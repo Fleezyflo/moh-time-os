@@ -1,0 +1,40 @@
+{
+  "id": "d75ef805",
+  "domain": "tasks",
+  "description": "Update task: Monoprix: January: Australian Range Announcement",
+  "status": "applied",
+  "created_at": "2026-02-02T08:23:49.827805+00:00",
+  "applied_at": "2026-02-02T08:23:49.828852+00:00",
+  "rolled_back_at": null,
+  "changes": [
+    {
+      "type": "update",
+      "id": "v2_a5ee1f10-91e9-46fa-b5e5-0c2475e1d113",
+      "target": "tasks",
+      "data": {
+        "id": "v2_a5ee1f10-91e9-46fa-b5e5-0c2475e1d113",
+        "type": "update",
+        "data": {
+          "priority": 75,
+          "updated_at": "2026-02-02T12:23:49.827778"
+        }
+      }
+    }
+  ],
+  "pre_images": {
+    "v2_a5ee1f10-91e9-46fa-b5e5-0c2475e1d113": {
+      "priority": 100
+    }
+  },
+  "rollback_steps": [
+    {
+      "type": "update",
+      "id": "v2_a5ee1f10-91e9-46fa-b5e5-0c2475e1d113",
+      "target": "tasks",
+      "data": {
+        "priority": 100
+      }
+    }
+  ],
+  "error": null
+}

@@ -1,0 +1,32 @@
+[
+  {
+    "cycle_start": "2026-02-01T04:44:11.885495+00:00",
+    "actions_taken": [],
+    "alerts_generated": [
+      "\u26a0\ufe0f 100 overdue items",
+      "\ud83d\udccb 3 items due today"
+    ],
+    "notifications_queued": 1,
+    "state_summary": {
+      "overdue": 100,
+      "due_today": 3,
+      "delegations": 1
+    },
+    "cycle_end": "2026-02-01T04:44:11.894434+00:00"
+  },
+  {
+    "cycle_start": "2026-02-01T04:47:43.424867+00:00",
+    "actions_taken": [],
+    "alerts_generated": [
+      "\u26a0\ufe0f 100 overdue items",
+      "\ud83d\udccb 3 items due today"
+    ],
+    "notifications_queued": 1,
+    "state_summary": {
+      "overdue": 100,
+      "due_today": 3,
+      "delegations": 1
+    },
+    "cycle_end": "2026-02-01T04:47:43.433441+00:00"
+  }
+]

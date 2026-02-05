@@ -1,0 +1,114 @@
+{
+  "d59fab75": {
+    "id": "d59fab75",
+    "name": "Dana",
+    "email": "dana@hrmny.co",
+    "role": "coordinator",
+    "lanes": [
+      "client",
+      "ops"
+    ],
+    "projects": [],
+    "clients": [],
+    "task_types": [],
+    "max_concurrent_items": 10,
+    "max_weekly_hours": 20.0,
+    "unavailable_days": [],
+    "escalation_contact": null,
+    "escalation_threshold_hours": 24,
+    "default_turnaround_days": 3,
+    "urgent_turnaround_days": 1,
+    "sensitivity_allowed": [],
+    "sensitivity_denied": [
+      "financial",
+      "legal"
+    ],
+    "active": true,
+    "created_at": "2026-02-01T04:36:14.363027+00:00",
+    "updated_at": "2026-02-01T04:36:14.363027+00:00"
+  },
+  "992e63f8": {
+    "id": "992e63f8",
+    "name": "Ayham",
+    "email": "ayham@hrmny.co",
+    "role": "coordinator",
+    "lanes": [
+      "client",
+      "ops"
+    ],
+    "projects": [],
+    "clients": [],
+    "task_types": [],
+    "max_concurrent_items": 10,
+    "max_weekly_hours": 20.0,
+    "unavailable_days": [],
+    "escalation_contact": null,
+    "escalation_threshold_hours": 24,
+    "default_turnaround_days": 3,
+    "urgent_turnaround_days": 1,
+    "sensitivity_allowed": [],
+    "sensitivity_denied": [
+      "financial",
+      "legal"
+    ],
+    "active": true,
+    "created_at": "2026-02-01T04:43:13.685043+00:00",
+    "updated_at": "2026-02-01T04:43:13.685043+00:00"
+  },
+  "e1119ffe": {
+    "id": "e1119ffe",
+    "name": "Youssef",
+    "email": "youssef@hrmny.co",
+    "role": "account manager",
+    "lanes": [
+      "client",
+      "finance"
+    ],
+    "projects": [],
+    "clients": [],
+    "task_types": [],
+    "max_concurrent_items": 10,
+    "max_weekly_hours": 20.0,
+    "unavailable_days": [],
+    "escalation_contact": null,
+    "escalation_threshold_hours": 24,
+    "default_turnaround_days": 3,
+    "urgent_turnaround_days": 1,
+    "sensitivity_allowed": [],
+    "sensitivity_denied": [
+      "financial",
+      "legal"
+    ],
+    "active": true,
+    "created_at": "2026-02-01T04:48:08.434481+00:00",
+    "updated_at": "2026-02-01T04:48:08.434481+00:00"
+  },
+  "eb488207": {
+    "id": "eb488207",
+    "name": "Krystie",
+    "email": "krystie@hrmny.co",
+    "role": "people ops",
+    "lanes": [
+      "people",
+      "admin"
+    ],
+    "projects": [],
+    "clients": [],
+    "task_types": [],
+    "max_concurrent_items": 10,
+    "max_weekly_hours": 20.0,
+    "unavailable_days": [],
+    "escalation_contact": null,
+    "escalation_threshold_hours": 24,
+    "default_turnaround_days": 3,
+    "urgent_turnaround_days": 1,
+    "sensitivity_allowed": [],
+    "sensitivity_denied": [
+      "financial",
+      "legal"
+    ],
+    "active": true,
+    "created_at": "2026-02-01T04:48:08.435118+00:00",
+    "updated_at": "2026-02-01T04:48:08.435118+00:00"
+  }
+}

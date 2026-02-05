@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HRMNY</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --black: #000000;
+      --white: #ffffff;
+      --grey-1: #111111;
+      --grey-2: #222222;
+      --grey-3: #444444;
+      --grey-4: #666666;
+      --grey-5: #888888;
+      --accent: #ff3d00;
+      --green: #00ff88;
+      --yellow: #ffcc00;
+    }
+
+    html { font-size: 14px; }
+
+    body {
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      background: var(--black);
+      color: var(--white);
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 32px;
+      background: var(--black);
+      border-bottom: 1px solid var(--grey-2);
+      z-index: 100;
+    }
+
+    .logo {
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.3em;
+    }
+
+    .header-center {
+      display: flex;
+      gap: 48px;
+    }
+
+    .nav-link {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--grey-4);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .nav-link:hover, .nav-link.active {
+      color: var(--white);
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--grey-4);
+    }
+
+    .status-live {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--green);
+      animation: pulse 2s infinite;
+    }
+
+    /* Main */
+    .main {
+      padding: 80px 32px 32px;
+    }
+
+    /* Agency Status Bar */
+    .agency-bar {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 1px;
+      background: var(--grey-2);
+      margin-bottom: 32px;
+    }
+
+    .agency-stat {
+      background: var(--black);
+      padding: 24px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .agency-stat:hover {
+      background: var(--grey-1);
+    }
+
+    .agency-stat-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--grey-4);
+      margin-bottom: 8px;
+    }
+
+    .agency-stat-value {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 4px;
+    }
+
+    .agency-stat-value.alert { color: var(--accent); }
+    .agency-stat-value.warning { color: var(--yellow); }
+    .agency-stat-value.good { color: var(--green); }
+
+    .agency-stat-sub {
+      font-size: 12px;
+      color: var(--grey-5);
+    }
+
+    /* Grid */
+    .grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 32px;
+    }
+
+    /* Section */
+    .section {
+      margin-bottom: 32px;
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--grey-2);
+    }
+
+    .section-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--grey-4);
+    }
+
+    .section-action {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      color: var(--grey-5);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .section-action:hover {
+      color: var(--white);
+    }
+
+    /* Project Row */
+    .project-row {
+      display: grid;
+      grid-template-columns: 8px 1fr 100px 80px 100px;
+      gap: 16px;
+      align-items: center;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--grey-1);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .project-row:hover {
+      background: var(--grey-1);
+      margin: 0 -16px;
+      padding: 16px;
+    }
+
+    .project-status {
+      width: 8px;
+      height: 8px;
+    }
+
+    .project-status.red { background: var(--accent); }
+    .project-status.yellow { background: var(--yellow); }
+    .project-status.green { background: var(--green); }
+
+    .project-info {
+      min-width: 0;
+    }
+
+    .project-name {
+      font-weight: 500;
+      margin-bottom: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .project-client {
+      font-size: 12px;
+      color: var(--grey-5);
+    }
+
+    .project-progress {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--grey-5);
+    }
+
+    .project-deadline {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--grey-4);
+    }
+
+    .project-owner {
+      font-size: 12px;
+      color: var(--grey-5);
+      text-align: right;
+    }
+
+    /* Client Row */
+    .client-row {
+      display: grid;
+      grid-template-columns: 1fr 60px 80px;
+      gap: 16px;
+      align-items: center;
+      padding: 14px 0;
+      border-bottom: 1px solid var(--grey-1);
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .client-row:hover {
+      background: var(--grey-1);
+      margin: 0 -16px;
+      padding: 14px 16px;
+    }
+
+    .client-name {
+      font-weight: 500;
+    }
+
+    .client-health {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      text-align: right;
+    }
+
+    .client-ar {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--grey-5);
+      text-align: right;
+    }
+
+    .client-ar.alert { color: var(--accent); }
+
+    /* Attention Items */
+    .attention-item {
+      display: flex;
+      gap: 16px;
+      padding: 16px;
+      background: var(--grey-1);
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+      border-left: 3px solid transparent;
+    }
+
+    .attention-item:hover {
+      background: var(--grey-2);
+    }
+
+    .attention-item.critical {
+      border-left-color: var(--accent);
+    }
+
+    .attention-item.warning {
+      border-left-color: var(--yellow);
+    }
+
+    .attention-content {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .attention-title {
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .attention-context {
+      font-size: 12px;
+      color: var(--grey-5);
+    }
+
+    .attention-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--grey-4);
+      flex-shrink: 0;
+    }
+
+    /* Invoice Row */
+    .invoice-row {
+      display: grid;
+      grid-template-columns: 1fr 80px 80px;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--grey-1);
+      font-size: 13px;
+    }
+
+    .invoice-client {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .invoice-amount {
+      font-family: 'JetBrains Mono', monospace;
+      text-align: right;
+    }
+
+    .invoice-age {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      text-align: right;
+      padding: 4px 8px;
+      background: var(--grey-2);
+    }
+
+    .invoice-age.critical {
+      background: rgba(255, 61, 0, 0.2);
+      color: var(--accent);
+    }
+
+    .invoice-age.warning {
+      background: rgba(255, 204, 0, 0.2);
+      color: var(--yellow);
+    }
+
+    /* Right Panel */
+    .panel-right {
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    /* Team Grid */
+    .team-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .team-member {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--grey-1);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .team-member:hover {
+      background: var(--grey-2);
+    }
+
+    .team-member.overload {
+      background: rgba(255, 61, 0, 0.15);
+      color: var(--accent);
+    }
+
+    /* Calendar */
+    .calendar-item {
+      display: flex;
+      gap: 12px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--grey-1);
+      font-size: 13px;
+    }
+
+    .calendar-time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--grey-4);
+      width: 50px;
+      flex-shrink: 0;
+    }
+
+    .calendar-title {
+      color: var(--grey-5);
+    }
+
+    /* Responsive */
+    @media (max-width: 1200px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .agency-bar {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .header-center {
+        display: none;
+      }
+
+      .agency-bar {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .project-row {
+        grid-template-columns: 8px 1fr 60px;
+      }
+
+      .project-deadline, .project-owner {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="logo">HRMNY</div>
+    <nav class="header-center">
+      <a href="#" class="nav-link active">Command</a>
+      <a href="#" class="nav-link">Clients</a>
+      <a href="#" class="nav-link">Projects</a>
+      <a href="#" class="nav-link">Cash</a>
+      <a href="#" class="nav-link">Team</a>
+    </nav>
+    <div class="header-right">
+      <div class="status-live">
+        <div class="status-dot"></div>
+        <span>SYNCED</span>
+      </div>
+      <span>WED 05 FEB — 09:14</span>
+    </div>
+  </header>
+
+  <main class="main">
+    <!-- Agency Status Bar -->
+    <div class="agency-bar">
+      <div class="agency-stat">
+        <div class="agency-stat-label">Projects</div>
+        <div class="agency-stat-value warning">10</div>
+        <div class="agency-stat-sub">1 at risk · 2 yellow</div>
+      </div>
+      <div class="agency-stat">
+        <div class="agency-stat-label">Clients</div>
+        <div class="agency-stat-value good">5</div>
+        <div class="agency-stat-sub">All healthy</div>
+      </div>
+      <div class="agency-stat">
+        <div class="agency-stat-label">Outstanding AR</div>
+        <div class="agency-stat-value alert">276K</div>
+        <div class="agency-stat-sub">3 overdue · 186K at 30+ days</div>
+      </div>
+      <div class="agency-stat">
+        <div class="agency-stat-label">Team Capacity</div>
+        <div class="agency-stat-value">94%</div>
+        <div class="agency-stat-sub">No overloads</div>
+      </div>
+      <div class="agency-stat">
+        <div class="agency-stat-label">Comms</div>
+        <div class="agency-stat-value">12</div>
+        <div class="agency-stat-sub">2 need response</div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="panel-left">
+        <!-- Attention Items -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title">Needs Attention</div>
+            <a href="#" class="section-action">View all →</a>
+          </div>
+          
+          <div class="attention-item critical">
+            <div class="attention-content">
+              <div class="attention-title">GMG Ramadan Campaign at risk</div>
+              <div class="attention-context">Brief not started · 39 days to deadline · Blocks all downstream</div>
+            </div>
+            <div class="attention-tag">Delivery</div>
+          </div>
+
+          <div class="attention-item warning">
+            <div class="attention-content">
+              <div class="attention-title">Supercare — AED 75K at 60+ days</div>
+              <div class="attention-context">3 invoices · Email follow-ups not working · Call needed</div>
+            </div>
+            <div class="attention-tag">Cash</div>
+          </div>
+
+          <div class="attention-item warning">
+            <div class="attention-content">
+              <div class="attention-title">Gargash contract meeting Friday</div>
+              <div class="attention-context">No prep done · Renewal terms need review</div>
+            </div>
+            <div class="attention-tag">Prep</div>
+          </div>
+        </div>
+
+        <!-- Projects -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title">Active Projects</div>
+            <a href="#" class="section-action">View all →</a>
+          </div>
+
+          <div class="project-row">
+            <div class="project-status red"></div>
+            <div class="project-info">
+              <div class="project-name">GMG Ramadan Campaign</div>
+              <div class="project-client">GMG · Monoprix</div>
+            </div>
+            <div class="project-progress">15%</div>
+            <div class="project-deadline">Mar 15</div>
+            <div class="project-owner">Strategy</div>
+          </div>
+
+          <div class="project-row">
+            <div class="project-status yellow"></div>
+            <div class="project-info">
+              <div class="project-name">Geant Monthly</div>
+              <div class="project-client">GMG · Geant</div>
+            </div>
+            <div class="project-progress">45%</div>
+            <div class="project-deadline">Ongoing</div>
+            <div class="project-owner">Ahmed</div>
+          </div>
+
+          <div class="project-row">
+            <div class="project-status yellow"></div>
+            <div class="project-info">
+              <div class="project-name">Supercare Monthly</div>
+              <div class="project-client">Supercare</div>
+            </div>
+            <div class="project-progress">55%</div>
+            <div class="project-deadline">Ongoing</div>
+            <div class="project-owner">Zeiad</div>
+          </div>
+
+          <div class="project-row">
+            <div class="project-status green"></div>
+            <div class="project-info">
+              <div class="project-name">Monoprix Monthly</div>
+              <div class="project-client">GMG · Monoprix</div>
+            </div>
+            <div class="project-progress">65%</div>
+            <div class="project-deadline">Ongoing</div>
+            <div class="project-owner">Fady</div>
+          </div>
+
+          <div class="project-row">
+            <div class="project-status green"></div>
+            <div class="project-info">
+              <div class="project-name">Aswaaq Monthly</div>
+              <div class="project-client">GMG · Aswaaq</div>
+            </div>
+            <div class="project-progress">80%</div>
+            <div class="project-deadline">Ongoing</div>
+            <div class="project-owner">Eifel</div>
+          </div>
+
+          <div class="project-row">
+            <div class="project-status green"></div>
+            <div class="project-info">
+              <div class="project-name">Mercedes-Benz Monthly</div>
+              <div class="project-client">Gargash</div>
+            </div>
+            <div class="project-progress">70%</div>
+            <div class="project-deadline">Ongoing</div>
+            <div class="project-owner">Creative</div>
+          </div>
+        </div>
+
+        <!-- Clients -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title">Clients</div>
+            <a href="#" class="section-action">View all →</a>
+          </div>
+
+          <div class="client-row">
+            <div class="client-name">GMG Consumer LLC</div>
+            <div class="client-health">72</div>
+            <div class="client-ar alert">107K</div>
+          </div>
+
+          <div class="client-row">
+            <div class="client-name">Gargash Enterprises</div>
+            <div class="client-health">85</div>
+            <div class="client-ar">1.2K</div>
+          </div>
+
+          <div class="client-row">
+            <div class="client-name">Supercare Pharmacy</div>
+            <div class="client-health">65</div>
+            <div class="client-ar alert">75K</div>
+          </div>
+
+          <div class="client-row">
+            <div class="client-name">Five Guys</div>
+            <div class="client-health">78</div>
+            <div class="client-ar">1.2K</div>
+          </div>
+
+          <div class="client-row">
+            <div class="client-name">BinSina Pharmacy</div>
+            <div class="client-health">70</div>
+            <div class="client-ar">0</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-right">
+        <!-- Today -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title">Today</div>
+          </div>
+
+          <div class="calendar-item">
+            <div class="calendar-time">09:00</div>
+            <div class="calendar-title">Team Standup</div>
+          </div>
+          <div class="calendar-item">
+            <div class="calendar-time">11:00</div>
+            <div class="calendar-title">GMG Campaign Review</div>
+          </div>
+          <div class="calendar-item">
+            <div class="calendar-time">14:00</div>
+            <div class="calendar-title">Client Call: Supercare</div>
+          </div>
+        </div>
+
+        <!-- AR Aging -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title">AR Aging</div>
+            <a href="#" class="section-action">View all →</a>
+          </div>
+
+          <div class="invoice-row">
+            <div class="invoice-client">Supercare</div>
+            <div class="invoice-amount">30,098</div>
+            <div class="invoice-age critical">61-90d</div>
+          </div>
+          <div class="invoice-row">
+            <div class="invoice-client">GMG</div>
+            <div class="invoice-amount">100,236</div>
+            <div class="invoice-age warning">31-60d</div>
+          </div>
+          <div class="invoice-row">
+            <div class="invoice-client">GMG</div>
+            <div class="invoice-amount">7,350</div>
+            <div class="invoice-age critical">90+d</div>
+          </div>
+          <div class="invoice-row">
+            <div class="invoice-client">Five Guys</div>
+            <div class="invoice-amount">1,200</div>
+            <div class="invoice-age warning">31-60d</div>
+          </div>
+        </div>
+
+        <!-- Team -->
+        <div class="section">
+          <div class="section-header">
+            <div class="section-title">Team Utilization</div>
+          </div>
+
+          <div class="team-grid">
+            <div class="team-member">AS 85%</div>
+            <div class="team-member">ZM 92%</div>
+            <div class="team-member">FH 78%</div>
+            <div class="team-member">EG 88%</div>
+            <div class="team-member">NR 95%</div>
+            <div class="team-member">MS 82%</div>
+            <div class="team-member">AH 90%</div>
+            <div class="team-member overload">MR 112%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</body>
+</html>

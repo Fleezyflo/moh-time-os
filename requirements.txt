@@ -1,0 +1,16 @@
+# MOH TIME OS Dependencies
+
+# Core
+pyyaml>=6.0
+flask>=3.0.0
+
+# API Server
+fastapi>=0.100.0
+uvicorn>=0.22.0
+pydantic>=2.0.0
+
+# CLI
+click>=8.0.0
+
+# Optional: Rich console output
+rich>=13.0.0

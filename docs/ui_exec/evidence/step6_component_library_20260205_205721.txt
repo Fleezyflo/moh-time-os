@@ -1,0 +1,54 @@
+STEP 6 FAST EVIDENCE — Component Library
+Timestamp: Thu Feb  5 20:57:21 +04 2026
+Root: ..
+Tools: bash=GNU bash, version 5.3.3(1)-release (aarch64-apple-darwin24.4.0)
+Tools: rg=ripgrep 15.1.0
+
+============================================================
+$ ls -la docs/ui_spec/08_COMPONENT_LIBRARY.md || true
+------------------------------------------------------------
+ls: docs/ui_spec/08_COMPONENT_LIBRARY.md: No such file or directory
+
+============================================================
+$ rg -n '(TBD|todo|placeholder|unmapped|figure out|later)' docs/ui_spec/08_COMPONENT_LIBRARY.md || true
+------------------------------------------------------------
+rg: docs/ui_spec/08_COMPONENT_LIBRARY.md: IO error for operation on docs/ui_spec/08_COMPONENT_LIBRARY.md: No such file or directory (os error 2)
+
+============================================================
+$ rg -n '(ProposalCard|IssueCard|TrustStrip|EvidenceStrip|EvidenceViewer|RoomDrawer|IssueDrawer|CouplingDrawer|FiltersBar|CommandPalette)' docs/ui_spec/08_COMPONENT_LIBRARY.md || true
+------------------------------------------------------------
+rg: docs/ui_spec/08_COMPONENT_LIBRARY.md: IO error for operation on docs/ui_spec/08_COMPONENT_LIBRARY.md: No such file or directory (os error 2)
+
+============================================================
+$ rg -n '(Eligibility|ineligible|06_PROPOSALS_BRIEFINGS|link_confidence|hypothesis|proof_density|confidence)' docs/ui_spec/08_COMPONENT_LIBRARY.md || true
+------------------------------------------------------------
+rg: docs/ui_spec/08_COMPONENT_LIBRARY.md: IO error for operation on docs/ui_spec/08_COMPONENT_LIBRARY.md: No such file or directory (os error 2)
+
+============================================================
+$ find time-os-ui/src/components -type f -maxdepth 3 -print | sort || true
+------------------------------------------------------------
+time-os-ui/src/components/ConfidenceBadge.tsx
+time-os-ui/src/components/EvidenceViewer.tsx
+time-os-ui/src/components/FixDataCard.tsx
+time-os-ui/src/components/IssueCard.tsx
+time-os-ui/src/components/IssueDrawer.tsx
+time-os-ui/src/components/PostureStrip.tsx
+time-os-ui/src/components/ProposalCard.tsx
+time-os-ui/src/components/RoomDrawer.tsx
+time-os-ui/src/components/index.ts
+
+============================================================
+$ rg -n '(export function|export const|interface|type)\s+(ProposalCard|IssueCard|TrustStrip|EvidenceStrip|EvidenceViewer|RoomDrawer|IssueDrawer|CouplingDrawer)' time-os-ui/src/components -S || true
+------------------------------------------------------------
+time-os-ui/src/components/RoomDrawer.tsx:6:interface RoomDrawerProps {
+time-os-ui/src/components/RoomDrawer.tsx:23:export function RoomDrawer({ isOpen, onClose, entity, proposal, onTag, onSnooze, onDismiss, onFixData, children }: RoomDrawerProps) {
+time-os-ui/src/components/ProposalCard.tsx:6:interface ProposalCardProps {
+time-os-ui/src/components/ProposalCard.tsx:13:export function ProposalCard({ proposal, onTag, onSnooze, onOpen }: ProposalCardProps) {
+time-os-ui/src/components/EvidenceViewer.tsx:12:interface EvidenceViewerProps {
+time-os-ui/src/components/EvidenceViewer.tsx:44:export function EvidenceViewer({ isOpen, onClose, excerpts, anchorId, onSourceClick }: EvidenceViewerProps) {
+time-os-ui/src/components/IssueDrawer.tsx:4:interface IssueDrawerProps {
+time-os-ui/src/components/IssueDrawer.tsx:52:export function IssueDrawer({ isOpen, onClose, issue, watchers = [], onTransition }: IssueDrawerProps) {
+time-os-ui/src/components/IssueCard.tsx:4:interface IssueCardProps {
+time-os-ui/src/components/IssueCard.tsx:49:export function IssueCard({ issue, onOpen }: IssueCardProps) {
+
+WROTE: ../docs/ui_exec/evidence/step6_component_library_20260205_205721.txt

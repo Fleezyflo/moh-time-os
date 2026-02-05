@@ -1,0 +1,51 @@
+STEP 7 FAST EVIDENCE — Data Access Layer
+Timestamp: Thu Feb  5 20:57:21 +04 2026
+Root: ..
+Tools: rg=ripgrep 15.1.0
+
+============================================================
+$ ls -la docs/ui_spec/09_DATA_ACCESS_LAYER.md || true
+------------------------------------------------------------
+ls: docs/ui_spec/09_DATA_ACCESS_LAYER.md: No such file or directory
+
+============================================================
+$ rg -n '(TBD|todo|placeholder|unmapped|figure out|later)' docs/ui_spec/09_DATA_ACCESS_LAYER.md || true
+------------------------------------------------------------
+rg: docs/ui_spec/09_DATA_ACCESS_LAYER.md: IO error for operation on docs/ui_spec/09_DATA_ACCESS_LAYER.md: No such file or directory (os error 2)
+
+============================================================
+$ rg -n '(CONTROL_ROOM_QUERIES|query recipe|cache|caching|invalidation|offline|hydration|loading|stale|revalidate)' docs/ui_spec/09_DATA_ACCESS_LAYER.md || true
+------------------------------------------------------------
+rg: docs/ui_spec/09_DATA_ACCESS_LAYER.md: IO error for operation on docs/ui_spec/09_DATA_ACCESS_LAYER.md: No such file or directory (os error 2)
+
+============================================================
+$ rg -n '(/clients|/team|/intersections|/issues|/fix-data|Snapshot|Control Room)' docs/ui_spec/09_DATA_ACCESS_LAYER.md || true
+------------------------------------------------------------
+rg: docs/ui_spec/09_DATA_ACCESS_LAYER.md: IO error for operation on docs/ui_spec/09_DATA_ACCESS_LAYER.md: No such file or directory (os error 2)
+
+============================================================
+$ find time-os-ui/src -maxdepth 5 -type f \( -name 'queries.ts' -o -name 'api.ts' -o -name 'data*.ts' -o -name '*query*.ts' \) | sort || true
+------------------------------------------------------------
+time-os-ui/src/lib/queries.ts
+
+============================================================
+$ rg -n '(getSnapshot|getClients|getClientDetail|getTeam|getTeamDetail|getIssues|getFixData|getCouplings|fetchSnapshot|fetchClients|fetchClient|fetchTeam|fetchIssues|fetchFixData|fetchCouplings)' time-os-ui/src -S || true
+------------------------------------------------------------
+time-os-ui/src/lib/queries.ts:29:export function getSnapshotProposals(scope?: { type: string; id: string }, _horizon?: string): Proposal[] {
+time-os-ui/src/lib/queries.ts:49:export function getSnapshotIssues(): Issue[] {
+time-os-ui/src/lib/queries.ts:62:export function getSnapshotWatchers(): Watcher[] {
+time-os-ui/src/lib/queries.ts:75:export function getFixDataCount(): number {
+time-os-ui/src/lib/queries.ts:86:export function getClients(): Client[] {
+time-os-ui/src/lib/queries.ts:99:export function getClientDetail(clientId: string): { 
+time-os-ui/src/lib/queries.ts:130:export function getTeamMembers(): TeamMember[] {
+time-os-ui/src/lib/queries.ts:143:export function getTeamDetail(memberId: string): {
+time-os-ui/src/lib/queries.ts:199:export function getCouplings(anchorType: string, anchorId: string): Coupling[] {
+time-os-ui/src/lib/queries.ts:217:export function getIssues(filters?: IssueFilters): Issue[] {
+time-os-ui/src/lib/queries.ts:243:export function getFixDataQueue(): FixData[] {
+
+============================================================
+$ rg -n '(local-first|cache|indexeddb|idb|localStorage|persist|offline|stale-while-revalidate)' time-os-ui/src -S || true
+------------------------------------------------------------
+time-os-ui/src/router.tsx:1454:// Audit log for Fix Data actions (stubbed - in production this would be persisted)
+
+WROTE: ../docs/ui_exec/evidence/step7_data_access_FAST_20260205_205721.txt

@@ -1,0 +1,3170 @@
+{
+  "team": [
+    {
+      "name": "Ahmed Hosny",
+      "title": "",
+      "department": "Other Income",
+      "email": "ahmed@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Ranim Hassan",
+      "title": "Sr. Creative",
+      "department": "Other Income",
+      "email": "ranim@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Ayham Homsi",
+      "title": "Managing Director",
+      "department": "Other Income",
+      "email": "ayham@hrmny.co",
+      "active": true
+    },
+    {
+      "name": "Molham Homsi",
+      "title": "Operations Manager",
+      "department": "Other Income",
+      "email": "molham@hrmny.co",
+      "active": true
+    },
+    {
+      "name": "Farah F",
+      "title": "Account Executive",
+      "department": "Other Income",
+      "email": "farah@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "John Paolo  Bermudo",
+      "title": "Administrator",
+      "department": "Other Income",
+      "email": "john@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Krystie Marie Beldad",
+      "title": "Administrator",
+      "department": "Other Income",
+      "email": "krystie@hrmny.co",
+      "active": true
+    },
+    {
+      "name": "Aubrey Sesbreno",
+      "title": "HR Manager",
+      "department": "Other Income",
+      "email": "aubrey@hrmny.co",
+      "active": true
+    },
+    {
+      "name": "Ahmed Rezk (Adam)",
+      "title": "Sr. Account Executive",
+      "department": "FIXED SALARIES",
+      "email": "ahmed@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Hend Ahmed Moawad Mossa",
+      "title": "Graphic Designer (Egypt)",
+      "department": "FIXED SALARIES",
+      "email": "hend@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Raafat Jghami",
+      "title": "Traffic Coordinator/Admin",
+      "department": "FIXED SALARIES",
+      "email": "raafat@hrmny.co",
+      "active": true
+    },
+    {
+      "name": "Maher Shenouda",
+      "title": "Junior SM",
+      "department": "FIXED SALARIES",
+      "email": "maher@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Haitham Malek Ahmed",
+      "title": "Graphic Designer",
+      "department": "FIXED SALARIES",
+      "email": "haitham@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Mariam Abdelaziz",
+      "title": "Remote Animator",
+      "department": "FIXED SALARIES",
+      "email": "mariam@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Islam Adulhafith",
+      "title": "Graphic Desiger",
+      "department": "FIXED SALARIES",
+      "email": "islam@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Ali Sherif Khalil",
+      "title": "Jr. Graphic Designer",
+      "department": "FIXED SALARIES",
+      "email": "ali@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Bojan Solar",
+      "title": "Graphic Desiger",
+      "department": "FIXED SALARIES",
+      "email": "bojan@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Aya Hneineh",
+      "title": "Graphic Designer",
+      "department": "FIXED SALARIES",
+      "email": "aya@hrmny.co",
+      "active": true
+    },
+    {
+      "name": "Yousef Ameen",
+      "title": "Art Director",
+      "department": "FIXED SALARIES",
+      "email": "yousef@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Tasneem Salah",
+      "title": "Junior Graphic Design",
+      "department": "FIXED SALARIES",
+      "email": "tasneem@hrmny.co",
+      "active": true
+    },
+    {
+      "name": "Fatima Ziedan",
+      "title": "Graphic Designer",
+      "department": "FIXED SALARIES",
+      "email": "fatima@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Mohamed Rezk",
+      "title": "SM Community Manager",
+      "department": "FIXED SALARIES",
+      "email": "mohamed@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Nada Hamed",
+      "title": "Graphic Designer",
+      "department": "FIXED SALARIES",
+      "email": "nada@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Peter Hakim",
+      "title": "Associate Creative Director",
+      "department": "FIXED SALARIES",
+      "email": "peter@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Fady Fayez",
+      "title": "Senior Graphic Designer",
+      "department": "FIXED SALARIES",
+      "email": "fady@hrmny.co",
+      "active": true
+    },
+    {
+      "name": "Sherine Mohamed",
+      "title": "SM Community Manager",
+      "department": "FIXED SALARIES",
+      "email": "sherine@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Youssef Omara",
+      "title": "Senior Art Director",
+      "department": "FIXED SALARIES",
+      "email": "youssef@hrmny.co",
+      "active": true
+    },
+    {
+      "name": "Ahmed Salah",
+      "title": "Motion Graphic Designer",
+      "department": "FIXED SALARIES",
+      "email": "ahmed@hrmny.co",
+      "active": true
+    },
+    {
+      "name": "Ayoub Tams",
+      "title": "Creative Copywriter",
+      "department": "FIXED SALARIES",
+      "email": "ayoub@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Noura El Rakaiby",
+      "title": "Animator",
+      "department": "FIXED SALARIES",
+      "email": "noura@hrmny.co",
+      "active": true
+    },
+    {
+      "name": "Mark Magdi",
+      "title": "Creative Director",
+      "department": "FIXED SALARIES",
+      "email": "mark@hrmny.co",
+      "active": true
+    },
+    {
+      "name": "Mariam Ghareeb",
+      "title": "Content Writer",
+      "department": "FIXED SALARIES",
+      "email": "mariam@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Mostafa Shaker",
+      "title": "",
+      "department": "FIXED SALARIES",
+      "email": "mostafa@hrmny.co",
+      "active": true
+    },
+    {
+      "name": "Earl Magno",
+      "title": "Content Creator",
+      "department": "FIXED SALARIES",
+      "email": "earl@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Reem",
+      "title": "Junior SM",
+      "department": "FIXED SALARIES",
+      "email": null,
+      "active": false
+    },
+    {
+      "name": "Syed Maaz",
+      "title": "Content Creator",
+      "department": "FIXED SALARIES",
+      "email": "syed@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Mokhallad Malegi",
+      "title": "Content Creator",
+      "department": "FIXED SALARIES",
+      "email": "mokhallad@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Eifel Guinto",
+      "title": "Content Creator",
+      "department": "FIXED SALARIES",
+      "email": "eifel@hrmny.co",
+      "active": true
+    },
+    {
+      "name": "Elnaz Tabei",
+      "title": "Content Producer",
+      "department": "FIXED SALARIES",
+      "email": "elnaz@hrmny.co",
+      "active": true
+    },
+    {
+      "name": "Afzal Muneer",
+      "title": "Content Creator",
+      "department": "FIXED SALARIES",
+      "email": "afzal@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Ali",
+      "title": "Content Creator",
+      "department": "FIXED SALARIES",
+      "email": null,
+      "active": false
+    },
+    {
+      "name": "Maher Al Chatty",
+      "title": "Content Lead",
+      "department": "FIXED SALARIES",
+      "email": "maher@hrmny.co",
+      "active": true
+    },
+    {
+      "name": "Caleb David",
+      "title": "Junior Account Executive",
+      "department": "FIXED SALARIES",
+      "email": "caleb@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Hiba",
+      "title": "Account Executive (DET)",
+      "department": "FIXED SALARIES",
+      "email": null,
+      "active": false
+    },
+    {
+      "name": "Jihad",
+      "title": "Graphic Desiger",
+      "department": "FIXED SALARIES",
+      "email": null,
+      "active": false
+    },
+    {
+      "name": "Shafia",
+      "title": "PR Intern",
+      "department": "FIXED SALARIES",
+      "email": null,
+      "active": false
+    },
+    {
+      "name": "Riya Vatnani",
+      "title": "Client Servicing Director",
+      "department": "FIXED SALARIES",
+      "email": "riya@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Joshua Daniells",
+      "title": "SM Senior Account Executive",
+      "department": "FIXED SALARIES",
+      "email": "joshua@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Lena Khalil",
+      "title": "PR Account Manager",
+      "department": "FIXED SALARIES",
+      "email": "lena@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Merna",
+      "title": "Content Executive",
+      "department": "FIXED SALARIES",
+      "email": null,
+      "active": false
+    },
+    {
+      "name": "Mahir",
+      "title": "PR Intern",
+      "department": "FIXED SALARIES",
+      "email": null,
+      "active": false
+    },
+    {
+      "name": "Islam Dessouki",
+      "title": "Senior Graphic Designer",
+      "department": "FIXED SALARIES",
+      "email": "islam@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Dalal Binsabt",
+      "title": "Account Manager",
+      "department": "FIXED SALARIES",
+      "email": "dalal@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Nour",
+      "title": "Junior Animator",
+      "department": "FIXED SALARIES",
+      "email": null,
+      "active": false
+    },
+    {
+      "name": "TBC",
+      "title": "Junior Account Executive",
+      "department": "FIXED SALARIES",
+      "email": null,
+      "active": false
+    },
+    {
+      "name": "DET",
+      "title": "Graphic Designer",
+      "department": "FIXED SALARIES",
+      "email": null,
+      "active": false
+    },
+    {
+      "name": "Haneen Issa",
+      "title": "Senior Account Manager",
+      "department": "FIXED SALARIES",
+      "email": "haneen@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Ayman El Mamoun",
+      "title": "SM Account Manager",
+      "department": "FIXED SALARIES",
+      "email": "ayman@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Layla Kurdieh",
+      "title": "Senior Account Executive",
+      "department": "FIXED SALARIES",
+      "email": "layla@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Sarah",
+      "title": "Junior Account Executive",
+      "department": "FIXED SALARIES",
+      "email": null,
+      "active": false
+    },
+    {
+      "name": "Salma El Gogary",
+      "title": "Junior SM Executive / Culture Officer",
+      "department": "FIXED SALARIES",
+      "email": "salma@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Youssef Fakreddine",
+      "title": "SM Account Executive",
+      "department": "FIXED SALARIES",
+      "email": "youssef@hrmny.co",
+      "active": true
+    },
+    {
+      "name": "Iman Soorty",
+      "title": "",
+      "department": "FIXED SALARIES",
+      "email": "iman@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Youmna Ashour",
+      "title": "",
+      "department": "FIXED SALARIES",
+      "email": "youmna@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Ramy Elbendary",
+      "title": "",
+      "department": "FIXED SALARIES",
+      "email": "ramy@hrmny.co",
+      "active": true
+    },
+    {
+      "name": "Mohammed Taha",
+      "title": "",
+      "department": "FIXED SALARIES",
+      "email": "mohammed@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Omar Alrabey",
+      "title": "",
+      "department": "FIXED SALARIES",
+      "email": "omar@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Elija Guinto",
+      "title": "",
+      "department": "FIXED SALARIES",
+      "email": "elija@hrmny.co",
+      "active": true
+    },
+    {
+      "name": "Jessica Shanmugan",
+      "title": "",
+      "department": "FIXED SALARIES",
+      "email": "jessica@hrmny.co",
+      "active": true
+    },
+    {
+      "name": "Mennatullah Allam",
+      "title": "",
+      "department": "FIXED SALARIES",
+      "email": "mennatullah@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Stuti Kaijur Dhakan",
+      "title": "",
+      "department": "FIXED SALARIES",
+      "email": "stuti@hrmny.co",
+      "active": false
+    },
+    {
+      "name": "Fabina",
+      "title": "",
+      "department": "FIXED SALARIES",
+      "email": null,
+      "active": true
+    },
+    {
+      "name": "Dana Oraibi",
+      "title": "",
+      "department": "FIXED SALARIES",
+      "email": "dana@hrmny.co",
+      "active": true
+    },
+    {
+      "name": "Nathan Pravin",
+      "title": "",
+      "department": "FIXED SALARIES",
+      "email": "nathan@hrmny.co",
+      "active": true
+    },
+    {
+      "name": "Zaied",
+      "title": "",
+      "department": "FIXED SALARIES",
+      "email": null,
+      "active": true
+    },
+    {
+      "name": "Imad",
+      "title": "",
+      "department": "FIXED SALARIES",
+      "email": null,
+      "active": true
+    },
+    {
+      "name": "Aya D",
+      "title": "",
+      "department": "FIXED SALARIES",
+      "email": "aya@hrmny.co",
+      "active": true
+    },
+    {
+      "name": "Jennifer Zita Love - Part time",
+      "title": "Pubic Relation",
+      "department": "FIXED SALARIES",
+      "email": "jennifer@hrmny.co",
+      "active": false
+    }
+  ],
+  "clients": [
+    {
+      "name": "Subgate",
+      "type": "retainer",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Dubai Economy (DED)",
+      "type": "retainer",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Gargash (Mercedes)",
+      "type": "retainer",
+      "status": "active",
+      "domains": [
+        "gargash.com"
+      ],
+      "contacts": []
+    },
+    {
+      "name": "Maestro Pizza",
+      "type": "retainer",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Albaik",
+      "type": "retainer",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "AMG Koffehause",
+      "type": "retainer",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Gargash Auto",
+      "type": "retainer",
+      "status": "active",
+      "domains": [
+        "gargash.com"
+      ],
+      "contacts": []
+    },
+    {
+      "name": "Soul Beach",
+      "type": "retainer",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "La Carnita",
+      "type": "retainer",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Weslodge Social Media",
+      "type": "retainer",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Weslodge PR & Media Relation",
+      "type": "retainer",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "RHS - Kuwait Kitchen",
+      "type": "retainer",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Guide Consultants",
+      "type": "retainer",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "11 11 Aesthetic",
+      "type": "retainer",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Anghami",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Dubai Future Foundation (DFF)",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Jack Morton (KSA Expo)",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Maestro Pizza - Branding",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Maestro Pizza - Campaign",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "DED (Economic Report)",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Gargash",
+      "type": "project",
+      "status": "historical",
+      "domains": [
+        "gargash.com"
+      ],
+      "contacts": []
+    },
+    {
+      "name": "D3 Unplugged",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Instashop",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "DFWAC",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Weslodge",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "DLMD",
+      "type": "retainer",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "BillBoard",
+      "type": "retainer",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "SO Uptown Hotel",
+      "type": "retainer",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Empire",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Saudi Mastermaker",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Five Guys",
+      "type": "retainer",
+      "status": "active",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Bin Sina Pharmacy",
+      "type": "retainer",
+      "status": "active",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Befit",
+      "type": "retainer",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Back To Roots",
+      "type": "retainer",
+      "status": "active",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "GMG Everyday Goods",
+      "type": "retainer",
+      "status": "active",
+      "domains": [
+        "gmg.com"
+      ],
+      "contacts": []
+    },
+    {
+      "name": "PetBae",
+      "type": "retainer",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "SuperCare",
+      "type": "retainer",
+      "status": "active",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "JD Sports",
+      "type": "forecast",
+      "status": "pipeline",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "NSTIF",
+      "type": "retainer",
+      "status": "active",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Sun & Sand Sports",
+      "type": "forecast",
+      "status": "active",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Brand Center",
+      "type": "forecast",
+      "status": "pipeline",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "SO Uptown Hotel Outsource",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "NSTIF Digital Spend",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "NSTIF Bachir Halimi",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Maestro (Hero)",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Maestro (CGI)",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Maestro (Lovin Dubai",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Maestro (EUFA)",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Gargash (Auto Projects)",
+      "type": "project",
+      "status": "historical",
+      "domains": [
+        "gargash.com"
+      ],
+      "contacts": []
+    },
+    {
+      "name": "Gargash Real estate",
+      "type": "project",
+      "status": "historical",
+      "domains": [
+        "gargash.com"
+      ],
+      "contacts": []
+    },
+    {
+      "name": "Gargash (Mercedes Brand Center)",
+      "type": "project",
+      "status": "historical",
+      "domains": [
+        "gargash.com"
+      ],
+      "contacts": []
+    },
+    {
+      "name": "GMG Gulf Food",
+      "type": "project",
+      "status": "historical",
+      "domains": [
+        "gmg.com"
+      ],
+      "contacts": []
+    },
+    {
+      "name": "GMG -Bred 2025",
+      "type": "project",
+      "status": "historical",
+      "domains": [
+        "gmg.com"
+      ],
+      "contacts": []
+    },
+    {
+      "name": "SRMG ( Dystinct)",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Cream",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Sun & Sand",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Sweet Mania - Cream Bred",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Sweet Mania - WTF",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Five Guys projects",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Saudi Mastermaker (Sabaho)",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Saudi Mastermaker Projects",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "UMHE",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Daman",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "AKI Projects",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Jones the Grocer",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Team 71 (DHA)",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Team 71 (Social boasting)",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "BEside Trading (Diesel)",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Al Arabia (OOH)",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Vivat Interludex",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Rose Hotels FZ-LLC",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Geekay",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Brandfolio (Skechers)",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "PVH MEA",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Puma",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Deliveroo -",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "DET Economic Report",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "CRG FZE",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "JW Marriott",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Asics Arabia",
+      "type": "project",
+      "status": "historical",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Dubai Street Food Festival",
+      "type": "forecast",
+      "status": "pipeline",
+      "domains": [],
+      "contacts": []
+    },
+    {
+      "name": "Dubai Food Festival",
+      "type": "forecast",
+      "status": "pipeline",
+      "domains": [],
+      "contacts": []
+    }
+  ],
+  "projects": [
+    {
+      "name": "CRM",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1199540446038077"
+    },
+    {
+      "name": "Managerial Task Board",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1199540446038171"
+    },
+    {
+      "name": "Employee On-boarding",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1200005221472559"
+    },
+    {
+      "name": "GARGASH MB",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1200030597653381"
+    },
+    {
+      "name": "hrmny",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1200122774918672"
+    },
+    {
+      "name": "HRMNY UAE : Payroll & Reimbursement",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1200611958952608"
+    },
+    {
+      "name": "Ahmad Hosny's Previously Assigned Tasks",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1201331573823947"
+    },
+    {
+      "name": "Receivables",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1201359420035793"
+    },
+    {
+      "name": "HR & Internal ",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1201562335558364"
+    },
+    {
+      "name": "Candidates",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1202237405812902"
+    },
+    {
+      "name": "Office Equipment",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1202551113326507"
+    },
+    {
+      "name": "Outgoing Invoice Tracker",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1202950578141521"
+    },
+    {
+      "name": "Templates ",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1202978390007956"
+    },
+    {
+      "name": "HRMNY DXB TIMESHEETS",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1203263320059770"
+    },
+    {
+      "name": "Sonic Unit - Moh Flow",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1203277449589952"
+    },
+    {
+      "name": "Master Production",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1203344535301836"
+    },
+    {
+      "name": "SIXT",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1203360708281484"
+    },
+    {
+      "name": "GAC ",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1203360708281526"
+    },
+    {
+      "name": "DAIMLER ",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1203360708281536"
+    },
+    {
+      "name": "Creative hires",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1203362678757827"
+    },
+    {
+      "name": "Alfa Romeo ",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1203370048790568"
+    },
+    {
+      "name": "Purple ",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1203370048790577"
+    },
+    {
+      "name": "Equipment Monitoring",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1203398069841542"
+    },
+    {
+      "name": "Kholoud T.'s Previously Assigned Tasks",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1203552857972876"
+    },
+    {
+      "name": "Company Docs & Clients Contract Tracker",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1203671647272341"
+    },
+    {
+      "name": "Sonic Unit",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1203719711832374"
+    },
+    {
+      "name": "Traffic: Creative Team",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1203796219759168"
+    },
+    {
+      "name": "Performance Reviews",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1203891865116557"
+    },
+    {
+      "name": "Social Media Strategy Template",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1204028898139937"
+    },
+    {
+      "name": "Traffic: Content Team",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1204055063139847"
+    },
+    {
+      "name": "Sonic Unit - A'Y",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1204359252063308"
+    },
+    {
+      "name": "Maesto",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1204646555178173"
+    },
+    {
+      "name": "CT - PIPELINE DASHBOARD",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1205410787100606"
+    },
+    {
+      "name": "Admin & Internal",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1205414242472061"
+    },
+    {
+      "name": "hrmny Social",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1205507173885482"
+    },
+    {
+      "name": "Sherine Mohamed's previously assigned tasks",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1205810761172078"
+    },
+    {
+      "name": "Adam Elgohary's previously assigned tasks",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1205811033027412"
+    },
+    {
+      "name": "Employee Offboarding",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1206390190731681"
+    },
+    {
+      "name": "Hrmny UAE: Procurement",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1206438300085137"
+    },
+    {
+      "name": "Five Guys",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1206949211080815"
+    },
+    {
+      "name": "BinSina",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1207519919348569"
+    },
+    {
+      "name": "BEFIT",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1208145616026004"
+    },
+    {
+      "name": "Back To Roots",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1208588392624628"
+    },
+    {
+      "name": "GMG: Geant",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1208773104159659"
+    },
+    {
+      "name": "GMG: Monoprix",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1208773111778405"
+    },
+    {
+      "name": "GMG: Aswaaq",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1208773111778409"
+    },
+    {
+      "name": "Ankai",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1208836435158560"
+    },
+    {
+      "name": "Recruitment Tracker",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1208909368652357"
+    },
+    {
+      "name": "HR 2025",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1208933545585703"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209321583012128"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209321606867874"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209321608539250"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209321670837966"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209321673910743"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209325228593753"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209325246413760"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209325247857145"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209325348726827"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209325349636323"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209337574696433"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209337575658274"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209337630788634"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209337731082970"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209337731810842"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209347598388736"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209347642780440"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209347643012596"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209347715766383"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209347715880198"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209347716512736"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209356555228539"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209356556039399"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209356556166911"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209356666598420"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209356667196616"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209356714688262"
+    },
+    {
+      "name": "Sales Pipeline 2025 ",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209356923265164"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209358595245973"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209358595670312"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209358596529795"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209358620817438"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209358714813998"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209358714949915"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209361681826593"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209361682891964"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209361683253509"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209361786391928"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209361787122736"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209361980759892"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209373241954242"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209373243472343"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209373243558915"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209373273504522"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209373275712051"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209373335751393"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209384781465188"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209384784306999"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209384784874256"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209384840558603"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209384846656843"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209384847357204"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209394641991978"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209394645243461"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209394645304852"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209394645519080"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209394772562354"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209394773620272"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209404498887424"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209404499028113"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209404500858276"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209404648259131"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209404735471612"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209404736515055"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209414498027341"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209414498431435"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209414500129800"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209414500131184"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209414600938076"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209414601584291"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209416435945706"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209416436379560"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209416468867947"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209416549737941"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209416550237504"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209416550354904"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209419633407825"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209419634028187"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209419634898084"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209419744971264"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209419790209131"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209419790210732"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209429303923178"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209429388487249"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209429388732923"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209429390953251"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209429435368528"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209429435962585"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209439563291237"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209439680886459"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209439681625627"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209439785219407"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209439786209372"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209439788113838"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209449484848359"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209449487517461"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209449489011795"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209449550263795"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209449552004312"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209449683237404"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209461613256963"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209461614059364"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209461826935942"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209461827343402"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209461925095715"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209461926047206"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209470206309560"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209470206605936"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209470254234234"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209470579615411"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209470581572430"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209470582753811"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209476141830980"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209476143158330"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209476219580292"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209476464515643"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209476466727415"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209476467197911"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209480460189058"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209480461227207"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209480461230914"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209480461344226"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209480580930808"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209480583936802"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209493134194071"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209493137838518"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209493138571495"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209493229242949"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209493230587442"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209493309341570"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209505334934416"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209505337185851"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209505577314431"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209505628075006"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209505628430381"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209505628714022"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209520412267218"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209520684325476"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209520685158593"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209520686872760"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209520736497882"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209520736534199"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209532172007782"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209532173777828"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209532174195008"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209532414292455"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209532492360760"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209532492472644"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209545082277182"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209545082558390"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209545133010546"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209545133066346"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209545133929007"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209545228556095"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209548865479891"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209548925101551"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209548925142250"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209548925318712"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209548974381360"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209548975887825"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209553231516208"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209553233299509"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209553284532703"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209553285309811"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209553346722306"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209553347233620"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209565196556206"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209565234974621"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209565235851022"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209565236123626"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209565333506305"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209565334570509"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209576866546163"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209576866764878"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209576867099289"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209576867735192"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209576921925133"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209577083687575"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209591791170618"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209591921851785"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209591922007126"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209591924706582"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209592227444742"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209592227714172"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209603753673436"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209603755511714"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209603757028380"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209603786583596"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209603834845282"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209603837159640"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209616646250263"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209616646356009"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209616696758998"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209616697952530"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209616698035279"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209616729123947"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209620461164389"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209620461202585"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209620461277303"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209620508729766"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209620509950230"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209620510677326"
+    },
+    {
+      "name": "SuperCare Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209624624463256"
+    },
+    {
+      "name": "Total (excluding VAT) Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209624625941282"
+    },
+    {
+      "name": "Price per unit after gargash descoping\nPercent increase result Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209624626429869"
+    },
+    {
+      "name": "Price per unit Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209624626661739"
+    },
+    {
+      "name": "Quantity of deliverables Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209624763247221"
+    },
+    {
+      "name": "Unit Description Focus Points",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209624881109473"
+    },
+    {
+      "name": "CS | PIPELINE",
+      "client": "CS",
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209625156396357"
+    },
+    {
+      "name": "Ramy | Ayham & Moh",
+      "client": "Ramy",
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1209797176864482"
+    },
+    {
+      "name": "Iman's Board",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1210054815481626"
+    },
+    {
+      "name": "CS Board",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1210094795613334"
+    },
+    {
+      "name": "Jessica",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1210237988980844"
+    },
+    {
+      "name": "Workflows",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1210316384444865"
+    },
+    {
+      "name": "Muhannad's Tasks",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1210397047350254"
+    },
+    {
+      "name": "Leadership Board",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1210676981245889"
+    },
+    {
+      "name": "Creative Asset Feedback & Approval",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1211054680364409"
+    },
+    {
+      "name": "hrmny | Daily Workflow ",
+      "client": "hrmny",
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1211063723676557"
+    },
+    {
+      "name": "Talents ",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1211076522937593"
+    },
+    {
+      "name": "[Onboarding Template]",
+      "client": "Onboarding Template",
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1211210997538971"
+    },
+    {
+      "name": "Onboarding - Maher Al Chatty",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1211288497497858"
+    },
+    {
+      "name": "Proposal pipeline",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1211326599826024"
+    },
+    {
+      "name": "hrmny launch | codename: sync",
+      "client": "hrmny launch",
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1211491802161372"
+    },
+    {
+      "name": "SSS | DFC | Master Visual | KV",
+      "client": "SSS",
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1211558954577122"
+    },
+    {
+      "name": "SSS | DFC | Production & Live Coverage",
+      "client": "SSS",
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1211585334090230"
+    },
+    {
+      "name": "Performance Review '25",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1211767315140121"
+    },
+    {
+      "name": "Five Guys | Golden Burger Hub",
+      "client": "Five Guys",
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1212001698689073"
+    },
+    {
+      "name": "hrmny Marketing Hub",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1212004311965625"
+    },
+    {
+      "name": "00. System Intake Ledger",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1212257582947314"
+    },
+    {
+      "name": "Active Production Deliveries",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1212286431620356"
+    },
+    {
+      "name": "01. Crisis Battle Board",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1212295858490498"
+    },
+    {
+      "name": "System Audit Log",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1212295879605198"
+    },
+    {
+      "name": "Post Production (ALL CLIENTS)",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1212305269694968"
+    },
+    {
+      "name": "Active Production Deliveries (project fallback)",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1212318971546377"
+    },
+    {
+      "name": "[Creative] Projects ",
+      "client": "Creative",
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1212471877348391"
+    },
+    {
+      "name": "INCOMING PROJECTS",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1212471877348396"
+    },
+    {
+      "name": "Sales Pipeline 2026",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1212644562548139"
+    },
+    {
+      "name": "ASICS Sportstyle Store Launch",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1212695933276920"
+    },
+    {
+      "name": "Stuti Dhakan's previously assigned tasks",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1212716026010371"
+    },
+    {
+      "name": "Feb",
+      "client": null,
+      "status": "active",
+      "source": "asana",
+      "asana_gid": "1212831709108489"
+    }
+  ],
+  "updated_at": "2026-01-30T13:46:40.021148+00:00"
+}

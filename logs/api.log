@@ -1,0 +1,22 @@
+2026-02-01 09:17:52 [INFO] CollectorOrchestrator: Initialized collector: asana
+2026-02-01 09:17:52 [INFO] CollectorOrchestrator: Initialized collector: gmail
+2026-02-01 09:17:52 [INFO] CollectorOrchestrator: Initialized collector: calendar
+2026-02-01 09:17:52 [INFO] CollectorOrchestrator: Initialized collector: tasks
+INFO:     Started server process [12066]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8420 (Press CTRL+C to quit)
+INFO:     127.0.0.1:52464 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:55804 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:57537 - "GET /api/health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61246 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:61246 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:61256 - "GET / HTTP/1.1" 404 Not Found
+INFO:     127.0.0.1:61258 - "GET /docs HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61261 - "GET /api/priorities HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61263 - "GET /api/anomalies HTTP/1.1" 200 OK
+INFO:     127.0.0.1:61400 - "GET /api/insights HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [12066]

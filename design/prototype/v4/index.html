@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HRMNY</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+  <style>
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    
+    @keyframes scanline {
+      0% { transform: translateY(-100%); }
+      100% { transform: translateY(100vh); }
+    }
+    
+    @keyframes glitch {
+      0%, 90%, 100% { transform: translate(0); }
+      92% { transform: translate(-2px, 1px); }
+      94% { transform: translate(2px, -1px); }
+      96% { transform: translate(-1px, 2px); }
+      98% { transform: translate(1px, -2px); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes typeIn {
+      from { width: 0; }
+      to { width: 100%; }
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --black: #000000;
+      --white: #ffffff;
+      --grey: #333333;
+      --accent: #ff3d00;
+      --accent-dim: #ff3d0066;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      background: var(--black);
+      color: var(--white);
+      overflow: hidden;
+    }
+
+    /* Scanline effect */
+    .scanline {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(transparent, rgba(255,255,255,0.03), transparent);
+      pointer-events: none;
+      z-index: 1000;
+      animation: scanline 8s linear infinite;
+    }
+
+    /* Main container */
+    .container {
+      height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      padding: 32px;
+      gap: 32px;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 32px;
+      border-bottom: 1px solid var(--grey);
+    }
+
+    .logo {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.3em;
+      color: var(--white);
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--grey);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    .time {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--grey);
+    }
+
+    /* Main content */
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 64px;
+      align-items: center;
+      overflow: hidden;
+    }
+
+    /* Focus panel - the one thing that matters */
+    .focus {
+      animation: fadeIn 0.6s ease-out;
+    }
+
+    .focus-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.2em;
+      color: var(--accent);
+      margin-bottom: 24px;
+      text-transform: uppercase;
+    }
+
+    .focus-title {
+      font-size: clamp(32px, 5vw, 56px);
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: 32px;
+      letter-spacing: -0.02em;
+    }
+
+    .focus-title span {
+      color: var(--accent);
+    }
+
+    .focus-context {
+      font-size: 18px;
+      line-height: 1.6;
+      color: #888;
+      margin-bottom: 48px;
+      max-width: 500px;
+    }
+
+    .focus-actions {
+      display: flex;
+      gap: 16px;
+    }
+
+    .btn {
+      padding: 16px 32px;
+      font-family: 'Space Grotesk', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      border: none;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--black);
+    }
+
+    .btn-primary:hover {
+      background: var(--white);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--white);
+      border: 1px solid var(--grey);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--white);
+    }
+
+    /* Data panel */
+    .data {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      padding-left: 64px;
+      border-left: 1px solid var(--grey);
+      animation: fadeIn 0.6s ease-out 0.2s both;
+    }
+
+    .metric {
+      padding: 24px 0;
+      border-bottom: 1px solid var(--grey);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .metric:last-child {
+      border-bottom: none;
+    }
+
+    .metric:hover {
+      padding-left: 16px;
+      border-left: 2px solid var(--accent);
+      margin-left: -2px;
+    }
+
+    .metric-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      color: var(--grey);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .metric-value {
+      font-size: 32px;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .metric-value.alert {
+      color: var(--accent);
+    }
+
+    .metric-sub {
+      font-size: 13px;
+      color: #666;
+      margin-top: 4px;
+    }
+
+    /* Queue */
+    .queue {
+      animation: fadeIn 0.6s ease-out 0.4s both;
+    }
+
+    .queue-label {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.15em;
+      color: var(--grey);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .queue-items {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .queue-item {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 16px;
+      background: #0a0a0a;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-size: 14px;
+    }
+
+    .queue-item:hover {
+      background: #111;
+      padding-left: 24px;
+    }
+
+    .queue-item-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--grey);
+      width: 24px;
+    }
+
+    .queue-item-text {
+      flex: 1;
+      color: #999;
+    }
+
+    .queue-item-meta {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--grey);
+    }
+
+    /* Footer */
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 32px;
+      border-top: 1px solid var(--grey);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      color: var(--grey);
+    }
+
+    .footer-nav {
+      display: flex;
+      gap: 48px;
+    }
+
+    .footer-nav a {
+      color: var(--grey);
+      text-decoration: none;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      transition: color 0.15s ease;
+    }
+
+    .footer-nav a:hover {
+      color: var(--white);
+    }
+
+    .footer-nav a.active {
+      color: var(--accent);
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .main {
+        grid-template-columns: 1fr;
+        gap: 48px;
+      }
+
+      .data {
+        padding-left: 0;
+        border-left: none;
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+
+      .metric {
+        flex: 1;
+        min-width: 150px;
+        border-bottom: none;
+        border-right: 1px solid var(--grey);
+        padding-right: 24px;
+      }
+
+      .metric:last-child {
+        border-right: none;
+      }
+
+      .metric:hover {
+        padding-left: 0;
+        border-left: none;
+        margin-left: 0;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .container {
+        padding: 20px;
+      }
+
+      .focus-title {
+        font-size: 28px;
+      }
+
+      .btn {
+        padding: 12px 24px;
+        font-size: 12px;
+      }
+
+      .footer-nav {
+        gap: 24px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="scanline"></div>
+  
+  <div class="container">
+    <header class="header">
+      <div class="logo">HRMNY</div>
+      <div class="status">
+        <div class="status-dot"></div>
+        <span>LIVE</span>
+      </div>
+      <div class="time">WED 05 FEB — 09:14</div>
+    </header>
+
+    <main class="main">
+      <div class="focus">
+        <div class="focus-label">// Requires attention</div>
+        <h1 class="focus-title">
+          GMG Ramadan<br>
+          <span>is at risk.</span>
+        </h1>
+        <p class="focus-context">
+          Campaign brief hasn't started. 39 days to deadline. 
+          You have a review meeting at 11:00 — that's your window to escalate.
+        </p>
+        <div class="focus-actions">
+          <button class="btn btn-primary">Escalate now</button>
+          <button class="btn btn-secondary">See project</button>
+        </div>
+      </div>
+
+      <div class="data">
+        <div class="metric">
+          <div class="metric-label">Outstanding AR</div>
+          <div class="metric-value alert">276K</div>
+          <div class="metric-sub">3 invoices overdue · Supercare needs a call</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Projects</div>
+          <div class="metric-value">10</div>
+          <div class="metric-sub">1 at risk · 2 need attention</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Team Capacity</div>
+          <div class="metric-value">94%</div>
+          <div class="metric-sub">Nominal · No overloads</div>
+        </div>
+        <div class="metric">
+          <div class="metric-label">Client Health</div>
+          <div class="metric-value">72</div>
+          <div class="metric-sub">GMG trending down · Gargash stable</div>
+        </div>
+
+        <div class="queue">
+          <div class="queue-label">// Next up</div>
+          <div class="queue-items">
+            <div class="queue-item">
+              <span class="queue-item-num">02</span>
+              <span class="queue-item-text">Supercare collection — AED 75K at 60+ days</span>
+              <span class="queue-item-meta">CASH</span>
+            </div>
+            <div class="queue-item">
+              <span class="queue-item-num">03</span>
+              <span class="queue-item-text">Gargash contract meeting — Friday, no prep</span>
+              <span class="queue-item-meta">PREP</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <nav class="footer-nav">
+        <a href="#" class="active">Command</a>
+        <a href="#">Clients</a>
+        <a href="#">Projects</a>
+        <a href="#">Cash</a>
+        <a href="#">Team</a>
+      </nav>
+      <div>Data synced 2 min ago · All systems operational</div>
+    </footer>
+  </div>
+</body>
+</html>

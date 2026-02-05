@@ -1,0 +1,40 @@
+# Intelligence Configuration
+# How the system analyzes and prioritizes
+
+priority:
+  weights:
+    due_date: 0.35        # Most important - when is it due
+    explicit_priority: 0.25
+    sender_importance: 0.20
+    project_criticality: 0.10
+    recency: 0.10
+  
+  due_date_scoring:
+    overdue_base: 90
+    overdue_per_day: 5    # +5 per day overdue
+    due_today: 80
+    due_tomorrow: 65
+    due_this_week: 50
+    due_next_week: 30
+    no_due_date: 20
+
+time:
+  work_hours:
+    start: "09:00"
+    end: "22:00"
+  deep_work:
+    preferred_start: "10:00"
+    preferred_end: "14:00"
+    min_block_minutes: 60
+  meeting_buffer: 15  # minutes after meetings
+  context_switch_cost: 10  # minutes
+
+escalation:
+  overdue_threshold_hours: 24
+  response_expected_hours: 48
+  critical_sender_response_hours: 4
+
+patterns:
+  min_occurrences: 3
+  confidence_threshold: 0.7
+  lookback_days: 30

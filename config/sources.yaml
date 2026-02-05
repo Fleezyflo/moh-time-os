@@ -1,0 +1,48 @@
+# Data Source Configuration
+# All external systems the OS connects to
+
+sources:
+  asana:
+    enabled: true
+    sync_interval: 300  # 5 minutes
+    workspaces: []  # Will be auto-discovered
+    priority_rules:
+      - field: "custom_field.priority"
+        mapping:
+          "High": 40
+          "Medium": 20
+          "Low": 0
+  
+  gmail:
+    enabled: true
+    sync_interval: 120  # 2 minutes
+    lookback_days: 30  # Past 30 days (reduced from 90 for faster cycles)
+    max_results: 200  # Max emails to fetch (reduced from 500)
+    max_body_fetch: 100  # Max bodies to fetch per sync (increased for commitment extraction)
+    priority_senders:
+      - pattern: "@hrmny"
+        boost: 30
+      - pattern: "important"
+        boost: 20
+    ignore_categories:
+      - "CATEGORY_PROMOTIONS"
+      - "CATEGORY_UPDATES"
+      - "CATEGORY_SOCIAL"
+  
+  calendar:
+    enabled: true
+    sync_interval: 60  # 1 minute
+    calendars:
+      - id: "primary"
+        importance: 100
+    lookback_days: 30  # Past 30 days
+    lookahead_days: 30  # Future 30 days
+    prep_time_default: 15
+  
+  xero:
+    enabled: true
+    sync_interval: 300  # 5 minutes
+  
+  apollo:
+    enabled: false  # Enable when ready
+    sync_interval: 600  # 10 minutes

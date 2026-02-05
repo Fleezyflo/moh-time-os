@@ -1,0 +1,789 @@
+{
+  "collected_at": "2026-02-05T19:15:05.016379+00:00",
+  "outstanding": [
+    {
+      "number": "INV-1451_Ref INV-1365",
+      "contact": "GMG Consumer LLC",
+      "amount_due": 7350.0,
+      "currency": "AED",
+      "due_date": "2025-11-01",
+      "is_overdue": true,
+      "days_overdue": 96
+    },
+    {
+      "number": "INV-1411",
+      "contact": "Super Care Pharmacy L.L.C",
+      "amount_due": 30098.25,
+      "currency": "AED",
+      "due_date": "2025-11-30",
+      "is_overdue": true,
+      "days_overdue": 67
+    },
+    {
+      "number": "INV-1410",
+      "contact": "Super Care Pharmacy L.L.C",
+      "amount_due": 15049.13,
+      "currency": "AED",
+      "due_date": "2025-11-30",
+      "is_overdue": true,
+      "days_overdue": 67
+    },
+    {
+      "number": "INV-1478 PO 203079",
+      "contact": "Gargash Enterprises L.L.C",
+      "amount_due": 1260.0,
+      "currency": "AED",
+      "due_date": "2025-12-01",
+      "is_overdue": true,
+      "days_overdue": 66
+    },
+    {
+      "number": "INV-1409",
+      "contact": "GMG Consumer LLC",
+      "amount_due": 100236.15,
+      "currency": "AED",
+      "due_date": "2025-12-24",
+      "is_overdue": true,
+      "days_overdue": 43
+    },
+    {
+      "number": "INV-1497",
+      "contact": "Chalhoub Inc. FZE",
+      "amount_due": 38587.5,
+      "currency": "AED",
+      "due_date": "2025-12-29",
+      "is_overdue": true,
+      "days_overdue": 38
+    },
+    {
+      "number": "INV-1487",
+      "contact": "Super Care Pharmacy L.L.C",
+      "amount_due": 30098.25,
+      "currency": "AED",
+      "due_date": "2025-12-30",
+      "is_overdue": true,
+      "days_overdue": 37
+    },
+    {
+      "number": "INV-1488",
+      "contact": "J W MARRIOTT MARQUIS HOTEL",
+      "amount_due": 2151.77,
+      "currency": "AED",
+      "due_date": "2025-12-31",
+      "is_overdue": true,
+      "days_overdue": 36
+    },
+    {
+      "number": "INV-1510",
+      "contact": "ASICS ARABIA FZE",
+      "amount_due": 26675.0,
+      "currency": "AED",
+      "due_date": "2026-01-15",
+      "is_overdue": true,
+      "days_overdue": 21
+    },
+    {
+      "number": "INV-1486",
+      "contact": "GMG Consumer LLC",
+      "amount_due": 100236.15,
+      "currency": "AED",
+      "due_date": "2026-01-24",
+      "is_overdue": true,
+      "days_overdue": 12
+    },
+    {
+      "number": "INV-1513",
+      "contact": "FGE International BV",
+      "amount_due": 1200.0,
+      "currency": "AED",
+      "due_date": "2026-01-28",
+      "is_overdue": true,
+      "days_overdue": 8
+    },
+    {
+      "number": "INV-1498",
+      "contact": "GMG Consumer LLC",
+      "amount_due": 100236.15,
+      "currency": "AED",
+      "due_date": "2026-01-30",
+      "is_overdue": true,
+      "days_overdue": 6
+    },
+    {
+      "number": "INV-1505",
+      "contact": "Al Khayyat Investments LLC",
+      "amount_due": 42850.5,
+      "currency": "AED",
+      "due_date": "2026-01-30",
+      "is_overdue": true,
+      "days_overdue": 6
+    },
+    {
+      "number": "INV-1480",
+      "contact": "Gargash Enterprises L.L.C",
+      "amount_due": 35631.75,
+      "currency": "AED",
+      "due_date": "2026-01-30",
+      "is_overdue": true,
+      "days_overdue": 6
+    },
+    {
+      "number": "INV-1506",
+      "contact": "Super Care Pharmacy L.L.C",
+      "amount_due": 30098.25,
+      "currency": "AED",
+      "due_date": "2026-01-30",
+      "is_overdue": true,
+      "days_overdue": 6
+    },
+    {
+      "number": "INV-1479",
+      "contact": "Gargash Enterprises L.L.C",
+      "amount_due": 26250.0,
+      "currency": "AED",
+      "due_date": "2026-01-30",
+      "is_overdue": true,
+      "days_overdue": 6
+    },
+    {
+      "number": "INV-1481",
+      "contact": "Gargash Enterprises L.L.C",
+      "amount_due": 10815.0,
+      "currency": "AED",
+      "due_date": "2026-01-30",
+      "is_overdue": true,
+      "days_overdue": 6
+    },
+    {
+      "number": "INV-1482",
+      "contact": "Gargash Enterprises L.L.C",
+      "amount_due": 10815.0,
+      "currency": "AED",
+      "due_date": "2026-01-30",
+      "is_overdue": true,
+      "days_overdue": 6
+    },
+    {
+      "number": "INV-1483",
+      "contact": "Charabanc Transportation LLC",
+      "amount_due": 10815.0,
+      "currency": "AED",
+      "due_date": "2026-01-30",
+      "is_overdue": true,
+      "days_overdue": 6
+    },
+    {
+      "number": "INV-1522",
+      "contact": "Al Khayyat Investments LLC",
+      "amount_due": 630.0,
+      "currency": "AED",
+      "due_date": "2026-02-04",
+      "is_overdue": true,
+      "days_overdue": 1
+    },
+    {
+      "number": "INV-1520",
+      "contact": "GMG Consumer LLC",
+      "amount_due": 100236.15,
+      "currency": "AED",
+      "due_date": "2026-03-24",
+      "is_overdue": false,
+      "days_overdue": 0
+    },
+    {
+      "number": "INV-1500",
+      "contact": "Gargash Enterprises L.L.C",
+      "amount_due": 35631.75,
+      "currency": "AED",
+      "due_date": "2026-02-28",
+      "is_overdue": false,
+      "days_overdue": 0
+    },
+    {
+      "number": "INV-1515",
+      "contact": "Gargash Enterprises L.L.C",
+      "amount_due": 35631.75,
+      "currency": "AED",
+      "due_date": "2026-03-30",
+      "is_overdue": false,
+      "days_overdue": 0
+    },
+    {
+      "number": "INV-1521",
+      "contact": "Super Care Pharmacy L.L.C",
+      "amount_due": 30098.25,
+      "currency": "AED",
+      "due_date": "2026-02-28",
+      "is_overdue": false,
+      "days_overdue": 0
+    },
+    {
+      "number": "INV-1499",
+      "contact": "Gargash Enterprises L.L.C",
+      "amount_due": 26250.0,
+      "currency": "AED",
+      "due_date": "2026-02-28",
+      "is_overdue": false,
+      "days_overdue": 0
+    },
+    {
+      "number": "INV-1514",
+      "contact": "Gargash Enterprises L.L.C",
+      "amount_due": 26250.0,
+      "currency": "AED",
+      "due_date": "2026-03-30",
+      "is_overdue": false,
+      "days_overdue": 0
+    },
+    {
+      "number": "INV-1519",
+      "contact": "FGE International BV",
+      "amount_due": 20000.0,
+      "currency": "AED",
+      "due_date": "2026-02-28",
+      "is_overdue": false,
+      "days_overdue": 0
+    },
+    {
+      "number": "INV-1501",
+      "contact": "Gargash Enterprises L.L.C",
+      "amount_due": 10815.0,
+      "currency": "AED",
+      "due_date": "2026-02-28",
+      "is_overdue": false,
+      "days_overdue": 0
+    },
+    {
+      "number": "INV-1502",
+      "contact": "Gargash Enterprises L.L.C",
+      "amount_due": 10815.0,
+      "currency": "AED",
+      "due_date": "2026-02-28",
+      "is_overdue": false,
+      "days_overdue": 0
+    },
+    {
+      "number": "INV-1503",
+      "contact": "Charabanc Transportation LLC",
+      "amount_due": 10815.0,
+      "currency": "AED",
+      "due_date": "2026-02-28",
+      "is_overdue": false,
+      "days_overdue": 0
+    },
+    {
+      "number": "INV-1516",
+      "contact": "Gargash Enterprises L.L.C",
+      "amount_due": 10815.0,
+      "currency": "AED",
+      "due_date": "2026-03-30",
+      "is_overdue": false,
+      "days_overdue": 0
+    },
+    {
+      "number": "INV-1517",
+      "contact": "Gargash Enterprises L.L.C",
+      "amount_due": 10815.0,
+      "currency": "AED",
+      "due_date": "2026-03-30",
+      "is_overdue": false,
+      "days_overdue": 0
+    },
+    {
+      "number": "INV-1518",
+      "contact": "Charabanc Transportation LLC",
+      "amount_due": 10815.0,
+      "currency": "AED",
+      "due_date": "2026-03-30",
+      "is_overdue": false,
+      "days_overdue": 0
+    }
+  ],
+  "summary": {
+    "total_outstanding": 33,
+    "total_ar": 960071.75,
+    "overdue_count": 20,
+    "overdue_amount": 621083.85,
+    "invoices": [
+      {
+        "number": "INV-1451_Ref INV-1365",
+        "contact": "GMG Consumer LLC",
+        "amount_due": 7350.0,
+        "currency": "AED",
+        "due_date": "2025-11-01",
+        "is_overdue": true,
+        "days_overdue": 96
+      },
+      {
+        "number": "INV-1411",
+        "contact": "Super Care Pharmacy L.L.C",
+        "amount_due": 30098.25,
+        "currency": "AED",
+        "due_date": "2025-11-30",
+        "is_overdue": true,
+        "days_overdue": 67
+      },
+      {
+        "number": "INV-1410",
+        "contact": "Super Care Pharmacy L.L.C",
+        "amount_due": 15049.13,
+        "currency": "AED",
+        "due_date": "2025-11-30",
+        "is_overdue": true,
+        "days_overdue": 67
+      },
+      {
+        "number": "INV-1478 PO 203079",
+        "contact": "Gargash Enterprises L.L.C",
+        "amount_due": 1260.0,
+        "currency": "AED",
+        "due_date": "2025-12-01",
+        "is_overdue": true,
+        "days_overdue": 66
+      },
+      {
+        "number": "INV-1409",
+        "contact": "GMG Consumer LLC",
+        "amount_due": 100236.15,
+        "currency": "AED",
+        "due_date": "2025-12-24",
+        "is_overdue": true,
+        "days_overdue": 43
+      },
+      {
+        "number": "INV-1497",
+        "contact": "Chalhoub Inc. FZE",
+        "amount_due": 38587.5,
+        "currency": "AED",
+        "due_date": "2025-12-29",
+        "is_overdue": true,
+        "days_overdue": 38
+      },
+      {
+        "number": "INV-1487",
+        "contact": "Super Care Pharmacy L.L.C",
+        "amount_due": 30098.25,
+        "currency": "AED",
+        "due_date": "2025-12-30",
+        "is_overdue": true,
+        "days_overdue": 37
+      },
+      {
+        "number": "INV-1488",
+        "contact": "J W MARRIOTT MARQUIS HOTEL",
+        "amount_due": 2151.77,
+        "currency": "AED",
+        "due_date": "2025-12-31",
+        "is_overdue": true,
+        "days_overdue": 36
+      },
+      {
+        "number": "INV-1510",
+        "contact": "ASICS ARABIA FZE",
+        "amount_due": 26675.0,
+        "currency": "AED",
+        "due_date": "2026-01-15",
+        "is_overdue": true,
+        "days_overdue": 21
+      },
+      {
+        "number": "INV-1486",
+        "contact": "GMG Consumer LLC",
+        "amount_due": 100236.15,
+        "currency": "AED",
+        "due_date": "2026-01-24",
+        "is_overdue": true,
+        "days_overdue": 12
+      },
+      {
+        "number": "INV-1513",
+        "contact": "FGE International BV",
+        "amount_due": 1200.0,
+        "currency": "AED",
+        "due_date": "2026-01-28",
+        "is_overdue": true,
+        "days_overdue": 8
+      },
+      {
+        "number": "INV-1498",
+        "contact": "GMG Consumer LLC",
+        "amount_due": 100236.15,
+        "currency": "AED",
+        "due_date": "2026-01-30",
+        "is_overdue": true,
+        "days_overdue": 6
+      },
+      {
+        "number": "INV-1505",
+        "contact": "Al Khayyat Investments LLC",
+        "amount_due": 42850.5,
+        "currency": "AED",
+        "due_date": "2026-01-30",
+        "is_overdue": true,
+        "days_overdue": 6
+      },
+      {
+        "number": "INV-1480",
+        "contact": "Gargash Enterprises L.L.C",
+        "amount_due": 35631.75,
+        "currency": "AED",
+        "due_date": "2026-01-30",
+        "is_overdue": true,
+        "days_overdue": 6
+      },
+      {
+        "number": "INV-1506",
+        "contact": "Super Care Pharmacy L.L.C",
+        "amount_due": 30098.25,
+        "currency": "AED",
+        "due_date": "2026-01-30",
+        "is_overdue": true,
+        "days_overdue": 6
+      },
+      {
+        "number": "INV-1479",
+        "contact": "Gargash Enterprises L.L.C",
+        "amount_due": 26250.0,
+        "currency": "AED",
+        "due_date": "2026-01-30",
+        "is_overdue": true,
+        "days_overdue": 6
+      },
+      {
+        "number": "INV-1481",
+        "contact": "Gargash Enterprises L.L.C",
+        "amount_due": 10815.0,
+        "currency": "AED",
+        "due_date": "2026-01-30",
+        "is_overdue": true,
+        "days_overdue": 6
+      },
+      {
+        "number": "INV-1482",
+        "contact": "Gargash Enterprises L.L.C",
+        "amount_due": 10815.0,
+        "currency": "AED",
+        "due_date": "2026-01-30",
+        "is_overdue": true,
+        "days_overdue": 6
+      },
+      {
+        "number": "INV-1483",
+        "contact": "Charabanc Transportation LLC",
+        "amount_due": 10815.0,
+        "currency": "AED",
+        "due_date": "2026-01-30",
+        "is_overdue": true,
+        "days_overdue": 6
+      },
+      {
+        "number": "INV-1522",
+        "contact": "Al Khayyat Investments LLC",
+        "amount_due": 630.0,
+        "currency": "AED",
+        "due_date": "2026-02-04",
+        "is_overdue": true,
+        "days_overdue": 1
+      },
+      {
+        "number": "INV-1520",
+        "contact": "GMG Consumer LLC",
+        "amount_due": 100236.15,
+        "currency": "AED",
+        "due_date": "2026-03-24",
+        "is_overdue": false,
+        "days_overdue": 0
+      },
+      {
+        "number": "INV-1500",
+        "contact": "Gargash Enterprises L.L.C",
+        "amount_due": 35631.75,
+        "currency": "AED",
+        "due_date": "2026-02-28",
+        "is_overdue": false,
+        "days_overdue": 0
+      },
+      {
+        "number": "INV-1515",
+        "contact": "Gargash Enterprises L.L.C",
+        "amount_due": 35631.75,
+        "currency": "AED",
+        "due_date": "2026-03-30",
+        "is_overdue": false,
+        "days_overdue": 0
+      },
+      {
+        "number": "INV-1521",
+        "contact": "Super Care Pharmacy L.L.C",
+        "amount_due": 30098.25,
+        "currency": "AED",
+        "due_date": "2026-02-28",
+        "is_overdue": false,
+        "days_overdue": 0
+      },
+      {
+        "number": "INV-1499",
+        "contact": "Gargash Enterprises L.L.C",
+        "amount_due": 26250.0,
+        "currency": "AED",
+        "due_date": "2026-02-28",
+        "is_overdue": false,
+        "days_overdue": 0
+      },
+      {
+        "number": "INV-1514",
+        "contact": "Gargash Enterprises L.L.C",
+        "amount_due": 26250.0,
+        "currency": "AED",
+        "due_date": "2026-03-30",
+        "is_overdue": false,
+        "days_overdue": 0
+      },
+      {
+        "number": "INV-1519",
+        "contact": "FGE International BV",
+        "amount_due": 20000.0,
+        "currency": "AED",
+        "due_date": "2026-02-28",
+        "is_overdue": false,
+        "days_overdue": 0
+      },
+      {
+        "number": "INV-1501",
+        "contact": "Gargash Enterprises L.L.C",
+        "amount_due": 10815.0,
+        "currency": "AED",
+        "due_date": "2026-02-28",
+        "is_overdue": false,
+        "days_overdue": 0
+      },
+      {
+        "number": "INV-1502",
+        "contact": "Gargash Enterprises L.L.C",
+        "amount_due": 10815.0,
+        "currency": "AED",
+        "due_date": "2026-02-28",
+        "is_overdue": false,
+        "days_overdue": 0
+      },
+      {
+        "number": "INV-1503",
+        "contact": "Charabanc Transportation LLC",
+        "amount_due": 10815.0,
+        "currency": "AED",
+        "due_date": "2026-02-28",
+        "is_overdue": false,
+        "days_overdue": 0
+      },
+      {
+        "number": "INV-1516",
+        "contact": "Gargash Enterprises L.L.C",
+        "amount_due": 10815.0,
+        "currency": "AED",
+        "due_date": "2026-03-30",
+        "is_overdue": false,
+        "days_overdue": 0
+      },
+      {
+        "number": "INV-1517",
+        "contact": "Gargash Enterprises L.L.C",
+        "amount_due": 10815.0,
+        "currency": "AED",
+        "due_date": "2026-03-30",
+        "is_overdue": false,
+        "days_overdue": 0
+      },
+      {
+        "number": "INV-1518",
+        "contact": "Charabanc Transportation LLC",
+        "amount_due": 10815.0,
+        "currency": "AED",
+        "due_date": "2026-03-30",
+        "is_overdue": false,
+        "days_overdue": 0
+      }
+    ],
+    "overdue_invoices": [
+      {
+        "number": "INV-1451_Ref INV-1365",
+        "contact": "GMG Consumer LLC",
+        "amount_due": 7350.0,
+        "currency": "AED",
+        "due_date": "2025-11-01",
+        "is_overdue": true,
+        "days_overdue": 96
+      },
+      {
+        "number": "INV-1411",
+        "contact": "Super Care Pharmacy L.L.C",
+        "amount_due": 30098.25,
+        "currency": "AED",
+        "due_date": "2025-11-30",
+        "is_overdue": true,
+        "days_overdue": 67
+      },
+      {
+        "number": "INV-1410",
+        "contact": "Super Care Pharmacy L.L.C",
+        "amount_due": 15049.13,
+        "currency": "AED",
+        "due_date": "2025-11-30",
+        "is_overdue": true,
+        "days_overdue": 67
+      },
+      {
+        "number": "INV-1478 PO 203079",
+        "contact": "Gargash Enterprises L.L.C",
+        "amount_due": 1260.0,
+        "currency": "AED",
+        "due_date": "2025-12-01",
+        "is_overdue": true,
+        "days_overdue": 66
+      },
+      {
+        "number": "INV-1409",
+        "contact": "GMG Consumer LLC",
+        "amount_due": 100236.15,
+        "currency": "AED",
+        "due_date": "2025-12-24",
+        "is_overdue": true,
+        "days_overdue": 43
+      },
+      {
+        "number": "INV-1497",
+        "contact": "Chalhoub Inc. FZE",
+        "amount_due": 38587.5,
+        "currency": "AED",
+        "due_date": "2025-12-29",
+        "is_overdue": true,
+        "days_overdue": 38
+      },
+      {
+        "number": "INV-1487",
+        "contact": "Super Care Pharmacy L.L.C",
+        "amount_due": 30098.25,
+        "currency": "AED",
+        "due_date": "2025-12-30",
+        "is_overdue": true,
+        "days_overdue": 37
+      },
+      {
+        "number": "INV-1488",
+        "contact": "J W MARRIOTT MARQUIS HOTEL",
+        "amount_due": 2151.77,
+        "currency": "AED",
+        "due_date": "2025-12-31",
+        "is_overdue": true,
+        "days_overdue": 36
+      },
+      {
+        "number": "INV-1510",
+        "contact": "ASICS ARABIA FZE",
+        "amount_due": 26675.0,
+        "currency": "AED",
+        "due_date": "2026-01-15",
+        "is_overdue": true,
+        "days_overdue": 21
+      },
+      {
+        "number": "INV-1486",
+        "contact": "GMG Consumer LLC",
+        "amount_due": 100236.15,
+        "currency": "AED",
+        "due_date": "2026-01-24",
+        "is_overdue": true,
+        "days_overdue": 12
+      },
+      {
+        "number": "INV-1513",
+        "contact": "FGE International BV",
+        "amount_due": 1200.0,
+        "currency": "AED",
+        "due_date": "2026-01-28",
+        "is_overdue": true,
+        "days_overdue": 8
+      },
+      {
+        "number": "INV-1498",
+        "contact": "GMG Consumer LLC",
+        "amount_due": 100236.15,
+        "currency": "AED",
+        "due_date": "2026-01-30",
+        "is_overdue": true,
+        "days_overdue": 6
+      },
+      {
+        "number": "INV-1505",
+        "contact": "Al Khayyat Investments LLC",
+        "amount_due": 42850.5,
+        "currency": "AED",
+        "due_date": "2026-01-30",
+        "is_overdue": true,
+        "days_overdue": 6
+      },
+      {
+        "number": "INV-1480",
+        "contact": "Gargash Enterprises L.L.C",
+        "amount_due": 35631.75,
+        "currency": "AED",
+        "due_date": "2026-01-30",
+        "is_overdue": true,
+        "days_overdue": 6
+      },
+      {
+        "number": "INV-1506",
+        "contact": "Super Care Pharmacy L.L.C",
+        "amount_due": 30098.25,
+        "currency": "AED",
+        "due_date": "2026-01-30",
+        "is_overdue": true,
+        "days_overdue": 6
+      },
+      {
+        "number": "INV-1479",
+        "contact": "Gargash Enterprises L.L.C",
+        "amount_due": 26250.0,
+        "currency": "AED",
+        "due_date": "2026-01-30",
+        "is_overdue": true,
+        "days_overdue": 6
+      },
+      {
+        "number": "INV-1481",
+        "contact": "Gargash Enterprises L.L.C",
+        "amount_due": 10815.0,
+        "currency": "AED",
+        "due_date": "2026-01-30",
+        "is_overdue": true,
+        "days_overdue": 6
+      },
+      {
+        "number": "INV-1482",
+        "contact": "Gargash Enterprises L.L.C",
+        "amount_due": 10815.0,
+        "currency": "AED",
+        "due_date": "2026-01-30",
+        "is_overdue": true,
+        "days_overdue": 6
+      },
+      {
+        "number": "INV-1483",
+        "contact": "Charabanc Transportation LLC",
+        "amount_due": 10815.0,
+        "currency": "AED",
+        "due_date": "2026-01-30",
+        "is_overdue": true,
+        "days_overdue": 6
+      },
+      {
+        "number": "INV-1522",
+        "contact": "Al Khayyat Investments LLC",
+        "amount_due": 630.0,
+        "currency": "AED",
+        "due_date": "2026-02-04",
+        "is_overdue": true,
+        "days_overdue": 1
+      }
+    ]
+  }
+}

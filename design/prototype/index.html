@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HRMNY Control Room</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <style>
+    :root {
+      --bg-primary: #0A0A0B;
+      --bg-secondary: #141415;
+      --bg-elevated: #1C1C1E;
+      --text-primary: #FAFAFA;
+      --text-secondary: #A1A1AA;
+      --text-muted: #52525B;
+      --status-green: #22C55E;
+      --status-yellow: #EAB308;
+      --status-orange: #F97316;
+      --status-red: #EF4444;
+      --accent-blue: #3B82F6;
+      --border-subtle: #27272A;
+      --border-focus: #3B82F6;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+
+    /* Header */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 32px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .logo {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    .settings-btn {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 6px;
+      transition: all 150ms;
+    }
+
+    .settings-btn:hover {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+    }
+
+    /* Main Container */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px;
+    }
+
+    /* Pulse Section */
+    .pulse {
+      text-align: center;
+      padding: 48px 24px;
+      border: 1px solid var(--border-subtle);
+      border-radius: 16px;
+      background: var(--bg-secondary);
+      margin-bottom: 32px;
+    }
+
+    .pulse-indicator {
+      width: 20px;
+      height: 20px;
+      background: var(--status-yellow);
+      border-radius: 50%;
+      margin: 0 auto 16px;
+      box-shadow: 0 0 20px var(--status-yellow);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(1.1); }
+    }
+
+    .pulse-status {
+      font-size: 28px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+
+    .pulse-summary {
+      color: var(--text-secondary);
+      font-size: 14px;
+    }
+
+    /* Section */
+    .section {
+      margin-bottom: 32px;
+    }
+
+    .section-header {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+
+    /* Focus Cards */
+    .focus-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 12px;
+      cursor: pointer;
+      transition: all 150ms;
+      position: relative;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .focus-card:hover {
+      background: var(--bg-elevated);
+      border-color: #3a3a3c;
+    }
+
+    .focus-card.priority-red {
+      border-left: 3px solid var(--status-red);
+    }
+
+    .focus-card.priority-orange {
+      border-left: 3px solid var(--status-orange);
+    }
+
+    .focus-card.priority-yellow {
+      border-left: 3px solid var(--status-yellow);
+    }
+
+    .focus-card-content {
+      flex: 1;
+    }
+
+    .focus-card-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .focus-card-tag .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+
+    .focus-card-tag .dot.red { background: var(--status-red); }
+    .focus-card-tag .dot.orange { background: var(--status-orange); }
+    .focus-card-tag .dot.yellow { background: var(--status-yellow); }
+
+    .focus-card-title {
+      font-size: 15px;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+
+    .focus-card-detail {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .focus-card-arrow {
+      color: var(--text-muted);
+      margin-left: 16px;
+      flex-shrink: 0;
+    }
+
+    /* Domain Grid */
+    .domain-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+    }
+
+    .domain-tile {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: 12px;
+      padding: 20px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 150ms;
+    }
+
+    .domain-tile:hover {
+      background: var(--bg-elevated);
+      border-color: #3a3a3c;
+    }
+
+    .domain-tile-name {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+
+    .domain-tile-indicator {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      margin: 0 auto 12px;
+    }
+
+    .domain-tile-indicator.green { background: var(--status-green); }
+    .domain-tile-indicator.yellow { background: var(--status-yellow); }
+    .domain-tile-indicator.orange { background: var(--status-orange); }
+    .domain-tile-indicator.red { background: var(--status-red); }
+
+    .domain-tile-primary {
+      font-size: 13px;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .domain-tile-secondary {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Footer */
+    .footer {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      padding: 24px;
+      border-top: 1px solid var(--border-subtle);
+      margin-top: 24px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .footer-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .footer-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--status-green);
+    }
+
+    /* Detail Panel */
+    .detail-panel {
+      position: fixed;
+      top: 0;
+      right: -600px;
+      width: 600px;
+      height: 100vh;
+      background: var(--bg-secondary);
+      border-left: 1px solid var(--border-subtle);
+      z-index: 100;
+      transition: right 200ms ease;
+      overflow-y: auto;
+    }
+
+    .detail-panel.open {
+      right: 0;
+    }
+
+    .detail-panel-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .detail-panel-back {
+      background: none;
+      border: none;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 8px;
+      margin: -8px;
+      border-radius: 6px;
+      transition: all 150ms;
+    }
+
+    .detail-panel-back:hover {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+    }
+
+    .detail-panel-title {
+      font-size: 17px;
+      font-weight: 600;
+    }
+
+    .detail-panel-badge {
+      margin-left: auto;
+      font-size: 11px;
+      font-weight: 500;
+      padding: 4px 8px;
+      background: var(--bg-elevated);
+      border-radius: 4px;
+      color: var(--text-secondary);
+    }
+
+    .detail-panel-content {
+      padding: 24px;
+    }
+
+    .detail-section {
+      margin-bottom: 32px;
+    }
+
+    .detail-section-title {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 16px;
+    }
+
+    /* Health Display */
+    .health-display {
+      display: grid;
+      grid-template-columns: 100px 1fr;
+      gap: 24px;
+      align-items: center;
+    }
+
+    .health-score {
+      text-align: center;
+    }
+
+    .health-score-value {
+      font-size: 36px;
+      font-weight: 600;
+    }
+
+    .health-score-label {
+      font-size: 12px;
+      color: var(--status-yellow);
+      font-weight: 500;
+    }
+
+    .health-score-trend {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    .health-breakdown {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .health-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .health-bar-label {
+      width: 80px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .health-bar-track {
+      flex: 1;
+      height: 4px;
+      background: var(--border-subtle);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .health-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 300ms ease;
+    }
+
+    .health-bar-fill.green { background: var(--status-green); }
+    .health-bar-fill.yellow { background: var(--status-yellow); }
+    .health-bar-fill.orange { background: var(--status-orange); }
+
+    .health-bar-value {
+      width: 30px;
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: right;
+    }
+
+    /* Project Tree */
+    .project-tree {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .project-tree-brand {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-secondary);
+      padding: 8px 0;
+    }
+
+    .project-tree-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0 8px 20px;
+      font-size: 13px;
+      border-left: 1px solid var(--border-subtle);
+      margin-left: 6px;
+    }
+
+    .project-tree-item:last-child {
+      border-left-color: transparent;
+    }
+
+    .project-tree-status {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .project-tree-status.green { background: var(--status-green); }
+    .project-tree-status.yellow { background: var(--status-yellow); }
+    .project-tree-status.red { background: var(--status-red); }
+
+    .project-tree-name {
+      flex: 1;
+      color: var(--text-primary);
+    }
+
+    .project-tree-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Invoice List */
+    .invoice-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .invoice-item {
+      display: grid;
+      grid-template-columns: 80px 1fr 80px 100px;
+      gap: 12px;
+      align-items: center;
+      padding: 12px;
+      background: var(--bg-elevated);
+      border-radius: 8px;
+      font-size: 13px;
+    }
+
+    .invoice-id {
+      color: var(--text-muted);
+      font-family: monospace;
+      font-size: 12px;
+    }
+
+    .invoice-amount {
+      font-weight: 500;
+    }
+
+    .invoice-status {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 4px 8px;
+      border-radius: 4px;
+      text-align: center;
+    }
+
+    .invoice-status.red {
+      background: rgba(239, 68, 68, 0.15);
+      color: var(--status-red);
+    }
+
+    .invoice-status.orange {
+      background: rgba(249, 115, 22, 0.15);
+      color: var(--status-orange);
+    }
+
+    .invoice-status.green {
+      background: rgba(34, 197, 94, 0.15);
+      color: var(--status-green);
+    }
+
+    .invoice-action {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Activity Feed */
+    .activity-feed {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .activity-item {
+      display: flex;
+      gap: 12px;
+      font-size: 13px;
+    }
+
+    .activity-date {
+      width: 50px;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .activity-content {
+      color: var(--text-secondary);
+    }
+
+    /* Actions */
+    .actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 150ms;
+      border: none;
+    }
+
+    .btn-primary {
+      background: var(--accent-blue);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #2563eb;
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+    }
+
+    .btn-ghost:hover {
+      background: var(--bg-elevated);
+      color: var(--text-primary);
+    }
+
+    /* Overlay */
+    .overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      z-index: 50;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 200ms;
+    }
+
+    .overlay.visible {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .domain-grid {
+        grid-template-columns: repeat(3, 1fr);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        padding: 20px 16px;
+      }
+
+      .domain-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .detail-panel {
+        width: 100%;
+        right: -100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="logo">HRMNY</div>
+    <div class="header-right">
+      <span>Wed 5 Feb · 09:14</span>
+      <button class="settings-btn">
+        <i data-lucide="settings" style="width: 18px; height: 18px;"></i>
+      </button>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Pulse -->
+    <div class="pulse">
+      <div class="pulse-indicator"></div>
+      <div class="pulse-status">STABLE</div>
+      <div class="pulse-summary">1 project at risk · AED 213K overdue · 1 VIP thread</div>
+    </div>
+
+    <!-- Today's Focus -->
+    <section class="section">
+      <div class="section-header">Today's Focus</div>
+      
+      <div class="focus-card priority-red" onclick="openDetail('gmg')">
+        <div class="focus-card-content">
+          <div class="focus-card-tag">
+            <span class="dot red"></span>
+            DELIVERY
+          </div>
+          <div class="focus-card-title">GMG Ramadan Campaign — 15% complete, 39 days to deadline</div>
+          <div class="focus-card-detail">Risk: Campaign brief not started. Blocks all downstream.</div>
+        </div>
+        <i data-lucide="chevron-right" class="focus-card-arrow" style="width: 20px; height: 20px;"></i>
+      </div>
+
+      <div class="focus-card priority-orange" onclick="openDetail('cash')">
+        <div class="focus-card-content">
+          <div class="focus-card-tag">
+            <span class="dot orange"></span>
+            CASH
+          </div>
+          <div class="focus-card-title">Supercare — AED 75K across 3 invoices, oldest 61-90 days</div>
+          <div class="focus-card-detail">Action: Collection call needed. Email follow-ups exhausted.</div>
+        </div>
+        <i data-lucide="chevron-right" class="focus-card-arrow" style="width: 20px; height: 20px;"></i>
+      </div>
+
+      <div class="focus-card priority-yellow" onclick="openDetail('gmg')">
+        <div class="focus-card-content">
+          <div class="focus-card-tag">
+            <span class="dot yellow"></span>
+            COMMS
+          </div>
+          <div class="focus-card-title">Gargash contract discussion — meeting Friday, no prep done</div>
+          <div class="focus-card-detail">Prep: Review renewal terms before Fri 11:00 meeting.</div>
+        </div>
+        <i data-lucide="chevron-right" class="focus-card-arrow" style="width: 20px; height: 20px;"></i>
+      </div>
+    </section>
+
+    <!-- Domains -->
+    <section class="section">
+      <div class="section-header">Domains</div>
+      
+      <div class="domain-grid">
+        <div class="domain-tile" onclick="navigateTo('delivery')">
+          <div class="domain-tile-name">Delivery</div>
+          <div class="domain-tile-indicator red"></div>
+          <div class="domain-tile-primary">1 at-risk</div>
+          <div class="domain-tile-secondary">2 yellow</div>
+        </div>
+
+        <div class="domain-tile" onclick="navigateTo('clients')">
+          <div class="domain-tile-name">Clients</div>
+          <div class="domain-tile-indicator green"></div>
+          <div class="domain-tile-primary">5 active</div>
+          <div class="domain-tile-secondary">all good</div>
+        </div>
+
+        <div class="domain-tile" onclick="navigateTo('cash')">
+          <div class="domain-tile-name">Cash</div>
+          <div class="domain-tile-indicator orange"></div>
+          <div class="domain-tile-primary">213K AR</div>
+          <div class="domain-tile-secondary">3 overdue</div>
+        </div>
+
+        <div class="domain-tile" onclick="navigateTo('capacity')">
+          <div class="domain-tile-name">Capacity</div>
+          <div class="domain-tile-indicator green"></div>
+          <div class="domain-tile-primary">94% util</div>
+          <div class="domain-tile-secondary">nominal</div>
+        </div>
+
+        <div class="domain-tile" onclick="navigateTo('comms')">
+          <div class="domain-tile-name">Comms</div>
+          <div class="domain-tile-indicator yellow"></div>
+          <div class="domain-tile-primary">2 pending</div>
+          <div class="domain-tile-secondary">1 VIP</div>
+        </div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <div class="footer-item">
+        <span class="footer-dot"></span>
+        Data: 2 min ago
+      </div>
+      <div class="footer-item">All gates pass</div>
+      <div class="footer-item">Client coverage 87%</div>
+    </footer>
+  </main>
+
+  <!-- Overlay -->
+  <div class="overlay" id="overlay" onclick="closeDetail()"></div>
+
+  <!-- Detail Panel: GMG -->
+  <aside class="detail-panel" id="detail-gmg">
+    <div class="detail-panel-header">
+      <button class="detail-panel-back" onclick="closeDetail()">
+        <i data-lucide="arrow-left" style="width: 20px; height: 20px;"></i>
+      </button>
+      <div class="detail-panel-title">GMG Consumer LLC</div>
+      <div class="detail-panel-badge">Tier A</div>
+    </div>
+    
+    <div class="detail-panel-content">
+      <section class="detail-section">
+        <div class="detail-section-title">Health</div>
+        <div class="health-display">
+          <div class="health-score">
+            <div class="health-score-value">72.5</div>
+            <div class="health-score-label">GOOD</div>
+            <div class="health-score-trend">↓ from 78</div>
+          </div>
+          <div class="health-breakdown">
+            <div class="health-bar">
+              <span class="health-bar-label">Delivery</span>
+              <div class="health-bar-track">
+                <div class="health-bar-fill green" style="width: 78%"></div>
+              </div>
+              <span class="health-bar-value">78</span>
+            </div>
+            <div class="health-bar">
+              <span class="health-bar-label">Finance</span>
+              <div class="health-bar-track">
+                <div class="health-bar-fill yellow" style="width: 55%"></div>
+              </div>
+              <span class="health-bar-value">55</span>
+            </div>
+            <div class="health-bar">
+              <span class="health-bar-label">Responsive</span>
+              <div class="health-bar-track">
+                <div class="health-bar-fill green" style="width: 80%"></div>
+              </div>
+              <span class="health-bar-value">80</span>
+            </div>
+            <div class="health-bar">
+              <span class="health-bar-label">Commitment</span>
+              <div class="health-bar-track">
+                <div class="health-bar-fill green" style="width: 72%"></div>
+              </div>
+              <span class="health-bar-value">72</span>
+            </div>
+            <div class="health-bar">
+              <span class="health-bar-label">Capacity</span>
+              <div class="health-bar-track">
+                <div class="health-bar-fill green" style="width: 77%"></div>
+              </div>
+              <span class="health-bar-value">77</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="detail-section">
+        <div class="detail-section-title">Brands & Projects</div>
+        <div class="project-tree">
+          <div class="project-tree-brand">Monoprix (2 projects)</div>
+          <div class="project-tree-item">
+            <span class="project-tree-status green"></span>
+            <span class="project-tree-name">Monoprix Monthly</span>
+            <span class="project-tree-meta">65% · on track</span>
+          </div>
+          <div class="project-tree-item">
+            <span class="project-tree-status red"></span>
+            <span class="project-tree-name">GMG Ramadan Campaign</span>
+            <span class="project-tree-meta">15% · at risk</span>
+          </div>
+          
+          <div class="project-tree-brand">Geant (1 project)</div>
+          <div class="project-tree-item">
+            <span class="project-tree-status yellow"></span>
+            <span class="project-tree-name">Geant Monthly</span>
+            <span class="project-tree-meta">45% · 2 overdue</span>
+          </div>
+          
+          <div class="project-tree-brand">Aswaaq (1 project)</div>
+          <div class="project-tree-item">
+            <span class="project-tree-status green"></span>
+            <span class="project-tree-name">Aswaaq Monthly</span>
+            <span class="project-tree-meta">80% · on track</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="detail-section">
+        <div class="detail-section-title">Financials — AED 107,586 Outstanding</div>
+        <div class="invoice-list">
+          <div class="invoice-item">
+            <span class="invoice-id">INV-1451</span>
+            <span class="invoice-amount">AED 7,350</span>
+            <span class="invoice-status red">90+ days</span>
+            <span class="invoice-action">needs escalation</span>
+          </div>
+          <div class="invoice-item">
+            <span class="invoice-id">INV-1409</span>
+            <span class="invoice-amount">AED 100,236</span>
+            <span class="invoice-status orange">31-60 days</span>
+            <span class="invoice-action">follow-up sent</span>
+          </div>
+          <div class="invoice-item">
+            <span class="invoice-id">INV-1520</span>
+            <span class="invoice-amount">AED 45,000</span>
+            <span class="invoice-status green">current</span>
+            <span class="invoice-action">due Feb 15</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="detail-section">
+        <div class="detail-section-title">Recent Activity</div>
+        <div class="activity-feed">
+          <div class="activity-item">
+            <span class="activity-date">Feb 4</span>
+            <span class="activity-content">Meeting: GMG Campaign Review (11:00)</span>
+          </div>
+          <div class="activity-item">
+            <span class="activity-date">Feb 2</span>
+            <span class="activity-content">Email: GMG Campaign Feedback — from marketing@gmg.ae</span>
+          </div>
+          <div class="activity-item">
+            <span class="activity-date">Jan 30</span>
+            <span class="activity-content">Email: Feedback on Deliverables — from team@gmg.ae</span>
+          </div>
+          <div class="activity-item">
+            <span class="activity-date">Jan 27</span>
+            <span class="activity-content">Email: Re: Project Timeline — from pm@gmg.ae</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="detail-section">
+        <div class="detail-section-title">Actions</div>
+        <div class="actions">
+          <button class="btn btn-primary">Escalate INV-1451</button>
+          <button class="btn btn-ghost">View all invoices</button>
+          <button class="btn btn-ghost">Email client</button>
+        </div>
+      </section>
+    </div>
+  </aside>
+
+  <script>
+    // Initialize Lucide icons
+    lucide.createIcons();
+
+    // Detail panel functions
+    function openDetail(type) {
+      const panel = document.getElementById('detail-' + type);
+      const overlay = document.getElementById('overlay');
+      
+      if (panel) {
+        panel.classList.add('open');
+        overlay.classList.add('visible');
+      }
+    }
+
+    function closeDetail() {
+      document.querySelectorAll('.detail-panel').forEach(p => p.classList.remove('open'));
+      document.getElementById('overlay').classList.remove('visible');
+    }
+
+    function navigateTo(domain) {
+      console.log('Navigate to:', domain);
+      // Would load domain view
+    }
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeDetail();
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+{
+  "4c6d5427": {
+    "id": "4c6d5427",
+    "name": "Test Project",
+    "aliases": [
+      "TP",
+      "test-proj"
+    ],
+    "involvement": "active",
+    "default_lane": "client",
+    "task_list": null,
+    "auto_create_threshold": 0.8,
+    "propose_threshold": 0.5,
+    "scheduling_eligible": true,
+    "weekly_cap_minutes": null,
+    "default_delegatee": null,
+    "delegation_allowed": true,
+    "reporting_cadence": "weekly",
+    "escalation_threshold_days": 3,
+    "sensitivity_profile": [],
+    "approval_required": false,
+    "archive_after_days": 30,
+    "reactivation_keywords": [],
+    "max_proposals_per_day": 5,
+    "max_proposals_per_week": 20,
+    "client_id": null,
+    "created_at": "2026-02-01T04:36:14.357672+00:00",
+    "updated_at": "2026-02-01T04:36:14.357672+00:00",
+    "archived_at": null
+  }
+}

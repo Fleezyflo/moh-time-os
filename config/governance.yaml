@@ -1,0 +1,96 @@
+approval_required:
+- action: send
+  condition: always
+  domain: email
+- action: reply
+  condition: always
+  domain: email
+- action: create
+  condition: duration_minutes > 60
+  domain: calendar
+- action: delete
+  condition: always
+  domain: calendar
+- action: create
+  condition: priority > 70
+  domain: tasks
+- action: delete
+  condition: always
+  domain: tasks
+domains:
+  calendar:
+    auto_threshold: 0.95
+    mode: propose
+  email:
+    auto_threshold: 0.99
+    mode: propose
+  notifications:
+    auto_threshold: 0.7
+    mode: auto_low
+  tasks:
+    auto_threshold: 0.8
+    mode: auto_low  # Allow user-initiated actions
+emergency:
+  enabled: true
+  triggers:
+  - condition: error_rate > 0.3
+    window_minutes: 10
+  - condition: actions_per_minute > 20
+    window_minutes: 5
+notification_settings:
+  batching:
+    briefs:
+      daily: 09:00
+      eod: '19:30'
+      midday: '13:00'
+    low_priority:
+      enabled: true
+      interval_minutes: 60
+      max_batch_size: 10
+  channels:
+    clawdbot:
+      default_channel: telegram
+      default_to: '5629458720'
+      enabled: true
+      gateway_url: http://127.0.0.1:18789
+      token: e8b18308104005157f57252173c0cef311ede96b485d98d3
+    email:
+      enabled: false
+    push:
+      enabled: false
+  daily_limits:
+    critical: 3
+    high: 5
+    low: unlimited
+    normal: 10
+  quiet_hours:
+    allow_critical: true
+    enabled: true
+    end: 08:00
+    start: '23:00'
+    timezone: Asia/Dubai
+  types:
+    alert:
+      channels:
+      - clawdbot
+      default_priority: high
+    decision:
+      channels:
+      - clawdbot
+      default_priority: high
+      require_action: true
+    insight:
+      batch: true
+      channels:
+      - clawdbot
+      default_priority: low
+    reminder:
+      channels:
+      - clawdbot
+      default_priority: normal
+rate_limits:
+  calendar_updates: 20
+  emails: 5
+  notifications: 10
+  task_updates: 50
+  total_actions: 100

@@ -1,0 +1,7 @@
+# Credentials and tokens - never commit
+.credentials.json
+.xero_token_cache.json
+xero_contacts.json
+
+# Cache files
+*.cache

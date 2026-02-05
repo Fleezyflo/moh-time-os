@@ -1,0 +1,14 @@
+[
+  {
+    "message": "# Time OS Brief\nGenerated: 2026-02-01 04:44 UTC\n\n## Domain Modes\n- calendar: observe\n- tasks: observe\n- email: observe\n- delegation: observe\n- alerts: observe\n\n## Alerts\n- **[HIGH]** \u26a0\ufe0f 100 overdue items\n  \u2192 Review and update status or deadlines\n- **[MEDIUM]** \ud83d\udccb 3 items due today\n  \u2192 Prioritize or reschedule\n\n## Summary\n- Overdue: 100\n- Due today: 3\n- Due this week: 9\n- Active delegations: 1\n- Pending proposals: 0\n- Open conflicts: 1",
+    "channel": null,
+    "created_at": "2026-02-01T04:44:11.894079+00:00",
+    "sent": false
+  },
+  {
+    "message": "# Time OS Brief\nGenerated: 2026-02-01 04:47 UTC\n\n## Domain Modes\n- calendar: observe\n- tasks: observe\n- email: observe\n- delegation: observe\n- alerts: observe\n\n## Alerts\n- **[HIGH]** \u26a0\ufe0f 100 overdue items\n  \u2192 Review and update status or deadlines\n- **[MEDIUM]** \ud83d\udccb 3 items due today\n  \u2192 Prioritize or reschedule\n\n## Summary\n- Overdue: 100\n- Due today: 3\n- Due this week: 9\n- Active delegations: 1\n- Pending proposals: 0\n- Open conflicts: 1",
+    "channel": null,
+    "created_at": "2026-02-01T04:47:43.433005+00:00",
+    "sent": false
+  }
+]

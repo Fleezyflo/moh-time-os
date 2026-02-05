@@ -1,0 +1,102 @@
+# VIP registry from MOH_TIME_OS_VIP.md
+priority_tiers:
+  always_urgent:
+    description: "Immediate attention required"
+    interrupt_allowed: true
+    
+  important:
+    description: "High priority, batched unless urgent"
+    interrupt_allowed: false
+    
+  significant:
+    description: "Normal processing"
+    interrupt_allowed: false
+
+people:
+  # ALWAYS URGENT - Internal Leadership
+  - email: "ay@hrmny.co"
+    name: "Ayham Homsi"
+    tier: "always_urgent"
+    relationship: "internal"
+    role: "Co-founder"
+    
+  # IMPORTANT - Core Team
+  - email: "krystie@hrmny.co"
+    name: "Krystie Marie Beldad"
+    tier: "important"
+    relationship: "internal"
+    role: "Operations"
+    
+  - email: "aubrey@hrmny.co"
+    name: "Aubrey"
+    tier: "important"
+    relationship: "internal"
+    role: "People & Admin"
+    
+  - email: "rene@hrmny.co"
+    name: "Rene"
+    tier: "important"
+    relationship: "internal"
+    role: "Creative"
+    
+  - email: "amar@hrmny.co"
+    name: "Amar"
+    tier: "important"
+    relationship: "internal"
+    role: "Creative"
+    
+  - email: "jana@hrmny.co"
+    name: "Jana"
+    tier: "important"
+    relationship: "internal"
+    role: "Creative"
+
+domains:
+  # VIP domains - always prioritize
+  vip:
+    - "hrmny.co"
+    - "spotify.com"
+    - "akigroup.com"
+    - "gargash.ae"
+    - "gmg.com"
+    - "warner.com"
+    - "universalmusic.com"
+    - "sonymusic.com"
+    
+  # Finance domains - high priority for financial matters
+  finance:
+    - "alphapartners.co"
+    - "stripe.com"
+    - "wise.com"
+    
+  # Internal domains
+  internal:
+    - "hrmny.co"
+    - "creamstudio.co"
+
+# Response time expectations by tier
+response_sla:
+  always_urgent:
+    acknowledge_minutes: 15
+    respond_hours: 2
+  important:
+    acknowledge_minutes: 60
+    respond_hours: 8
+  significant:
+    acknowledge_minutes: 240
+    respond_hours: 24
+
+# Keywords that elevate priority
+urgency_keywords:
+  critical:
+    - "urgent"
+    - "asap"
+    - "emergency"
+    - "critical"
+    - "immediately"
+  high:
+    - "important"
+    - "priority"
+    - "deadline"
+    - "today"
+    - "eod"

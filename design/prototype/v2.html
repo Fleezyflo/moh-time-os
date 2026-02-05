@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A — HRMNY</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #09090B;
+      --surface: #18181B;
+      --surface-2: #27272A;
+      --text: #FAFAFA;
+      --text-2: #A1A1AA;
+      --text-3: #52525B;
+      --accent: #3B82F6;
+      --green: #22C55E;
+      --yellow: #EAB308;
+      --red: #EF4444;
+      --border: #27272A;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      display: flex;
+    }
+
+    /* Two-panel layout */
+    .conversation {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      max-width: 560px;
+    }
+
+    .context {
+      flex: 1;
+      background: var(--surface);
+      overflow-y: auto;
+    }
+
+    /* Conversation Panel */
+    .conv-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .conv-avatar {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, var(--accent), #8B5CF6);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .conv-title {
+      font-weight: 500;
+      font-size: 15px;
+    }
+
+    .conv-status {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--text-3);
+    }
+
+    .conv-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .message {
+      max-width: 90%;
+    }
+
+    .message.from-a {
+      align-self: flex-start;
+    }
+
+    .message.from-user {
+      align-self: flex-end;
+    }
+
+    .message-content {
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--text);
+    }
+
+    .message.from-a .message-content {
+      color: var(--text-2);
+    }
+
+    .message-time {
+      font-size: 11px;
+      color: var(--text-3);
+      margin-top: 6px;
+    }
+
+    /* Focus items in conversation */
+    .focus-items {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .focus-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 16px;
+      cursor: pointer;
+      transition: all 150ms;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .focus-item:hover {
+      background: var(--surface-2);
+      border-color: #3a3a3c;
+    }
+
+    .focus-item.active {
+      border-color: var(--accent);
+      background: rgba(59, 130, 246, 0.08);
+    }
+
+    .focus-num {
+      width: 20px;
+      height: 20px;
+      background: var(--surface-2);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-2);
+      flex-shrink: 0;
+    }
+
+    .focus-item.active .focus-num {
+      background: var(--accent);
+      color: white;
+    }
+
+    .focus-content {
+      flex: 1;
+    }
+
+    .focus-title {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .focus-meta {
+      font-size: 12px;
+      color: var(--text-3);
+    }
+
+    .focus-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 6px;
+    }
+
+    .focus-indicator.red { background: var(--red); }
+    .focus-indicator.yellow { background: var(--yellow); }
+    .focus-indicator.green { background: var(--green); }
+
+    /* Input */
+    .conv-input {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+    }
+
+    .input-wrapper {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .input-field {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+      transition: border-color 150ms;
+    }
+
+    .input-field:focus {
+      border-color: var(--accent);
+    }
+
+    .input-field::placeholder {
+      color: var(--text-3);
+    }
+
+    .send-btn {
+      width: 40px;
+      height: 40px;
+      background: var(--accent);
+      border: none;
+      border-radius: 10px;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 150ms;
+    }
+
+    .send-btn:hover {
+      background: #2563EB;
+    }
+
+    /* Context Panel */
+    .context-empty {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-3);
+      font-size: 14px;
+    }
+
+    .context-content {
+      padding: 32px;
+      display: none;
+    }
+
+    .context-content.visible {
+      display: block;
+    }
+
+    .context-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+
+    .context-title {
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .context-badge {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 4px 10px;
+      background: var(--surface-2);
+      border-radius: 6px;
+      color: var(--text-2);
+    }
+
+    .context-section {
+      margin-bottom: 28px;
+    }
+
+    .context-section-title {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+
+    /* Project Card */
+    .project-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .project-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .project-status {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .project-status.red { background: var(--red); }
+    .project-status.yellow { background: var(--yellow); }
+
+    .project-name {
+      font-weight: 500;
+      font-size: 15px;
+    }
+
+    .project-client {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--text-3);
+    }
+
+    .project-progress {
+      margin-bottom: 16px;
+    }
+
+    .progress-bar {
+      height: 6px;
+      background: var(--surface-2);
+      border-radius: 3px;
+      overflow: hidden;
+      margin-bottom: 8px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 300ms;
+    }
+
+    .progress-fill.red { background: var(--red); }
+    .progress-fill.yellow { background: var(--yellow); }
+    .progress-fill.green { background: var(--green); }
+
+    .progress-text {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-3);
+    }
+
+    .project-details {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .detail-item {
+      font-size: 13px;
+    }
+
+    .detail-label {
+      color: var(--text-3);
+      margin-bottom: 2px;
+    }
+
+    .detail-value {
+      color: var(--text);
+    }
+
+    .detail-value.warning {
+      color: var(--red);
+    }
+
+    /* Blocker */
+    .blocker {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      border-radius: 8px;
+      padding: 14px;
+      margin-top: 16px;
+    }
+
+    .blocker-title {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--red);
+      margin-bottom: 4px;
+    }
+
+    .blocker-text {
+      font-size: 13px;
+      color: var(--text-2);
+    }
+
+    /* Quick Actions */
+    .quick-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .quick-action {
+      padding: 10px 14px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-2);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 150ms;
+    }
+
+    .quick-action:hover {
+      background: var(--surface-2);
+      color: var(--text);
+      border-color: var(--text-3);
+    }
+
+    .quick-action.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: white;
+    }
+
+    .quick-action.primary:hover {
+      background: #2563EB;
+    }
+
+    /* Related Items */
+    .related-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .related-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: var(--bg);
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 150ms;
+    }
+
+    .related-item:hover {
+      background: var(--surface-2);
+    }
+
+    .related-icon {
+      width: 28px;
+      height: 28px;
+      background: var(--surface-2);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-3);
+    }
+
+    .related-text {
+      flex: 1;
+      color: var(--text-2);
+    }
+
+    .related-meta {
+      font-size: 11px;
+      color: var(--text-3);
+    }
+  </style>
+</head>
+<body>
+  <!-- Conversation Panel -->
+  <div class="conversation">
+    <div class="conv-header">
+      <div class="conv-avatar">A</div>
+      <div class="conv-title">A</div>
+      <div class="conv-status">09:14</div>
+    </div>
+
+    <div class="conv-messages">
+      <div class="message from-a">
+        <div class="message-content">
+          Good morning Moh.<br><br>
+          The agency is stable. Three things need your attention today.
+        </div>
+        <div class="focus-items">
+          <div class="focus-item active" onclick="showContext('ramadan')">
+            <div class="focus-num">1</div>
+            <div class="focus-content">
+              <div class="focus-title">GMG Ramadan Campaign</div>
+              <div class="focus-meta">15% complete · deadline in 39 days · brief not started</div>
+            </div>
+            <div class="focus-indicator red"></div>
+          </div>
+          <div class="focus-item" onclick="showContext('supercare')">
+            <div class="focus-num">2</div>
+            <div class="focus-content">
+              <div class="focus-title">Supercare — AED 75K overdue</div>
+              <div class="focus-meta">3 invoices · oldest 61-90 days · needs phone call</div>
+            </div>
+            <div class="focus-indicator yellow"></div>
+          </div>
+          <div class="focus-item" onclick="showContext('gargash')">
+            <div class="focus-num">3</div>
+            <div class="focus-content">
+              <div class="focus-title">Gargash contract meeting Friday</div>
+              <div class="focus-meta">No prep done · renewal terms need review</div>
+            </div>
+            <div class="focus-indicator yellow"></div>
+          </div>
+        </div>
+        <div class="message-time">09:14</div>
+      </div>
+    </div>
+
+    <div class="conv-input">
+      <div class="input-wrapper">
+        <input type="text" class="input-field" placeholder="Ask A anything...">
+        <button class="send-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Context Panel -->
+  <div class="context">
+    <div class="context-empty" id="context-empty">
+      Select an item to see details
+    </div>
+
+    <!-- Ramadan Campaign Context -->
+    <div class="context-content" id="context-ramadan">
+      <div class="context-header">
+        <div class="context-title">GMG Ramadan Campaign</div>
+        <div class="context-badge">GMG · Monoprix</div>
+      </div>
+
+      <div class="context-section">
+        <div class="context-section-title">Status</div>
+        <div class="project-card">
+          <div class="project-header">
+            <div class="project-status red"></div>
+            <div class="project-name">At Risk</div>
+            <div class="project-client">Campaign</div>
+          </div>
+          <div class="project-progress">
+            <div class="progress-bar">
+              <div class="progress-fill red" style="width: 15%"></div>
+            </div>
+            <div class="progress-text">
+              <span>15% complete</span>
+              <span>39 days remaining</span>
+            </div>
+          </div>
+          <div class="project-details">
+            <div class="detail-item">
+              <div class="detail-label">Deadline</div>
+              <div class="detail-value">Mar 15, 2026</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Owner</div>
+              <div class="detail-value">Strategy Team</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Tasks</div>
+              <div class="detail-value warning">2 of 12 complete</div>
+            </div>
+            <div class="detail-item">
+              <div class="detail-label">Client Health</div>
+              <div class="detail-value">72.5 (Good)</div>
+            </div>
+          </div>
+          <div class="blocker">
+            <div class="blocker-title">BLOCKER</div>
+            <div class="blocker-text">Campaign brief not started. This blocks creative concepts, production planning, and media buying. Every day of delay compresses the remaining timeline.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="context-section">
+        <div class="context-section-title">What I can do</div>
+        <div class="quick-actions">
+          <button class="quick-action primary">Draft escalation to Rami</button>
+          <button class="quick-action">Schedule brief kickoff</button>
+          <button class="quick-action">Show me the brief tasks</button>
+          <button class="quick-action">Open in Asana</button>
+        </div>
+      </div>
+
+      <div class="context-section">
+        <div class="context-section-title">Related</div>
+        <div class="related-list">
+          <div class="related-item">
+            <div class="related-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+            </div>
+            <div class="related-text">GMG Campaign Feedback</div>
+            <div class="related-meta">Feb 2</div>
+          </div>
+          <div class="related-item">
+            <div class="related-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+            </div>
+            <div class="related-text">GMG Campaign Review</div>
+            <div class="related-meta">Today 11:00</div>
+          </div>
+          <div class="related-item">
+            <div class="related-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+            </div>
+            <div class="related-text">INV-1409 — AED 100,236</div>
+            <div class="related-meta">31-60 days</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Supercare Context -->
+    <div class="context-content" id="context-supercare">
+      <div class="context-header">
+        <div class="context-title">Supercare Collection</div>
+        <div class="context-badge">Cash · AR</div>
+      </div>
+
+      <div class="context-section">
+        <div class="context-section-title">Outstanding</div>
+        <div class="project-card">
+          <div style="font-size: 32px; font-weight: 600; margin-bottom: 8px;">AED 75,245</div>
+          <div style="font-size: 13px; color: var(--text-3); margin-bottom: 20px;">across 3 invoices</div>
+          
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <div style="display: flex; justify-content: space-between; padding: 12px; background: var(--surface); border-radius: 8px;">
+              <span style="font-size: 13px;">INV-1411</span>
+              <span style="font-size: 13px; font-weight: 500;">AED 30,098</span>
+              <span style="font-size: 11px; padding: 2px 8px; background: rgba(239,68,68,0.15); color: var(--red); border-radius: 4px;">61-90 days</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 12px; background: var(--surface); border-radius: 8px;">
+              <span style="font-size: 13px;">INV-1410</span>
+              <span style="font-size: 13px; font-weight: 500;">AED 15,049</span>
+              <span style="font-size: 11px; padding: 2px 8px; background: rgba(239,68,68,0.15); color: var(--red); border-radius: 4px;">61-90 days</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; padding: 12px; background: var(--surface); border-radius: 8px;">
+              <span style="font-size: 13px;">INV-1487</span>
+              <span style="font-size: 13px; font-weight: 500;">AED 30,098</span>
+              <span style="font-size: 11px; padding: 2px 8px; background: rgba(249,115,22,0.15); color: var(--yellow); border-radius: 4px;">31-60 days</span>
+            </div>
+          </div>
+
+          <div class="blocker" style="margin-top: 20px;">
+            <div class="blocker-title">ESCALATION NEEDED</div>
+            <div class="blocker-text">Two email follow-ups sent with no response. At this aging level, phone call is the recommended next step. Contact: accounts@supercare.ae</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="context-section">
+        <div class="context-section-title">What I can do</div>
+        <div class="quick-actions">
+          <button class="quick-action primary">Draft call script</button>
+          <button class="quick-action">Schedule call reminder</button>
+          <button class="quick-action">View email history</button>
+          <button class="quick-action">See client health</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gargash Context -->
+    <div class="context-content" id="context-gargash">
+      <div class="context-header">
+        <div class="context-title">Gargash Contract Renewal</div>
+        <div class="context-badge">Meeting · Prep</div>
+      </div>
+
+      <div class="context-section">
+        <div class="context-section-title">Meeting</div>
+        <div class="project-card">
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+            <div style="width: 48px; height: 48px; background: var(--surface); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+            </div>
+            <div>
+              <div style="font-weight: 500;">Gargash Contract Discussion</div>
+              <div style="font-size: 13px; color: var(--text-3);">Friday, Feb 7 · 11:00 - 12:00</div>
+            </div>
+          </div>
+          
+          <div style="padding: 14px; background: rgba(234,179,8,0.1); border: 1px solid rgba(234,179,8,0.2); border-radius: 8px;">
+            <div style="font-size: 12px; font-weight: 500; color: var(--yellow); margin-bottom: 4px;">NO PREP DONE</div>
+            <div style="font-size: 13px; color: var(--text-2);">Meeting is in 2 days. Contract renewal terms need review before the call.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="context-section">
+        <div class="context-section-title">Context</div>
+        <div class="related-list">
+          <div class="related-item">
+            <div class="related-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+            </div>
+            <div class="related-text">Contract Renewal Discussion</div>
+            <div class="related-meta">Feb 1 · legal@gargash.com</div>
+          </div>
+          <div class="related-item">
+            <div class="related-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                <polyline points="22,6 12,13 2,6"/>
+              </svg>
+            </div>
+            <div class="related-text">Budget Approval</div>
+            <div class="related-meta">Jan 26 · finance@gargash.com</div>
+          </div>
+          <div class="related-item">
+            <div class="related-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+            </div>
+            <div class="related-text">INV-1478 — AED 1,260</div>
+            <div class="related-meta">61-90 days</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="context-section">
+        <div class="context-section-title">What I can do</div>
+        <div class="quick-actions">
+          <button class="quick-action primary">Create prep checklist</button>
+          <button class="quick-action">Pull contract history</button>
+          <button class="quick-action">Summarize email thread</button>
+          <button class="quick-action">Block prep time tomorrow</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function showContext(id) {
+      // Hide all contexts
+      document.querySelectorAll('.context-content').forEach(c => c.classList.remove('visible'));
+      document.getElementById('context-empty').style.display = 'none';
+      
+      // Show selected context
+      document.getElementById('context-' + id).classList.add('visible');
+      
+      // Update active state
+      document.querySelectorAll('.focus-item').forEach(f => f.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+    }
+
+    // Show first context by default
+    document.getElementById('context-ramadan').classList.add('visible');
+    document.getElementById('context-empty').style.display = 'none';
+  </script>
+</body>
+</html>

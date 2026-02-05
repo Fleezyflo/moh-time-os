@@ -1,0 +1,234 @@
+[
+  {
+    "attendees": [
+      {
+        "email": "ay@hrmny.co",
+        "responseStatus": "needsAction"
+      },
+      {
+        "email": "molham@hrmny.co",
+        "responseStatus": "needsAction",
+        "self": true
+      },
+      {
+        "email": "krystie@hrmny.co",
+        "organizer": true,
+        "responseStatus": "accepted"
+      }
+    ],
+    "conferenceData": {
+      "conferenceId": "ppy-hiof-vzx",
+      "conferenceSolution": {
+        "iconUri": "https://fonts.gstatic.com/s/i/productlogos/meet_2020q4/v6/web-512dp/logo_meet_2020q4_color_2x_web_512dp.png",
+        "key": {
+          "type": "hangoutsMeet"
+        },
+        "name": "Google Meet"
+      },
+      "entryPoints": [
+        {
+          "entryPointType": "video",
+          "label": "meet.google.com/ppy-hiof-vzx",
+          "uri": "https://meet.google.com/ppy-hiof-vzx"
+        },
+        {
+          "entryPointType": "more",
+          "pin": "7157259030000",
+          "uri": "https://tel.meet/ppy-hiof-vzx?pin=7157259030000"
+        },
+        {
+          "entryPointType": "phone",
+          "label": "+1 732-655-8594",
+          "pin": "207882178",
+          "regionCode": "US",
+          "uri": "tel:+1-732-655-8594"
+        }
+      ]
+    },
+    "created": "2026-01-29T17:15:41.000Z",
+    "creator": {
+      "email": "krystie@hrmny.co"
+    },
+    "end": {
+      "dateTime": "2026-01-30T18:00:00+04:00",
+      "timeZone": "Asia/Dubai"
+    },
+    "etag": "\"3539436265518078\"",
+    "eventType": "default",
+    "hangoutLink": "https://meet.google.com/ppy-hiof-vzx",
+    "htmlLink": "https://www.google.com/calendar/event?eid=Mm8zZmZodDI3MGxtZDFsMjExbDM2dmk0aWcgbW9saGFtQGhybW55LmNv",
+    "iCalUID": "2o3ffht270lmd1l211l36vi4ig@google.com",
+    "id": "2o3ffht270lmd1l211l36vi4ig",
+    "kind": "calendar#event",
+    "organizer": {
+      "email": "krystie@hrmny.co"
+    },
+    "reminders": {
+      "useDefault": true
+    },
+    "start": {
+      "dateTime": "2026-01-30T10:00:00+04:00",
+      "timeZone": "Asia/Dubai"
+    },
+    "status": "confirmed",
+    "summary": "OOO | Ayham and Molham Off",
+    "updated": "2026-01-29T20:22:12.759Z"
+  },
+  {
+    "created": "2026-01-29T14:37:35.000Z",
+    "creator": {
+      "email": "molham@hrmny.co",
+      "self": true
+    },
+    "end": {
+      "dateTime": "2026-01-30T16:00:00+04:00",
+      "timeZone": "Asia/Dubai"
+    },
+    "etag": "\"3539394910685630\"",
+    "eventType": "default",
+    "htmlLink": "https://www.google.com/calendar/event?eid=NWtzdDJycGY1b2VpdW5hbHZmcThxajQ4NHQgbW9saGFtQGhybW55LmNv",
+    "iCalUID": "5kst2rpf5oeiunalvfq8qj484t@google.com",
+    "id": "5kst2rpf5oeiunalvfq8qj484t",
+    "kind": "calendar#event",
+    "organizer": {
+      "email": "molham@hrmny.co",
+      "self": true
+    },
+    "reminders": {
+      "useDefault": true
+    },
+    "start": {
+      "dateTime": "2026-01-30T14:00:00+04:00",
+      "timeZone": "Asia/Dubai"
+    },
+    "status": "confirmed",
+    "summary": "asics",
+    "updated": "2026-01-29T14:37:35.342Z"
+  },
+  {
+    "attachments": [
+      {
+        "fileId": "1lt7ZN-9ziBR8szfA2DjdG1ZpnnA7OGZqqJv0EiyPIbc",
+        "fileUrl": "https://docs.google.com/document/d/1lt7ZN-9ziBR8szfA2DjdG1ZpnnA7OGZqqJv0EiyPIbc/edit?usp=meet_tnfm_calendar",
+        "iconLink": "https://drive-thirdparty.googleusercontent.com/32/type/application/vnd.google-apps.document",
+        "mimeType": "application/vnd.google-apps.document",
+        "title": "Notes by Gemini"
+      }
+    ],
+    "attendees": [
+      {
+        "email": "imad@hrmny.co",
+        "responseStatus": "accepted"
+      },
+      {
+        "email": "nathan@hrmny.co",
+        "responseStatus": "needsAction"
+      },
+      {
+        "email": "fabina@hrmny.co",
+        "responseStatus": "accepted"
+      },
+      {
+        "email": "molham@hrmny.co",
+        "responseStatus": "needsAction",
+        "self": true
+      },
+      {
+        "email": "youssef.f@hrmny.co",
+        "responseStatus": "needsAction"
+      },
+      {
+        "email": "ramy@hrmny.co",
+        "organizer": true,
+        "responseStatus": "accepted"
+      },
+      {
+        "email": "mostafa@hrmny.co",
+        "responseStatus": "needsAction"
+      },
+      {
+        "email": "raafat@hrmny.co",
+        "responseStatus": "tentative"
+      },
+      {
+        "email": "elnaz@hrmny.co",
+        "responseStatus": "needsAction"
+      },
+      {
+        "email": "maher@hrmny.co",
+        "responseStatus": "needsAction"
+      },
+      {
+        "email": "jessica@hrmny.co",
+        "responseStatus": "needsAction"
+      },
+      {
+        "email": "mark@hrmny.co",
+        "responseStatus": "needsAction"
+      }
+    ],
+    "conferenceData": {
+      "conferenceId": "hxt-oope-bfb",
+      "conferenceSolution": {
+        "iconUri": "https://fonts.gstatic.com/s/i/productlogos/meet_2020q4/v6/web-512dp/logo_meet_2020q4_color_2x_web_512dp.png",
+        "key": {
+          "type": "hangoutsMeet"
+        },
+        "name": "Google Meet"
+      },
+      "entryPoints": [
+        {
+          "entryPointType": "video",
+          "label": "meet.google.com/hxt-oope-bfb",
+          "uri": "https://meet.google.com/hxt-oope-bfb"
+        },
+        {
+          "entryPointType": "more",
+          "pin": "2688021975571",
+          "uri": "https://tel.meet/hxt-oope-bfb?pin=2688021975571"
+        },
+        {
+          "entryPointType": "phone",
+          "label": "+1 929-999-4318",
+          "pin": "522375389",
+          "regionCode": "US",
+          "uri": "tel:+1-929-999-4318"
+        }
+      ]
+    },
+    "created": "2025-12-19T11:00:46.000Z",
+    "creator": {
+      "email": "ramy@hrmny.co"
+    },
+    "end": {
+      "dateTime": "2026-01-30T17:00:00+04:00",
+      "timeZone": "Asia/Dubai"
+    },
+    "etag": "\"3539516900306942\"",
+    "eventType": "default",
+    "hangoutLink": "https://meet.google.com/hxt-oope-bfb",
+    "htmlLink": "https://www.google.com/calendar/event?eid=MnBzc2FobWJidmVqNjg0MWpyMmhzNGhjbzBfMjAyNjAxMjZUMTIwMDAwWiBtb2xoYW1AaHJtbnkuY28",
+    "iCalUID": "2pssahmbbvej6841jr2hs4hco0_R20260119T120000@google.com",
+    "id": "2pssahmbbvej6841jr2hs4hco0_20260126T120000Z",
+    "kind": "calendar#event",
+    "organizer": {
+      "email": "ramy@hrmny.co"
+    },
+    "originalStartTime": {
+      "dateTime": "2026-01-26T16:00:00+04:00",
+      "timeZone": "Asia/Dubai"
+    },
+    "recurringEventId": "2pssahmbbvej6841jr2hs4hco0_R20260119T120000",
+    "reminders": {
+      "useDefault": true
+    },
+    "sequence": 4,
+    "start": {
+      "dateTime": "2026-01-30T16:00:00+04:00",
+      "timeZone": "Asia/Dubai"
+    },
+    "status": "confirmed",
+    "summary": "[hrmny] CS X Content | 2026 Forward Planning",
+    "updated": "2026-01-30T07:34:10.153Z"
+  }
+]

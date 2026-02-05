@@ -1,0 +1,48 @@
+{
+  "id": "db18071a",
+  "domain": "tasks",
+  "description": "Bulk assign: 1 tasks",
+  "status": "applied",
+  "created_at": "2026-02-02T08:42:18.978150+00:00",
+  "applied_at": "2026-02-02T08:42:18.980039+00:00",
+  "rolled_back_at": null,
+  "changes": [
+    {
+      "type": "update",
+      "id": "v2_c8fbcc83-9f02-4cae-af21-d5525cbb345e",
+      "target": "tasks",
+      "data": {
+        "id": "v2_c8fbcc83-9f02-4cae-af21-d5525cbb345e",
+        "type": "assign",
+        "data": {
+          "updated_at": "2026-02-02T12:42:18.978124",
+          "assignee": "Test User"
+        }
+      }
+    }
+  ],
+  "pre_images": {
+    "v2_c8fbcc83-9f02-4cae-af21-d5525cbb345e": {
+      "status": "pending",
+      "assignee": "Fady",
+      "due_date": "2026-01-30",
+      "priority": 89,
+      "project": null
+    }
+  },
+  "rollback_steps": [
+    {
+      "type": "update",
+      "id": "v2_c8fbcc83-9f02-4cae-af21-d5525cbb345e",
+      "target": "tasks",
+      "data": {
+        "status": "pending",
+        "assignee": "Fady",
+        "due_date": "2026-01-30",
+        "priority": 89,
+        "project": null
+      }
+    }
+  ],
+  "error": null
+}

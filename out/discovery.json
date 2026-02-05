@@ -1,0 +1,133 @@
+{
+  "generated_at": "2026-01-31T21:56:06.048193+00:00",
+  "period_days": 14,
+  "email": {
+    "by_domain": {
+      "hrmny.co": 25,
+      "jaggaer.com": 20,
+      "google.com": 19,
+      "amazon.ae": 14,
+      "linkedin.com": 9,
+      "globalsources.com": 5,
+      "910ths.sa": 5,
+      "ounass.com": 4,
+      "email.ounass.com": 4,
+      "cryptonary.com": 4,
+      "tabby.ai": 3,
+      "e.podia.com": 3,
+      "mail.instagram.com": 3,
+      "emiratesnbd.com": 3,
+      "pb-plans.in": 3,
+      "dubaichamber.com": 3,
+      "bayzat.com": 3,
+      "mail.apollo.io": 3,
+      "keepersecurity.com": 3,
+      "lemonsqueezy-mail.com": 2
+    },
+    "by_sender": {
+      "sourcingsupport@jaggaer.com": 17,
+      "\"Amazon.ae\" <store-news@amazon.ae>": 12,
+      "Ayham Homsi <ay@hrmny.co>": 8,
+      "\"Krystie Marie Beldad (via Google Chat)\" <chat-noreply@google.com>": 6,
+      "Gemini <gemini-notes@google.com>": 5,
+      "\"Forsa - \u0645\u0646\u0635\u0629 \u0641\u064f\u0631\u0635\u0629\" <forsah@910ths.sa>": 5,
+      "LinkedIn <messages-noreply@linkedin.com>": 4,
+      "Ounass <email@ounass.com>": 4,
+      "Ounass <noreply@email.ounass.com>": 4,
+      "Google Calendar <calendar-notification@google.com>": 4,
+      "Cryptonary <support@cryptonary.com>": 4,
+      "Tabby Payments <notifications@tabby.ai>": 3,
+      "Global Sources Product Alert <paservices@globalsources.com>": 3,
+      "<businessONLINE@emiratesnbd.com>": 3,
+      "\"Policybazaar.ae\" <hello@pb-plans.in>": 3,
+      " Dubai Chambers <customersupport@dubaichamber.com>": 3,
+      "Krystie Marie Beldad <krystie@hrmny.co>": 3,
+      "Bayzat <noreply@bayzat.com>": 3,
+      "Apollo <hello@mail.apollo.io>": 3,
+      "Keeper Security <noreply@keepersecurity.com>": 3
+    },
+    "total": 200
+  },
+  "calendar": {
+    "by_day": {
+      "Monday": 5,
+      "Tuesday": 4,
+      "Wednesday": 1
+    },
+    "by_hour": {
+      "10": 1,
+      "11": 3,
+      "12": 1,
+      "14": 1,
+      "16": 2,
+      "17": 1,
+      "19": 1
+    },
+    "recurring_count": 7,
+    "total": 10
+  },
+  "inferred_lanes": {
+    "Finance": 53,
+    "People": 31,
+    "Creative": 10,
+    "Sales": 7,
+    "Personal": 3,
+    "Operations": 2
+  },
+  "priority_tiers": {
+    "high": 29,
+    "medium": 3,
+    "low": 168,
+    "high_senders": [
+      "ayham homsi <ay@hrmny.co>",
+      "\"youssef fakhreddine (via google chat)\" <chat-noreply@google.com>",
+      "\"'hrmny client services (via dropbox)' via john\" <john@hrmny.co>",
+      "\"krystie marie beldad (via google chat)\" <chat-noreply@google.com>",
+      "molham@hrmny.co",
+      "krystie marie beldad <krystie@hrmny.co>",
+      "dana oraibi <dana@hrmny.co>",
+      "molham homsi <molham@hrmny.co>",
+      "\"'wetransfer' via john\" <john@hrmny.co>",
+      "\"'ariba administrator' via john\" <john@hrmny.co>"
+    ]
+  },
+  "scheduling": {
+    "meeting_hours": {
+      "10": 1,
+      "11": 3,
+      "12": 1,
+      "14": 1,
+      "16": 2,
+      "17": 1,
+      "19": 1
+    },
+    "potential_deep_work": [
+      9,
+      13,
+      15,
+      18
+    ]
+  },
+  "detected_projects": [
+    {
+      "name": "hrmny",
+      "signals": 8
+    },
+    {
+      "name": "people",
+      "signals": 2
+    },
+    {
+      "name": "FIVE GUYS",
+      "signals": 2
+    },
+    {
+      "name": "GMG",
+      "signals": 2
+    },
+    {
+      "name": "mp",
+      "signals": 2
+    }
+  ]
+}

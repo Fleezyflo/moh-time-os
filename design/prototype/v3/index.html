@@ -1,0 +1,834 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Control Room — HRMNY</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --base: #000000;
+      --surface: #0a0a0a;
+      --elevated: #141414;
+      --text-1: #ffffff;
+      --text-2: #8a8a8a;
+      --text-3: #4a4a4a;
+      --critical: #ff3b30;
+      --warning: #ff9500;
+      --positive: #30d158;
+      --brand: #6366f1;
+    }
+
+    html, body {
+      height: 100%;
+      font-family: 'Inter', -apple-system, system-ui, sans-serif;
+      background: var(--base);
+      color: var(--text-1);
+      font-size: 15px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .app {
+      min-height: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 48px 32px;
+    }
+
+    /* Status Bar */
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 64px;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--warning);
+    }
+
+    .status-dot.stable { background: var(--positive); }
+    .status-dot.attention { background: var(--warning); }
+    .status-dot.critical { background: var(--critical); }
+
+    .time {
+      font-size: 13px;
+      color: var(--text-2);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Section */
+    .section {
+      margin-bottom: 64px;
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-3);
+      margin-bottom: 20px;
+      letter-spacing: 0.01em;
+    }
+
+    /* Attention Stack */
+    .attention-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .attention-card {
+      background: var(--elevated);
+      border-radius: 12px;
+      padding: 20px 24px;
+      border-left: 3px solid transparent;
+      cursor: pointer;
+      transition: background 150ms ease;
+      position: relative;
+    }
+
+    .attention-card:hover {
+      background: #1a1a1a;
+    }
+
+    .attention-card.critical { border-left-color: var(--critical); }
+    .attention-card.warning { border-left-color: var(--warning); }
+
+    .attention-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 6px;
+    }
+
+    .attention-entity {
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .attention-signal {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-top: 6px;
+      flex-shrink: 0;
+    }
+
+    .attention-signal.critical { background: var(--critical); }
+    .attention-signal.warning { background: var(--warning); }
+
+    .attention-situation {
+      color: var(--text-2);
+      font-size: 14px;
+      margin-bottom: 4px;
+    }
+
+    .attention-recommendation {
+      color: var(--text-3);
+      font-size: 14px;
+      font-style: italic;
+    }
+
+    .attention-arrow {
+      position: absolute;
+      right: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-3);
+      opacity: 0;
+      transition: opacity 150ms ease;
+    }
+
+    .attention-card:hover .attention-arrow {
+      opacity: 1;
+    }
+
+    /* Quick Nav */
+    .quick-nav {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    .nav-tile {
+      background: var(--surface);
+      border: 1px solid var(--elevated);
+      border-radius: 12px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 150ms ease;
+    }
+
+    .nav-tile:hover {
+      background: var(--elevated);
+      border-color: #2a2a2a;
+    }
+
+    .nav-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 12px;
+    }
+
+    .nav-primary {
+      font-size: 20px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .nav-secondary {
+      font-size: 13px;
+      color: var(--text-2);
+    }
+
+    /* Detail Panel */
+    .detail-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 200ms ease, visibility 200ms ease;
+      z-index: 100;
+    }
+
+    .detail-overlay.open {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .detail-panel {
+      position: fixed;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 560px;
+      max-width: 100%;
+      background: var(--surface);
+      transform: translateX(100%);
+      transition: transform 250ms ease;
+      z-index: 101;
+      overflow-y: auto;
+    }
+
+    .detail-overlay.open .detail-panel {
+      transform: translateX(0);
+    }
+
+    .detail-header {
+      padding: 24px 32px;
+      border-bottom: 1px solid var(--elevated);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      z-index: 10;
+    }
+
+    .detail-back {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      border: none;
+      background: transparent;
+      color: var(--text-2);
+      cursor: pointer;
+      transition: all 150ms ease;
+    }
+
+    .detail-back:hover {
+      background: var(--elevated);
+      color: var(--text-1);
+    }
+
+    .detail-title {
+      font-size: 17px;
+      font-weight: 600;
+    }
+
+    .detail-badge {
+      margin-left: auto;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-2);
+      background: var(--elevated);
+      padding: 4px 10px;
+      border-radius: 6px;
+    }
+
+    .detail-body {
+      padding: 32px;
+    }
+
+    .detail-section {
+      margin-bottom: 40px;
+    }
+
+    .detail-section-title {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--text-3);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 16px;
+    }
+
+    /* Progress Block */
+    .progress-block {
+      background: var(--elevated);
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    .progress-value {
+      font-size: 36px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .progress-bar {
+      height: 4px;
+      background: var(--text-3);
+      border-radius: 2px;
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 300ms ease;
+    }
+
+    .progress-fill.critical { background: var(--critical); }
+    .progress-fill.warning { background: var(--warning); }
+    .progress-fill.positive { background: var(--positive); }
+
+    .progress-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .progress-item-label {
+      font-size: 12px;
+      color: var(--text-3);
+      margin-bottom: 2px;
+    }
+
+    .progress-item-value {
+      font-size: 14px;
+    }
+
+    .progress-item-value.critical { color: var(--critical); }
+
+    /* Problem Block */
+    .problem-block {
+      background: rgba(255, 59, 48, 0.08);
+      border: 1px solid rgba(255, 59, 48, 0.15);
+      border-radius: 10px;
+      padding: 16px 20px;
+    }
+
+    .problem-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--critical);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .problem-text {
+      font-size: 14px;
+      color: var(--text-2);
+      line-height: 1.6;
+    }
+
+    /* Recommendation */
+    .recommendation {
+      font-size: 14px;
+      color: var(--text-2);
+      line-height: 1.7;
+    }
+
+    /* Actions */
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 150ms ease;
+      border: none;
+      font-family: inherit;
+    }
+
+    .btn-primary {
+      background: var(--brand);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #5457e5;
+    }
+
+    .btn-secondary {
+      background: var(--elevated);
+      color: var(--text-2);
+      border: 1px solid #2a2a2a;
+    }
+
+    .btn-secondary:hover {
+      background: #1a1a1a;
+      color: var(--text-1);
+    }
+
+    /* Related */
+    .related-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .related-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      background: var(--elevated);
+      border-radius: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: background 150ms ease;
+    }
+
+    .related-item:hover {
+      background: #1a1a1a;
+    }
+
+    .related-date {
+      width: 60px;
+      color: var(--text-3);
+      flex-shrink: 0;
+    }
+
+    .related-text {
+      color: var(--text-2);
+    }
+
+    /* Invoice List */
+    .invoice-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .invoice-row {
+      display: grid;
+      grid-template-columns: 80px 1fr 90px;
+      gap: 12px;
+      align-items: center;
+      padding: 12px 14px;
+      background: var(--elevated);
+      border-radius: 8px;
+      font-size: 13px;
+    }
+
+    .invoice-id {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-3);
+    }
+
+    .invoice-amount {
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .invoice-status {
+      font-size: 11px;
+      font-weight: 500;
+      padding: 4px 8px;
+      border-radius: 4px;
+      text-align: center;
+    }
+
+    .invoice-status.critical {
+      background: rgba(255, 59, 48, 0.12);
+      color: var(--critical);
+    }
+
+    .invoice-status.warning {
+      background: rgba(255, 149, 0, 0.12);
+      color: var(--warning);
+    }
+
+    .invoice-status.positive {
+      background: rgba(48, 209, 88, 0.12);
+      color: var(--positive);
+    }
+
+    @media (max-width: 768px) {
+      .app {
+        padding: 32px 20px;
+      }
+
+      .quick-nav {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .detail-panel {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <!-- Status Bar -->
+    <div class="status-bar">
+      <div class="status">
+        <div class="status-dot attention"></div>
+        <span>ATTENTION</span>
+      </div>
+      <div class="time">Wed 5 Feb · 9:14 AM</div>
+    </div>
+
+    <!-- Attention Stack -->
+    <div class="section">
+      <div class="section-title">Needs attention</div>
+      <div class="attention-stack">
+        <div class="attention-card critical" onclick="openDetail('ramadan')">
+          <div class="attention-header">
+            <div class="attention-entity">GMG Ramadan Campaign</div>
+            <div class="attention-signal critical"></div>
+          </div>
+          <div class="attention-situation">Brief not started. 39 days to deadline.</div>
+          <div class="attention-recommendation">Escalate at today's 11:00 review.</div>
+          <span class="attention-arrow">→</span>
+        </div>
+
+        <div class="attention-card warning" onclick="openDetail('supercare')">
+          <div class="attention-header">
+            <div class="attention-entity">Supercare collection</div>
+            <div class="attention-signal warning"></div>
+          </div>
+          <div class="attention-situation">AED 75K at 60+ days. Emails not working.</div>
+          <div class="attention-recommendation">Phone call needed.</div>
+          <span class="attention-arrow">→</span>
+        </div>
+
+        <div class="attention-card warning" onclick="openDetail('gargash')">
+          <div class="attention-header">
+            <div class="attention-entity">Gargash contract meeting</div>
+            <div class="attention-signal warning"></div>
+          </div>
+          <div class="attention-situation">Friday. No prep done.</div>
+          <div class="attention-recommendation">Block time tomorrow.</div>
+          <span class="attention-arrow">→</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Nav -->
+    <div class="section">
+      <div class="quick-nav">
+        <div class="nav-tile">
+          <div class="nav-label">Clients</div>
+          <div class="nav-primary">5</div>
+          <div class="nav-secondary">all healthy</div>
+        </div>
+        <div class="nav-tile">
+          <div class="nav-label">Projects</div>
+          <div class="nav-primary">10</div>
+          <div class="nav-secondary">1 at risk</div>
+        </div>
+        <div class="nav-tile">
+          <div class="nav-label">Cash</div>
+          <div class="nav-primary">276K</div>
+          <div class="nav-secondary">3 overdue</div>
+        </div>
+        <div class="nav-tile">
+          <div class="nav-label">Team</div>
+          <div class="nav-primary">94%</div>
+          <div class="nav-secondary">nominal</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Detail Overlay -->
+  <div class="detail-overlay" id="detailOverlay" onclick="closeDetail(event)">
+    <!-- Ramadan Detail -->
+    <div class="detail-panel" id="detail-ramadan" onclick="event.stopPropagation()">
+      <div class="detail-header">
+        <button class="detail-back" onclick="closeDetail()">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 18l-6-6 6-6"/>
+          </svg>
+        </button>
+        <div class="detail-title">GMG Ramadan Campaign</div>
+        <div class="detail-badge">Monoprix</div>
+      </div>
+      <div class="detail-body">
+        <div class="detail-section">
+          <div class="detail-section-title">Status</div>
+          <div class="progress-block">
+            <div class="progress-value">15%</div>
+            <div class="progress-bar">
+              <div class="progress-fill critical" style="width: 15%"></div>
+            </div>
+            <div class="progress-grid">
+              <div>
+                <div class="progress-item-label">Deadline</div>
+                <div class="progress-item-value">Mar 15</div>
+              </div>
+              <div>
+                <div class="progress-item-label">Days left</div>
+                <div class="progress-item-value critical">39</div>
+              </div>
+              <div>
+                <div class="progress-item-label">Owner</div>
+                <div class="progress-item-value">Strategy Team</div>
+              </div>
+              <div>
+                <div class="progress-item-label">Client health</div>
+                <div class="progress-item-value">72.5</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">Problem</div>
+          <div class="problem-block">
+            <div class="problem-title">Blocker</div>
+            <div class="problem-text">
+              Campaign brief hasn't started. This blocks creative concepts, 
+              production planning, and media buying. Every day of delay 
+              compresses the remaining timeline exponentially.
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">Recommendation</div>
+          <div class="recommendation">
+            You have a GMG Campaign Review at 11:00 today. That's the right 
+            moment to escalate this directly. I can draft talking points for 
+            that meeting.
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">Actions</div>
+          <div class="actions">
+            <button class="btn btn-primary">Draft talking points</button>
+            <button class="btn btn-secondary">See all tasks</button>
+            <button class="btn btn-secondary">View client</button>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">Related</div>
+          <div class="related-list">
+            <div class="related-item">
+              <span class="related-date">Today</span>
+              <span class="related-text">GMG Campaign Review (11:00)</span>
+            </div>
+            <div class="related-item">
+              <span class="related-date">Feb 2</span>
+              <span class="related-text">GMG Campaign Feedback (email)</span>
+            </div>
+            <div class="related-item">
+              <span class="related-date">Jan 30</span>
+              <span class="related-text">Feedback on Deliverables (email)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Supercare Detail -->
+    <div class="detail-panel" id="detail-supercare" onclick="event.stopPropagation()">
+      <div class="detail-header">
+        <button class="detail-back" onclick="closeDetail()">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 18l-6-6 6-6"/>
+          </svg>
+        </button>
+        <div class="detail-title">Supercare Collection</div>
+        <div class="detail-badge">Cash</div>
+      </div>
+      <div class="detail-body">
+        <div class="detail-section">
+          <div class="detail-section-title">Outstanding</div>
+          <div class="progress-block">
+            <div class="progress-value">AED 75,245</div>
+            <div style="color: var(--text-3); font-size: 13px; margin-bottom: 20px;">across 3 invoices</div>
+            <div class="invoice-list">
+              <div class="invoice-row">
+                <span class="invoice-id">INV-1411</span>
+                <span class="invoice-amount">30,098</span>
+                <span class="invoice-status critical">61-90 days</span>
+              </div>
+              <div class="invoice-row">
+                <span class="invoice-id">INV-1410</span>
+                <span class="invoice-amount">15,049</span>
+                <span class="invoice-status critical">61-90 days</span>
+              </div>
+              <div class="invoice-row">
+                <span class="invoice-id">INV-1487</span>
+                <span class="invoice-amount">30,098</span>
+                <span class="invoice-status warning">31-60 days</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">Problem</div>
+          <div class="problem-block">
+            <div class="problem-title">Escalation needed</div>
+            <div class="problem-text">
+              Two email follow-ups sent with no response. At this aging level, 
+              phone call is the recommended next step.
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">Actions</div>
+          <div class="actions">
+            <button class="btn btn-primary">Draft call script</button>
+            <button class="btn btn-secondary">View email history</button>
+            <button class="btn btn-secondary">See client health</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gargash Detail -->
+    <div class="detail-panel" id="detail-gargash" onclick="event.stopPropagation()">
+      <div class="detail-header">
+        <button class="detail-back" onclick="closeDetail()">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 18l-6-6 6-6"/>
+          </svg>
+        </button>
+        <div class="detail-title">Gargash Contract Meeting</div>
+        <div class="detail-badge">Prep</div>
+      </div>
+      <div class="detail-body">
+        <div class="detail-section">
+          <div class="detail-section-title">Meeting</div>
+          <div class="progress-block">
+            <div style="font-size: 17px; font-weight: 500; margin-bottom: 4px;">Gargash Contract Discussion</div>
+            <div style="color: var(--text-2); font-size: 14px; margin-bottom: 16px;">Friday, Feb 7 · 11:00 – 12:00</div>
+            <div class="problem-block" style="background: rgba(255, 149, 0, 0.08); border-color: rgba(255, 149, 0, 0.15);">
+              <div class="problem-title" style="color: var(--warning);">No prep done</div>
+              <div class="problem-text">
+                Meeting is in 2 days. Contract renewal terms need review before the call.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">Recommendation</div>
+          <div class="recommendation">
+            Block 90 minutes tomorrow afternoon to review the contract history 
+            and renewal terms. I can pull the relevant emails and create a prep checklist.
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">Actions</div>
+          <div class="actions">
+            <button class="btn btn-primary">Create prep checklist</button>
+            <button class="btn btn-secondary">Pull contract history</button>
+            <button class="btn btn-secondary">Block time tomorrow</button>
+          </div>
+        </div>
+
+        <div class="detail-section">
+          <div class="detail-section-title">Related</div>
+          <div class="related-list">
+            <div class="related-item">
+              <span class="related-date">Feb 1</span>
+              <span class="related-text">Contract Renewal Discussion (email)</span>
+            </div>
+            <div class="related-item">
+              <span class="related-date">Jan 26</span>
+              <span class="related-text">Budget Approval (email)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentDetail = null;
+
+    function openDetail(id) {
+      const overlay = document.getElementById('detailOverlay');
+      const panels = document.querySelectorAll('.detail-panel');
+      
+      panels.forEach(p => p.style.display = 'none');
+      
+      const panel = document.getElementById('detail-' + id);
+      if (panel) {
+        panel.style.display = 'block';
+        overlay.classList.add('open');
+        currentDetail = id;
+      }
+    }
+
+    function closeDetail(event) {
+      if (event && event.target !== event.currentTarget) return;
+      
+      const overlay = document.getElementById('detailOverlay');
+      overlay.classList.remove('open');
+      currentDetail = null;
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && currentDetail) {
+        closeDetail();
+      }
+    });
+  </script>
+</body>
+</html>

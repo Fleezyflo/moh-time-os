@@ -1,0 +1,28 @@
+{
+  "10073643": {
+    "id": "10073643",
+    "item_id": "item123",
+    "objective": "Review and provide feedback on the Five Guys proposal",
+    "context": "Review proposal",
+    "source_refs": [],
+    "constraints": {
+      "deadline": "2026-02-05",
+      "lane": "client",
+      "sensitivity": []
+    },
+    "deliverable_format": "Email with feedback or approved stamp",
+    "escalation_rule": "Escalate to Moh after 5 days",
+    "delegatee_id": "992e63f8",
+    "delegatee_name": "Ayham",
+    "status": "draft",
+    "created_at": "2026-02-01T04:43:13.685797+00:00",
+    "sent_at": null,
+    "acknowledged_at": null,
+    "completed_at": null,
+    "next_nudge_at": "2026-02-04T04:43:13.685797+00:00",
+    "escalation_at": "2026-02-06T04:43:13.685797+00:00",
+    "nudge_count": 0,
+    "sensitivity_redacted": false,
+    "completeness_score": 0.6666666666666666
+  }
+}

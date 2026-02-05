@@ -1,0 +1,144 @@
+# Delegation graph from MOH_TIME_OS_DELEGATION_GRAPH.md
+delegates:
+  - email: "ay@hrmny.co"
+    name: "Ayham Homsi"
+    role: "Co-owner/Approver"
+    lanes: ["ops", "governance", "finance", "client", "cream"]
+    is_approver: true
+    turnaround_days: 1
+    
+  - email: "krystie@hrmny.co"
+    name: "Krystie Marie Beldad"
+    role: "Primary delegate for follow-ups"
+    lanes: ["admin", "finance", "ops"]
+    is_approver: false
+    turnaround_days: 2
+    
+  - email: "aubrey@hrmny.co"
+    name: "Aubrey"
+    role: "People & Admin delegate"
+    lanes: ["people", "admin"]
+    is_approver: false
+    turnaround_days: 2
+    
+  - email: "rene@hrmny.co"
+    name: "Rene"
+    role: "Creative lead"
+    lanes: ["client", "cream"]
+    is_approver: false
+    turnaround_days: 3
+    
+  - email: "amar@hrmny.co"
+    name: "Amar"
+    role: "Creative"
+    lanes: ["client", "cream"]
+    is_approver: false
+    turnaround_days: 3
+    
+  - email: "jana@hrmny.co"
+    name: "Jana"
+    role: "Creative"
+    lanes: ["client", "cream"]
+    is_approver: false
+    turnaround_days: 3
+
+# Lane → delegate routing
+routing:
+  finance:
+    primary: "krystie@hrmny.co"
+    approver: "ay@hrmny.co"
+    
+  admin:
+    primary: "krystie@hrmny.co"
+    backup: "aubrey@hrmny.co"
+    
+  people:
+    primary: "aubrey@hrmny.co"
+    approver: "ay@hrmny.co"
+    
+  ops:
+    primary: "krystie@hrmny.co"
+    approver: "ay@hrmny.co"
+    
+  client:
+    primary: "rene@hrmny.co"
+    approver: "ay@hrmny.co"
+    
+  cream:
+    primary: "rene@hrmny.co"
+    approver: "ay@hrmny.co"
+    
+  governance:
+    primary: null  # Moh only
+    approver: "ay@hrmny.co"
+    
+  music:
+    primary: null  # Moh only
+    approver: null
+
+# Escalation paths
+escalation:
+  default_path:
+    - "delegate"      # Primary delegate for lane
+    - "lane_owner"    # Lane owner if different
+    - "moh"           # Moh as fallback
+    - "ayham"         # Ayham as final escalation
+    
+  stale_days: 5       # Days before auto-escalation
+  
+  urgency_overrides:
+    critical:
+      skip_to: "moh"
+      notify: ["ay@hrmny.co"]
+    high:
+      escalate_after_hours: 4
+
+# Delegation rules
+rules:
+  # Tasks that can be auto-delegated
+  auto_delegate:
+    enabled: true
+    lanes: ["admin", "finance"]
+    max_priority: 3  # Only delegate priority <= 3
+    require_approval: false
+    
+  # Tasks that require Moh's approval before delegation
+  approval_required:
+    lanes: ["governance", "client"]
+    priority_threshold: 4
+    
+  # Tasks that cannot be delegated
+  no_delegate:
+    lanes: ["music"]
+    keywords: ["personal", "confidential", "moh only"]
+
+# Handoff templates
+handoff_templates:
+  task:
+    subject: "[Delegated] {title}"
+    body: |
+      Hi {delegate_name},
+      
+      I'm delegating this task to you:
+      
+      **Task:** {title}
+      **Due:** {due_date}
+      **Context:** {context}
+      
+      Please let me know if you have questions.
+      
+      Thanks,
+      Moh
+      
+  followup:
+    subject: "Follow-up needed: {title}"
+    body: |
+      Hi {delegate_name},
+      
+      Can you follow up on this?
+      
+      **Original:** {title}
+      **Context:** {context}
+      **Action needed:** {action}
+      
+      Thanks!
