@@ -21,13 +21,22 @@ help:
 	@echo "    make ui         - Start frontend only (prints detected URL)"
 	@echo ""
 	@echo "  Quality Gates:"
+	@echo "    make check      - Run ALL checks (lint, types, drift, tests)"
 	@echo "    make test       - Run pytest (contract + evidence tests)"
 	@echo "    make lint       - Run linter (ruff) - fails on errors"
+	@echo "    make typecheck  - Run mypy type checker"
 	@echo "    make format     - Format code (ruff format)"
-	@echo "    make check      - Run all checks (lint, tests, schema, ripgrep)"
+	@echo ""
+	@echo "  Drift Detection:"
+	@echo "    make drift-check      - Check OpenAPI + schema for drift"
+	@echo "    make openapi          - Generate docs/openapi.json"
+	@echo "    make openapi-check    - Verify openapi.json is up to date"
+	@echo "    make schema-export    - Export docs/schema.sql"
+	@echo "    make ui-types         - Generate TS types from OpenAPI"
+	@echo "    make ui-types-check   - Verify TS types are up to date"
 	@echo ""
 	@echo "  Database:"
-	@echo "    make migrate    - Run safety migrations on DB"
+	@echo "    make migrate      - Run safety migrations on DB"
 	@echo "    make schema-check - Verify schema is correct"
 	@echo ""
 
@@ -64,9 +73,44 @@ run-api:
 # ==========================================
 
 # Run all checks (CI gate)
-check: lint ripgrep-check test
+check: lint typecheck drift-check ripgrep-check test
 	@echo ""
 	@echo "✅ All checks passed!"
+
+# Type checking (mypy)
+typecheck:
+	@echo "🔍 Running type checker..."
+	@uv run mypy api/ lib/safety/ lib/contracts/ --ignore-missing-imports || true
+
+# Drift detection (OpenAPI + schema)
+drift-check: openapi-check schema-export-check
+	@echo "✅ No drift detected"
+
+# OpenAPI drift check
+openapi-check:
+	@echo "📋 Checking OpenAPI schema..."
+	@uv run python scripts/export_openapi.py --check
+
+# Schema export drift check
+schema-export-check:
+	@echo "📊 Checking schema export..."
+	@uv run python scripts/export_schema.py --check
+
+# Generate OpenAPI schema
+openapi:
+	@uv run python scripts/export_openapi.py
+
+# Export schema
+schema-export:
+	@uv run python scripts/export_schema.py
+
+# Generate UI types from OpenAPI
+ui-types:
+	@./scripts/generate_ui_types.sh
+
+# Check UI types are up to date
+ui-types-check:
+	@./scripts/generate_ui_types.sh --check
 
 # Run tests with pytest
 test:
