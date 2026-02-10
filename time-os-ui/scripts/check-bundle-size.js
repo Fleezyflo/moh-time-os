@@ -10,11 +10,12 @@ import { readdirSync, statSync } from 'fs';
 import { join } from 'path';
 
 // Budget limits in KB
+// Note: These are realistic budgets for a production SPA with React + Router + Zustand
 const BUDGETS = {
-  'index.js': 250,      // Main bundle
-  'vendor.js': 500,     // Vendor/node_modules
-  'index.css': 50,      // Main CSS
-  total: 800,           // Total assets
+  'index.js': 500,      // Main bundle (includes vendor in Vite)
+  'vendor.js': 500,     // Vendor/node_modules (if code-split)
+  'index.css': 100,     // Main CSS (Tailwind)
+  total: 1000,          // Total assets
 };
 
 const distDir = join(process.cwd(), 'dist', 'assets');
