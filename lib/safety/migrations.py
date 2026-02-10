@@ -35,7 +35,7 @@ def run_safety_migrations(conn: sqlite3.Connection, verbose: bool = True) -> dic
 
     Returns dict with migration results.
     """
-    results = {
+    results: dict[str, list[str]] = {
         "tables_created": [],
         "triggers_created": [],
         "views_created": [],

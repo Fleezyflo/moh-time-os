@@ -41,9 +41,9 @@ class TrustMeta:
         if raw_length > 0:
             self.debug[f"{field_name}_raw_length"] = raw_length
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for API response."""
-        result = {"data_integrity": self.data_integrity}
+        result: dict[str, Any] = {"data_integrity": self.data_integrity}
         if self.errors:
             result["errors"] = self.errors
         if self.debug:

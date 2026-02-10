@@ -53,10 +53,16 @@ if [ -z "$REQUIRED_PYTHON" ]; then
     warn "No .python-version file found"
 else
     CURRENT_PYTHON=$(python3 --version 2>/dev/null | grep -oE '[0-9]+\.[0-9]+' | head -1)
-    if [[ "$CURRENT_PYTHON" == "$REQUIRED_PYTHON"* ]]; then
-        pass "Python version: $CURRENT_PYTHON (required: $REQUIRED_PYTHON)"
+    CURRENT_MAJOR=$(echo "$CURRENT_PYTHON" | cut -d. -f1)
+    REQUIRED_MAJOR=$(echo "$REQUIRED_PYTHON" | cut -d. -f1)
+    CURRENT_MINOR=$(echo "$CURRENT_PYTHON" | cut -d. -f2)
+    REQUIRED_MINOR=$(echo "$REQUIRED_PYTHON" | cut -d. -f2)
+
+    # Allow equal or newer minor version
+    if [ "$CURRENT_MAJOR" -eq "$REQUIRED_MAJOR" ] && [ "$CURRENT_MINOR" -ge "$REQUIRED_MINOR" ]; then
+        pass "Python version: $CURRENT_PYTHON (min: $REQUIRED_PYTHON)"
     else
-        fail "Python version mismatch: $CURRENT_PYTHON (required: $REQUIRED_PYTHON)"
+        fail "Python version mismatch: $CURRENT_PYTHON (min: $REQUIRED_PYTHON)"
     fi
 fi
 
@@ -91,10 +97,11 @@ if [ -z "$REQUIRED_NODE" ]; then
     warn "No .nvmrc file found"
 else
     CURRENT_NODE=$(node --version 2>/dev/null | grep -oE '[0-9]+' | head -1)
-    if [[ "$CURRENT_NODE" == "$REQUIRED_NODE"* ]]; then
-        pass "Node version: v$CURRENT_NODE (required: $REQUIRED_NODE)"
+    # Allow equal or newer major version
+    if [ "$CURRENT_NODE" -ge "$REQUIRED_NODE" ]; then
+        pass "Node version: v$CURRENT_NODE (min: $REQUIRED_NODE)"
     else
-        fail "Node version mismatch: v$CURRENT_NODE (required: $REQUIRED_NODE)"
+        fail "Node version mismatch: v$CURRENT_NODE (min: $REQUIRED_NODE)"
     fi
 fi
 

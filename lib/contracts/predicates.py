@@ -30,23 +30,31 @@ class NormalizedData:
     Predicates check this against the final snapshot.
     """
 
-    projects: list = None
-    clients: list = None
-    invoices: list = None
-    commitments: list = None
-    communications: list = None
-    people: list = None
+    projects: list[Any]
+    clients: list[Any]
+    invoices: list[Any]
+    commitments: list[Any]
+    communications: list[Any]
+    people: list[Any]
 
-    def __post_init__(self):
-        self.projects = self.projects or []
-        self.clients = self.clients or []
-        self.invoices = self.invoices or []
-        self.commitments = self.commitments or []
-        self.communications = self.communications or []
-        self.people = self.people or []
+    def __init__(
+        self,
+        projects: list[Any] | None = None,
+        clients: list[Any] | None = None,
+        invoices: list[Any] | None = None,
+        commitments: list[Any] | None = None,
+        communications: list[Any] | None = None,
+        people: list[Any] | None = None,
+    ) -> None:
+        self.projects = projects if projects is not None else []
+        self.clients = clients if clients is not None else []
+        self.invoices = invoices if invoices is not None else []
+        self.commitments = commitments if commitments is not None else []
+        self.communications = communications if communications is not None else []
+        self.people = people if people is not None else []
 
 
-def get_nested(obj: dict, path: str) -> Any:
+def get_nested(obj: dict[str, Any], path: str) -> Any:
     """
     Get nested value from dict using dot notation.
 
@@ -54,7 +62,7 @@ def get_nested(obj: dict, path: str) -> Any:
              returns snapshot["cash_ar"]["debtors"]
     """
     parts = path.split(".")
-    current = obj
+    current: Any = obj
     for part in parts:
         if current is None:
             return None

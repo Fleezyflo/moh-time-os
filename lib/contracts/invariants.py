@@ -42,8 +42,9 @@ def check_ar_totals_match(snapshot: dict, normalized: NormalizedData) -> None:
 
     # Path 1: from tiles
     tiles_valid_ar = tiles.get("valid_ar", {})
+    tiles_total: float
     if isinstance(tiles_valid_ar, dict):
-        tiles_total = sum(tiles_valid_ar.values())
+        tiles_total = float(sum(tiles_valid_ar.values()))
     else:
         tiles_total = float(tiles_valid_ar or 0)
 
