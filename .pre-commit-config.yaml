@@ -7,7 +7,7 @@ repos:
   # Only runs on active, maintained modules
   # ==========================================
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.4.4
+    rev: v0.8.6
     hooks:
       # Linter - only run on v29/spec modules
       # Note: --ignore S110,S602,S608 skips security rules that are too noisy for legacy code
