@@ -151,6 +151,45 @@ jobs:
           path: docs/sbom/
 
   # ==========================================
+  # MUTATION TESTING
+  # ==========================================
+  mutation:
+    name: Mutation Testing
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Run mutation tests (lib/safety)
+        run: |
+          uv run mutmut run \
+            --paths-to-mutate=lib/safety/ \
+            --tests-dir=tests/ \
+            --runner="python -m pytest tests/test_safety.py -x -q --tb=no" \
+            || true
+
+      - name: Report mutation results
+        run: uv run mutmut results
+
+      - name: Upload mutation cache
+        uses: actions/upload-artifact@v4
+        with:
+          name: mutmut-cache
+          path: .mutmut-cache
+
+  # ==========================================
   # DEAD CODE ANALYSIS
   # ==========================================
   dead-code:

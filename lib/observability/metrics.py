@@ -103,6 +103,24 @@ class MetricsRegistry:
         self._histograms: dict[str, Histogram] = {}
         self._lock = threading.Lock()
 
+    @property
+    def counters(self) -> dict[str, Counter]:
+        """Get all counters."""
+        with self._lock:
+            return dict(self._counters)
+
+    @property
+    def gauges(self) -> dict[str, Gauge]:
+        """Get all gauges."""
+        with self._lock:
+            return dict(self._gauges)
+
+    @property
+    def histograms(self) -> dict[str, Histogram]:
+        """Get all histograms."""
+        with self._lock:
+            return dict(self._histograms)
+
     def counter(self, name: str, description: str = "") -> Counter:
         """Get or create a counter."""
         with self._lock:
@@ -176,6 +194,12 @@ class MetricsRegistry:
 
 # Global registry instance
 REGISTRY = MetricsRegistry()
+
+
+def get_registry() -> MetricsRegistry:
+    """Get the global metrics registry."""
+    return REGISTRY
+
 
 # Pre-defined metrics
 collector_runs = REGISTRY.counter("collector_runs_total", "Total collector run count")

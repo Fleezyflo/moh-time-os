@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 
 from lib import db as db_module
@@ -3298,6 +3298,49 @@ async def get_status():
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
+
+@app.get("/api/metrics")
+async def metrics():
+    """
+    Prometheus-format metrics endpoint.
+
+    Exports application metrics in text format for scraping.
+    """
+    from lib.observability.metrics import get_registry
+
+    registry = get_registry()
+    lines = []
+
+    # Export counters
+    for name, counter in registry.counters.items():
+        lines.append(f"# HELP {name} {counter.description}")
+        lines.append(f"# TYPE {name} counter")
+        lines.append(f"{name} {counter.value}")
+
+    # Export gauges
+    for name, gauge in registry.gauges.items():
+        lines.append(f"# HELP {name} {gauge.description}")
+        lines.append(f"# TYPE {name} gauge")
+        lines.append(f"{name} {gauge.value}")
+
+    # Export histograms (simplified: just count and sum)
+    for name, histogram in registry.histograms.items():
+        lines.append(f"# HELP {name} {histogram.description}")
+        lines.append(f"# TYPE {name} histogram")
+        with histogram._lock:
+            count = len(histogram._values)
+            total = sum(histogram._values) if histogram._values else 0
+        lines.append(f"{name}_count {count}")
+        lines.append(f"{name}_sum {total:.6f}")
+
+    # Add process info
+    import os
+    lines.append("# HELP process_start_time_seconds Process start time")
+    lines.append("# TYPE process_start_time_seconds gauge")
+    lines.append(f"process_start_time_seconds {os.getpid()}")
+
+    return PlainTextResponse("\n".join(lines) + "\n", media_type="text/plain")
 
 
 @app.get("/api/debug/db")

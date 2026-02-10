@@ -477,6 +477,11 @@
     },
     {
       "method": "GET",
+      "path": "/api/metrics",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
       "path": "/api/debug/db",
       "source": "api/server.py"
     },
@@ -1062,7 +1067,7 @@
   ],
   "generated_by": "scripts/generate_system_map.py",
   "summary": {
-    "api_routes_count": 171,
+    "api_routes_count": 172,
     "collectors_count": 5,
     "db_tables_count": 45,
     "ui_routes_count": 10

@@ -152,6 +152,100 @@ class TestSchemaAssertions:
         conn.close()
 
 
+class TestUpgrade:
+    """Test database upgrade from older schema versions."""
+
+    @pytest.fixture
+    def old_schema_db(self):
+        """Create a database with older schema version."""
+        fd, path = tempfile.mkstemp(suffix=".db")
+        os.close(fd)
+
+        # Create DB with older schema (version 1, minimal tables)
+        conn = sqlite3.connect(path)
+        conn.execute("PRAGMA user_version = 1")
+
+        # Create minimal v1 schema
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS clients (
+                id TEXT PRIMARY KEY,
+                name TEXT NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS events (
+                id TEXT PRIMARY KEY,
+                title TEXT,
+                start_time TEXT,
+                end_time TEXT,
+                client_id TEXT
+            )
+        """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS invoices (
+                id TEXT PRIMARY KEY,
+                client_id TEXT,
+                amount REAL,
+                status TEXT
+            )
+        """)
+        conn.commit()
+        conn.close()
+
+        yield path
+        if os.path.exists(path):
+            os.unlink(path)
+
+    def test_upgrade_from_old_schema(self, old_schema_db):
+        """Migrations upgrade from older schema to current."""
+        from lib.db import SCHEMA_VERSION, run_migrations
+
+        # Verify old version
+        conn = sqlite3.connect(old_schema_db)
+        cursor = conn.execute("PRAGMA user_version")
+        old_version = cursor.fetchone()[0]
+        assert old_version == 1, f"Expected old version 1, got {old_version}"
+
+        # Run migrations
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys=ON")
+        run_migrations(conn)
+
+        # Verify upgraded
+        cursor = conn.execute("PRAGMA user_version")
+        new_version = cursor.fetchone()[0]
+        assert new_version == SCHEMA_VERSION, f"Expected {SCHEMA_VERSION}, got {new_version}"
+
+        # Verify core tables still exist
+        cursor = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='clients'"
+        )
+        assert cursor.fetchone() is not None, "clients table lost during upgrade"
+        conn.close()
+
+    def test_upgrade_preserves_data(self, old_schema_db):
+        """Upgrade preserves existing data."""
+        from lib.db import run_migrations
+
+        # Insert test data
+        conn = sqlite3.connect(old_schema_db)
+        conn.execute("INSERT INTO clients (id, name) VALUES ('test-1', 'Test Client')")
+        conn.commit()
+
+        # Run migrations
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys=ON")
+        run_migrations(conn)
+
+        # Verify data preserved
+        cursor = conn.execute("SELECT name FROM clients WHERE id = 'test-1'")
+        row = cursor.fetchone()
+        assert row is not None, "Data lost during upgrade"
+        assert row[0] == "Test Client"
+        conn.close()
+
+
 class TestBackupRestore:
     """Test backup and restore functionality."""
 

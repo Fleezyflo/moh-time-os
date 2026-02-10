@@ -4112,6 +4112,23 @@
         "summary": "Get Insights"
       }
     },
+    "/api/metrics": {
+      "get": {
+        "description": "Prometheus-format metrics endpoint.\n\nExports application metrics in text format for scraping.",
+        "operationId": "metrics_api_metrics_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Metrics"
+      }
+    },
     "/api/notifications": {
       "get": {
         "description": "Get notifications.",

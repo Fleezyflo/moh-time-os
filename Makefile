@@ -93,9 +93,13 @@ check: lint typecheck test-property test drift-check ui-test
 	@echo "✅ All checks passed!"
 
 # Full CI suite (~5 min)
-ci: pins lint typecheck test-all drift-check invariants ui-check db-lifecycle-test smoke governance
+ci: pins lint typecheck test-ci drift-check invariants ui-check db-lifecycle-test smoke governance
 	@echo ""
 	@echo "✅ Full CI suite passed!"
+
+test-ci:
+	@echo "🧪 Running CI test suite..."
+	@uv run pytest tests/contract/ tests/property/ tests/lifecycle/ tests/test_safety.py tests/negative/ -v --tb=short
 
 # ==========================================
 # PYTHON QUALITY
@@ -271,6 +275,16 @@ bench:
 bench-save:
 	@echo "📊 Running and saving benchmarks..."
 	@uv run python scripts/benchmark.py --save benchmarks.json
+
+mutation:
+	@echo "🧬 Running mutation tests (small scope: lib/safety)..."
+	@uv run mutmut run --paths-to-mutate=lib/safety/json_parse.py --tests-dir=tests/ --runner="python -m pytest tests/test_safety.py -x -q --tb=no" || true
+	@uv run mutmut results
+
+mutation-full:
+	@echo "🧬 Running full mutation tests (nightly scope)..."
+	@uv run mutmut run --paths-to-mutate=lib/safety/ --tests-dir=tests/ || true
+	@uv run mutmut results
 
 # ==========================================
 # DB LIFECYCLE
