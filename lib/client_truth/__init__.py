@@ -21,4 +21,4 @@ Invariants:
 from .health_calculator import HealthCalculator
 from .linker import ClientLinker
 
-__all__ = ['HealthCalculator', 'ClientLinker']
+__all__ = ["HealthCalculator", "ClientLinker"]
