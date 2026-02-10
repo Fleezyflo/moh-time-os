@@ -2,16 +2,67 @@
 
 Personal Operating System for executive productivity. Runs autonomously without AI in the critical path.
 
-## Quick Start
+## Pristine Bootstrap
+
+**Toolchain:** uv (Python package manager)
+**API Framework:** FastAPI/Uvicorn
+**Database:** SQLite (auto-created on first run)
+
+### Fresh Clone → Running
 
 ```bash
-# Start API server
-cd ~/clawd/moh_time_os
-source .venv/bin/activate
-python3 -m api.server
+# 1. Clone the repo
+git clone <repo-url> moh_time_os
+cd moh_time_os
+
+# 2. Install dependencies (requires uv: https://docs.astral.sh/uv/)
+make setup
+# OR: uv sync
+
+# 3. Run verification (optional but recommended)
+make verify
+# OR: ./scripts/verify_pristine.sh
+
+# 4. Start API server
+make run-api
+# OR: uv run python -m api.server
 
 # Dashboard available at http://localhost:8420
+# API docs at http://localhost:8420/docs
 ```
+
+### Prerequisites
+
+- Python 3.11+
+- [uv](https://docs.astral.sh/uv/) package manager
+- Node.js 18+ (for frontend, optional)
+
+### Development
+
+```bash
+# Start both backend and frontend
+make dev
+
+# Backend only
+make api
+
+# Frontend only
+make ui
+
+# Run tests
+make test
+
+# Run linter
+make lint
+
+# Format code
+make format
+
+# Full verification
+make verify
+```
+
+---
 
 ## Architecture
 
@@ -34,7 +85,7 @@ python3 -m api.server
 │  │Proposals│    │ Bundles │                                │
 │  └─────────┘    └─────────┘                                │
 │                                                              │
-└──────────────────────┬──────────────────────────────────────┘
+└──────────────────────────────────────────────────────────────┘
                        │
                        ▼
 ┌─────────────────────────────────────────────────────────────┐
@@ -47,8 +98,10 @@ python3 -m api.server
 
 ## API Endpoints (40+)
 
+### Health Check
+- `GET /api/health` - System health (use for pristine verification)
+
 ### Core
-- `GET /api/health` - System health
 - `GET /api/overview` - Dashboard home data
 - `GET /api/summary` - Quick summary
 
@@ -104,8 +157,8 @@ moh_time_os/
 ├── config/
 │   ├── governance.yaml   # Domain modes, rate limits
 │   └── intelligence.yaml # Scoring weights
-├── data/
-│   ├── state.db         # SQLite database
+├── data/                 # Runtime data (gitignored)
+│   ├── moh_time_os.db   # SQLite database
 │   └── bundles/         # Change bundles for rollback
 ├── lib/
 │   ├── autonomous_loop.py
@@ -115,8 +168,16 @@ moh_time_os/
 │   ├── change_bundles.py
 │   ├── calibration.py   # Weekly calibration
 │   └── notifier/        # Notification engine
-├── ui/
-│   └── index.html       # Dashboard (Tailwind)
+├── scripts/
+│   ├── verify_pristine.sh     # Pristine verification
+│   ├── check_no_derived_tracked.sh
+│   └── ...
+├── tests/
+│   ├── contract/        # Contract tests
+│   └── negative/        # Negative tests
+├── time-os-ui/          # Frontend (Vite + React)
+├── pyproject.toml       # Python project config
+├── Makefile             # Build targets
 └── README.md
 ```
 
@@ -138,24 +199,6 @@ moh_time_os/
 3. **ATTRIBUTION REQUIRED** - All outputs trace to sources
 4. **REVERSIBLE BY DEFAULT** - All changes produce rollback bundles
 5. **USER CONTROLS AUTONOMY** - Per-domain mode switching
-
-## Development
-
-```bash
-# Install dependencies
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-
-# Run tests
-python3 -m pytest tests/
-
-# Run single cycle
-python3 -m lib.autonomous_loop run
-
-# Check status
-python3 -m lib.autonomous_loop status
-```
 
 ## Dashboard
 

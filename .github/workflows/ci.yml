@@ -1,0 +1,177 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  verify:
+    name: Pristine Verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Check no derived files tracked
+        run: ./scripts/check_no_derived_tracked.sh
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run pre-commit
+        run: uv run pre-commit run -a
+
+      # ═══════════════════════════════════════════════════════════════
+      # PATCHWORK SCAN (BLOCKING) - Must pass before tests run
+      # ═══════════════════════════════════════════════════════════════
+      - name: Patchwork Anti-Pattern Scan
+        run: bash scripts/patchwork_scan.sh --ci
+
+      # ═══════════════════════════════════════════════════════════════
+      # SPEC TRACEABILITY (BLOCKING) - Contract must match UI spec
+      # ═══════════════════════════════════════════════════════════════
+      - name: Spec Traceability Check
+        run: uv run python scripts/spec_traceability.py
+
+      # ═══════════════════════════════════════════════════════════════
+      # TESTS (ALL BLOCKING)
+      # ═══════════════════════════════════════════════════════════════
+      - name: Run Contract tests
+        run: uv run pytest tests/contract/ -v --tb=short
+
+      - name: Run Negative tests
+        run: uv run pytest tests/negative/ -v --tb=short
+
+      - name: Run Golden tests
+        run: uv run pytest tests/golden/ -v --tb=short
+
+      - name: Run UI Spec tests
+        run: uv run pytest lib/ui_spec_v21/tests/ -v --tb=short
+
+      # ═══════════════════════════════════════════════════════════════
+      # ARTIFACT VALIDATION (BLOCKING) - Proves generated output is valid
+      # ═══════════════════════════════════════════════════════════════
+      - name: Generate Snapshot Artifact
+        run: |
+          mkdir -p output
+          uv run python -c "
+          from lib.agency_snapshot.generator import AgencySnapshotGenerator
+          gen = AgencySnapshotGenerator()
+          snapshot = gen.generate()
+          gen.save(snapshot)
+          print('Generated snapshot successfully')
+          "
+
+      - name: Validate Snapshot Artifact
+        run: uv run python scripts/validate_snapshot_artifact.py output/agency_snapshot.json
+
+      - name: Upload Artifact on Failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: failed-snapshot
+          path: output/agency_snapshot.json
+
+  lint:
+    name: Lint & Security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Ruff Lint
+        run: uv run ruff check lib/ api/ --output-format=github
+
+      - name: Ruff Format Check
+        run: uv run ruff format --check lib/ api/
+
+      - name: Bandit Security Scan
+        run: uv run bandit -r lib/ api/ -ll
+
+      - name: Mypy Type Check
+        run: uv run mypy lib/ api/ --ignore-missing-imports
+        continue-on-error: true  # Mypy can be noisy on legacy code
+
+  sql-injection-check:
+    name: SQL Injection Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for SQL f-strings
+        run: |
+          echo "Checking for SQL injection patterns..."
+          if grep -rn 'execute.*f"' --include="*.py" lib/ api/; then
+            echo "::warning::Found SQL f-string patterns - review for injection risk"
+          fi
+
+      - name: Check for SQL .format()
+        run: |
+          if grep -rn 'execute.*\.format(' --include="*.py" lib/ api/; then
+            echo "::warning::Found SQL .format() patterns - review for injection risk"
+          fi
+
+  api-smoke-test:
+    name: API Smoke Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Start API and check health
+        run: |
+          mkdir -p data
+          export MOH_TIME_OS_DB_PATH="$(pwd)/data/ci_test.db"
+
+          # Start server in background
+          uv run python -m api.server &
+          API_PID=$!
+
+          # Wait for server to start
+          for i in $(seq 1 15); do
+            sleep 1
+            if curl -sf http://localhost:8420/api/health; then
+              echo "API healthy!"
+              kill $API_PID || true
+              exit 0
+            fi
+          done
+
+          echo "API failed to start within 15s"
+          kill $API_PID || true
+          exit 1
