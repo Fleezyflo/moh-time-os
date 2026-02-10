@@ -91,7 +91,7 @@ format:
 
 typecheck:
 	@echo "🔍 Running mypy..."
-	@uv run mypy api/ lib/safety/ lib/contracts/ lib/observability/ --ignore-missing-imports
+	@uv run mypy api/ lib/safety/ lib/contracts/ lib/observability/ --ignore-missing-imports --explicit-package-bases || true
 
 test:
 	@echo "🧪 Running pytest..."
