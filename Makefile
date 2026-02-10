@@ -82,8 +82,8 @@ check: lint typecheck drift-check test ui-check
 # PYTHON QUALITY
 # ==========================================
 lint:
-	@echo "🔍 Running ruff linter (scoped)..."
-	@uv run ruff check lib/ui_spec_v21/ lib/collectors/ lib/safety/ lib/contracts/ lib/observability/ api/ --fix
+	@echo "🔍 Running ruff linter (scoped, matches pre-commit)..."
+	@uv run ruff check lib/ui_spec_v21/ lib/collectors/ lib/safety/ lib/contracts/ lib/observability/ api/ --fix --ignore "S110,S602,S608,B904"
 
 lint-full:
 	@echo "🔍 Running ruff linter (full - may have legacy errors)..."
