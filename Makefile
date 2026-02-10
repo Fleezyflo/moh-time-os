@@ -245,6 +245,18 @@ ui-deps:
 	@echo "🔍 Checking UI dependencies..."
 	@cd time-os-ui && node scripts/check-deps.js || true
 
+ui-contracts:
+	@echo "📋 Running UI API contract tests..."
+	@cd time-os-ui && pnpm test -- api-contracts
+
+ui-fixtures:
+	@echo "🧪 Validating MSW fixtures against schemas..."
+	@cd time-os-ui && pnpm test -- fixtures
+
+ui-integration:
+	@echo "🔗 Running UI integration tests..."
+	@cd time-os-ui && pnpm test -- integration
+
 # ==========================================
 # HYGIENE
 # ==========================================

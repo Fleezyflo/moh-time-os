@@ -28,5 +28,31 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'warn',
       'no-console': ['warn', { allow: ['warn', 'error'] }],
     },
+  },
+  // Ban direct fetch/axios usage outside src/api/
+  // All API calls MUST go through src/api/http.ts
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/api/**', 'src/**/__tests__/**', 'src/**/*.test.{ts,tsx}'],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        {
+          name: 'fetch',
+          message: 'Direct fetch() is banned. Use src/api/http.ts instead.',
+        },
+      ],
+      'no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: 'axios',
+              message: 'axios is banned. Use src/api/http.ts instead.',
+            },
+          ],
+        },
+      ],
+    },
   }
 );
