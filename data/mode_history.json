@@ -1,9 +1,0 @@
-[
-  {
-    "timestamp": "2026-02-01T04:48:13.319543+00:00",
-    "domain": "tasks",
-    "old_mode": "observe",
-    "new_mode": "propose",
-    "reason": "Initial enablement after build"
-  }
-]
