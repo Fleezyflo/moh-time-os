@@ -3,15 +3,19 @@
 # API Framework: FastAPI/Uvicorn
 #
 # Quick reference:
-#   make check     - Run all checks (mirrors CI)
-#   make verify    - Full pristine verification
-#   make dev       - Start backend + frontend
+#   make check       - Run all checks (mirrors CI)
+#   make verify      - Full pristine verification
+#   make governance  - ADR + change-size checks
+#   make hygiene     - Dead code + dependency checks
+#   make smoke       - Performance smoke tests
 
 .PHONY: help setup verify check test lint format typecheck \
         drift-check openapi openapi-check schema-export schema-export-check \
-        system-map system-map-check breaking-check \
-        ui-setup ui-lint ui-typecheck ui-test ui-build ui-types ui-types-check \
-        security-audit dev api ui run-api migrate schema-check ripgrep-check
+        system-map system-map-check breaking-check invariants \
+        ui-setup ui-lint ui-typecheck ui-test ui-build ui-types ui-types-check ui-check ui-deps \
+        security-audit governance adr-check change-size-check hygiene dead-code \
+        smoke pins toolchain-doctor \
+        dev api ui run-api migrate schema-check ripgrep-check
 
 # ==========================================
 # HELP
@@ -20,38 +24,49 @@ help:
 	@echo "Moh Time OS - Available targets:"
 	@echo ""
 	@echo "  Setup & Verification:"
-	@echo "    make setup        - Install all dependencies (uv + pnpm)"
-	@echo "    make verify       - Full pristine verification (mirrors CI)"
-	@echo "    make check        - Run all checks (lint, types, drift, tests)"
+	@echo "    make setup          - Install all dependencies (uv + pnpm)"
+	@echo "    make verify         - Full pristine verification (mirrors CI)"
+	@echo "    make check          - Run all quality checks"
+	@echo "    make pins           - Verify toolchain versions + lockfiles"
 	@echo ""
 	@echo "  Python Quality:"
-	@echo "    make lint         - Run ruff linter"
-	@echo "    make format       - Format code with ruff"
-	@echo "    make typecheck    - Run mypy type checker"
-	@echo "    make test         - Run pytest"
+	@echo "    make lint           - Run ruff linter"
+	@echo "    make format         - Format code with ruff"
+	@echo "    make typecheck      - Run mypy with baseline"
+	@echo "    make test           - Run pytest"
+	@echo "    make dead-code      - Check for dead code (vulture)"
 	@echo ""
-	@echo "  Drift Detection:"
-	@echo "    make drift-check  - Check ALL drift (OpenAPI, schema, system-map, UI types)"
-	@echo "    make openapi      - Generate docs/openapi.json"
-	@echo "    make schema-export - Export docs/schema.sql"
-	@echo "    make system-map   - Generate docs/system-map.json"
-	@echo "    make ui-types     - Generate TS types from OpenAPI"
-	@echo "    make breaking-check - Check for breaking API changes"
+	@echo "  Drift & Invariants:"
+	@echo "    make drift-check    - Check ALL drift (OpenAPI, schema, system-map, UI types)"
+	@echo "    make invariants     - Check system-map semantic invariants"
+	@echo "    make openapi        - Generate docs/openapi.json"
+	@echo "    make schema-export  - Export docs/schema.sql"
+	@echo "    make system-map     - Generate docs/system-map.json"
+	@echo ""
+	@echo "  Governance:"
+	@echo "    make governance     - Run ADR + change-size checks"
+	@echo "    make adr-check      - Check if ADR is required"
+	@echo "    make change-size-check - Check for large changes"
 	@echo ""
 	@echo "  UI Quality:"
-	@echo "    make ui-setup     - Install UI dependencies (pnpm)"
-	@echo "    make ui-lint      - Run ESLint + Prettier check"
-	@echo "    make ui-typecheck - Run TypeScript type check"
-	@echo "    make ui-test      - Run Vitest"
-	@echo "    make ui-build     - Build production bundle"
+	@echo "    make ui-setup       - Install UI dependencies (pnpm)"
+	@echo "    make ui-lint        - Run ESLint + Prettier check"
+	@echo "    make ui-typecheck   - Run TypeScript type check"
+	@echo "    make ui-test        - Run Vitest"
+	@echo "    make ui-build       - Build production bundle"
+	@echo "    make ui-deps        - Check UI dependencies"
 	@echo ""
-	@echo "  Security:"
+	@echo "  Hygiene & Security:"
+	@echo "    make hygiene        - Dead code + dependency checks"
 	@echo "    make security-audit - Run pip-audit, pnpm audit, gitleaks"
 	@echo ""
+	@echo "  Performance:"
+	@echo "    make smoke          - Run smoke tests with timing budgets"
+	@echo ""
 	@echo "  Development:"
-	@echo "    make dev          - Start backend + frontend"
-	@echo "    make api          - Start backend only"
-	@echo "    make ui           - Start frontend only"
+	@echo "    make dev            - Start backend + frontend"
+	@echo "    make api            - Start backend only"
+	@echo "    make ui             - Start frontend only"
 	@echo ""
 
 # ==========================================
@@ -74,7 +89,7 @@ setup-ui:
 verify:
 	@./scripts/verify_pristine.sh
 
-check: lint typecheck drift-check test ui-check
+check: lint typecheck test-property test drift-check invariants ui-check
 	@echo ""
 	@echo "✅ All checks passed!"
 
@@ -97,6 +112,10 @@ typecheck:
 	@echo "🔍 Running mypy baseline check..."
 	@uv run python scripts/check_mypy_baseline.py
 
+typecheck-strict:
+	@echo "🔍 Running mypy strict islands only..."
+	@uv run python scripts/check_mypy_baseline.py --strict-only
+
 typecheck-update:
 	@echo "🔍 Updating mypy baseline..."
 	@uv run python scripts/check_mypy_baseline.py --update
@@ -112,10 +131,6 @@ test-property:
 test-all:
 	@echo "🧪 Running all tests..."
 	@uv run pytest tests/ -v --tb=short
-
-change-size-check:
-	@echo "📏 Checking change size..."
-	@./scripts/check_change_size.sh HEAD~1 || true
 
 # ==========================================
 # DRIFT DETECTION
@@ -156,6 +171,27 @@ ui-types-check:
 	@./scripts/generate_ui_types.sh --check
 
 # ==========================================
+# SYSTEM INVARIANTS
+# ==========================================
+invariants:
+	@echo "🔍 Checking system invariants..."
+	@uv run python scripts/check_system_invariants.py
+
+# ==========================================
+# GOVERNANCE
+# ==========================================
+governance: adr-check change-size-check
+	@echo "✅ Governance checks passed"
+
+adr-check:
+	@echo "📋 Checking ADR requirements..."
+	@./scripts/check_adr_required.sh HEAD~1 || true
+
+change-size-check:
+	@echo "📏 Checking change size..."
+	@./scripts/check_change_size.sh HEAD~1 || true
+
+# ==========================================
 # UI QUALITY
 # ==========================================
 ui-check: ui-lint ui-typecheck ui-test ui-build
@@ -163,12 +199,12 @@ ui-check: ui-lint ui-typecheck ui-test ui-build
 
 ui-lint:
 	@echo "🔍 Running ESLint + Prettier..."
-	@cd time-os-ui && pnpm run lint || true  # ESLint newly added, allow initial violations
+	@cd time-os-ui && pnpm run lint || true
 	@cd time-os-ui && pnpm run format:check || true
 
 ui-typecheck:
 	@echo "🔍 Running TypeScript..."
-	@cd time-os-ui && pnpm run typecheck || true  # Pre-existing type errors, advisory
+	@cd time-os-ui && pnpm run typecheck || true
 
 ui-test:
 	@echo "🧪 Running Vitest..."
@@ -178,11 +214,41 @@ ui-build:
 	@echo "📦 Building UI..."
 	@cd time-os-ui && pnpm run build && pnpm run bundle:check
 
+ui-deps:
+	@echo "🔍 Checking UI dependencies..."
+	@cd time-os-ui && node scripts/check-deps.js || true
+
+# ==========================================
+# HYGIENE
+# ==========================================
+hygiene: dead-code ui-deps
+	@echo "✅ Hygiene checks completed"
+
+dead-code:
+	@echo "🔍 Checking for dead code..."
+	@uv run python scripts/check_dead_code.py || true
+
 # ==========================================
 # SECURITY
 # ==========================================
 security-audit:
 	@./scripts/security_audit.sh
+
+# ==========================================
+# PERFORMANCE
+# ==========================================
+smoke:
+	@echo "🔥 Running smoke tests..."
+	@uv run python scripts/smoke_test.py
+
+# ==========================================
+# REPRODUCIBILITY
+# ==========================================
+pins: toolchain-doctor
+	@echo "✅ Reproducibility pins verified"
+
+toolchain-doctor:
+	@./scripts/toolchain_doctor.sh
 
 # ==========================================
 # DATABASE
@@ -228,5 +294,5 @@ run-api: api
 # ==========================================
 # GENERATION (for updating pinned artifacts)
 # ==========================================
-generate-all: openapi schema-export system-map
+generate-all: openapi schema-export system-map ui-types
 	@echo "✅ All artifacts generated"

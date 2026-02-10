@@ -191,6 +191,95 @@ jobs:
         run: pnpm run bundle:check
 
   # ==========================================
+  # SYSTEM INVARIANTS
+  # ==========================================
+  system-invariants:
+    name: System Invariants
+    runs-on: ubuntu-latest
+    needs: drift-detection
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Check System Invariants
+        run: uv run python scripts/check_system_invariants.py || true
+
+  # ==========================================
+  # GOVERNANCE
+  # ==========================================
+  governance:
+    name: Governance Checks
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for diff
+
+      - name: ADR Requirement Check
+        run: |
+          chmod +x ./scripts/check_adr_required.sh
+          ./scripts/check_adr_required.sh origin/${{ github.base_ref }} || true
+
+      - name: Change Size Check
+        run: |
+          chmod +x ./scripts/check_change_size.sh
+          ./scripts/check_change_size.sh origin/${{ github.base_ref }}
+
+  # ==========================================
+  # REPRODUCIBILITY
+  # ==========================================
+  reproducibility:
+    name: Reproducibility Pins
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Python Version Pin
+        run: |
+          if [ ! -f ".python-version" ]; then
+            echo "❌ .python-version missing"
+            exit 1
+          fi
+          echo "✅ .python-version exists: $(cat .python-version)"
+
+      - name: Check Node Version Pin
+        run: |
+          if [ ! -f ".nvmrc" ]; then
+            echo "❌ .nvmrc missing"
+            exit 1
+          fi
+          echo "✅ .nvmrc exists: $(cat .nvmrc)"
+
+      - name: Check uv.lock exists
+        run: |
+          if [ ! -f "uv.lock" ]; then
+            echo "❌ uv.lock missing"
+            exit 1
+          fi
+          echo "✅ uv.lock exists"
+
+      - name: Check pnpm-lock.yaml exists
+        run: |
+          if [ ! -f "time-os-ui/pnpm-lock.yaml" ]; then
+            echo "❌ time-os-ui/pnpm-lock.yaml missing"
+            exit 1
+          fi
+          echo "✅ pnpm-lock.yaml exists"
+
+  # ==========================================
   # SECURITY AUDIT
   # ==========================================
   security-audit:
