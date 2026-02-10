@@ -54,13 +54,8 @@ jobs:
       - name: Bandit Security Scan
         run: uv run bandit -r lib/ api/ -ll
 
-      - name: Mypy Type Check (strict modules)
-        run: uv run mypy api/ lib/safety/ lib/contracts/ lib/observability/ --ignore-missing-imports --explicit-package-bases
-        continue-on-error: true  # Type errors exist, advisory for now
-
-      - name: Mypy Type Check (legacy - soft fail)
-        run: uv run mypy lib/ --ignore-missing-imports --explicit-package-bases
-        continue-on-error: true
+      - name: Mypy Baseline Check
+        run: uv run python scripts/check_mypy_baseline.py
 
   # ==========================================
   # PYTHON TESTS
@@ -105,6 +100,12 @@ jobs:
 
       - name: Run UI Spec tests
         run: uv run pytest lib/ui_spec_v21/tests/ -v --tb=short
+
+      - name: Run Property tests
+        run: uv run pytest tests/property/ -v --tb=short
+
+      - name: Run OpenAPI contract tests
+        run: uv run pytest tests/contract/test_openapi_contract.py -v --tb=short
 
   # ==========================================
   # DRIFT DETECTION

@@ -94,16 +94,28 @@ format:
 	@uv run ruff format lib/ui_spec_v21/ lib/collectors/ lib/safety/ lib/contracts/ lib/observability/ api/
 
 typecheck:
-	@echo "🔍 Running mypy..."
-	@uv run mypy api/ lib/safety/ lib/contracts/ lib/observability/ --ignore-missing-imports --explicit-package-bases || true
+	@echo "🔍 Running mypy baseline check..."
+	@uv run python scripts/check_mypy_baseline.py
+
+typecheck-update:
+	@echo "🔍 Updating mypy baseline..."
+	@uv run python scripts/check_mypy_baseline.py --update
 
 test:
-	@echo "🧪 Running pytest..."
+	@echo "🧪 Running pytest (contract + safety)..."
 	@uv run pytest tests/contract/ tests/test_safety.py -v --tb=short
+
+test-property:
+	@echo "🧪 Running property-based tests..."
+	@uv run pytest tests/property/ -v --tb=short
 
 test-all:
 	@echo "🧪 Running all tests..."
 	@uv run pytest tests/ -v --tb=short
+
+change-size-check:
+	@echo "📏 Checking change size..."
+	@./scripts/check_change_size.sh HEAD~1 || true
 
 # ==========================================
 # DRIFT DETECTION
