@@ -97,68 +97,80 @@ class Histogram:
 class MetricsRegistry:
     """Central registry for all metrics."""
 
-    def __init__(self):
-        self._metrics: dict[str, Counter | Gauge | Histogram] = {}
+    def __init__(self) -> None:
+        self._counters: dict[str, Counter] = {}
+        self._gauges: dict[str, Gauge] = {}
+        self._histograms: dict[str, Histogram] = {}
         self._lock = threading.Lock()
 
     def counter(self, name: str, description: str = "") -> Counter:
         """Get or create a counter."""
         with self._lock:
-            if name not in self._metrics:
-                self._metrics[name] = Counter(name, description)
-            return self._metrics[name]
+            if name not in self._counters:
+                self._counters[name] = Counter(name, description)
+            return self._counters[name]
 
     def gauge(self, name: str, description: str = "") -> Gauge:
         """Get or create a gauge."""
         with self._lock:
-            if name not in self._metrics:
-                self._metrics[name] = Gauge(name, description)
-            return self._metrics[name]
+            if name not in self._gauges:
+                self._gauges[name] = Gauge(name, description)
+            return self._gauges[name]
 
     def histogram(self, name: str, description: str = "") -> Histogram:
         """Get or create a histogram."""
         with self._lock:
-            if name not in self._metrics:
-                self._metrics[name] = Histogram(name, description)
-            return self._metrics[name]
+            if name not in self._histograms:
+                self._histograms[name] = Histogram(name, description)
+            return self._histograms[name]
 
     def to_prometheus(self) -> str:
         """Export metrics in Prometheus text format."""
-        lines = []
+        lines: list[str] = []
         with self._lock:
-            for name, metric in sorted(self._metrics.items()):
-                if metric.description:
-                    lines.append(f"# HELP {name} {metric.description}")
+            # Counters
+            for name in sorted(self._counters.keys()):
+                c = self._counters[name]
+                if c.description:
+                    lines.append(f"# HELP {name} {c.description}")
+                lines.append(f"# TYPE {name} counter")
+                lines.append(f"{name} {c.value}")
 
-                if isinstance(metric, Counter):
-                    lines.append(f"# TYPE {name} counter")
-                    lines.append(f"{name} {metric.value}")
-                elif isinstance(metric, Gauge):
-                    lines.append(f"# TYPE {name} gauge")
-                    lines.append(f"{name} {metric.value}")
-                elif isinstance(metric, Histogram):
-                    lines.append(f"# TYPE {name} summary")
-                    lines.append(f"{name}_count {metric.count}")
-                    lines.append(f"{name}_sum {metric.sum}")
+            # Gauges
+            for name in sorted(self._gauges.keys()):
+                g = self._gauges[name]
+                if g.description:
+                    lines.append(f"# HELP {name} {g.description}")
+                lines.append(f"# TYPE {name} gauge")
+                lines.append(f"{name} {g.value}")
+
+            # Histograms
+            for name in sorted(self._histograms.keys()):
+                h = self._histograms[name]
+                if h.description:
+                    lines.append(f"# HELP {name} {h.description}")
+                lines.append(f"# TYPE {name} summary")
+                lines.append(f"{name}_count {h.count}")
+                lines.append(f"{name}_sum {h.sum}")
 
         return "\n".join(lines) + "\n"
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, dict[str, float | int | str]]:
         """Export metrics as dictionary."""
-        result = {}
+        result: dict[str, dict[str, float | int | str]] = {}
         with self._lock:
-            for name, metric in self._metrics.items():
-                if isinstance(metric, Counter):
-                    result[name] = {"type": "counter", "value": metric.value}
-                elif isinstance(metric, Gauge):
-                    result[name] = {"type": "gauge", "value": metric.value}
-                elif isinstance(metric, Histogram):
-                    result[name] = {
-                        "type": "histogram",
-                        "count": metric.count,
-                        "sum": metric.sum,
-                        "avg": metric.avg,
-                    }
+            for name in self._counters:
+                result[name] = {"type": "counter", "value": self._counters[name].value}
+            for name in self._gauges:
+                result[name] = {"type": "gauge", "value": self._gauges[name].value}
+            for name in self._histograms:
+                h = self._histograms[name]
+                result[name] = {
+                    "type": "histogram",
+                    "count": h.count,
+                    "sum": h.sum,
+                    "avg": h.avg,
+                }
         return result
 
 

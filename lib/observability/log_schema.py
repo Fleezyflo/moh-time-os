@@ -76,7 +76,7 @@ class LogEntry:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
-        result = {
+        result: dict[str, Any] = {
             "timestamp": self.timestamp,
             "level": self.level.value,
             "message": self.message,
