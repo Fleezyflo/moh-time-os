@@ -144,7 +144,7 @@ class TestEndpointCount:
 class TestUiUsedEndpoints:
     """
     Verify UI-used endpoints cannot loosen.
-    
+
     These endpoints are used by the React UI and their schemas
     must not remove required fields or change types.
     """
@@ -159,14 +159,14 @@ class TestUiUsedEndpoints:
     def test_ui_used_endpoints_exist(self, openapi_schema):
         """All UI-used endpoints must exist."""
         paths = openapi_schema.get("paths", {})
-        
+
         for endpoint in self.UI_USED_ENDPOINTS:
             assert endpoint in paths, f"UI-used endpoint missing: {endpoint}"
 
     def test_ui_used_endpoints_have_get(self, openapi_schema):
         """UI-used endpoints must support GET method."""
         paths = openapi_schema.get("paths", {})
-        
+
         for endpoint in self.UI_USED_ENDPOINTS:
             if endpoint in paths:
                 assert "get" in paths[endpoint], \
@@ -178,10 +178,10 @@ class TestUiUsedEndpoints:
         health_path = paths.get("/api/health", {})
         get_op = health_path.get("get", {})
         responses = get_op.get("responses", {})
-        
+
         # Must have 200 response
         assert "200" in responses, "/api/health must have 200 response"
-        
+
         # Response must have content
         response_200 = responses["200"]
         content = response_200.get("content", {})
