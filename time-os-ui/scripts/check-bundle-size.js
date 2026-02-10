@@ -12,10 +12,9 @@ import { join } from 'path';
 // Budget limits in KB
 // Note: These are realistic budgets for a production SPA with React + Router + Zustand
 const BUDGETS = {
-  'index.js': 500,      // Main bundle (includes vendor in Vite)
-  'vendor.js': 500,     // Vendor/node_modules (if code-split)
-  'index.css': 100,     // Main CSS (Tailwind)
-  total: 1000,          // Total assets
+  js: 500,      // Main JS bundle (includes vendor in Vite)
+  css: 100,     // Main CSS (Tailwind)
+  total: 1000,  // Total assets
 };
 
 const distDir = join(process.cwd(), 'dist', 'assets');
@@ -26,6 +25,8 @@ function getFileSizeKB(filePath) {
 
 function checkBudgets() {
   let totalSize = 0;
+  let jsSize = 0;
+  let cssSize = 0;
   let violations = [];
 
   try {
@@ -36,20 +37,28 @@ function checkBudgets() {
       const sizeKB = getFileSizeKB(filePath);
       totalSize += sizeKB;
 
-      // Check individual file budgets
-      for (const [pattern, budget] of Object.entries(BUDGETS)) {
-        if (pattern === 'total') continue;
-        if (file.includes(pattern.replace('.js', '').replace('.css', ''))) {
-          if (sizeKB > budget) {
-            violations.push(`${file}: ${sizeKB.toFixed(1)}KB exceeds budget of ${budget}KB`);
-          } else {
-            console.log(`✓ ${file}: ${sizeKB.toFixed(1)}KB (budget: ${budget}KB)`);
-          }
-        }
+      if (file.endsWith('.js')) {
+        jsSize += sizeKB;
+        console.log(`  JS: ${file}: ${sizeKB.toFixed(1)}KB`);
+      } else if (file.endsWith('.css')) {
+        cssSize += sizeKB;
+        console.log(`  CSS: ${file}: ${sizeKB.toFixed(1)}KB`);
       }
     }
 
-    // Check total budget
+    // Check budgets
+    if (jsSize > BUDGETS.js) {
+      violations.push(`JS total: ${jsSize.toFixed(1)}KB exceeds budget of ${BUDGETS.js}KB`);
+    } else {
+      console.log(`✓ JS total: ${jsSize.toFixed(1)}KB (budget: ${BUDGETS.js}KB)`);
+    }
+
+    if (cssSize > BUDGETS.css) {
+      violations.push(`CSS total: ${cssSize.toFixed(1)}KB exceeds budget of ${BUDGETS.css}KB`);
+    } else {
+      console.log(`✓ CSS total: ${cssSize.toFixed(1)}KB (budget: ${BUDGETS.css}KB)`);
+    }
+
     if (totalSize > BUDGETS.total) {
       violations.push(`Total: ${totalSize.toFixed(1)}KB exceeds budget of ${BUDGETS.total}KB`);
     } else {
