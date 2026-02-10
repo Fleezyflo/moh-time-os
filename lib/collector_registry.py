@@ -9,11 +9,10 @@ DO NOT define collectors anywhere else.
 
 import fcntl
 import os
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable
 
 from lib import paths
-
 
 # ============================================================================
 # LOCKFILE GUARD — Prevents double execution

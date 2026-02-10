@@ -13,11 +13,11 @@ non-empty drill-down fields"
 
 import json
 import sqlite3
-from pathlib import Path
-from unittest import TestCase
 
 # Add project root to path
 import sys
+from pathlib import Path
+from unittest import TestCase
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 

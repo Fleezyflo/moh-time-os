@@ -11,7 +11,6 @@ from datetime import date, timedelta
 from typing import Any
 
 from engine.asana_client import list_projects, list_tasks_in_project, list_workspaces
-
 from lib.entities import create_project, find_client, find_project, update_project
 from lib.items import create_item
 from lib.store import get_connection, now_iso

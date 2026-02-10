@@ -10,7 +10,6 @@ from datetime import date, datetime
 from typing import Any
 
 from engine.xero_client import list_contacts, list_invoices
-
 from lib.entities import create_client, find_client, update_client
 from lib.store import get_connection, now_iso
 

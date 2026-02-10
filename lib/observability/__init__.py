@@ -15,9 +15,9 @@ Usage:
     result = health.run_all()
 """
 
-from .logging import get_logger, configure_logging, JSONFormatter
 from .context import RequestContext, get_request_id, set_request_id
 from .health import HealthChecker, HealthStatus
+from .logging import JSONFormatter, configure_logging, get_logger
 
 __all__ = [
     "get_logger",

@@ -7,12 +7,12 @@ import uuid
 from typing import Optional
 
 # Thread-safe context variable for request ID
-_request_id_var: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
+_request_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "request_id", default=None
 )
 
 
-def get_request_id() -> Optional[str]:
+def get_request_id() -> str | None:
     """Get the current request ID from context."""
     return _request_id_var.get()
 
@@ -41,9 +41,9 @@ class RequestContext:
             ...
     """
 
-    def __init__(self, request_id: Optional[str] = None):
+    def __init__(self, request_id: str | None = None):
         self.request_id = request_id or generate_request_id()
-        self._token: Optional[contextvars.Token] = None
+        self._token: contextvars.Token | None = None
 
     def __enter__(self) -> "RequestContext":
         self._token = set_request_id(self.request_id)

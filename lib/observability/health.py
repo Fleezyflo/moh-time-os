@@ -4,9 +4,10 @@ Health check system with component-level checks.
 
 import sqlite3
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable, Optional
+from typing import Optional
 
 from lib import paths
 

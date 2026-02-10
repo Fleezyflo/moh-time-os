@@ -79,7 +79,9 @@ UI_DIR = paths.app_home() / "time-os-ui" / "dist"
 # ==== Spec v2.9 Router ====
 # Mount spec-compliant endpoints at /api/v2
 # These implement CLIENT-UI-SPEC-v2.9.md using lib/ui_spec_v21 modules
-from api.spec_router import spec_router  # noqa: E402 - intentionally imported here, right before use
+from api.spec_router import (
+    spec_router,  # noqa: E402 - intentionally imported here, right before use
+)
 
 app.include_router(spec_router, prefix="/api/v2")
 
