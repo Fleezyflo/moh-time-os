@@ -3,19 +3,18 @@
 # API Framework: FastAPI/Uvicorn
 #
 # Quick reference:
-#   make check       - Run all checks (mirrors CI)
+#   make check       - Run all checks (fast, for local dev)
+#   make ci          - Full CI suite (slower, authoritative)
 #   make verify      - Full pristine verification
-#   make governance  - ADR + change-size checks
-#   make hygiene     - Dead code + dependency checks
-#   make smoke       - Performance smoke tests
+#   make dev         - Start API + UI dev servers
 
-.PHONY: help setup verify check test lint format typecheck \
+.PHONY: help setup verify check ci test lint format typecheck \
         drift-check openapi openapi-check schema-export schema-export-check \
         system-map system-map-check breaking-check invariants \
         ui-setup ui-lint ui-typecheck ui-test ui-build ui-types ui-types-check ui-check ui-deps \
         security-audit governance adr-check change-size-check hygiene dead-code \
-        smoke pins toolchain-doctor \
-        dev api ui run-api migrate schema-check ripgrep-check
+        smoke pins toolchain-doctor bench coverage db-lifecycle-test \
+        dev api ui run-api migrate schema-check ripgrep-check changelog
 
 # ==========================================
 # HELP
@@ -25,48 +24,47 @@ help:
 	@echo ""
 	@echo "  Setup & Verification:"
 	@echo "    make setup          - Install all dependencies (uv + pnpm)"
-	@echo "    make verify         - Full pristine verification (mirrors CI)"
-	@echo "    make check          - Run all quality checks"
+	@echo "    make verify         - Full pristine verification"
+	@echo "    make check          - Fast quality checks (local dev)"
+	@echo "    make ci             - Full CI suite (authoritative)"
 	@echo "    make pins           - Verify toolchain versions + lockfiles"
 	@echo ""
 	@echo "  Python Quality:"
 	@echo "    make lint           - Run ruff linter"
 	@echo "    make format         - Format code with ruff"
 	@echo "    make typecheck      - Run mypy with baseline"
-	@echo "    make test           - Run pytest"
-	@echo "    make dead-code      - Check for dead code (vulture)"
+	@echo "    make test           - Run pytest (fast subset)"
+	@echo "    make test-all       - Run all tests"
+	@echo "    make coverage       - Run tests with coverage"
 	@echo ""
 	@echo "  Drift & Invariants:"
-	@echo "    make drift-check    - Check ALL drift (OpenAPI, schema, system-map, UI types)"
+	@echo "    make drift-check    - Check ALL drift (OpenAPI, schema, system-map)"
 	@echo "    make invariants     - Check system-map semantic invariants"
-	@echo "    make openapi        - Generate docs/openapi.json"
-	@echo "    make schema-export  - Export docs/schema.sql"
-	@echo "    make system-map     - Generate docs/system-map.json"
 	@echo ""
 	@echo "  Governance:"
 	@echo "    make governance     - Run ADR + change-size checks"
-	@echo "    make adr-check      - Check if ADR is required"
-	@echo "    make change-size-check - Check for large changes"
+	@echo "    make changelog      - Generate CHANGELOG.md from commits"
 	@echo ""
 	@echo "  UI Quality:"
-	@echo "    make ui-setup       - Install UI dependencies (pnpm)"
-	@echo "    make ui-lint        - Run ESLint + Prettier check"
-	@echo "    make ui-typecheck   - Run TypeScript type check"
+	@echo "    make ui-check       - Full UI quality suite"
 	@echo "    make ui-test        - Run Vitest"
 	@echo "    make ui-build       - Build production bundle"
-	@echo "    make ui-deps        - Check UI dependencies"
 	@echo ""
-	@echo "  Hygiene & Security:"
+	@echo "  Performance & Hygiene:"
+	@echo "    make bench          - Run performance benchmarks"
+	@echo "    make smoke          - Run smoke tests"
 	@echo "    make hygiene        - Dead code + dependency checks"
-	@echo "    make security-audit - Run pip-audit, pnpm audit, gitleaks"
+	@echo "    make security-audit - Run security audits"
 	@echo ""
-	@echo "  Performance:"
-	@echo "    make smoke          - Run smoke tests with timing budgets"
+	@echo "  DB Lifecycle:"
+	@echo "    make db-lifecycle-test - Run DB boot/migrate/backup tests"
+	@echo "    make schema-check   - Validate schema assertions"
+	@echo "    make migrate        - Run safety migrations"
 	@echo ""
 	@echo "  Development:"
-	@echo "    make dev            - Start backend + frontend"
-	@echo "    make api            - Start backend only"
-	@echo "    make ui             - Start frontend only"
+	@echo "    make dev            - Start API + UI servers"
+	@echo "    make api            - Start API server only"
+	@echo "    make ui             - Start UI dev server only"
 	@echo ""
 
 # ==========================================
@@ -84,24 +82,30 @@ setup-ui:
 	@cd time-os-ui && pnpm install
 
 # ==========================================
-# FULL VERIFICATION (mirrors CI)
+# FULL VERIFICATION
 # ==========================================
 verify:
 	@./scripts/verify_pristine.sh
 
-check: lint typecheck test-property test drift-check invariants ui-check
+# Fast check for local dev (<2 min)
+check: lint typecheck test-property test drift-check ui-test
 	@echo ""
 	@echo "✅ All checks passed!"
+
+# Full CI suite (~5 min)
+ci: pins lint typecheck test-all drift-check invariants ui-check db-lifecycle-test smoke governance
+	@echo ""
+	@echo "✅ Full CI suite passed!"
 
 # ==========================================
 # PYTHON QUALITY
 # ==========================================
 lint:
-	@echo "🔍 Running ruff linter (scoped, matches pre-commit)..."
+	@echo "🔍 Running ruff linter (scoped)..."
 	@uv run ruff check lib/ui_spec_v21/ lib/collectors/ lib/safety/ lib/contracts/ lib/observability/ api/ --fix --ignore "S110,S602,S608,B904,E402,S104"
 
 lint-full:
-	@echo "🔍 Running ruff linter (full - may have legacy errors)..."
+	@echo "🔍 Running ruff linter (full)..."
 	@uv run ruff check lib/ api/ tests/ --fix || true
 
 format:
@@ -131,6 +135,18 @@ test-property:
 test-all:
 	@echo "🧪 Running all tests..."
 	@uv run pytest tests/ -v --tb=short
+
+# ==========================================
+# COVERAGE
+# ==========================================
+coverage:
+	@echo "📊 Running tests with coverage..."
+	@uv run python scripts/check_coverage.py
+
+coverage-html:
+	@echo "📊 Generating HTML coverage report..."
+	@uv run python scripts/check_coverage.py --html
+	@echo "Open htmlcov/index.html to view"
 
 # ==========================================
 # DRIFT DETECTION
@@ -191,6 +207,13 @@ change-size-check:
 	@echo "📏 Checking change size..."
 	@./scripts/check_change_size.sh HEAD~1 || true
 
+changelog:
+	@echo "📝 Generating changelog..."
+	@uv run python scripts/generate_changelog.py --print
+
+changelog-save:
+	@uv run python scripts/generate_changelog.py -o CHANGELOG.md
+
 # ==========================================
 # UI QUALITY
 # ==========================================
@@ -241,18 +264,21 @@ smoke:
 	@echo "🔥 Running smoke tests..."
 	@uv run python scripts/smoke_test.py
 
-# ==========================================
-# REPRODUCIBILITY
-# ==========================================
-pins: toolchain-doctor
-	@echo "✅ Reproducibility pins verified"
+bench:
+	@echo "📊 Running benchmarks..."
+	@uv run python scripts/benchmark.py
 
-toolchain-doctor:
-	@./scripts/toolchain_doctor.sh
+bench-save:
+	@echo "📊 Running and saving benchmarks..."
+	@uv run python scripts/benchmark.py --save benchmarks.json
 
 # ==========================================
-# DATABASE
+# DB LIFECYCLE
 # ==========================================
+db-lifecycle-test:
+	@echo "🗄️  Running DB lifecycle tests..."
+	@uv run pytest tests/lifecycle/ -v --tb=short
+
 schema-check:
 	@echo "📊 Checking schema..."
 	@uv run python -c "from lib.safety.schema import SchemaAssertion; from lib import paths; import sqlite3; \
@@ -270,6 +296,15 @@ migrate:
 		result = run_safety_migrations(conn); \
 		print(f'Tables: {result[\"tables_created\"]}'); \
 		print(f'Triggers: {len(result[\"triggers_created\"])} created')"
+
+# ==========================================
+# REPRODUCIBILITY
+# ==========================================
+pins: toolchain-doctor
+	@echo "✅ Reproducibility pins verified"
+
+toolchain-doctor:
+	@./scripts/toolchain_doctor.sh
 
 ripgrep-check:
 	@echo "🔎 Checking for forbidden patterns..."
@@ -292,7 +327,7 @@ dev:
 run-api: api
 
 # ==========================================
-# GENERATION (for updating pinned artifacts)
+# GENERATION
 # ==========================================
 generate-all: openapi schema-export system-map ui-types
 	@echo "✅ All artifacts generated"

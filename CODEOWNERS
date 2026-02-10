@@ -1,0 +1,48 @@
+# CODEOWNERS - Defines ownership for code review and notifications
+#
+# Format: <pattern> @owner @owner2
+# When a PR changes files matching a pattern, listed owners are automatically requested for review.
+#
+# Critical areas require explicit review from maintainers.
+
+# =============================================================================
+# GLOBAL - Default ownership
+# =============================================================================
+*                           @molhamhomsi
+
+# =============================================================================
+# CRITICAL INFRASTRUCTURE - Requires explicit approval
+# =============================================================================
+
+# Database and schema (destructive potential)
+lib/db.py                   @molhamhomsi
+lib/migrations/             @molhamhomsi
+lib/safety/schema.py        @molhamhomsi
+lib/safety/migrations.py    @molhamhomsi
+docs/schema.sql             @molhamhomsi
+
+# API contracts (breaking change potential)
+api/server.py               @molhamhomsi
+api/spec_router.py          @molhamhomsi
+docs/openapi.json           @molhamhomsi
+
+# Core business logic
+lib/ui_spec_v21/            @molhamhomsi
+lib/contracts/              @molhamhomsi
+
+# Security-sensitive
+lib/safety/                 @molhamhomsi
+.pre-commit-config.yaml     @molhamhomsi
+
+# =============================================================================
+# CI/CD AND TOOLING
+# =============================================================================
+.github/                    @molhamhomsi
+Makefile                    @molhamhomsi
+pyproject.toml              @molhamhomsi
+scripts/                    @molhamhomsi
+
+# =============================================================================
+# UI
+# =============================================================================
+time-os-ui/                 @molhamhomsi

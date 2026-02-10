@@ -66,3 +66,15 @@ repos:
         language: system
         pass_filenames: false
         types: [python]
+
+  # ==========================================
+  # CONVENTIONAL COMMITS
+  # ==========================================
+  - repo: local
+    hooks:
+      - id: conventional-commits
+        name: Check commit message format
+        entry: python scripts/check_commit_message.py --file
+        language: python
+        stages: [commit-msg]
+        pass_filenames: true
