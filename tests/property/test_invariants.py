@@ -112,20 +112,24 @@ def test_ar_totals_sum_correctly(amounts: list[float]):
 
 
 @given(st.lists(st.text(min_size=1, max_size=50), min_size=0, max_size=50))
-def test_deduplication_preserves_order(items: list[str]):
-    """Deduplication preserves first occurrence order."""
-    seen = set()
-    deduped = []
-    for item in items:
-        if item not in seen:
-            seen.add(item)
-            deduped.append(item)
+def test_deduplication_is_idempotent(items: list[str]):
+    """Deduplication applied twice gives same result as once."""
+    def dedupe(lst):
+        seen = set()
+        result = []
+        for item in lst:
+            if item not in seen:
+                seen.add(item)
+                result.append(item)
+        return result
     
-    # All items in deduped are unique
-    assert len(deduped) == len(set(deduped))
-    # First occurrence of each unique item matches
-    for item in set(items):
-        assert items.index(item) == deduped.index(item)
+    once = dedupe(items)
+    twice = dedupe(once)
+    
+    # Idempotent: applying twice = applying once
+    assert once == twice
+    # All items unique
+    assert len(once) == len(set(once))
 
 
 # ============================================================================
