@@ -3,7 +3,7 @@ import json
 import os
 import time
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from .gogcli import run_gog
@@ -11,7 +11,7 @@ from .rules_store import load_rules
 
 
 def now_iso() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    return datetime.now(UTC).replace(microsecond=0).isoformat()
 
 
 def dedupe_key(parts: list[str]) -> str:
@@ -43,7 +43,6 @@ ARCHIVE_SUBJECT_SUBSTR = [
     "settle local",
     "mediation",
     "new horizons roadshow",
-
     # Moh rules: ignore/archvive these classes
     "daily agenda for molham homsi",
     "public announcement of open tender",
@@ -99,18 +98,30 @@ def ensure_board_lists(account: str) -> BoardLists:
 
 
 def _cache_path(account: str) -> str:
-    os.makedirs("moh_time_os/out", exist_ok=True)
+    from lib import paths
+
+    out = paths.out_dir()
+    out.mkdir(parents=True, exist_ok=True)
     safe = account.replace("@", "_at_").replace("/", "_")
-    return f"moh_time_os/out/tasks-board-cache-{safe}.json"
+    return str(out / f"tasks-board-cache-{safe}.json")
 
 
-def build_list_cache(account: str, tasklist_id: str, *, max_pages: int = 20) -> dict[str, dict]:
+def build_list_cache(
+    account: str, tasklist_id: str, *, max_pages: int = 20
+) -> dict[str, dict]:
     """Return {dedupe_key: {taskId, status}} for a given list."""
     mapping: dict[str, dict] = {}
     page = None
     pages = 0
     while True:
-        args = ["tasks", "list", tasklist_id, "--max=100", "--show-hidden", "--show-completed"]
+        args = [
+            "tasks",
+            "list",
+            tasklist_id,
+            "--max=100",
+            "--show-hidden",
+            "--show-completed",
+        ]
         if page:
             args.append(f"--page={page}")
         res = run_gog(args, account=account, timeout=240)
@@ -119,7 +130,7 @@ def build_list_cache(account: str, tasklist_id: str, *, max_pages: int = 20) -> 
         data = res.data or {}
         tasks = data.get("tasks") or []
         for t in tasks:
-            notes = (t.get("notes") or "")
+            notes = t.get("notes") or ""
             # MOHOS/v1 header format: "dedupe_key: <dk>"
             for line in notes.splitlines()[:40]:
                 if line.startswith("dedupe_key: "):
@@ -139,7 +150,7 @@ def load_cache(account: str) -> dict:
     if not os.path.exists(path):
         return {}
     try:
-        return json.loads(open(path, "r", encoding="utf-8").read())
+        return json.loads(open(path, encoding="utf-8").read())
     except Exception:
         return {}
 
@@ -150,20 +161,42 @@ def save_cache(account: str, cache: dict) -> None:
         json.dump(cache, f, ensure_ascii=False, indent=2)
 
 
-def upsert_task(account: str, tasklist_id: str, *, title: str, notes: str, dk: str, cache: dict) -> dict:
+def upsert_task(
+    account: str, tasklist_id: str, *, title: str, notes: str, dk: str, cache: dict
+) -> dict:
     entry = (cache.get(tasklist_id) or {}).get(dk)
     if entry and entry.get("taskId"):
         tid = entry["taskId"]
-        res = run_gog(["tasks", "update", tasklist_id, tid, f"--title={title}", f"--notes={notes}"], account=account, timeout=360)
+        res = run_gog(
+            [
+                "tasks",
+                "update",
+                tasklist_id,
+                tid,
+                f"--title={title}",
+                f"--notes={notes}",
+            ],
+            account=account,
+            timeout=360,
+        )
         if not res.ok:
             raise RuntimeError(res.error)
         return res.data
 
-    res = run_gog(["tasks", "add", tasklist_id, f"--title={title}", f"--notes={notes}"], account=account, timeout=360)
+    res = run_gog(
+        ["tasks", "add", tasklist_id, f"--title={title}", f"--notes={notes}"],
+        account=account,
+        timeout=360,
+    )
     if not res.ok:
         raise RuntimeError(res.error)
     # update cache locally (task id included in response shape under task)
-    cache.setdefault(tasklist_id, {})[dk] = {"taskId": (res.data.get("task") or {}).get("id") if isinstance(res.data, dict) else None, "status": "needsAction"}
+    cache.setdefault(tasklist_id, {})[dk] = {
+        "taskId": (res.data.get("task") or {}).get("id")
+        if isinstance(res.data, dict)
+        else None,
+        "status": "needsAction",
+    }
     return res.data
 
 
@@ -177,20 +210,20 @@ def mohos_notes_header(payload: dict[str, Any]) -> str:
     """MOHOS/v1 header. This is the contract between simulator and future executor."""
     lines = [
         "MOHOS/v1",
-        f"lane: {payload.get('lane','Unknowns')}",
-        f"project: {payload.get('project','(unenrolled)')}",
-        f"status: {payload.get('status','proposed')}",
-        f"urgency: {payload.get('urgency','low')}",
-        f"impact: {payload.get('impact','low')}",
-        f"deadline: {payload.get('deadline','soft:')}",
-        f"effort: {payload.get('effort','15-30')}",
-        f"waiting_for: {payload.get('waiting_for','')}",
-        f"sensitivity: {','.join(payload.get('sensitivity',[]) or [])}",
-        f"classification: {payload.get('classification','rule')}",
-        f"rule_hit: {payload.get('rule_hit','')}",
-        f"source: {payload.get('source','')}",
-        f"dedupe_key: {payload.get('dedupe_key','')}",
-        f"proposed_action: {payload.get('proposed_action','')}",
+        f"lane: {payload.get('lane', 'Unknowns')}",
+        f"project: {payload.get('project', '(unenrolled)')}",
+        f"status: {payload.get('status', 'proposed')}",
+        f"urgency: {payload.get('urgency', 'low')}",
+        f"impact: {payload.get('impact', 'low')}",
+        f"deadline: {payload.get('deadline', 'soft:')}",
+        f"effort: {payload.get('effort', '15-30')}",
+        f"waiting_for: {payload.get('waiting_for', '')}",
+        f"sensitivity: {','.join(payload.get('sensitivity', []) or [])}",
+        f"classification: {payload.get('classification', 'rule')}",
+        f"rule_hit: {payload.get('rule_hit', '')}",
+        f"source: {payload.get('source', '')}",
+        f"dedupe_key: {payload.get('dedupe_key', '')}",
+        f"proposed_action: {payload.get('proposed_action', '')}",
         "---",
     ]
     ctx = payload.get("context") or ""
@@ -203,10 +236,10 @@ def email_should_archive(subject: str, sender: str) -> tuple[bool, str]:
     snd = sender.lower()
 
     # overrides first
-    for k in (rules.archive_sender_substr or []):
+    for k in rules.archive_sender_substr or []:
         if k and k.lower() in snd:
             return True, f"ARCHIVE.override_sender:{k}"
-    for k in (rules.archive_subject_substr or []):
+    for k in rules.archive_subject_substr or []:
         if k and k.lower() in subj:
             return True, f"ARCHIVE.override_subject:{k}"
 
@@ -225,7 +258,7 @@ def email_should_delegate_to_krystie(subject: str, sender: str) -> tuple[bool, s
     s = (subject + " " + sender).lower()
 
     # overrides first
-    for k in (rules.delegate_krystie_substr or []):
+    for k in rules.delegate_krystie_substr or []:
         if k and k.lower() in s:
             return True, f"DELEGATE.override_krystie:{k}"
 
@@ -246,7 +279,9 @@ def is_reply_worthy(subject: str, message_count: int) -> tuple[bool, str]:
     return False, ""
 
 
-def make_board_items_from_inputs(*, chat_json_path: str, gmail_json_path: str, calendar_json_path: str) -> list[dict[str, Any]]:
+def make_board_items_from_inputs(
+    *, chat_json_path: str, gmail_json_path: str, calendar_json_path: str
+) -> list[dict[str, Any]]:
     """Create storyboard items (proposals vs simulated execution).
 
     - Proposals: require Moh attention (approvals, explicit asks)
@@ -256,7 +291,7 @@ def make_board_items_from_inputs(*, chat_json_path: str, gmail_json_path: str, c
     out: list[dict[str, Any]] = []
 
     # --- Chat: explicit @Molham asks ---
-    chat = json.loads(open(chat_json_path, "r", encoding="utf-8").read())
+    chat = json.loads(open(chat_json_path, encoding="utf-8").read())
     for space_id, info in chat.items():
         space_name = (info or {}).get("name") or space_id
         for m in (info or {}).get("messages") or []:
@@ -267,11 +302,30 @@ def make_board_items_from_inputs(*, chat_json_path: str, gmail_json_path: str, c
                 continue
 
             t = txt.lower()
-            if not any(k in t for k in ("request", "need", "please", "authorization", "approve", "release", "send")):
+            if not any(
+                k in t
+                for k in (
+                    "request",
+                    "need",
+                    "please",
+                    "authorization",
+                    "approve",
+                    "release",
+                    "send",
+                )
+            ):
                 continue
 
-            lane = "Finance" if "finance" in space_name.lower() else ("Admin" if "admin" in space_name.lower() else "Ops")
-            sens = ["financial"] if any(k in t for k in ("payment", "bank", "authorization")) else []
+            lane = (
+                "Finance"
+                if "finance" in space_name.lower()
+                else ("Admin" if "admin" in space_name.lower() else "Ops")
+            )
+            sens = (
+                ["financial"]
+                if any(k in t for k in ("payment", "bank", "authorization"))
+                else []
+            )
             urg = "high" if ("today" in t or "authorization" in t) else "medium"
 
             # If it's bank/payment authorization → approval required (Moh)
@@ -305,7 +359,7 @@ def make_board_items_from_inputs(*, chat_json_path: str, gmail_json_path: str, c
             )
 
     # --- Gmail: simulate archive/delegate; propose reply drafts only if reply-worthy ---
-    gmail = json.loads(open(gmail_json_path, "r", encoding="utf-8").read())
+    gmail = json.loads(open(gmail_json_path, encoding="utf-8").read())
     for t in gmail[:120]:
         subj = (t.get("subject") or "").strip()
         frm = (t.get("from") or "").strip()
@@ -406,13 +460,19 @@ def make_board_items_from_inputs(*, chat_json_path: str, gmail_json_path: str, c
         )
 
     # --- Calendar simulated blocks (minimal) ---
-    cal = json.loads(open(calendar_json_path, "r", encoding="utf-8").read())
+    cal = json.loads(open(calendar_json_path, encoding="utf-8").read())
     for e in cal[:50]:
         summary = (e.get("summary") or "").strip()
         if not summary:
             continue
         if summary.lower() in ("asics",):
-            dk = dedupe_key(["calendar_block", summary, (e.get("start") or {}).get("dateTime") or ""]) 
+            dk = dedupe_key(
+                [
+                    "calendar_block",
+                    summary,
+                    (e.get("start") or {}).get("dateTime") or "",
+                ]
+            )
             out.append(
                 {
                     "bucket": "simulated",
@@ -497,8 +557,11 @@ def reconcile_and_write(
                 "source": it.get("source"),
                 "dedupe_key": dk,
                 "proposed_action": it.get("proposed_action"),
-                "waiting_for": KRYSTIE_EMAIL if it.get("proposed_action") == "email_forward_to_krystie" else "",
-                "context": (it.get("context") or "") + ("\n\nopen: " + it.get("open_url") if it.get("open_url") else ""),
+                "waiting_for": KRYSTIE_EMAIL
+                if it.get("proposed_action") == "email_forward_to_krystie"
+                else "",
+                "context": (it.get("context") or "")
+                + ("\n\nopen: " + it.get("open_url") if it.get("open_url") else ""),
             }
         )
 
@@ -555,4 +618,10 @@ def write_board_from_collector_outputs(
 
     items.sort(key=sort_key)
 
-    return reconcile_and_write(account=account, lists=lists, items=items, throttle_ms=throttle_ms, max_items=max_items)
+    return reconcile_and_write(
+        account=account,
+        lists=lists,
+        items=items,
+        throttle_ms=throttle_ms,
+        max_items=max_items,
+    )

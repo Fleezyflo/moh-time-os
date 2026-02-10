@@ -2,8 +2,7 @@ import re
 from typing import Any
 
 from .gogcli import run_gog
-from .rules_store import RuleOverrides, load_rules, save_rules
-
+from .rules_store import load_rules, save_rules
 
 FROM_RE = re.compile(r"^from:\s*(.+)$", re.I | re.M)
 SUBJ_RE = re.compile(r"^subject:\s*(.+)$", re.I | re.M)
@@ -34,7 +33,9 @@ def _normalize_sender_key(frm: str) -> str:
     return frm_l
 
 
-def ingest_rejections(*, account: str, rejected_list_id: str, rules_path: str | None = None) -> dict[str, Any]:
+def ingest_rejections(
+    *, account: str, rejected_list_id: str, rules_path: str | None = None
+) -> dict[str, Any]:
     """Read tasks in 'Rejected' and turn them into rule overrides.
 
     Conservative policy:
@@ -51,7 +52,14 @@ def ingest_rejections(*, account: str, rejected_list_id: str, rules_path: str | 
     seen = 0
 
     while True:
-        args = ["tasks", "list", rejected_list_id, "--max=100", "--show-hidden", "--show-completed"]
+        args = [
+            "tasks",
+            "list",
+            rejected_list_id,
+            "--max=100",
+            "--show-hidden",
+            "--show-completed",
+        ]
         if page:
             args.append(f"--page={page}")
         res = run_gog(args, account=account, timeout=240)

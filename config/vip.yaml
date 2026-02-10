@@ -3,11 +3,11 @@ priority_tiers:
   always_urgent:
     description: "Immediate attention required"
     interrupt_allowed: true
-    
+
   important:
     description: "High priority, batched unless urgent"
     interrupt_allowed: false
-    
+
   significant:
     description: "Normal processing"
     interrupt_allowed: false
@@ -19,32 +19,32 @@ people:
     tier: "always_urgent"
     relationship: "internal"
     role: "Co-founder"
-    
+
   # IMPORTANT - Core Team
   - email: "krystie@hrmny.co"
     name: "Krystie Marie Beldad"
     tier: "important"
     relationship: "internal"
     role: "Operations"
-    
+
   - email: "aubrey@hrmny.co"
     name: "Aubrey"
     tier: "important"
     relationship: "internal"
     role: "People & Admin"
-    
+
   - email: "rene@hrmny.co"
     name: "Rene"
     tier: "important"
     relationship: "internal"
     role: "Creative"
-    
+
   - email: "amar@hrmny.co"
     name: "Amar"
     tier: "important"
     relationship: "internal"
     role: "Creative"
-    
+
   - email: "jana@hrmny.co"
     name: "Jana"
     tier: "important"
@@ -62,13 +62,13 @@ domains:
     - "warner.com"
     - "universalmusic.com"
     - "sonymusic.com"
-    
+
   # Finance domains - high priority for financial matters
   finance:
     - "alphapartners.co"
     - "stripe.com"
     - "wise.com"
-    
+
   # Internal domains
   internal:
     - "hrmny.co"

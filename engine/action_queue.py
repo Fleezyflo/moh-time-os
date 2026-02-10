@@ -1,6 +1,6 @@
 import json
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 
@@ -16,11 +16,11 @@ class ActionItem:
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    return datetime.now(UTC).replace(microsecond=0).isoformat()
 
 
 def build_from_chat_unread(chat_path: str) -> list[ActionItem]:
-    data = json.loads(open(chat_path, "r", encoding="utf-8").read())
+    data = json.loads(open(chat_path, encoding="utf-8").read())
     items: list[ActionItem] = []
 
     # Only include messages that explicitly @mention Moh (Molham Homsi) in text.
@@ -30,7 +30,11 @@ def build_from_chat_unread(chat_path: str) -> list[ActionItem]:
             txt = (m.get("text") or "").strip()
             if not txt:
                 continue
-            if "@Molham Homsi" not in txt and "@molham" not in txt.lower() and "molham homsi" not in txt.lower():
+            if (
+                "@Molham Homsi" not in txt
+                and "@molham" not in txt.lower()
+                and "molham homsi" not in txt.lower()
+            ):
                 continue
 
             items.append(
@@ -56,7 +60,7 @@ def build_from_chat_unread(chat_path: str) -> list[ActionItem]:
 
 
 def build_from_calendar_next24h(cal_path: str) -> list[ActionItem]:
-    events = json.loads(open(cal_path, "r", encoding="utf-8").read())
+    events = json.loads(open(cal_path, encoding="utf-8").read())
     items: list[ActionItem] = []
     for e in events:
         s = (e.get("start") or {}).get("dateTime") or (e.get("start") or {}).get("date")
@@ -69,7 +73,10 @@ def build_from_calendar_next24h(cal_path: str) -> list[ActionItem]:
                 who=(e.get("organizer") or {}).get("email"),
                 when=s,
                 ask=f"Upcoming event: {e.get('summary')} ({s} → {en})",
-                source={"htmlLink": e.get("htmlLink"), "hangoutLink": e.get("hangoutLink")},
+                source={
+                    "htmlLink": e.get("htmlLink"),
+                    "hangoutLink": e.get("hangoutLink"),
+                },
             )
         )
     items.sort(key=lambda x: x.when or "")
@@ -77,7 +84,7 @@ def build_from_calendar_next24h(cal_path: str) -> list[ActionItem]:
 
 
 def build_from_gmail_unread_threads(gmail_path: str) -> list[ActionItem]:
-    threads = json.loads(open(gmail_path, "r", encoding="utf-8").read())
+    threads = json.loads(open(gmail_path, encoding="utf-8").read())
     items: list[ActionItem] = []
     for t in threads:
         tid = t.get("id")
@@ -91,13 +98,24 @@ def build_from_gmail_unread_threads(gmail_path: str) -> list[ActionItem]:
                 who=t.get("from"),
                 when=t.get("date"),
                 ask=f"Unread thread: {t.get('subject')}",
-                source={"labels": t.get("labels"), "messageCount": t.get("messageCount"), "threadId": tid},
+                source={
+                    "labels": t.get("labels"),
+                    "messageCount": t.get("messageCount"),
+                    "threadId": tid,
+                },
             )
         )
     return items
 
 
-def write_operator_view(out_md: str, *, chat_items: list[ActionItem], cal_items: list[ActionItem], gmail_items: list[ActionItem], meta: dict[str, Any]) -> None:
+def write_operator_view(
+    out_md: str,
+    *,
+    chat_items: list[ActionItem],
+    cal_items: list[ActionItem],
+    gmail_items: list[ActionItem],
+    meta: dict[str, Any],
+) -> None:
     lines: list[str] = []
     lines.append("# Time OS — Operator Queue\n")
     lines.append(f"Generated: {_now_iso()} (UTC)\n")
@@ -121,7 +139,9 @@ def write_operator_view(out_md: str, *, chat_items: list[ActionItem], cal_items:
     lines.append("\n---\n")
     lines.append("## Build status\n")
     lines.append(f"- inputs: {meta}\n")
-    lines.append("- next: enable People API to resolve chat user ids to names (optional but improves UX)\n")
+    lines.append(
+        "- next: enable People API to resolve chat user ids to names (optional but improves UX)\n"
+    )
 
     with open(out_md, "w", encoding="utf-8") as f:
         f.write("".join(lines))
