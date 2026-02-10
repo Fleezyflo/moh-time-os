@@ -120,7 +120,8 @@ def validate_log_entry(entry: dict) -> list[str]:
             errors.append(f"Missing required field: {field}")
 
     # Type checks
-    if "level" in entry and entry["level"] not in [l.value for l in LogLevel]:
+    valid_levels = [level.value for level in LogLevel]
+    if "level" in entry and entry["level"] not in valid_levels:
         errors.append(f"Invalid log level: {entry['level']}")
 
     if "timestamp" in entry:
