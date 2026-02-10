@@ -1,0 +1,31 @@
+{
+  "generated_at": "2026-02-10T23:56:50.509648Z",
+  "git_sha": "02f5d4f5ae5e604a356e3631ca3bc4d760051fc9",
+  "git_branch": "recover-wip",
+  "sections": {
+    "openapi": {
+      "diff": "No changes",
+      "check_passed": true
+    },
+    "schema": {
+      "diff": "No changes",
+      "check_passed": true
+    },
+    "system_map": {
+      "diff": "No changes",
+      "check_passed": true
+    },
+    "ui_bundle": {
+      "output": "\n> time-os-ui@0.0.0 bundle:check /Users/molhamhomsi/clawd/moh_time_os/time-os-ui\n> node scripts/check-bundle-size.js\n\n  JS: index-D3HmgqV5.js: 392.1KB\n  CSS: index-DsuTRVru.css: 47.6KB\n\u2713 JS total: 392.1KB (budget: 500KB)\n\u2713 CSS total: 47.6KB (budget: 100KB)\n\u2713 Total: 439.7KB (budget: 1000KB)\n\n\u2705 All bundles within budget\n",
+      "passed": true
+    },
+    "smoke": {
+      "output": "\ud83d\udd25 Running smoke tests...\n\nStarting API server on port 8422...\n\u2705 startup: 0.702s / 10.000s - Server healthy\n\n\u2705 health: 0.014s / 0.500s\n\u2705 typical_query: 0.032s / 2.000s - /api/control-room/proposals responded\n\u2705 db_cycle: 0.012s / 1.000s - DB health check passed\n\n\ud83d\udcca Results: 3/3 passed\n\n\u2705 All smoke tests passed\n",
+      "passed": true
+    },
+    "scenarios": {
+      "output": "============================= test session starts ==============================\nplatform darwin -- Python 3.11.14, pytest-9.0.2, pluggy-1.6.0 -- /Users/molhamhomsi/clawd/moh_time_os/.venv/bin/python3\ncachedir: .pytest_cache\nhypothesis profile 'default'\nrootdir: /Users/molhamhomsi/clawd/moh_time_os\nconfigfile: pytest.ini (WARNING: ignoring pytest config in pyproject.toml!)\nplugins: anyio-4.12.1, hypothesis-6.151.5, cov-7.0.0\ncollecting ... collected 5 items\n\ntests/scenarios/test_client_health_scenario.py::TestClientHealthScenario::test_healthy_client_path PASSED [ 20%]\ntests/scenarios/test_client_health_scenario.py::TestClientHealthScenario::test_at_risk_client_path PASSED [ 40%]\ntests/scenarios/test_client_health_scenario.py::TestProposalScenario::test_proposal_creation_path PASSED [ 60%]\ntests/scenarios/test_client_health_scenario.py::TestIssueLifecycleScenario::test_issue_tagged_from_proposal PASSED [ 80%]\ntests/scenarios/test_client_health_scenario.py::TestIssueLifecycleScenario::test_issue_resolved PASSED [100%]\n\n============================== 5 passed in 0.14s ===============================\n",
+      "passed": true
+    }
+  }
+}

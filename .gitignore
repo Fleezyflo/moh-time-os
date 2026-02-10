@@ -90,3 +90,4 @@ dashboard/
 # Deprecated HTML output
 /out/*.html
 .hypothesis/
+evidence/

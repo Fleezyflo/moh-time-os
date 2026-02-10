@@ -23,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 EVIDENCE_DIR = Path("evidence")
 
 
-def run_cmd(cmd: list[str], capture: bool = True) -> tuple[int, str]:
+def run_cmd(cmd: list[str], capture: bool = True, cwd: Path | None = None) -> tuple[int, str]:
     """Run a command and return exit code + output."""
     try:
         result = subprocess.run(
@@ -31,6 +31,7 @@ def run_cmd(cmd: list[str], capture: bool = True) -> tuple[int, str]:
             capture_output=capture,
             text=True,
             timeout=120,
+            cwd=cwd,
         )
         output = result.stdout + result.stderr if capture else ""
         return result.returncode, output
@@ -90,6 +91,7 @@ def generate_evidence() -> dict:
     ui_build_code, ui_build_output = run_cmd(
         ["pnpm", "run", "bundle:check"],
         capture=True,
+        cwd=Path(__file__).parent.parent / "time-os-ui",
     )
     evidence["sections"]["ui_bundle"] = {
         "output": ui_build_output[:2000],  # Truncate
