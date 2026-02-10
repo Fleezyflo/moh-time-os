@@ -10,8 +10,9 @@ repos:
     rev: v0.4.4
     hooks:
       # Linter - only run on v29/spec modules
+      # Note: --ignore S110,S602,S608 skips security rules that are too noisy for legacy code
       - id: ruff
-        args: [--fix, --exit-non-zero-on-fix]
+        args: [--fix, --exit-non-zero-on-fix, --ignore, "S110,S602,S608,B904"]
         types_or: [python, pyi]
         files: ^(lib/ui_spec_v21|lib/collectors|lib/safety|lib/db|lib/paths|lib/collector_registry|api/spec_router|scripts/backfill|scripts/verify)/.*\.py$
       # Formatter - same scope

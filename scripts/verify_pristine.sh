@@ -48,11 +48,11 @@ echo ""
 # ==========================================
 echo "=== Step 2: Install dependencies (uv sync) ==="
 if command -v uv >/dev/null 2>&1; then
-    if uv sync --quiet 2>/dev/null; then
+    if uv sync --all-extras 2>/dev/null; then
         pass "Dependencies installed via uv sync"
     else
-        # Try with --dev for older uv versions
-        if uv pip install -e ".[dev]" --quiet 2>/dev/null; then
+        # Try with pip install for older uv versions
+        if uv pip install -e ".[dev]" 2>/dev/null; then
             pass "Dependencies installed via uv pip install"
         else
             fail "uv sync/install failed"
@@ -130,16 +130,16 @@ echo "=== Step 5: API server health check ==="
 mkdir -p data
 export MOH_TIME_OS_DB_PATH="${REPO_ROOT}/data/test_pristine.db"
 
-# Start server in background
+# Start server in background on a test port
 API_PORT=8421
+export PORT=$API_PORT
 echo "Starting API server on port $API_PORT..."
-$PYTEST_CMD -c /dev/null 2>/dev/null || true  # Ensure deps loaded
 
 # Use uv run or direct python
 if command -v uv >/dev/null 2>&1; then
     uv run python -m api.server &
 else
-    python3 -m api.server &
+    PYTHONPATH=. python3 -m api.server &
 fi
 API_PID=$!
 

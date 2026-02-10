@@ -35,11 +35,11 @@ help:
 # PRISTINE BOOTSTRAP TARGETS
 # ==========================================
 
-# Install all dependencies using uv
+# Install all dependencies using uv (including dev deps)
 setup:
 	@echo "📦 Installing dependencies..."
 	@if command -v uv >/dev/null 2>&1; then \
-		uv sync; \
+		uv sync --all-extras; \
 	else \
 		echo "⚠️  uv not found, falling back to pip..."; \
 		python3 -m pip install -e ".[dev]"; \
