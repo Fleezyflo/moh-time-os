@@ -1,193 +1,231 @@
-// ProposalCard — primary attention unit with eligibility gate enforcement
-import { ConfidenceBadge } from './ConfidenceBadge';
-import type { Proposal } from '../fixtures';
-import { checkEligibility } from '../fixtures';
+// ProposalCard — displays proposal with hierarchy context
+import { useState, useCallback } from 'react';
+import type { Proposal } from '../types/api';
 
 interface ProposalCardProps {
   proposal: Proposal;
-  onTag?: () => void;
-  onSnooze?: () => void;
+  onTag?: () => Promise<void> | void;
+  onSnooze?: () => Promise<void> | void;
+  onDismiss?: () => Promise<void> | void;
   onOpen?: () => void;
+  isPending?: boolean;
 }
 
-export function ProposalCard({ proposal, onTag, onSnooze, onOpen }: ProposalCardProps) {
-  const { is_eligible, gate_violations } = checkEligibility(proposal);
-  
-  const trendIcon = {
-    worsening: '📉',
-    improving: '📈',
-    flat: '➡️'
-  }[proposal.trend];
-  
-  const impactBadges = [];
-  if (proposal.impact.dimensions.time) {
-    impactBadges.push({ icon: '⏱️', text: `${proposal.impact.dimensions.time.days_at_risk}d at risk`, color: 'text-orange-400' });
-  }
-  if (proposal.impact.dimensions.cash) {
-    impactBadges.push({ icon: '💰', text: `$${(proposal.impact.dimensions.cash.amount / 1000).toFixed(0)}k`, color: 'text-green-400' });
-  }
-  if (proposal.impact.dimensions.reputation) {
-    const severity = proposal.impact.dimensions.reputation.severity;
-    impactBadges.push({ icon: '⭐', text: severity, color: severity === 'high' ? 'text-red-400' : severity === 'medium' ? 'text-amber-400' : 'text-slate-400' });
-  }
-  
+export function ProposalCard({ proposal, onTag, onSnooze, onDismiss, onOpen, isPending = false }: ProposalCardProps) {
+  const [isTagging, setIsTagging] = useState(false);
+  const [isSnoozing, setIsSnoozing] = useState(false);
+
+  const handleTag = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onTag || isTagging) return;
+    setIsTagging(true);
+    try {
+      await onTag();
+    } finally {
+      setIsTagging(false);
+    }
+  }, [onTag, isTagging]);
+
+  const handleSnooze = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!onSnooze || isSnoozing) return;
+    setIsSnoozing(true);
+    try {
+      await onSnooze();
+    } finally {
+      setIsSnoozing(false);
+    }
+  }, [onSnooze, isSnoozing]);
+
+  const isBusy = isPending || isTagging || isSnoozing;
+
+  // Tier badge colors
+  const tierColors: Record<string, string> = {
+    'A': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+    'B': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+    'C': 'bg-slate-500/20 text-slate-400 border-slate-500/30',
+  };
+
+  // Score color based on severity
+  const getScoreColor = (score: number) => {
+    if (score >= 100) return 'text-red-400';
+    if (score >= 50) return 'text-orange-400';
+    if (score >= 25) return 'text-amber-400';
+    return 'text-slate-400';
+  };
+
+  // Signal category labels and colors (no emojis)
+  const categoryLabels: Record<string, { label: string; color: string; bg: string }> = {
+    overdue: { label: 'OVERDUE', color: 'text-red-400', bg: 'bg-red-500/20 border-red-500/30' },
+    approaching: { label: 'DUE SOON', color: 'text-amber-400', bg: 'bg-amber-500/20 border-amber-500/30' },
+    blocked: { label: 'BLOCKED', color: 'text-red-400', bg: 'bg-red-500/20 border-red-500/30' },
+    health: { label: 'HEALTH', color: 'text-pink-400', bg: 'bg-pink-500/20 border-pink-500/30' },
+    financial: { label: 'AR', color: 'text-yellow-400', bg: 'bg-yellow-500/20 border-yellow-500/30' },
+    process: { label: 'PROCESS', color: 'text-slate-400', bg: 'bg-slate-500/20 border-slate-500/30' },
+    other: { label: 'OTHER', color: 'text-slate-400', bg: 'bg-slate-500/20 border-slate-500/30' },
+  };
+
+  // Get display name - prefer scope_name, fallback to headline
+  const displayName = proposal.scope_name || proposal.headline?.split(':')[0] || 'Unknown';
+  const clientName = proposal.client_name;
+  const showClientSubtitle = clientName && clientName !== displayName;
+
+  // Get signal summary
+  const summary = proposal.signal_summary;
+  const signalCount = proposal.signal_count || summary?.total || proposal.impact?.signal_count || 0;
+  const remainingCount = proposal.remaining_count || 0;
+
+  // Build category badges
+  const categoryBadges = summary?.by_category ?
+    Object.entries(summary.by_category)
+      .filter(([_, count]) => count > 0)
+      .map(([cat, count]) => ({ cat, count, ...categoryLabels[cat] }))
+      .filter(b => b.label)
+    : [];
+
   return (
-    <div 
-      className={`bg-slate-800 rounded-lg border transition-colors cursor-pointer ${
-        is_eligible ? 'border-slate-700 hover:border-slate-600' : 'border-red-900/50 opacity-75'
-      }`}
+    <div
+      className="bg-slate-800 rounded-lg border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer overflow-hidden"
       onClick={onOpen}
     >
       {/* Header */}
-      <div className="p-4 border-b border-slate-700">
+      <div className="p-4">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            {!is_eligible && (
-              <div className="flex items-center gap-2 text-red-400 text-xs mb-2">
-                <span>⚠️</span>
-                <span>Ineligible</span>
-              </div>
-            )}
-            <h3 className="font-medium text-slate-100 leading-tight">{proposal.headline}</h3>
-            <div className="flex items-center gap-3 mt-2 text-sm">
-              <span className="text-slate-400">Score: {proposal.score.toFixed(1)}</span>
-              <span className="text-slate-500">{trendIcon} {proposal.trend}</span>
-              {proposal.occurrence_count > 1 && (
-                <span className="text-slate-500">×{proposal.occurrence_count}</span>
+            {/* Title row with tier badge */}
+            <div className="flex items-center gap-2">
+              <h3 className="font-semibold text-slate-100 leading-tight truncate">{displayName}</h3>
+              {proposal.client_tier && (
+                <span className={`px-1.5 py-0.5 text-xs font-medium rounded border ${tierColors[proposal.client_tier] || tierColors['C']}`}>
+                  {proposal.client_tier}
+                </span>
+              )}
+              {proposal.engagement_type === 'retainer' && (
+                <span className="px-1.5 py-0.5 text-xs bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded">
+                  RETAINER
+                </span>
               )}
             </div>
+
+            {/* Client subtitle if different from scope */}
+            {showClientSubtitle && (
+              <p className="text-sm text-slate-500 mt-0.5 truncate">{clientName}</p>
+            )}
+
+            {/* Score and trend */}
+            <div className="flex items-center gap-3 mt-2">
+              <span className={`text-lg font-bold ${getScoreColor(proposal.score)}`}>
+                {proposal.score.toFixed(0)}
+              </span>
+              <span className={`text-xs px-1.5 py-0.5 rounded ${
+                proposal.trend === 'worsening' ? 'bg-red-500/20 text-red-400' :
+                proposal.trend === 'improving' ? 'bg-green-500/20 text-green-400' :
+                'text-slate-500'
+              }`}>
+                {proposal.trend === 'worsening' ? 'WORSE' : proposal.trend === 'improving' ? 'BETTER' : '—'}
+              </span>
+              <span className="text-sm text-slate-500">
+                {signalCount} signal{signalCount !== 1 ? 's' : ''}
+              </span>
+            </div>
           </div>
+
+          {/* Scope level indicator */}
           <span className={`px-2 py-1 rounded text-xs ${
-            proposal.proposal_type === 'risk' ? 'bg-red-900/50 text-red-300' :
-            proposal.proposal_type === 'opportunity' ? 'bg-green-900/50 text-green-300' :
+            proposal.scope_level === 'client' ? 'bg-indigo-900/50 text-indigo-300' :
+            proposal.scope_level === 'brand' ? 'bg-violet-900/50 text-violet-300' :
             'bg-slate-700 text-slate-300'
           }`}>
-            {proposal.proposal_type}
+            {proposal.scope_level || proposal.impact?.entity_type || 'project'}
           </span>
         </div>
-        
-        {/* Impact strip */}
-        {impactBadges.length > 0 && (
-          <div className="flex items-center gap-3 mt-3">
-            {impactBadges.map((badge, i) => (
-              <span key={i} className={`text-sm ${badge.color}`}>
-                {badge.icon} {badge.text}
+
+        {/* Signal category badges */}
+        {categoryBadges.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 mt-3">
+            {categoryBadges.map(({ cat, count, label, color, bg }) => (
+              <span key={cat} className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded border text-xs font-medium ${bg} ${color}`}>
+                <span>{label}</span>
+                <span className="opacity-70">{count}</span>
               </span>
             ))}
-            {proposal.impact.deadline_at && (
-              <span className="text-sm text-slate-500">
-                Due: {new Date(proposal.impact.deadline_at).toLocaleDateString()}
-              </span>
-            )}
           </div>
         )}
-        
-        {/* Confidence badges */}
-        <div className="flex items-center gap-2 mt-3">
-          <ConfidenceBadge type="linkage" value={proposal.linkage_confidence} />
-          <ConfidenceBadge type="interpretation" value={proposal.interpretation_confidence} />
-        </div>
-      </div>
-      
-      {/* Hypotheses */}
-      <div className="p-4 border-b border-slate-700">
-        <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">Why this matters</h4>
-        <div className="space-y-2">
-          {proposal.top_hypotheses.slice(0, 3).map((hyp, i) => (
-            <div key={i} className="flex items-start gap-2 text-sm">
-              <span className="text-slate-500 w-4">{i + 1}.</span>
-              <div className="flex-1">
-                <span className="text-slate-200">{hyp.label}</span>
-                <span className={`ml-2 text-xs ${hyp.confidence >= 0.70 ? 'text-green-400' : hyp.confidence >= 0.55 ? 'text-amber-400' : 'text-red-400'}`}>
-                  ({(hyp.confidence * 100).toFixed(0)}%)
-                </span>
-                <span className="ml-2 text-xs text-slate-500">
-                  {hyp.supporting_signal_ids.length} signals
-                </span>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-      
-      {/* Proof excerpts */}
-      <div className="p-4 border-b border-slate-700">
-        <h4 className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-2">
-          Proof ({proposal.proof.length} excerpts)
-        </h4>
-        <div className="space-y-2">
-          {proposal.proof.slice(0, 3).map((p, i) => (
-            <div key={i} className="flex items-start gap-2 text-sm">
-              <span className="text-blue-400">●</span>
-              <div className="flex-1 min-w-0">
-                <p className="text-slate-300 truncate">{p.text}</p>
-                <p className="text-xs text-slate-500 mt-0.5">
-                  📎 {p.source_type.replace('_', ' ')}
-                </p>
-              </div>
-            </div>
-          ))}
-          {proposal.proof.length > 3 && (
-            <p className="text-xs text-slate-500 pl-5">+{proposal.proof.length - 3} more</p>
-          )}
-        </div>
-      </div>
-      
-      {/* Missing confirmations */}
-      {proposal.missing_confirmations.length > 0 && (
-        <div className="p-4 border-b border-slate-700 bg-amber-900/10">
-          <h4 className="text-xs font-medium text-amber-400 uppercase tracking-wide mb-2">Missing confirmations</h4>
-          <ul className="text-sm text-slate-300 space-y-1">
-            {proposal.missing_confirmations.map((mc, i) => (
-              <li key={i} className="flex items-center gap-2">
-                <span className="text-amber-500">○</span>
-                {mc}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      
-      {/* Gate violations (if ineligible) */}
-      {!is_eligible && (
-        <div className="p-4 border-b border-slate-700 bg-red-900/10">
-          <h4 className="text-xs font-medium text-red-400 uppercase tracking-wide mb-2">Gate violations</h4>
-          <ul className="text-sm text-slate-300 space-y-1">
-            {gate_violations.map((v, i) => (
-              <li key={i} className="flex items-center gap-2">
-                <span className="text-red-500">✗</span>
-                {v.message}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-      
-      {/* Actions */}
-      <div className="p-4 flex items-center gap-2">
-        {is_eligible ? (
-          <>
-            <button 
-              onClick={(e) => { e.stopPropagation(); onTag?.(); }}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded transition-colors"
-            >
-              Tag & Monitor
-            </button>
-            <button 
-              onClick={(e) => { e.stopPropagation(); onSnooze?.(); }}
-              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm rounded transition-colors"
-            >
-              Snooze
-            </button>
-          </>
-        ) : (
-          <button 
-            onClick={(e) => { e.stopPropagation(); }}
-            className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white text-sm font-medium rounded transition-colors"
-          >
-            Fix Data →
-          </button>
+
+        {/* Worst signal text */}
+        {(proposal.worst_signal || proposal.impact?.worst_signal) && (
+          <p className="mt-3 text-sm text-slate-400 line-clamp-2">
+            {proposal.worst_signal || proposal.impact?.worst_signal}
+          </p>
         )}
+
+        {/* "And X more" link */}
+        {remainingCount > 0 && (
+          <p className="mt-2 text-xs text-slate-500">
+            and {remainingCount} more issue{remainingCount !== 1 ? 's' : ''}...
+          </p>
+        )}
+      </div>
+
+      {/* Score breakdown bar (visual) */}
+      {proposal.score_breakdown && (
+        <div className="px-4 pb-3">
+          <div className="flex h-1.5 rounded-full overflow-hidden bg-slate-700/50">
+            <div
+              className="bg-red-500/70"
+              style={{ width: `${(proposal.score_breakdown.urgency / 60) * 40}%` }}
+              title={`Urgency: ${proposal.score_breakdown.urgency}`}
+            />
+            <div
+              className="bg-amber-500/70"
+              style={{ width: `${(proposal.score_breakdown.breadth / 40) * 30}%` }}
+              title={`Breadth: ${proposal.score_breakdown.breadth}`}
+            />
+            <div
+              className="bg-blue-500/70"
+              style={{ width: `${(proposal.score_breakdown.diversity / 30) * 30}%` }}
+              title={`Diversity: ${proposal.score_breakdown.diversity}`}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Actions */}
+      <div className="px-4 py-3 border-t border-slate-700/50 flex items-center gap-2">
+        <button
+          onClick={handleTag}
+          disabled={isBusy}
+          className={`px-3 py-1.5 text-white text-sm font-medium rounded transition-colors ${
+            isBusy
+              ? 'bg-slate-600 cursor-not-allowed'
+              : 'bg-blue-600 hover:bg-blue-500'
+          }`}
+        >
+          {isTagging ? (
+            <span className="flex items-center gap-2">
+              <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+              ...
+            </span>
+          ) : 'Tag'}
+        </button>
+        <button
+          onClick={handleSnooze}
+          disabled={isBusy}
+          className={`px-3 py-1.5 text-slate-300 text-sm rounded transition-colors ${
+            isBusy
+              ? 'bg-slate-700/50 cursor-not-allowed'
+              : 'bg-slate-700 hover:bg-slate-600'
+          }`}
+        >
+          {isSnoozing ? '...' : 'Snooze'}
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onDismiss?.(); }}
+          disabled={isBusy}
+          className="px-3 py-1.5 text-slate-500 text-sm rounded hover:text-slate-300 transition-colors ml-auto"
+        >
+          Dismiss
+        </button>
       </div>
     </div>
   );

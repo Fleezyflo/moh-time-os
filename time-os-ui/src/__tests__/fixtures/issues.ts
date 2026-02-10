@@ -1,0 +1,86 @@
+// Test fixtures for issues with various priority levels (v29 format)
+import type { Issue } from '../../types/api';
+
+export const mockIssues: Issue[] = [
+  {
+    id: 'issue-critical-1',
+    type: 'risk',
+    state: 'surfaced',
+    severity: 'critical',
+    client_id: 'client-1',
+    title: 'Critical issue requiring immediate attention - System outage',
+    evidence: '{}',
+    created_at: '2025-02-05T10:00:00Z',
+    updated_at: '2025-02-06T14:00:00Z',
+    // Legacy aliases
+    issue_id: 'issue-critical-1',
+    headline: 'Critical issue requiring immediate attention - System outage',
+    priority: 95,
+    last_activity_at: '2025-02-06T14:00:00Z'
+  },
+  {
+    id: 'issue-high-1',
+    type: 'risk',
+    state: 'surfaced',
+    severity: 'high',
+    client_id: 'client-1',
+    title: 'High priority issue - Performance degradation',
+    evidence: '{}',
+    created_at: '2025-02-04T09:00:00Z',
+    updated_at: '2025-02-06T12:00:00Z',
+    issue_id: 'issue-high-1',
+    headline: 'High priority issue - Performance degradation',
+    priority: 75,
+    last_activity_at: '2025-02-06T12:00:00Z'
+  },
+  {
+    id: 'issue-medium-1',
+    type: 'risk',
+    state: 'acknowledged',
+    severity: 'medium',
+    client_id: 'client-2',
+    title: 'Medium priority issue - Minor UI bug',
+    evidence: '{}',
+    created_at: '2025-02-03T08:00:00Z',
+    updated_at: '2025-02-05T16:00:00Z',
+    issue_id: 'issue-medium-1',
+    headline: 'Medium priority issue - Minor UI bug',
+    priority: 50,
+    last_activity_at: '2025-02-05T16:00:00Z'
+  },
+  {
+    id: 'issue-low-1',
+    type: 'risk',
+    state: 'surfaced',
+    severity: 'low',
+    client_id: 'client-2',
+    title: 'Low priority enhancement - Nice to have feature',
+    evidence: '{}',
+    created_at: '2025-02-01T11:00:00Z',
+    updated_at: '2025-02-02T15:00:00Z',
+    issue_id: 'issue-low-1',
+    headline: 'Low priority enhancement - Nice to have feature',
+    priority: 25,
+    last_activity_at: '2025-02-02T15:00:00Z'
+  },
+  {
+    id: 'issue-critical-2',
+    type: 'risk',
+    state: 'addressing',
+    severity: 'critical',
+    client_id: 'client-1',
+    title: 'Another critical issue - Security vulnerability',
+    evidence: '{}',
+    created_at: '2025-02-05T13:00:00Z',
+    updated_at: '2025-02-06T10:00:00Z',
+    issue_id: 'issue-critical-2',
+    headline: 'Another critical issue - Security vulnerability',
+    priority: 90,
+    last_activity_at: '2025-02-06T10:00:00Z'
+  }
+];
+
+// Helper to get issues sorted by priority (highest first)
+export function getIssuesSortedByPriority(): Issue[] {
+  return [...mockIssues].sort((a, b) => (b.priority ?? 0) - (a.priority ?? 0));
+}

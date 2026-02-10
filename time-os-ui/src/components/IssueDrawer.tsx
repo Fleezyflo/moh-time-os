@@ -1,192 +1,359 @@
-// IssueDrawer — Detail drawer for issues with state, watchers, and actions
-import type { Issue, Watcher } from '../fixtures';
+// IssueDrawer — detail view for an issue
+import { useState, useEffect, useRef } from 'react';
+import type { Issue } from '../types/api';
+import type { IssueState } from '../lib/api';
+import { priorityLabel } from '../lib/priority';
+import { useToast } from './Toast';
 
 interface IssueDrawerProps {
-  isOpen: boolean;
+  issue: Issue | null;
+  open: boolean;
   onClose: () => void;
-  issue: Issue;
-  watchers?: Watcher[];
-  onTransition?: (newState: Issue['state']) => void;
+  onResolve?: () => Promise<void>;
+  onAddNote?: (text: string) => Promise<void>;
+  onChangeState?: (newState: IssueState) => Promise<void>;
 }
 
-const stateConfig = {
-  open: { icon: '●', color: 'text-red-500', bg: 'bg-red-500/10', label: 'Open' },
-  monitoring: { icon: '◐', color: 'text-amber-500', bg: 'bg-amber-500/10', label: 'Monitoring' },
-  awaiting: { icon: '◑', color: 'text-blue-500', bg: 'bg-blue-500/10', label: 'Awaiting' },
-  blocked: { icon: '■', color: 'text-slate-400', bg: 'bg-slate-500/10', label: 'Blocked' },
-  resolved: { icon: '✓', color: 'text-green-500', bg: 'bg-green-500/10', label: 'Resolved' },
-  closed: { icon: '○', color: 'text-slate-400', bg: 'bg-slate-500/10', label: 'Closed' }
+const stateStyles: Record<string, { icon: string; color: string; bg: string; label: string }> = {
+  // v29 states
+  detected: { icon: '◎', color: 'text-blue-300', bg: 'bg-blue-900/20', label: 'Detected' },
+  surfaced: { icon: '○', color: 'text-blue-400', bg: 'bg-blue-900/30', label: 'Surfaced' },
+  snoozed: { icon: '◷', color: 'text-amber-400', bg: 'bg-amber-900/30', label: 'Snoozed' },
+  acknowledged: { icon: '◉', color: 'text-purple-400', bg: 'bg-purple-900/30', label: 'Acknowledged' },
+  addressing: { icon: '⊕', color: 'text-cyan-400', bg: 'bg-cyan-900/30', label: 'Addressing' },
+  awaiting_resolution: { icon: '◷', color: 'text-amber-400', bg: 'bg-amber-900/30', label: 'Awaiting Resolution' },
+  regression_watch: { icon: '◎', color: 'text-yellow-400', bg: 'bg-yellow-900/30', label: 'Regression Watch' },
+  regressed: { icon: '⊘', color: 'text-red-400', bg: 'bg-red-900/30', label: 'Regressed' },
+  closed: { icon: '✓', color: 'text-green-400', bg: 'bg-green-900/30', label: 'Closed' },
+  // Legacy states
+  open: { icon: '○', color: 'text-blue-400', bg: 'bg-blue-900/30', label: 'Open' },
+  monitoring: { icon: '◉', color: 'text-purple-400', bg: 'bg-purple-900/30', label: 'Monitoring' },
+  awaiting: { icon: '◷', color: 'text-amber-400', bg: 'bg-amber-900/30', label: 'Awaiting' },
+  blocked: { icon: '⊘', color: 'text-red-400', bg: 'bg-red-900/30', label: 'Blocked' },
+  resolved: { icon: '✓', color: 'text-green-400', bg: 'bg-green-900/30', label: 'Resolved' },
 };
 
-const priorityConfig = {
-  critical: { color: 'text-red-400', bg: 'bg-red-900/30' },
-  high: { color: 'text-orange-400', bg: 'bg-orange-900/30' },
-  medium: { color: 'text-amber-400', bg: 'bg-amber-900/30' },
-  low: { color: 'text-slate-400', bg: 'bg-slate-700' }
+const priorityColors: Record<string, string> = {
+  critical: 'text-red-400',
+  high: 'text-orange-400',
+  medium: 'text-amber-400',
+  low: 'text-slate-400',
+  info: 'text-slate-500',
 };
 
-function formatRelativeTime(isoString: string): string {
-  const date = new Date(isoString);
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffHrs / 24);
-  
-  if (diffDays > 0) return `${diffDays}d ago`;
-  if (diffHrs > 0) return `${diffHrs}h ago`;
-  return 'Just now';
+// Convert v29 severity to priority number
+const severityToPriority = (severity: string | undefined): number => {
+  switch (severity) {
+    case 'critical': return 90;
+    case 'high': return 70;
+    case 'medium': return 50;
+    case 'low': return 30;
+    case 'info': return 10;
+    default: return 50;
+  }
+};
+
+// Get issue title (v29: title, legacy: headline)
+const getTitle = (issue: Issue): string => issue.title || issue.headline || '';
+
+// Get issue type (v29: type, legacy: issue_type - not in Issue type but may exist)
+const getType = (issue: Issue): string => issue.type || '';
+
+// Get priority (v29: severity→number, legacy: priority)
+const getPriority = (issue: Issue): number => issue.priority ?? severityToPriority(issue.severity);
+
+// Get created at (v29: created_at, legacy: opened_at - not in Issue type)
+const getCreatedAt = (issue: Issue): string => issue.created_at || '';
+
+// Get last activity (v29: updated_at, legacy: last_activity_at)
+const getLastActivity = (issue: Issue): string => issue.updated_at || issue.last_activity_at || '';
+
+function getPriorityInfo(priority: number): { label: string; color: string } {
+  const label = priorityLabel(priority);
+  return {
+    label: label.charAt(0).toUpperCase() + label.slice(1),
+    color: priorityColors[label] || priorityColors.medium
+  };
 }
 
-function formatFutureTime(isoString: string): string {
-  const date = new Date(isoString);
-  const now = new Date();
-  const diffMs = date.getTime() - now.getTime();
-  const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffHrs / 24);
-  
-  if (diffDays > 0) return `in ${diffDays}d`;
-  if (diffHrs > 0) return `in ${diffHrs}h`;
-  return 'Soon';
-}
+export function IssueDrawer({ issue, open, onClose, onResolve, onAddNote, onChangeState }: IssueDrawerProps) {
+  const toast = useToast();
+  const [isResolving, setIsResolving] = useState(false);
+  const [isChangingState, setIsChangingState] = useState(false);
+  const [isAddingNote, setIsAddingNote] = useState(false);
+  const [noteText, setNoteText] = useState('');
+  const [showNoteInput, setShowNoteInput] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-export function IssueDrawer({ isOpen, onClose, issue, watchers = [], onTransition }: IssueDrawerProps) {
-  if (!isOpen) return null;
+  // ESC key to close
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, onClose]);
 
-  const state = stateConfig[issue.state];
-  const priority = priorityConfig[issue.priority];
-  const issueWatchers = watchers.filter(w => w.issue_id === issue.issue_id);
+  // Lock body scroll when open
+  useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden';
+      return () => { document.body.style.overflow = ''; };
+    }
+  }, [open]);
 
-  const stateTransitions: Record<Issue['state'], Issue['state'][]> = {
-    open: ['monitoring', 'awaiting', 'blocked', 'resolved'],
-    monitoring: ['open', 'awaiting', 'blocked', 'resolved'],
-    awaiting: ['open', 'monitoring', 'blocked', 'resolved'],
-    blocked: ['open', 'monitoring', 'awaiting', 'resolved'],
-    resolved: ['closed', 'open'],
-    closed: ['open']
+  // Focus trap - keep focus within drawer
+  const drawerRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open || !drawerRef.current) return;
+
+    // Focus first focusable element
+    const firstFocusable = drawerRef.current.querySelector<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    firstFocusable?.focus();
+
+    // Trap focus within drawer
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab' || !drawerRef.current) return;
+
+      const focusables = drawerRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last?.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first?.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleTab);
+    return () => document.removeEventListener('keydown', handleTab);
+  }, [open]);
+
+  if (!open || !issue) return null;
+
+  const stateStyle = stateStyles[issue.state] || stateStyles.open;
+  const priorityInfo = getPriorityInfo(getPriority(issue));
+
+  const handleResolve = async () => {
+    if (!onResolve) return;
+    setIsResolving(true);
+    setError(null);
+    try {
+      await onResolve();
+      toast.success('Issue resolved');
+      onClose();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to resolve';
+      setError(message);
+      toast.error(message);
+    } finally {
+      setIsResolving(false);
+    }
+  };
+
+  const handleChangeState = async (newState: IssueState) => {
+    if (!onChangeState) return;
+    setIsChangingState(true);
+    setError(null);
+    try {
+      await onChangeState(newState);
+      toast.success(`Issue state changed to ${newState}`);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to change state';
+      setError(message);
+      toast.error(message);
+    } finally {
+      setIsChangingState(false);
+    }
+  };
+
+  const handleAddNote = async () => {
+    if (!onAddNote || !noteText.trim()) return;
+    setIsAddingNote(true);
+    setError(null);
+    try {
+      await onAddNote(noteText.trim());
+      toast.success('Note added');
+      setNoteText('');
+      setShowNoteInput(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to add note';
+      setError(message);
+      toast.error(message);
+    } finally {
+      setIsAddingNote(false);
+    }
   };
 
   return (
-    <>
+    <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Backdrop */}
-      <div 
-        className="fixed inset-0 bg-black/50 z-40 lg:bg-black/30"
-        onClick={onClose}
-      />
-      
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} />
+
       {/* Drawer */}
-      <div className="fixed inset-y-0 right-0 z-50 w-full sm:w-[400px] bg-slate-900 border-l border-slate-700 shadow-drawer overflow-y-auto">
+      <div
+        ref={drawerRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="issue-drawer-title"
+        className="absolute right-0 top-0 h-full w-full max-w-lg bg-slate-900 border-l border-slate-700 shadow-xl overflow-y-auto"
+      >
         {/* Header */}
-        <div className="sticky top-0 bg-slate-900/95 backdrop-blur border-b border-slate-700 p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <span className={`text-lg ${state.color}`}>{state.icon}</span>
-                <span className={`text-xs px-2 py-0.5 rounded ${state.bg} ${state.color}`}>
-                  {state.label}
-                </span>
-                <span className={`text-xs px-2 py-0.5 rounded ${priority.bg} ${priority.color}`}>
-                  {issue.priority}
-                </span>
-              </div>
-              <h2 className="text-lg font-semibold text-slate-100 leading-tight">
-                {issue.headline}
-              </h2>
+        <div className={`p-4 border-b border-slate-700 ${stateStyle.bg}`}>
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <span className={`text-lg ${stateStyle.color}`}>{stateStyle.icon}</span>
+              <span className={`font-medium ${stateStyle.color}`}>{stateStyle.label}</span>
             </div>
-            <button 
+            <button
               onClick={onClose}
-              className="p-2 hover:bg-slate-800 rounded transition-colors text-slate-400 hover:text-slate-200"
-              aria-label="Close drawer"
+              aria-label="Close issue drawer"
+              className="text-slate-400 hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 rounded"
             >
               ✕
             </button>
           </div>
+          <h2 id="issue-drawer-title" className="text-lg font-semibold text-slate-100">{getTitle(issue)}</h2>
         </div>
-        
-        {/* Content */}
-        <div className="p-4 space-y-6">
-          {/* Resolution criteria */}
-          <section>
-            <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wide mb-2">
-              Resolution criteria
-            </h3>
-            <p className="text-slate-300 bg-slate-800 rounded-lg p-3">
-              {issue.resolution_criteria}
-            </p>
-          </section>
-          
-          {/* Activity */}
-          <section>
-            <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wide mb-2">
-              Activity
-            </h3>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-500">Last activity</span>
-                <span className="text-slate-300">{formatRelativeTime(issue.last_activity_at)}</span>
-              </div>
-              {issue.next_trigger && (
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500">Next trigger</span>
-                  <span className="text-blue-400">{formatFutureTime(issue.next_trigger)}</span>
-                </div>
-              )}
+
+        {/* Details */}
+        <div className="p-4 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <div className="text-xs text-slate-400 uppercase tracking-wide">Priority</div>
+              <div className={`font-medium ${priorityInfo.color}`}>{priorityInfo.label}</div>
             </div>
-          </section>
-          
-          {/* Watchers */}
-          {issueWatchers.length > 0 && (
-            <section>
-              <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wide mb-2">
-                Watchers ({issueWatchers.length})
-              </h3>
-              <div className="space-y-2">
-                {issueWatchers.map(w => (
-                  <div key={w.watcher_id} className="bg-slate-800 rounded-lg p-3">
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-blue-400">⏰</span>
-                      <span className="text-slate-300">{w.trigger_condition}</span>
-                    </div>
-                    <p className="text-xs text-slate-500 mt-1 ml-6">
-                      Next check: {formatFutureTime(w.next_check_at)}
-                    </p>
-                  </div>
-                ))}
+            <div>
+              <div className="text-xs text-slate-400 uppercase tracking-wide">Type</div>
+              <div className="text-slate-200">{getType(issue) || 'N/A'}</div>
+            </div>
+            {getCreatedAt(issue) && (
+              <div>
+                <div className="text-xs text-slate-400 uppercase tracking-wide">Created</div>
+                <div className="text-slate-200">{new Date(getCreatedAt(issue)).toLocaleString()}</div>
               </div>
-            </section>
+            )}
+            {getLastActivity(issue) && (
+              <div>
+                <div className="text-xs text-slate-400 uppercase tracking-wide">Last Activity</div>
+                <div className="text-slate-200">{new Date(getLastActivity(issue)).toLocaleString()}</div>
+              </div>
+            )}
+          </div>
+
+          {issue.client_id && (
+            <div className="border-t border-slate-700 pt-4">
+              <div className="text-xs text-slate-400 uppercase tracking-wide mb-2">Client</div>
+              <div className="text-sm text-slate-300">{issue.client_id}</div>
+            </div>
           )}
-          
-          {/* State transitions */}
-          <section>
-            <h3 className="text-sm font-medium text-slate-400 uppercase tracking-wide mb-2">
-              Transition state
-            </h3>
-            <div className="flex flex-wrap gap-2">
-              {stateTransitions[issue.state].map(newState => {
-                const config = stateConfig[newState];
-                return (
-                  <button
-                    key={newState}
-                    onClick={() => onTransition?.(newState)}
-                    className={`px-3 py-1.5 rounded text-sm transition-colors ${config.bg} ${config.color} hover:opacity-80`}
-                  >
-                    {config.icon} {config.label}
-                  </button>
-                );
-              })}
+        </div>
+
+        {/* Actions */}
+        <div className="p-4 border-t border-slate-700 space-y-3">
+          {error && (
+            <div className="text-sm text-red-400 bg-red-900/20 px-3 py-2 rounded">
+              {error}
             </div>
-          </section>
-          
-          {/* Actions */}
-          <div className="flex items-center gap-2 pt-4 border-t border-slate-700">
-            <button className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm rounded transition-colors">
-              Add commitment
+          )}
+
+          {showNoteInput && (
+            <div className="space-y-2">
+              <textarea
+                value={noteText}
+                onChange={(e) => setNoteText(e.target.value)}
+                placeholder="Add a note..."
+                className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                rows={3}
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={handleAddNote}
+                  disabled={isAddingNote || !noteText.trim()}
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm rounded"
+                >
+                  {isAddingNote ? 'Saving...' : 'Save Note'}
+                </button>
+                <button
+                  onClick={() => { setShowNoteInput(false); setNoteText(''); }}
+                  className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm rounded"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center gap-2" role="group" aria-label="Issue actions">
+            <button
+              onClick={handleResolve}
+              disabled={isResolving || issue.state === 'resolved'}
+              aria-label={isResolving ? 'Resolving issue...' : issue.state === 'resolved' ? 'Issue already resolved' : 'Resolve this issue'}
+              className="px-4 py-2 bg-green-600 hover:bg-green-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm font-medium rounded focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 focus:ring-offset-slate-900"
+            >
+              {isResolving ? 'Resolving...' : issue.state === 'resolved' ? 'Resolved' : 'Resolve'}
             </button>
-            <button className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm rounded transition-colors">
-              Add watcher
+            <button
+              onClick={() => setShowNoteInput(true)}
+              aria-label="Add a note to this issue"
+              disabled={showNoteInput}
+              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-600 text-slate-200 text-sm rounded"
+            >
+              Add Note
             </button>
           </div>
+
+          {/* State Transition Buttons */}
+          {onChangeState && issue.state !== 'resolved' && issue.state !== 'closed' && (
+            <div className="flex flex-wrap items-center gap-2 mt-3" role="group" aria-label="State transitions">
+              {issue.state !== 'monitoring' && (
+                <button
+                  onClick={() => handleChangeState('monitoring')}
+                  disabled={isChangingState}
+                  className="px-3 py-1.5 bg-purple-700 hover:bg-purple-600 disabled:opacity-50 text-white text-xs rounded"
+                >
+                  {isChangingState ? '...' : 'Monitor'}
+                </button>
+              )}
+              {issue.state !== 'blocked' && (
+                <button
+                  onClick={() => handleChangeState('blocked')}
+                  disabled={isChangingState}
+                  className="px-3 py-1.5 bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white text-xs rounded"
+                >
+                  {isChangingState ? '...' : 'Block'}
+                </button>
+              )}
+              {issue.state === 'blocked' && (
+                <button
+                  onClick={() => handleChangeState('open')}
+                  disabled={isChangingState}
+                  className="px-3 py-1.5 bg-blue-700 hover:bg-blue-600 disabled:opacity-50 text-white text-xs rounded"
+                >
+                  {isChangingState ? '...' : 'Unblock'}
+                </button>
+              )}
+              {issue.state !== 'awaiting' && (
+                <button
+                  onClick={() => handleChangeState('awaiting')}
+                  disabled={isChangingState}
+                  className="px-3 py-1.5 bg-amber-700 hover:bg-amber-600 disabled:opacity-50 text-white text-xs rounded"
+                >
+                  {isChangingState ? '...' : 'Set Awaiting'}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
-    </>
+    </div>
   );
 }
