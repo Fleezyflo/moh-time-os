@@ -27,27 +27,27 @@ Everything starts with mapping entities across sources.
 class EntityResolver:
     """
     Resolves entities across data sources.
-    
+
     Core mappings:
     - email domain → company → client
     - person email → person (internal/external)
     - invoice client_name → client
     - project name → client (weak)
     """
-    
+
     def __init__(self, db_path: Path):
         self.db = db_path
         self._build_domain_map()
         self._build_person_map()
-    
+
     def _build_domain_map(self):
         """Build domain → client mapping from multiple sources."""
         self.domain_to_client = {}
-        
+
         # Source 1: Existing client_identities
         for row in self._query("SELECT domain, client_id FROM client_identities"):
             self.domain_to_client[row['domain'].lower()] = row['client_id']
-        
+
         # Source 2: Invoice client names → infer domain
         for row in self._query("""
             SELECT DISTINCT client_name FROM invoices WHERE client_name IS NOT NULL
@@ -58,10 +58,10 @@ class EntityResolver:
                 # Find or create client
                 client = self._find_or_create_client(row['client_name'])
                 self.domain_to_client[domain] = client['id']
-        
+
         # Source 3: Calendar attendees (external domains we meet with)
         for row in self._query("""
-            SELECT DISTINCT 
+            SELECT DISTINCT
                 LOWER(SUBSTR(value, INSTR(value, '@')+1)) as domain
             FROM events, json_each(events.attendees)
             WHERE events.source = 'calendar'
@@ -72,7 +72,7 @@ class EntityResolver:
             if domain and domain not in self.domain_to_client:
                 # Mark as known external domain (may not be a client yet)
                 self.domain_to_client[domain] = None  # Known but not linked
-    
+
     def _name_to_domain(self, name: str) -> Optional[str]:
         """Convert company name to likely domain."""
         # "GMG Consumer LLC" → "gmg.com"
@@ -80,7 +80,7 @@ class EntityResolver:
         normalized = re.sub(r'\s+(LLC|Inc|Ltd|FZE|FZCO|L\.?L\.?C\.?|FZ)\.?$', '', name, flags=re.I)
         normalized = re.sub(r'[^a-zA-Z0-9]', '', normalized).lower()
         return f"{normalized}.com" if normalized else None
-    
+
     def resolve_email(self, email: str) -> Dict:
         """
         Resolve an email address to entity info.
@@ -92,7 +92,7 @@ class EntityResolver:
         }
         """
         domain = email.split('@')[-1].lower()
-        
+
         # Internal?
         if domain == 'hrmny.co':
             person = self._query_one(
@@ -104,7 +104,7 @@ class EntityResolver:
                 'client_id': None,
                 'company_domain': domain,
             }
-        
+
         # Known client domain?
         client_id = self.domain_to_client.get(domain)
         return {
@@ -130,7 +130,7 @@ class FinancialSignal:
     """
     Extracts financial health signals from invoice data.
     """
-    
+
     def compute(self, client_id: str) -> Dict:
         """
         Returns:
@@ -147,10 +147,10 @@ class FinancialSignal:
         }
         """
         client_name = self._get_client_name(client_id)
-        
+
         # Get all invoices for client
         invoices = self._query("""
-            SELECT 
+            SELECT
                 amount,
                 due_date,
                 paid_date,
@@ -160,21 +160,21 @@ class FinancialSignal:
             WHERE client_name = ?
             ORDER BY created_at DESC
         """, (client_name,))
-        
+
         if not invoices:
             return {'confidence': 0, 'risk_level': 'unknown'}
-        
+
         total_ar = sum(i['amount'] for i in invoices if not i['paid_date'])
         overdue = [i for i in invoices if not i['paid_date'] and i['days_overdue'] > 0]
         overdue_ar = sum(i['amount'] for i in overdue)
         severe_ar = sum(i['amount'] for i in overdue if i['days_overdue'] > 60)
-        
+
         # Payment velocity (for paid invoices)
         paid = [i for i in invoices if i['paid_date']]
         if paid:
             velocities = [i['days_overdue'] for i in paid]
             avg_velocity = sum(velocities) / len(velocities)
-            
+
             # Trend: compare recent vs older
             recent = velocities[:len(velocities)//2] if len(velocities) > 2 else velocities
             older = velocities[len(velocities)//2:] if len(velocities) > 2 else []
@@ -188,7 +188,7 @@ class FinancialSignal:
         else:
             avg_velocity = None
             trend = 'unknown'
-        
+
         # Risk level
         if severe_ar > 50000 or (overdue_ar > 0 and overdue_ar / total_ar > 0.5):
             risk = 'critical'
@@ -198,7 +198,7 @@ class FinancialSignal:
             risk = 'medium'
         else:
             risk = 'low'
-        
+
         return {
             'total_ar': total_ar,
             'overdue_ar': overdue_ar,
@@ -221,7 +221,7 @@ class RelationshipSignal:
     """
     Extracts relationship health signals from calendar data.
     """
-    
+
     def compute(self, client_id: str) -> Dict:
         """
         Returns:
@@ -240,12 +240,12 @@ class RelationshipSignal:
         domains = self._get_client_domains(client_id)
         if not domains:
             return {'confidence': 0, 'engagement_level': 'unknown'}
-        
+
         domain_pattern = '|'.join(domains)
-        
+
         # Find meetings with this client
         meetings = self._query(f"""
-            SELECT 
+            SELECT
                 events.id,
                 events.start_time,
                 events.title,
@@ -255,30 +255,30 @@ class RelationshipSignal:
               AND events.attendees LIKE '%{domain_pattern}%'
             ORDER BY events.start_time DESC
         """)
-        
+
         now = datetime.now()
         meetings_30d = [m for m in meetings if self._within_days(m['start_time'], 30)]
         meetings_90d = [m for m in meetings if self._within_days(m['start_time'], 90)]
-        
+
         # Extract key contacts
         contact_counts = {}
         for m in meetings:
             for email in json.loads(m['attendees'] or '[]'):
                 if any(d in email for d in domains):
                     contact_counts[email] = contact_counts.get(email, 0) + 1
-        
+
         key_contacts = [
             {'email': e, 'meeting_count': c}
             for e, c in sorted(contact_counts.items(), key=lambda x: -x[1])[:5]
         ]
-        
+
         # Last meeting
         last_meeting = meetings[0] if meetings else None
         days_since = None
         if last_meeting:
             last_dt = datetime.fromisoformat(last_meeting['start_time'].replace('Z', '+00:00'))
             days_since = (now - last_dt).days
-        
+
         # Trend
         if len(meetings_30d) >= 3:
             trend = 'increasing' if len(meetings_30d) > len(meetings_90d) / 3 else 'stable'
@@ -288,7 +288,7 @@ class RelationshipSignal:
             trend = 'decreasing'
         else:
             trend = 'cold'
-        
+
         # Engagement level
         if len(meetings_30d) >= 3 or (days_since and days_since < 14):
             engagement = 'high'
@@ -298,7 +298,7 @@ class RelationshipSignal:
             engagement = 'low'
         else:
             engagement = 'cold'
-        
+
         return {
             'meeting_count_30d': len(meetings_30d),
             'meeting_count_90d': len(meetings_90d),
@@ -320,7 +320,7 @@ class CommunicationSignal:
     """
     Extracts communication health signals from email data.
     """
-    
+
     def compute(self, client_id: str) -> Dict:
         """
         Returns:
@@ -341,27 +341,27 @@ class CommunicationSignal:
         domains = self._get_client_domains(client_id)
         if not domains:
             return {'confidence': 0, 'communication_health': 'unknown'}
-        
+
         # Get communications with this client
         comms = self._query("""
-            SELECT 
-                id, thread_id, from_email, to_emails, 
+            SELECT
+                id, thread_id, from_email, to_emails,
                 received_at, created_at, subject,
                 CASE WHEN from_domain IN ({domains}) THEN 'inbound' ELSE 'outbound' END as direction
             FROM communications
             WHERE client_id = ? OR from_domain IN ({domains})
             ORDER BY COALESCE(received_at, created_at) DESC
         """.format(domains=','.join(f"'{d}'" for d in domains)), (client_id,))
-        
+
         if not comms:
             return {'confidence': 0.3, 'communication_health': 'silent'}
-        
+
         # Counts
         now = datetime.now()
         recent = [c for c in comms if self._within_days(c['received_at'] or c['created_at'], 30)]
         inbound = [c for c in recent if c['direction'] == 'inbound']
         outbound = [c for c in recent if c['direction'] == 'outbound']
-        
+
         # Thread analysis
         threads = {}
         for c in comms:
@@ -370,16 +370,16 @@ class CommunicationSignal:
                 threads[tid] = {'messages': [], 'last_direction': None}
             threads[tid]['messages'].append(c)
             threads[tid]['last_direction'] = c['direction']
-        
+
         # Open threads where we need to respond
         awaiting_us = sum(1 for t in threads.values() if t['last_direction'] == 'inbound')
-        
+
         # Last contact
         last_inbound = inbound[0] if inbound else None
         last_outbound = outbound[0] if outbound else None
         last_contact = comms[0]
         days_since = (now - self._parse_date(last_contact['received_at'] or last_contact['created_at'])).days
-        
+
         # Health assessment
         if days_since < 7 and len(recent) >= 3:
             health = 'active'
@@ -389,7 +389,7 @@ class CommunicationSignal:
             health = 'lagging'
         else:
             health = 'silent'
-        
+
         return {
             'email_count_30d': len(recent),
             'inbound_count': len(inbound),
@@ -418,12 +418,12 @@ class ClientIntelligence:
     """
     Combines signals into composite client intelligence.
     """
-    
+
     def __init__(self, db_path: Path):
         self.financial = FinancialSignal(db_path)
         self.relationship = RelationshipSignal(db_path)
         self.communication = CommunicationSignal(db_path)
-    
+
     def analyze(self, client_id: str) -> Dict:
         """
         Returns comprehensive client intelligence.
@@ -431,55 +431,55 @@ class ClientIntelligence:
         fin = self.financial.compute(client_id)
         rel = self.relationship.compute(client_id)
         comm = self.communication.compute(client_id)
-        
+
         # Composite health score (weighted)
         weights = {
             'financial': 0.40,    # Money talks
             'relationship': 0.35, # Meetings matter
             'communication': 0.25 # Email rounds it out
         }
-        
+
         health_scores = {
             'financial': self._score_financial(fin),
             'relationship': self._score_relationship(rel),
             'communication': self._score_communication(comm),
         }
-        
+
         composite_score = sum(
-            health_scores[k] * weights[k] 
+            health_scores[k] * weights[k]
             for k in weights
         )
-        
+
         # Determine tier from financial value
         tier = self._compute_tier(fin)
-        
+
         # Generate attention flags
         attention_flags = []
-        
+
         if fin['risk_level'] == 'critical':
             attention_flags.append({
                 'type': 'ar_critical',
                 'severity': 'high',
                 'message': f"${fin['severe_ar']:,.0f} severely overdue (60+ days)",
             })
-        
+
         if rel['engagement_level'] == 'cold' and fin['total_ar'] > 0:
             attention_flags.append({
                 'type': 'relationship_cold',
                 'severity': 'medium',
                 'message': f"No meetings in {rel.get('days_since_last_meeting', '90+')} days, AR outstanding",
             })
-        
+
         if comm['threads_awaiting_reply'] > 0:
             attention_flags.append({
                 'type': 'response_needed',
                 'severity': 'medium',
                 'message': f"{comm['threads_awaiting_reply']} threads awaiting your reply",
             })
-        
+
         # Generate recommended actions
         actions = self._generate_actions(fin, rel, comm, attention_flags)
-        
+
         return {
             'client_id': client_id,
             'composite_score': round(composite_score),
@@ -494,11 +494,11 @@ class ClientIntelligence:
             'recommended_actions': actions,
             'confidence': min(fin['confidence'], rel['confidence'], comm['confidence']),
         }
-    
+
     def _generate_actions(self, fin, rel, comm, flags) -> List[Dict]:
         """Generate prioritized action recommendations."""
         actions = []
-        
+
         # Critical AR + upcoming meeting = discuss payment
         if fin['risk_level'] in ('critical', 'high') and rel.get('days_since_last_meeting', 999) < 14:
             actions.append({
@@ -507,7 +507,7 @@ class ClientIntelligence:
                 'message': "Upcoming meeting opportunity - address AR situation",
                 'context': f"${fin['overdue_ar']:,.0f} overdue",
             })
-        
+
         # Cold relationship + AR = re-engage
         if rel['engagement_level'] == 'cold' and fin['total_ar'] > 10000:
             actions.append({
@@ -516,7 +516,7 @@ class ClientIntelligence:
                 'message': "Schedule call to discuss account status",
                 'context': f"No meetings in {rel.get('days_since_last_meeting', '90+')} days",
             })
-        
+
         # Awaiting reply threads
         if comm['threads_awaiting_reply'] > 0:
             actions.append({
@@ -524,7 +524,7 @@ class ClientIntelligence:
                 'priority': 'medium',
                 'message': f"Respond to {comm['threads_awaiting_reply']} pending email(s)",
             })
-        
+
         # Good relationship + no recent invoice = upsell opportunity
         if rel['engagement_level'] == 'high' and fin['total_ar'] < 5000:
             actions.append({
@@ -532,7 +532,7 @@ class ClientIntelligence:
                 'priority': 'low',
                 'message': "Active engagement with low revenue - explore expansion",
             })
-        
+
         return sorted(actions, key=lambda a: {'high': 0, 'medium': 1, 'low': 2}[a['priority']])
 ```
 
@@ -548,14 +548,14 @@ Real capacity based on actual calendar, not fake task hours.
 class CapacityIntelligence:
     """
     Computes actual capacity from calendar data.
-    
+
     This is REAL capacity:
     - Base hours in workday (8h)
     - Minus actual meetings scheduled
     - Minus focus blocks reserved
     - = Actual available time
     """
-    
+
     def compute(self, horizon: str = 'TODAY') -> Dict:
         """
         Returns:
@@ -582,7 +582,7 @@ class CapacityIntelligence:
             start = datetime.now()
             end = start + timedelta(hours=4)
             base_hours = 4
-        
+
         events = self._query("""
             SELECT id, title, start_time, end_time, attendees
             FROM events
@@ -591,19 +591,19 @@ class CapacityIntelligence:
               AND start_time <= ?
             ORDER BY start_time
         """, (start.isoformat(), end.isoformat()))
-        
+
         meeting_hours = 0
         focus_hours = 0
         meetings = []
-        
+
         for e in events:
             try:
                 e_start = datetime.fromisoformat(e['start_time'].replace('Z', '+00:00'))
                 e_end = datetime.fromisoformat(e['end_time'].replace('Z', '+00:00'))
                 duration = (e_end - e_start).total_seconds() / 3600
-                
+
                 is_focus = 'focus' in e['title'].lower() or 'block' in e['title'].lower()
-                
+
                 if is_focus:
                     focus_hours += duration
                 else:
@@ -616,13 +616,13 @@ class CapacityIntelligence:
                     })
             except:
                 pass
-        
+
         available = max(0, base_hours - meeting_hours - focus_hours)
         utilization = (meeting_hours + focus_hours) / base_hours if base_hours > 0 else 0
-        
+
         # Find largest free block
         largest_free = self._find_largest_free_block(events, start, end)
-        
+
         return {
             'base_hours': base_hours,
             'meeting_hours': round(meeting_hours, 1),
@@ -647,16 +647,16 @@ The ultimate output: what should you pay attention to NOW?
 class AttentionQueue:
     """
     Generates prioritized attention queue from all signals.
-    
+
     This is what the dashboard shows first.
     """
-    
+
     def generate(self) -> List[Dict]:
         """
         Returns prioritized list of attention items.
         """
         items = []
-        
+
         # 1. Critical AR situations
         critical_ar = self._query("""
             SELECT client_name, SUM(amount) as overdue
@@ -667,11 +667,11 @@ class AttentionQueue:
             HAVING overdue > 20000
             ORDER BY overdue DESC
         """)
-        
+
         for row in critical_ar:
             client = self._find_client(row['client_name'])
             rel = self.relationship.compute(client['id']) if client else {}
-            
+
             items.append({
                 'type': 'ar_critical',
                 'priority': 100,  # Highest
@@ -682,7 +682,7 @@ class AttentionQueue:
                 'context': f"Last meeting: {rel.get('days_since_last_meeting', '?')} days ago",
                 'action': 'Review AR and schedule call',
             })
-        
+
         # 2. Meetings in next 24h needing prep
         upcoming = self._query("""
             SELECT title, start_time, attendees
@@ -692,11 +692,11 @@ class AttentionQueue:
               AND attendees NOT LIKE '%hrmny.co%' ONLY  -- external meetings
             ORDER BY start_time
         """)
-        
+
         for event in upcoming:
             external_domains = self._extract_external_domains(event['attendees'])
             client = self._find_client_by_domains(external_domains)
-            
+
             if client:
                 fin = self.financial.compute(client['id'])
                 if fin['overdue_ar'] > 0:
@@ -710,7 +710,7 @@ class AttentionQueue:
                         'context': f"${fin['overdue_ar']:,.0f} overdue. Opportunity to discuss.",
                         'action': 'Prepare payment discussion',
                     })
-        
+
         # 3. Emails awaiting response (by client importance)
         awaiting = self._query("""
             SELECT c.client_id, COUNT(*) as thread_count
@@ -725,13 +725,13 @@ class AttentionQueue:
             GROUP BY c.client_id
             HAVING thread_count > 0
         """)
-        
+
         for row in awaiting:
             if row['client_id']:
                 client = self._get_client(row['client_id'])
                 tier = self._get_tier(row['client_id'])
                 priority = 70 if tier == '1' else 60 if tier == '2' else 50
-                
+
                 items.append({
                     'type': 'response_needed',
                     'priority': priority,
@@ -741,23 +741,23 @@ class AttentionQueue:
                     'headline': f"{row['thread_count']} email(s) awaiting reply",
                     'action': 'Respond to threads',
                 })
-        
+
         # 4. Relationships going cold (with AR)
         cooling = self._query("""
             SELECT c.id, c.name, c.tier,
-                   (SELECT MAX(start_time) FROM events e 
-                    WHERE e.attendees LIKE '%' || 
-                          (SELECT domain FROM client_identities ci WHERE ci.client_id = c.id LIMIT 1) 
+                   (SELECT MAX(start_time) FROM events e
+                    WHERE e.attendees LIKE '%' ||
+                          (SELECT domain FROM client_identities ci WHERE ci.client_id = c.id LIMIT 1)
                           || '%') as last_meeting
             FROM clients c
             WHERE EXISTS (
-                SELECT 1 FROM invoices i 
-                WHERE i.client_name = c.name 
-                  AND i.paid_date IS NULL 
+                SELECT 1 FROM invoices i
+                WHERE i.client_name = c.name
+                  AND i.paid_date IS NULL
                   AND i.amount > 5000
             )
         """)
-        
+
         for row in cooling:
             if row['last_meeting']:
                 days_ago = (datetime.now() - datetime.fromisoformat(row['last_meeting'])).days
@@ -772,7 +772,7 @@ class AttentionQueue:
                         'context': 'Active AR on account',
                         'action': 'Schedule check-in',
                     })
-        
+
         # Sort by priority descending
         return sorted(items, key=lambda x: -x['priority'])
 ```

@@ -76,46 +76,46 @@ class Signal:
         self.tier = tier
         self.timestamp = datetime.now()
         self.arbitration_key = self._compute_key()
-    
+
     def _compute_key(self) -> str:
         """Key for deduplication and arbitration."""
         return f"{self.type}:{self.source.get('id', 'unknown')}"
 
 def classify_signal(event: dict) -> Signal:
     """Classify incoming event into signal tier."""
-    
+
     # TIER 0: Interrupt
     if event['type'] == 'email' and event.get('sentiment') == 'escalation':
         return Signal('client_escalation', event, SignalTier.INTERRUPT)
-    
+
     if event['type'] == 'ar_update':
         client = get_client(event['client_id'])
         threshold = AR_THRESHOLDS[client.get('tier', 'C')]
         if event['days_overdue'] >= 90 and event['amount'] > threshold:
             return Signal('ar_critical', event, SignalTier.INTERRUPT)
-    
+
     if event['type'] == 'task':
         hours_to_due = (parse(event['due_date']) - datetime.now()).total_seconds() / 3600
         if hours_to_due < 2 and event.get('is_critical'):
             return Signal('deadline_imminent', event, SignalTier.INTERRUPT)
-    
+
     # TIER 1: Urgent
     if event['type'] == 'task' and event.get('waiting_for_moh'):
         hours_waiting = (datetime.now() - parse(event['blocked_since'])).total_seconds() / 3600
         if hours_waiting > 24:
             return Signal('blocked_on_you', event, SignalTier.URGENT)
-    
+
     if event['type'] == 'team_load':
         if event['load_percentage'] > 150:
             return Signal('team_overload', event, SignalTier.URGENT)
-    
+
     # TIER 2: Important
     if event['type'] == 'task' and event.get('due_date') == date.today().isoformat():
         return Signal('due_today', event, SignalTier.IMPORTANT)
-    
+
     if event['type'] == 'commitment' and is_this_week(event.get('due_date')):
         return Signal('commitment_due', event, SignalTier.IMPORTANT)
-    
+
     # TIER 3: Advisory (default for most updates)
     return Signal('update', event, SignalTier.ADVISORY)
 ```
@@ -146,17 +146,17 @@ class Arbitrator:
     def __init__(self):
         self.active_signals: Dict[str, Signal] = {}
         self.cooldowns: Dict[str, datetime] = {}
-    
+
     def ingest(self, signal: Signal) -> Optional[Signal]:
         """Process signal, return if it should surface."""
-        
+
         key = signal.arbitration_key
-        
+
         # Check cooldown
         if key in self.cooldowns:
             if datetime.now() < self.cooldowns[key]:
                 return None  # Suppressed
-        
+
         # Check for existing signal on same entity
         if key in self.active_signals:
             existing = self.active_signals[key]
@@ -166,33 +166,33 @@ class Arbitrator:
             # New wins, replace
             self.active_signals[key] = signal
             return signal
-        
+
         # New signal
         self.active_signals[key] = signal
         return signal
-    
+
     def _arbitrate(self, a: Signal, b: Signal) -> Signal:
         """Determine winner between two signals."""
-        
+
         # Tier comparison
         if a.tier.value < b.tier.value:
             return a
         if b.tier.value < a.tier.value:
             return b
-        
+
         # Same tier: client tier comparison
         a_client_tier = get_client_tier(a.source.get('client_id'))
         b_client_tier = get_client_tier(b.source.get('client_id'))
-        
+
         tier_order = {'A': 0, 'B': 1, 'C': 2, None: 3}
         if tier_order.get(a_client_tier, 3) < tier_order.get(b_client_tier, 3):
             return a
         if tier_order.get(b_client_tier, 3) < tier_order.get(a_client_tier, 3):
             return b
-        
+
         # Same client tier: recency
         return b if b.timestamp > a.timestamp else a
-    
+
     def set_cooldown(self, key: str, minutes: int):
         """Prevent re-alerting on same issue."""
         self.cooldowns[key] = datetime.now() + timedelta(minutes=minutes)
@@ -222,7 +222,7 @@ gates:
       - cooldown_clear(signal.key, 60)  # 60min between same alert
       - daily_interrupt_count < 5
     allows: immediate push to WhatsApp
-    
+
   notification_urgent:
     requires: signal.tier == URGENT
     conditions:
@@ -230,45 +230,45 @@ gates:
       - cooldown_clear(signal.key, 120)
       - daily_urgent_count < 10
     allows: push to WhatsApp
-    
+
   notification_important:
     requires: signal.tier == IMPORTANT
     conditions:
       - none  # Always allowed
     allows: include in next brief (morning/evening)
-    
+
   # DATA UPDATES (internal, no approval)
   update_priority_score:
     requires: recalculation_triggered
     conditions:
       - last_recalc > 15min ago
     allows: update task.priority in database
-    
+
   update_client_health:
     requires: health_signal_changed
     conditions:
       - change is computable (AR, activity, overdue count)
     allows: update client.relationship_health
-    
+
   update_team_load:
     requires: task_assignment_changed
     conditions:
       - none
     allows: recalculate person.load_percentage
-    
+
   # EXTERNAL ACTIONS (require approval or high confidence)
   send_email:
     requires: action.type == email
     conditions:
       - NEVER auto-execute
     allows: queue for human approval
-    
+
   create_calendar_event:
     requires: action.type == calendar
     conditions:
       - NEVER auto-execute
     allows: queue for human approval
-    
+
   create_task:
     requires: action.type == task_create
     conditions:
@@ -286,35 +286,35 @@ class Gate:
         self.requires = config.get('requires')
         self.conditions = config.get('conditions', [])
         self.allows = config.get('allows')
-    
+
     def check(self, context: dict) -> Tuple[bool, str]:
         """Check if gate allows passage."""
-        
+
         for condition in self.conditions:
             result, reason = self._eval_condition(condition, context)
             if not result:
                 return False, reason
-        
+
         return True, self.allows
-    
+
     def _eval_condition(self, condition: str, context: dict) -> Tuple[bool, str]:
         if condition == 'not in_quiet_hours()':
             if is_quiet_hours() and context.get('tier') != SignalTier.INTERRUPT:
                 return False, "quiet hours active"
             return True, ""
-        
+
         if condition == 'is_work_hours()':
             if not is_work_hours():
                 return False, "outside work hours"
             return True, ""
-        
+
         if condition.startswith('cooldown_clear'):
             key = context.get('signal_key')
             minutes = int(condition.split(',')[1].strip(' )'))
             if not cooldown_clear(key, minutes):
                 return False, f"cooldown active ({minutes}min)"
             return True, ""
-        
+
         if condition.startswith('daily_') and '_count' in condition:
             limit_name = condition.split('<')[0].strip()
             limit_value = int(condition.split('<')[1].strip())
@@ -322,14 +322,14 @@ class Gate:
             if current >= limit_value:
                 return False, f"{limit_name} limit reached ({current}/{limit_value})"
             return True, ""
-        
+
         # Unknown condition, fail safe
         return False, f"unknown condition: {condition}"
 
 class GateKeeper:
     def __init__(self, config_path: str):
         self.gates = self._load_gates(config_path)
-    
+
     def may_proceed(self, action_type: str, context: dict) -> Tuple[bool, str]:
         """Check if action may proceed through its gate."""
         gate = self.gates.get(action_type)
@@ -364,7 +364,7 @@ escalation_paths:
         action: push notification "X tasks unassigned >48h"
       - after: 72h
         action: auto-assign to project owner or escalate to you
-        
+
   blocked_task:
     initial_state: marked blocked or waiting_for set
     escalation:
@@ -374,7 +374,7 @@ escalation_paths:
         action: push notification if blocker is you
       - after: 72h
         action: escalate to project owner
-        
+
   overdue_task:
     initial_state: due_date passed, status != done
     escalation:
@@ -384,7 +384,7 @@ escalation_paths:
         action: push if client tier A or B
       - after: 72h
         action: mark stale, flag for review/archive
-        
+
   ar_overdue:
     initial_state: invoice past due
     escalation:
@@ -396,7 +396,7 @@ escalation_paths:
         action: update client health to "critical", push notification
       - after: 120d
         action: daily reminder until resolved
-        
+
   commitment_due:
     initial_state: commitment with due_date
     escalation:
@@ -408,7 +408,7 @@ escalation_paths:
         action: push alert "commitment to X missed"
       - after: 24h
         action: flag for follow-up/apology
-        
+
   client_no_contact:
     initial_state: no meaningful interaction
     escalation:
@@ -429,24 +429,24 @@ class EscalationEngine:
     def __init__(self, store, config: dict):
         self.store = store
         self.paths = config.get('escalation_paths', {})
-    
+
     def check_escalations(self) -> List[Signal]:
         """Check all items against escalation paths, return signals."""
         signals = []
-        
+
         # Unassigned tasks
         unassigned = self.store.query("""
-            SELECT *, 
+            SELECT *,
                    (julianday('now') - julianday(created_at)) * 24 as hours_unassigned
-            FROM tasks 
-            WHERE status = 'pending' 
+            FROM tasks
+            WHERE status = 'pending'
             AND (assignee IS NULL OR assignee = '')
         """)
-        
+
         for task in unassigned:
             hours = task['hours_unassigned']
             path = self.paths['unassigned_task']['escalation']
-            
+
             for step in path:
                 threshold = self._parse_time(step['after'])
                 if hours >= threshold:
@@ -455,7 +455,7 @@ class EscalationEngine:
                     )
                     signals.append(signal)
                     break  # Only highest applicable escalation
-        
+
         # Blocked tasks
         blocked = self.store.query("""
             SELECT *,
@@ -464,24 +464,24 @@ class EscalationEngine:
             WHERE status = 'pending'
             AND (is_blocked = 1 OR waiting_for IS NOT NULL)
         """)
-        
+
         for task in blocked:
             hours = task['hours_blocked']
             # ... similar pattern
-        
+
         # AR overdue
         ar_overdue = self.store.query("""
-            SELECT c.*, 
+            SELECT c.*,
                    MAX(CAST(REPLACE(c.financial_ar_aging, '+', '') AS INTEGER)) as days_overdue
             FROM clients c
             WHERE c.financial_ar_outstanding > 0
             AND c.financial_ar_aging IS NOT NULL
         """)
-        
+
         for client in ar_overdue:
             days = client['days_overdue']
             path = self.paths['ar_overdue']['escalation']
-            
+
             for step in path:
                 threshold = self._parse_time(step['after'])
                 if days >= threshold:
@@ -492,15 +492,15 @@ class EscalationEngine:
                             self.store.update('clients', client['id'], {
                                 'relationship_health': new_health
                             })
-                    
+
                     signal = self._create_escalation_signal(
                         'ar_overdue', client, step, days
                     )
                     signals.append(signal)
                     break
-        
+
         return signals
-    
+
     def _parse_time(self, time_str: str) -> float:
         """Parse '24h', '30d', etc into hours."""
         if time_str.endswith('h'):
@@ -533,35 +533,35 @@ drift_boundaries:
     warning: 6-10
     critical: > 10
     correction: force_rank_top_priorities()
-    
+
   stale_accumulation:
     measure: count of tasks overdue > 7 days
     healthy: <= 5
     warning: 6-15
     critical: > 15
     correction: flag_for_archive_review()
-    
+
   unassigned_accumulation:
     measure: count of tasks with no owner
     healthy: <= 10
     warning: 11-25
     critical: > 25
     correction: surface_in_brief(), block_new_task_creation()
-    
+
   notification_spam:
     measure: notifications sent in last 24h
     healthy: <= 10
     warning: 11-20
     critical: > 20
     correction: increase_cooldowns(), raise_thresholds()
-    
+
   data_freshness:
     measure: hours since last successful sync per source
     healthy: <= 1h
     warning: 1-4h
     critical: > 4h
     correction: alert_sync_failure(), retry_sync()
-    
+
   client_health_skew:
     measure: percentage of clients at critical or poor
     healthy: <= 10%
@@ -577,16 +577,16 @@ class DriftMonitor:
     def __init__(self, store, config: dict):
         self.store = store
         self.boundaries = config.get('drift_boundaries', {})
-    
+
     def check_boundaries(self) -> List[dict]:
         """Check all boundaries, return violations."""
         violations = []
-        
+
         # Priority inflation
         high_priority_count = self.store.query(
             "SELECT COUNT(*) FROM tasks WHERE status='pending' AND priority >= 90"
         )[0][0]
-        
+
         boundary = self.boundaries['priority_inflation']
         status = self._check_threshold(high_priority_count, boundary)
         if status != 'healthy':
@@ -598,13 +598,13 @@ class DriftMonitor:
             })
             if status == 'critical':
                 self._execute_correction(boundary['correction'])
-        
+
         # Stale accumulation
         stale_count = self.store.query("""
-            SELECT COUNT(*) FROM tasks 
+            SELECT COUNT(*) FROM tasks
             WHERE status='pending' AND due_date < date('now', '-7 days')
         """)[0][0]
-        
+
         boundary = self.boundaries['stale_accumulation']
         status = self._check_threshold(stale_count, boundary)
         if status != 'healthy':
@@ -614,24 +614,24 @@ class DriftMonitor:
                 'value': stale_count,
                 'correction': boundary['correction']
             })
-        
+
         # ... etc for each boundary
-        
+
         return violations
-    
+
     def _check_threshold(self, value: int, boundary: dict) -> str:
         healthy = boundary.get('healthy', '<= 0')
         warning = boundary.get('warning', '0')
-        
+
         healthy_max = self._parse_threshold(healthy)
         warning_max = self._parse_threshold(warning)
-        
+
         if value <= healthy_max:
             return 'healthy'
         if value <= warning_max:
             return 'warning'
         return 'critical'
-    
+
     def _execute_correction(self, correction: str):
         """Execute automatic correction."""
         if correction == 'force_rank_top_priorities()':
@@ -639,15 +639,15 @@ class DriftMonitor:
         elif correction == 'flag_for_archive_review()':
             self._flag_stale_for_review()
         # ... etc
-    
+
     def _force_rank_priorities(self):
         """Enforce max 5 at priority 90+."""
         tasks = self.store.query("""
-            SELECT id FROM tasks 
-            WHERE status='pending' 
+            SELECT id FROM tasks
+            WHERE status='pending'
             ORDER BY priority DESC, due_date ASC
         """)
-        
+
         for i, task in enumerate(tasks):
             if i < 5:
                 new_priority = 95 - i
@@ -655,7 +655,7 @@ class DriftMonitor:
                 new_priority = 84 - (i - 5)
             else:
                 new_priority = max(30, 69 - (i - 20))
-            
+
             self.store.update('tasks', task['id'], {'priority': new_priority})
 ```
 
@@ -735,24 +735,24 @@ class TruthLayer:
         self.healthy = False
         self.last_check = None
         self.issues = []
-    
+
     def verify(self, layer_states: Dict[str, bool]) -> bool:
         """Verify this layer is healthy."""
-        
+
         # Check dependencies first
         for dep in self.dependencies:
             if not layer_states.get(dep, False):
                 self.healthy = False
                 self.issues = [f"dependency {dep} not healthy"]
                 return False
-        
+
         # Run checks
         self.issues = []
         for check in self.checks:
             result, issue = check()
             if not result:
                 self.issues.append(issue)
-        
+
         self.healthy = len(self.issues) == 0
         self.last_check = datetime.now()
         return self.healthy
@@ -761,7 +761,7 @@ class TruthEngine:
     def __init__(self, store):
         self.store = store
         self.layers = self._define_layers()
-    
+
     def _define_layers(self) -> Dict[str, TruthLayer]:
         return {
             'data': TruthLayer('data', [
@@ -796,12 +796,12 @@ class TruthEngine:
                 self._check_escalations_current,
             ], dependencies=['client', 'finance', 'commitment']),
         }
-    
+
     def verify_all(self) -> Dict[str, dict]:
         """Verify all layers in sequence."""
         states = {}
         results = {}
-        
+
         for name in ['data', 'task', 'commitment', 'calendar', 'assignment', 'client', 'finance', 'alert']:
             layer = self.layers[name]
             healthy = layer.verify(states)
@@ -811,43 +811,43 @@ class TruthEngine:
                 'issues': layer.issues,
                 'last_check': layer.last_check.isoformat() if layer.last_check else None
             }
-            
+
             if not healthy:
                 # Don't proceed to dependent layers
                 break
-        
+
         return results
-    
+
     def _check_sync_freshness(self) -> Tuple[bool, str]:
         """Check all sources synced within threshold."""
         sources = ['tasks', 'calendar', 'gmail']
         for source in sources:
             last_sync = self.store.query(f"""
-                SELECT MAX(synced_at) FROM {source} 
+                SELECT MAX(synced_at) FROM {source}
                 WHERE synced_at IS NOT NULL
             """)[0][0]
-            
+
             if not last_sync:
                 return False, f"{source} never synced"
-            
+
             hours_ago = (datetime.now() - datetime.fromisoformat(last_sync)).total_seconds() / 3600
             if hours_ago > 4:
                 return False, f"{source} last synced {hours_ago:.1f}h ago"
-        
+
         return True, ""
-    
+
     def _check_tasks_have_required_fields(self) -> Tuple[bool, str]:
         """Check all tasks have required fields."""
         missing = self.store.query("""
-            SELECT COUNT(*) FROM tasks 
+            SELECT COUNT(*) FROM tasks
             WHERE status = 'pending'
             AND (title IS NULL OR title = '')
         """)[0][0]
-        
+
         if missing > 0:
             return False, f"{missing} tasks missing title"
         return True, ""
-    
+
     # ... etc for each check
 ```
 
@@ -863,27 +863,27 @@ objects:
     required: [id, title, status, source]
     optional: [due_date, assignee, project, client_id, priority, notes]
     computed: [priority_score, is_overdue, is_blocked, days_stale]
-    
+
   commitment:
     required: [id, description, due_date, source]
     optional: [promised_to, linked_task_id]
     computed: [is_overdue, hours_until_due]
-    
+
   client:
     required: [id, name]
     optional: [tier, health, ar_outstanding, ar_aging]
     computed: [health_score, days_since_contact, overdue_task_count]
-    
+
   person:
     required: [id, name]
     optional: [capacity_hours, is_internal]
     computed: [current_load, load_percentage, overdue_count]
-    
+
   event:
     required: [id, title, start_time]
     optional: [end_time, attendees, location]
     computed: [duration_hours, has_conflict, needs_prep]
-    
+
   project:
     required: [id, name]
     optional: [client_id, deadline, owner]
@@ -900,12 +900,12 @@ transformations:
   task.is_blocked: compute from waiting_for, blockers
   client.health: compute from AR + activity + overdue
   person.load_percentage: compute from assigned tasks
-  
+
   # Gated (requires conditions)
   notification.send: requires gate check
   task.status -> done: requires user action or API call
   task.assignee: requires user action or delegation rules
-  
+
   # Forbidden (never auto)
   email.send: never
   calendar.create: never
@@ -917,7 +917,7 @@ transformations:
 ```yaml
 signal_actions:
   # Which signals can trigger which actions
-  
+
   ar_critical:
     may_trigger:
       - update_client_health
@@ -925,21 +925,21 @@ signal_actions:
     may_not_trigger:
       - send_email
       - create_task
-      
+
   deadline_imminent:
     may_trigger:
       - create_notification(INTERRUPT if critical, else URGENT)
     may_not_trigger:
       - reschedule
       - reassign
-      
+
   team_overload:
     may_trigger:
       - create_notification(URGENT)
       - flag_for_rebalance
     may_not_trigger:
       - auto_reassign
-      
+
   commitment_due:
     may_trigger:
       - create_notification(IMPORTANT or URGENT based on time)
@@ -960,7 +960,7 @@ time:
   work_hours_end: "21:00"
   quiet_hours_start: "23:00"
   quiet_hours_end: "08:00"
-  
+
   deadline_imminent_hours: 2
   deadline_soon_hours: 24
   blocked_escalate_hours: 24
