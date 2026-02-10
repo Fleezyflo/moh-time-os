@@ -1,0 +1,67 @@
+# Pre-commit hooks - runs before every commit
+# Install: pip install pre-commit && pre-commit install
+
+repos:
+  # ==========================================
+  # RUFF - Fast Python linter + formatter
+  # Only runs on active, maintained modules
+  # ==========================================
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.4
+    hooks:
+      # Linter - only run on v29/spec modules
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        types_or: [python, pyi]
+        files: ^(lib/ui_spec_v21|lib/collectors|lib/safety|lib/db|lib/paths|lib/collector_registry|api/spec_router|scripts/backfill|scripts/verify)/.*\.py$
+      # Formatter - same scope
+      - id: ruff-format
+        types_or: [python, pyi]
+        files: ^(lib/ui_spec_v21|lib/collectors|lib/safety|lib/db|lib/paths|lib/collector_registry|api/spec_router|scripts/backfill|scripts/verify)/.*\.py$
+
+  # ==========================================
+  # BANDIT - Security scanning
+  # ==========================================
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.8
+    hooks:
+      - id: bandit
+        args: [-r, -ll, --skip, "B101"]  # Skip assert warnings
+        files: ^(lib/ui_spec_v21|lib/collectors|lib/safety|api/spec_router)/.*\.py$
+
+  # ==========================================
+  # GENERAL HOOKS
+  # ==========================================
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+        files: ^(lib/ui_spec_v21|lib/collectors|lib/safety|api|tests|scripts)/
+        exclude: \.md$
+      - id: end-of-file-fixer
+        files: ^(lib/ui_spec_v21|lib/collectors|lib/safety|api|tests|scripts)/
+      - id: check-yaml
+        files: ^(\.pre-commit-config\.yaml|pytest\.ini)$
+      - id: check-json
+        files: ^(lib|api|tests)/.*\.json$
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: check-merge-conflict
+      - id: detect-private-key
+
+  # ==========================================
+  # SQL INJECTION CHECK (custom)
+  # Note: grep-based check. Known safe patterns excluded:
+  # - lib/safety/migrations.py (trigger names from code)
+  # - lib/safety/schema.py (table names from code)
+  # - lib/ui_spec_v21/time_utils.py (table names from hardcoded list)
+  # - api/server.py (constants, not user input)
+  # ==========================================
+  - repo: local
+    hooks:
+      - id: no-sql-fstrings
+        name: Check for SQL f-string injection
+        entry: bash -c 'grep -rn "execute.*f\"" --include="*.py" lib/ui_spec_v21/endpoints.py lib/ui_spec_v21/detectors.py lib/ui_spec_v21/inbox_lifecycle.py lib/ui_spec_v21/issue_lifecycle.py lib/collectors/ 2>/dev/null && exit 1 || exit 0'
+        language: system
+        pass_filenames: false
+        types: [python]
