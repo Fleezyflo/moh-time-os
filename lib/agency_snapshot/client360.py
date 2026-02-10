@@ -12,6 +12,7 @@ import sqlite3
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from enum import StrEnum
+from pathlib import Path
 from typing import Any
 
 from lib import paths
