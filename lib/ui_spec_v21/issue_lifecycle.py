@@ -304,9 +304,7 @@ class IssueLifecycleManager:
 
         return True, None
 
-    def _action_unsnooze(
-        self, issue: dict, user_id: str, now: str
-    ) -> tuple[bool, str | None]:
+    def _action_unsnooze(self, issue: dict, user_id: str, now: str) -> tuple[bool, str | None]:
         """Transition from snoozed to surfaced."""
         current = IssueState(issue["state"])
 
@@ -375,9 +373,7 @@ class IssueLifecycleManager:
 
         return True, None
 
-    def _action_mark_awaiting(
-        self, issue: dict, user_id: str, now: str
-    ) -> tuple[bool, str | None]:
+    def _action_mark_awaiting(self, issue: dict, user_id: str, now: str) -> tuple[bool, str | None]:
         """Transition to awaiting_resolution state."""
         current = IssueState(issue["state"])
         target = IssueState.AWAITING_RESOLUTION
@@ -459,9 +455,7 @@ class IssueLifecycleManager:
 
         return True, None
 
-    def _action_escalate(
-        self, issue: dict, user_id: str, now: str
-    ) -> tuple[bool, str | None]:
+    def _action_escalate(self, issue: dict, user_id: str, now: str) -> tuple[bool, str | None]:
         """
         Escalate action.
 

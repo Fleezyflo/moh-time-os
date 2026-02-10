@@ -1,24 +1,16 @@
 """Knowledge base: ingest clients, team, projects from source systems."""
 
 import json
-import os
 import re
-import sys
-from dataclasses import dataclass, asdict
-from datetime import datetime, timezone
-from typing import Any
+from dataclasses import asdict, dataclass
+from datetime import UTC, datetime
 
-# Local imports - handle both module and script execution
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from engine.asana_client import list_projects, list_workspaces
+from engine.gogcli import run_gog
 
-try:
-    from .asana_client import list_workspaces, list_projects, list_sections, list_tasks_in_section
-    from .gogcli import run_gog
-except ImportError:
-    from asana_client import list_workspaces, list_projects, list_sections, list_tasks_in_section
-    from gogcli import run_gog
+from lib import paths
 
-KB_PATH = os.path.join(os.path.dirname(__file__), "..", "config", "knowledge_base.json")
+KB_PATH = str(paths.config_dir() / "knowledge_base.json")
 FORECAST_SHEET_ID = "1iTWOo77r1l-65AwDh2KAnhKg1ch7X1XLqxtWQQgorVI"
 
 
@@ -31,7 +23,7 @@ class TeamMember:
     active: bool
 
 
-@dataclass 
+@dataclass
 class Client:
     name: str
     type: str  # retainer, project, forecast
@@ -55,7 +47,7 @@ class KnowledgeBase:
     clients: list[Client]
     projects: list[Project]
     updated_at: str
-    
+
     def to_dict(self) -> dict:
         return {
             "team": [asdict(t) for t in self.team],
@@ -63,7 +55,7 @@ class KnowledgeBase:
             "projects": [asdict(p) for p in self.projects],
             "updated_at": self.updated_at,
         }
-    
+
     @classmethod
     def from_dict(cls, d: dict) -> "KnowledgeBase":
         return cls(
@@ -78,7 +70,7 @@ def load_kb() -> KnowledgeBase | None:
     if not os.path.exists(KB_PATH):
         return None
     try:
-        with open(KB_PATH, "r") as f:
+        with open(KB_PATH) as f:
             return KnowledgeBase.from_dict(json.load(f))
     except Exception:
         return None
@@ -92,51 +84,51 @@ def save_kb(kb: KnowledgeBase) -> None:
 
 def ingest_team_from_forecast(account: str = "molham@hrmny.co") -> list[TeamMember]:
     """Pull team from Forecast sheet salary section."""
-    
+
     # Get salary rows (around rows 225-320 based on earlier analysis)
     res = run_gog(
         ["sheets", "get", FORECAST_SHEET_ID, "Forecast!A225:BK350", "--json"],
         account=account,
         timeout=60,
     )
-    
+
     if not res.ok:
         print(f"Error fetching team: {res.error}")
         return []
-    
+
     rows = res.data.get("values", [])
     team = []
     current_dept = "Unknown"
-    
+
     # Find current month column (Jan 2026 = ~48, Feb 2026 = ~49)
     # We'll use column 49 (Feb 2026) as reference
     CURRENT_MONTH_COL = 49
-    
+
     for row in rows:
         if len(row) < 3:
             continue
-            
+
         # Check for department header
         if row[0] and "Salaries" not in str(row[0]):
             # Could be department header
             dept = str(row[0]).strip()
             if dept and dept not in ("", "ADMIN COSTS", "TOTAL", "FIXED"):
                 current_dept = dept
-        
+
         # Check for salary row
         if len(row) > 0 and "Salaries" in str(row[0]):
             title = str(row[1]).strip() if len(row) > 1 else ""
             name = str(row[2]).strip() if len(row) > 2 else ""
-            
+
             # Skip budget placeholders
             if not name or name.lower() == "budget":
                 continue
-            
+
             # Check if active (has salary in current month)
             current_salary = ""
             if len(row) > CURRENT_MONTH_COL:
                 current_salary = str(row[CURRENT_MONTH_COL]).strip()
-            
+
             # Parse salary - active if > 0
             active = False
             if current_salary:
@@ -147,66 +139,68 @@ def ingest_team_from_forecast(account: str = "molham@hrmny.co") -> list[TeamMemb
                         active = True
                 except ValueError:
                     pass
-            
+
             # Infer email from name (simple heuristic)
             email = None
             name_parts = name.lower().split()
             if len(name_parts) >= 2:
                 # firstname@hrmny.co pattern
                 email = f"{name_parts[0]}@hrmny.co"
-            
-            team.append(TeamMember(
-                name=name,
-                title=title,
-                department=current_dept,
-                email=email,
-                active=active,
-            ))
-    
+
+            team.append(
+                TeamMember(
+                    name=name,
+                    title=title,
+                    department=current_dept,
+                    email=email,
+                    active=active,
+                )
+            )
+
     return team
 
 
 def ingest_clients_from_forecast(account: str = "molham@hrmny.co") -> list[Client]:
     """Pull clients from Forecast sheet revenue section."""
-    
+
     # Get revenue rows (rows 5-100 based on earlier analysis)
     res = run_gog(
         ["sheets", "get", FORECAST_SHEET_ID, "Forecast!A5:BK100", "--json"],
         account=account,
         timeout=60,
     )
-    
+
     if not res.ok:
         print(f"Error fetching clients: {res.error}")
         return []
-    
+
     rows = res.data.get("values", [])
     clients = []
     seen_names = set()
-    
+
     # Current month columns (Jan 2026 = ~48, Feb 2026 = ~49)
     CURRENT_MONTH_COL = 49
-    
+
     for row in rows:
         if len(row) < 3:
             continue
-        
+
         row_type = str(row[0]).strip() if row[0] else ""
-        
+
         # Only process Revenue rows
         if not row_type.startswith("Revenue"):
             continue
-        
+
         client_name = str(row[1]).strip() if len(row) > 1 else ""
         engagement_type = str(row[2]).strip().lower() if len(row) > 2 else ""
-        
+
         # Skip empty, TBD, or already seen
         if not client_name or client_name.lower() in ("tbd", "others", ""):
             continue
         if client_name in seen_names:
             continue
         seen_names.add(client_name)
-        
+
         # Determine type
         if "forecast" in row_type.lower():
             client_type = "forecast"
@@ -214,11 +208,11 @@ def ingest_clients_from_forecast(account: str = "molham@hrmny.co") -> list[Clien
             client_type = "retainer"
         else:
             client_type = "project"
-        
+
         # Check if active (has revenue in current or future months)
         has_current = False
         has_future = False
-        
+
         for col_idx in range(CURRENT_MONTH_COL, min(len(row), CURRENT_MONTH_COL + 12)):
             val = str(row[col_idx]).strip() if col_idx < len(row) else ""
             clean = re.sub(r"[^\d.]", "", val)
@@ -230,14 +224,14 @@ def ingest_clients_from_forecast(account: str = "molham@hrmny.co") -> list[Clien
                         has_future = True
             except ValueError:
                 pass
-        
+
         if has_current or has_future:
             status = "active"
         elif client_type == "forecast":
             status = "pipeline"
         else:
             status = "historical"
-        
+
         # Try to infer domain from name
         domains = []
         name_lower = client_name.lower().replace(" ", "")
@@ -247,86 +241,94 @@ def ingest_clients_from_forecast(account: str = "molham@hrmny.co") -> list[Clien
         elif "gmg" in name_lower:
             domains.append("gmg.com")
         # Add more as needed
-        
-        clients.append(Client(
-            name=client_name,
-            type=client_type,
-            status=status,
-            domains=domains,
-            contacts=[],
-        ))
-    
+
+        clients.append(
+            Client(
+                name=client_name,
+                type=client_type,
+                status=status,
+                domains=domains,
+                contacts=[],
+            )
+        )
+
     return clients
 
 
 def ingest_projects_from_asana() -> list[Project]:
     """Pull projects from Asana."""
-    
+
     projects = []
-    
+
     try:
         workspaces = list_workspaces()
     except Exception as e:
         print(f"Asana error: {e}")
         return []
-    
+
     for ws in workspaces:
         if "hrmny" not in ws.get("name", "").lower():
             continue
-        
+
         try:
             asana_projects = list_projects(ws["gid"])
         except Exception as e:
             print(f"Error listing projects: {e}")
             continue
-        
+
         for p in asana_projects:
             name = p.get("name", "")
-            
+
             # Try to extract client from project name
             # Common patterns: "[ClientName] Project" or "ClientName | Project"
             client = None
             if "|" in name:
                 client = name.split("|")[0].strip()
             elif name.startswith("[") and "]" in name:
-                client = name[1:name.index("]")].strip()
-            
-            projects.append(Project(
-                name=name,
-                client=client,
-                status="active",  # Asana archived projects filtered by default
-                source="asana",
-                asana_gid=p.get("gid"),
-            ))
-    
+                client = name[1 : name.index("]")].strip()
+
+            projects.append(
+                Project(
+                    name=name,
+                    client=client,
+                    status="active",  # Asana archived projects filtered by default
+                    source="asana",
+                    asana_gid=p.get("gid"),
+                )
+            )
+
     return projects
 
 
 def build_knowledge_base(account: str = "molham@hrmny.co") -> KnowledgeBase:
     """Build complete knowledge base from all sources."""
-    
+
     print("Ingesting team from Forecast sheet...")
     team = ingest_team_from_forecast(account)
-    print(f"  Found {len(team)} team members ({sum(1 for t in team if t.active)} active)")
-    
+    print(
+        f"  Found {len(team)} team members ({sum(1 for t in team if t.active)} active)"
+    )
+
     print("Ingesting clients from Forecast sheet...")
     clients = ingest_clients_from_forecast(account)
-    print(f"  Found {len(clients)} clients ({sum(1 for c in clients if c.status == 'active')} active)")
-    
+    print(
+        f"  Found {len(clients)} clients ({sum(1 for c in clients if c.status == 'active')} active)"
+    )
+
     print("Ingesting projects from Asana...")
     projects = ingest_projects_from_asana()
     print(f"  Found {len(projects)} projects")
-    
+
     kb = KnowledgeBase(
         team=team,
         clients=clients,
         projects=projects,
-        updated_at=datetime.now(timezone.utc).isoformat(),
+        updated_at=datetime.now(UTC).isoformat(),
     )
-    
+
     save_kb(kb)
     print(f"\nKnowledge base saved to {KB_PATH}")
-    
+
     return kb
 
 
@@ -335,7 +337,7 @@ def lookup_client_by_domain(domain: str) -> Client | None:
     kb = load_kb()
     if not kb:
         return None
-    
+
     domain = domain.lower()
     for client in kb.clients:
         if domain in [d.lower() for d in client.domains]:
@@ -348,7 +350,7 @@ def lookup_team_member_by_name(name: str) -> TeamMember | None:
     kb = load_kb()
     if not kb:
         return None
-    
+
     name = name.lower()
     for member in kb.team:
         if name in member.name.lower():
@@ -361,7 +363,7 @@ def is_known_client(name: str) -> bool:
     kb = load_kb()
     if not kb:
         return False
-    
+
     name = name.lower()
     for client in kb.clients:
         if name in client.name.lower() or client.name.lower() in name:
@@ -371,19 +373,19 @@ def is_known_client(name: str) -> bool:
 
 if __name__ == "__main__":
     kb = build_knowledge_base()
-    
+
     print("\n" + "=" * 50)
     print("ACTIVE TEAM:")
     for t in kb.team:
         if t.active:
             print(f"  {t.name:25} | {t.title:30} | {t.department}")
-    
+
     print("\n" + "=" * 50)
     print("ACTIVE CLIENTS:")
     for c in kb.clients:
         if c.status == "active":
             print(f"  {c.name:30} | {c.type:10}")
-    
+
     print("\n" + "=" * 50)
     print("ASANA PROJECTS:")
     for p in kb.projects[:20]:

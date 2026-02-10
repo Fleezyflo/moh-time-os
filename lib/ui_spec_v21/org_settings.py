@@ -154,9 +154,7 @@ def save_org_settings(conn, settings: OrgSettings) -> None:
     conn.commit()
 
 
-def validate_invoice_currency(
-    invoice_currency: str, org_settings: OrgSettings
-) -> tuple:
+def validate_invoice_currency(invoice_currency: str, org_settings: OrgSettings) -> tuple:
     """
     Validate invoice currency against org base currency.
 

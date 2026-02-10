@@ -126,12 +126,12 @@ Total SQL queries: 67
 - Doc: Get client health overview.
 - SQL queries: 1
   ```sql
-  
-        SELECT * FROM clients 
-        ORDER BY 
-            CASE relationship_health 
-                WHEN 'critical' THEN 1 
-                WHEN 'poor' THEN 2 
+
+        SELECT * FROM clients
+        ORDER BY
+            CASE relationship_health
+                WHEN 'critical' THEN 1
+                WHEN 'poor' THEN 2
                 WHEN 'needs_attentio
   ```
 
@@ -141,12 +141,12 @@ Total SQL queries: 67
 - Doc: Get clients that are at risk.
 - SQL queries: 1
   ```sql
-  
-        SELECT * FROM clients 
+
+        SELECT * FROM clients
         WHERE relationship_health IN ('poor', 'critical')
            OR (financial_ar_outstanding > 50000 AND financial_ar_aging IN ('60+', '90+'))
-        ORDER BY 
-  
+        ORDER BY
+
   ```
 
 ### get_client_health (line 462)
@@ -179,9 +179,9 @@ Total SQL queries: 67
 - Doc: Get tasks with optional filters.
 - SQL queries: 1
   ```sql
-  
-        SELECT * FROM tasks 
-        WHERE 
+
+        SELECT * FROM tasks
+        WHERE
   ```
 
 ### TaskCreate (line 536)
@@ -255,12 +255,12 @@ Total SQL queries: 67
 - Doc: Get all delegated tasks.
 - SQL queries: 1
   ```sql
-  
-        SELECT * FROM tasks 
-        WHERE assignee IS NOT NULL AND assignee != '' 
+
+        SELECT * FROM tasks
+        WHERE assignee IS NOT NULL AND assignee != ''
         AND status NOT IN ('completed', 'done', 'cancelled', 'deleted')
         ORDER BY delegated_at DESC
-    
+
   ```
 
 ### get_data_quality (line 810)
@@ -269,38 +269,38 @@ Total SQL queries: 67
 - Doc: Get data quality metrics and cleanup suggestions.
 - SQL queries: 5
   ```sql
-  
+
         SELECT COUNT(*) as cnt FROM tasks
         WHERE status NOT IN ('completed', 'done', 'cancelled', 'deleted')
           AND due_date IS NOT NULL
-          AND date(due_date) < date('now', '-30 
+          AND date(due_date) < date('now', '-30
   ```
   ```sql
-  
+
         SELECT COUNT(*) as cnt FROM tasks
         WHERE status NOT IN ('completed', 'done', 'cancelled', 'deleted')
           AND due_date IS NOT NULL
-          AND date(due_date) < date('now', '-14 
+          AND date(due_date) < date('now', '-14
   ```
   ```sql
-  
+
         SELECT COUNT(*) as cnt FROM tasks
         WHERE status NOT IN ('completed', 'done', 'cancelled', 'deleted')
           AND due_date IS NOT NULL
           AND date(due_date) < date('now')
-    
+
   ```
   ```sql
-  
+
         SELECT COUNT(*) as cnt FROM tasks
         WHERE status = 'pending' AND (due_date IS NULL OR due_date = '')
-    
+
   ```
   ```sql
-  
+
         SELECT COUNT(*) as cnt FROM tasks
         WHERE status = 'pending' AND (project IS NULL OR project = '')
-    
+
   ```
 
 ### _get_cleanup_suggestions (line 878)
@@ -309,14 +309,14 @@ Total SQL queries: 67
 - Doc: Generate cleanup suggestions based on data quality issues.
 - SQL queries: 2
   ```sql
-  
+
         SELECT id, title FROM tasks
         WHERE status NOT IN ('completed', 'done', 'cancelled', 'deleted')
           AND due_date IS NOT NULL
           AND date(due_date) < date('now', '-30 days')
   ```
   ```sql
-  
+
         SELECT id, title FROM tasks
         WHERE status NOT IN ('completed', 'done', 'cancelled', 'deleted')
           AND due_date IS NOT NULL
@@ -334,7 +334,7 @@ Total SQL queries: 67
 - Doc: Archive tasks that are >30 days overdue.
 - SQL queries: 1
   ```sql
-  
+
         SELECT id, title FROM tasks
         WHERE status NOT IN ('completed', 'done', 'cancelled', 'deleted')
           AND due_date IS NOT NULL
@@ -347,7 +347,7 @@ Total SQL queries: 67
 - Doc: Archive tasks that are 14-30 days overdue.
 - SQL queries: 1
   ```sql
-  
+
         SELECT id, title FROM tasks
         WHERE status NOT IN ('completed', 'done', 'cancelled', 'deleted')
           AND due_date IS NOT NULL
@@ -360,10 +360,10 @@ Total SQL queries: 67
 - Doc: Recalculate priorities for all pending tasks.
 - SQL queries: 1
   ```sql
-  
+
         SELECT * FROM tasks
         WHERE status NOT IN ('completed', 'done', 'cancelled', 'deleted')
-    
+
   ```
 
 ### _calculate_realistic_priority (line 1032)
@@ -377,18 +377,18 @@ Total SQL queries: 67
 - Doc: Preview what would be affected by a cleanup operation.
 - SQL queries: 2
   ```sql
-  
+
             SELECT id, title, due_date, project, assignee FROM tasks
             WHERE status NOT IN ('completed', 'done', 'cancelled', 'deleted')
               AND due_date IS NOT NULL
-             
+
   ```
   ```sql
-  
+
             SELECT id, title, due_date, project, assignee FROM tasks
             WHERE status NOT IN ('completed', 'done', 'cancelled', 'deleted')
               AND due_date IS NOT NULL
-             
+
   ```
 
 ### get_team (line 1117)
@@ -406,9 +406,9 @@ Total SQL queries: 67
 - Doc: Get projects list.
 - SQL queries: 1
   ```sql
-  
-        SELECT * FROM projects 
-        WHERE 
+
+        SELECT * FROM projects
+        WHERE
   ```
 
 ### api_calendar (line 1162)
@@ -417,11 +417,11 @@ Total SQL queries: 67
 - Doc: Get calendar events.
 - SQL queries: 1
   ```sql
-  
-        SELECT * FROM events 
+
+        SELECT * FROM events
         WHERE date(start_time) >= ? AND date(start_time) <= ?
         ORDER BY start_time
-    
+
   ```
 
 ### api_delegations (line 1189)
@@ -435,12 +435,12 @@ Total SQL queries: 67
 - Doc: Get inbox items (unprocessed communications, new tasks, etc.).
 - SQL queries: 1
   ```sql
-  
-        SELECT * FROM communications 
+
+        SELECT * FROM communications
         WHERE processed = 0 OR processed IS NULL
         ORDER BY received_at DESC
         LIMIT ?
-    
+
   ```
 
 ### api_insights (line 1208)
@@ -449,12 +449,12 @@ Total SQL queries: 67
 - Doc: Get insights.
 - SQL queries: 1
   ```sql
-  
-        SELECT * FROM insights 
+
+        SELECT * FROM insights
         WHERE expires_at IS NULL OR expires_at > datetime('now')
         ORDER BY created_at DESC
         LIMIT ?
-    
+
   ```
 
 ### api_decisions (line 1221)
@@ -463,12 +463,12 @@ Total SQL queries: 67
 - Doc: Get pending decisions.
 - SQL queries: 1
   ```sql
-  
-        SELECT * FROM decisions 
+
+        SELECT * FROM decisions
         WHERE approved IS NULL
         ORDER BY created_at DESC
         LIMIT ?
-    
+
   ```
 
 ### api_priority_complete (line 1234)
@@ -518,11 +518,11 @@ Total SQL queries: 67
 - Doc: Get summary of bundle activity.
 - SQL queries: 1
   ```sql
-  
-        SELECT * FROM change_bundles 
-        ORDER BY created_at DESC 
+
+        SELECT * FROM change_bundles
+        ORDER BY created_at DESC
         LIMIT 10
-    
+
   ```
 
 ### rollback_last_bundle (line 1400)
@@ -630,12 +630,12 @@ Total SQL queries: 67
 - Doc: Archive stale priority items.
 - SQL queries: 1
   ```sql
-  
+
         SELECT id, title FROM tasks
-        WHERE status = 'pending' 
+        WHERE status = 'pending'
         AND updated_at < ?
         AND snoozed_until IS NULL
-    
+
   ```
 
 ### get_events (line 1759)
@@ -644,11 +644,11 @@ Total SQL queries: 67
 - Doc: Get upcoming events.
 - SQL queries: 1
   ```sql
-  
-        SELECT * FROM events 
+
+        SELECT * FROM events
         WHERE start_time >= ? AND start_time <= ?
         ORDER BY start_time
-    
+
   ```
 
 ### get_day_analysis (line 1776)
@@ -667,9 +667,9 @@ Total SQL queries: 67
 - Doc: Get emails from communications.
 - SQL queries: 1
   ```sql
-  
-        SELECT * FROM communications 
-        WHERE 
+
+        SELECT * FROM communications
+        WHERE
   ```
 
 ### mark_email_actionable (line 1812)
@@ -683,9 +683,9 @@ Total SQL queries: 67
 - Doc: Get insights.
 - SQL queries: 1
   ```sql
-  
-        SELECT * FROM insights 
-        WHERE 
+
+        SELECT * FROM insights
+        WHERE
   ```
 
 ### get_anomalies (line 1838)
@@ -694,12 +694,12 @@ Total SQL queries: 67
 - Doc: Get anomalies.
 - SQL queries: 1
   ```sql
-  
-        SELECT * FROM insights 
-        WHERE type = 'anomaly' 
+
+        SELECT * FROM insights
+        WHERE type = 'anomaly'
         AND (expires_at IS NULL OR expires_at > datetime('now'))
         ORDER BY severity DESC, created_at DESC
-    
+
   ```
 
 ### get_notifications (line 1851)
@@ -708,9 +708,9 @@ Total SQL queries: 67
 - Doc: Get notifications.
 - SQL queries: 1
   ```sql
-  
-        SELECT * FROM notifications 
-        WHERE 
+
+        SELECT * FROM notifications
+        WHERE
   ```
 
 ### get_notification_stats (line 1868)
@@ -782,11 +782,11 @@ Total SQL queries: 67
 - Doc: Get governance action history.
 - SQL queries: 1
   ```sql
-  
-        SELECT * FROM governance_history 
-        ORDER BY created_at DESC 
+
+        SELECT * FROM governance_history
+        ORDER BY created_at DESC
         LIMIT ?
-    
+
   ```
 
 ### activate_emergency_brake (line 1978)
@@ -835,10 +835,10 @@ Total SQL queries: 67
 - Doc: Get a comprehensive summary.
 - SQL queries: 1
   ```sql
-  
-        SELECT COUNT(*) as cnt FROM tasks 
+
+        SELECT COUNT(*) as cnt FROM tasks
         WHERE status = 'pending' AND due_date < date('now')
-    
+
   ```
 
 ### search_items (line 2070)
@@ -847,25 +847,25 @@ Total SQL queries: 67
 - Doc: Search across tasks, projects, and clients.
 - SQL queries: 3
   ```sql
-  
-        SELECT 'task' as type, id, title, status, project FROM tasks 
+
+        SELECT 'task' as type, id, title, status, project FROM tasks
         WHERE title LIKE ? OR description LIKE ?
         LIMIT ?
-    
+
   ```
   ```sql
-  
-        SELECT 'project' as type, id, name as title, status FROM projects 
+
+        SELECT 'project' as type, id, name as title, status FROM projects
         WHERE name LIKE ?
         LIMIT ?
-    
+
   ```
   ```sql
-  
-        SELECT 'client' as type, id, name as title, tier FROM clients 
+
+        SELECT 'client' as type, id, name as title, tier FROM clients
         WHERE name LIKE ?
         LIMIT ?
-    
+
   ```
 
 ### get_team_workload (line 2102)
@@ -874,13 +874,13 @@ Total SQL queries: 67
 - Doc: Get team workload distribution.
 - SQL queries: 1
   ```sql
-  
-        SELECT 
+
+        SELECT
             assignee,
             COUNT(*) as total,
             SUM(CASE WHEN due_date < date('now') THEN 1 ELSE 0 END) as overdue,
             MAX(priority) as max_priority
-        
+
   ```
 
 ### get_grouped_priorities (line 2123)
@@ -894,17 +894,17 @@ Total SQL queries: 67
 - Doc: Get clients with filters.
 - SQL queries: 4
   ```sql
-  
-            SELECT DISTINCT client_id FROM tasks 
-            WHERE client_id IS NOT NULL 
+
+            SELECT DISTINCT client_id FROM tasks
+            WHERE client_id IS NOT NULL
             AND (updated_at >= date('now', '-90 days') OR status = 'pending')
             UNION
-            
+
   ```
   ```sql
-  
-        SELECT * FROM clients 
-        WHERE 
+
+        SELECT * FROM clients
+        WHERE
   ```
   ```sql
   SELECT COUNT(*) as cnt FROM projects WHERE client_id = ? AND enrollment_status = 'enrolled'
@@ -919,46 +919,46 @@ Total SQL queries: 67
 - Doc: Get client portfolio overview.
 - SQL queries: 5
   ```sql
-  
-        SELECT 
+
+        SELECT
             tier,
             COUNT(*) as count,
             SUM(financial_ar_outstanding) as total_ar,
             SUM(CASE WHEN relationship_health IN ('poor', 'critical') THEN 1 EL
   ```
   ```sql
-  
-        SELECT 
+
+        SELECT
             relationship_health as health,
             COUNT(*) as count
         FROM clients
         WHERE relationship_health IS NOT NULL
         GROUP BY relationship_health
-    
+
   ```
   ```sql
-  
-        SELECT * FROM clients 
+
+        SELECT * FROM clients
         WHERE (tier IN ('A', 'B') AND relationship_health IN ('poor', 'critical'))
            OR (financial_ar_outstanding > 100000 AND financial_ar_aging = '90+')
-    
+
   ```
   ```sql
-  
-        SELECT 
+
+        SELECT
             COUNT(*) as total_clients,
             SUM(financial_ar_outstanding) as total_ar,
             SUM(financial_annual_value) as total_annual_value
         FROM clients
-    
+
   ```
   ```sql
-  
-        SELECT 
+
+        SELECT
             COUNT(*) as count,
             COALESCE(SUM(financial_ar_outstanding), 0) as total
         FROM clients
-        WHERE financial_ar_outstanding > 0 
+        WHERE financial_ar_outstanding > 0
         AND financial_a
   ```
 
@@ -993,9 +993,9 @@ Total SQL queries: 67
 - Doc: Get projects with filters.
 - SQL queries: 1
   ```sql
-  
-        SELECT * FROM projects 
-        WHERE 
+
+        SELECT * FROM projects
+        WHERE
   ```
 
 ### get_project_candidates (line 2373)
@@ -1004,11 +1004,11 @@ Total SQL queries: 67
 - Doc: Get projects that could be enrolled.
 - SQL queries: 1
   ```sql
-  
-        SELECT * FROM projects 
+
+        SELECT * FROM projects
         WHERE (enrollment_status IS NULL OR enrollment_status = 'candidate')
         ORDER BY updated_at DESC
-    
+
   ```
 
 ### get_enrolled_projects (line 2385)
@@ -1017,11 +1017,11 @@ Total SQL queries: 67
 - Doc: Get enrolled projects.
 - SQL queries: 1
   ```sql
-  
-        SELECT * FROM projects 
+
+        SELECT * FROM projects
         WHERE enrollment_status = 'enrolled'
         ORDER BY updated_at DESC
-    
+
   ```
 
 ### EnrollmentAction (line 2397)
@@ -1040,12 +1040,12 @@ Total SQL queries: 67
 - Doc: Detect new projects from tasks.
 - SQL queries: 1
   ```sql
-  
+
         SELECT DISTINCT project as name, COUNT(*) as task_count
-        FROM tasks 
+        FROM tasks
         WHERE project IS NOT NULL AND project != ''
         AND project NOT IN (SELECT name FROM projects)
-        
+
   ```
 
 ### get_project_detail (line 2447)
@@ -1078,12 +1078,12 @@ Total SQL queries: 67
 - Doc: Get email queue.
 - SQL queries: 1
   ```sql
-  
-        SELECT * FROM communications 
+
+        SELECT * FROM communications
         WHERE type = 'email' AND (processed = 0 OR processed IS NULL)
         ORDER BY received_at DESC
         LIMIT ?
-    
+
   ```
 
 ### dismiss_email (line 2530)
@@ -1097,24 +1097,24 @@ Total SQL queries: 67
 - Doc: Get weekly digest.
 - SQL queries: 3
   ```sql
-  
-        SELECT * FROM tasks 
+
+        SELECT * FROM tasks
         WHERE status = 'completed' AND updated_at >= ?
         ORDER BY updated_at DESC
-    
+
   ```
   ```sql
-  
-        SELECT * FROM tasks 
+
+        SELECT * FROM tasks
         WHERE status = 'pending' AND due_date < date('now') AND due_date >= ?
         ORDER BY due_date ASC
-    
+
   ```
   ```sql
-  
-        SELECT COUNT(*) as cnt FROM tasks 
+
+        SELECT COUNT(*) as cnt FROM tasks
         WHERE status = 'archived' AND updated_at >= ?
-    
+
   ```
 
 ### BlockerRequest (line 2583)
@@ -1138,11 +1138,11 @@ Total SQL queries: 67
 - Doc: Get task dependency graph.
 - SQL queries: 1
   ```sql
-  
-        SELECT * FROM tasks 
+
+        SELECT * FROM tasks
         WHERE status = 'pending' AND blockers IS NOT NULL AND blockers != '' AND blockers != '[]'
         ORDER BY priority DESC
-    
+
   ```
 
 ### spa_fallback (line 2674)
@@ -1154,4 +1154,3 @@ Total SQL queries: 67
 - Args: []
 - Bytecode: 64 bytes
 - Doc: Run the server.
-

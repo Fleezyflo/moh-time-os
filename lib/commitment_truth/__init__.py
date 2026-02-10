@@ -16,7 +16,12 @@ Invariants:
 - Untracked commitments surface in briefs
 """
 
-from .detector import detect_promises, detect_requests, extract_deadline
 from .commitment_manager import CommitmentManager
+from .detector import detect_promises, detect_requests, extract_deadline
 
-__all__ = ['detect_promises', 'detect_requests', 'extract_deadline', 'CommitmentManager']
+__all__ = [
+    "detect_promises",
+    "detect_requests",
+    "extract_deadline",
+    "CommitmentManager",
+]

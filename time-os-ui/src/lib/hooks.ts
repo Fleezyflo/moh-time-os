@@ -1,46 +1,66 @@
 // React hooks for data fetching from Control Room API
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import * as api from './api';
 
-// Generic fetch hook
+// Generic fetch hook with error recovery
 function useFetch<T>(fetcher: () => Promise<T>, deps: unknown[] = []) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  useEffect(() => {
-    let cancelled = false;
+  const doFetch = useCallback(() => {
     setLoading(true);
-    fetcher()
+    return fetcher()
       .then(result => {
-        if (!cancelled) {
-          setData(result);
-          setError(null);
-        }
+        setData(result);
+        setError(null);
+        return result;
       })
       .catch(err => {
-        if (!cancelled) {
-          setError(err);
-          console.error('Fetch error:', err);
+        setError(err);
+        // Only log once per error in dev mode
+        if (retryCount === 0 && import.meta.env.DEV) {
+          console.error('Fetch error:', err.message);
         }
+        throw err;
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        setLoading(false);
       });
-    return () => { cancelled = true; };
-  }, deps);
+  }, [fetcher, retryCount]);
 
-  return { data, loading, error, refetch: () => fetcher().then(setData) };
+  useEffect(() => {
+    // Track if component unmounts during fetch (for future abort implementation)
+    const controller = { cancelled: false };
+    doFetch().catch(() => {
+      // Error already handled in doFetch
+      // Future: check controller.cancelled before state updates
+    });
+    return () => { controller.cancelled = true; };
+  }, [...deps, retryCount]);
+
+  // Refetch clears error and retries
+  const refetch = useCallback(() => {
+    setRetryCount(c => c + 1);
+  }, []);
+
+  // Reset error without refetching (keeps last-good-data if present)
+  const resetError = useCallback(() => {
+    setError(null);
+  }, []);
+
+  return { data, loading, error, refetch, resetError };
 }
 
 // Proposals
-export function useProposals(limit = 7, status = 'open') {
-  return useFetch(() => api.fetchProposals(limit, status), [limit, status]);
+export function useProposals(limit = 7, status = 'open', days = 7, clientId?: string, memberId?: string) {
+  return useFetch(() => api.fetchProposals(limit, status, days, clientId, memberId), [limit, status, days, clientId, memberId]);
 }
 
 // Issues
-export function useIssues(limit = 5) {
-  return useFetch(() => api.fetchIssues(limit), [limit]);
+export function useIssues(limit = 5, days = 7, clientId?: string, memberId?: string) {
+  return useFetch(() => api.fetchIssues(limit, days, clientId, memberId), [limit, days, clientId, memberId]);
 }
 
 // Watchers
@@ -56,7 +76,7 @@ export function useFixData() {
 // Couplings for specific anchor
 export function useCouplings(anchorType: string, anchorId: string) {
   return useFetch(
-    () => api.fetchCouplings(anchorType, anchorId), 
+    () => api.fetchCouplings(anchorType, anchorId),
     [anchorType, anchorId]
   );
 }
@@ -74,6 +94,11 @@ export function useClients() {
 // Team
 export function useTeam() {
   return useFetch(() => api.fetchTeam(), []);
+}
+
+// Tasks for a specific assignee
+export function useTasks(assignee?: string, status?: string, limit = 20) {
+  return useFetch(() => api.fetchTasks(assignee, status, limit), [assignee, status, limit]);
 }
 
 // Evidence for an entity

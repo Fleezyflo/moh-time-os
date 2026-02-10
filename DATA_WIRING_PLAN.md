@@ -51,7 +51,7 @@ CREATE TABLE client_identities (
 def build_identities():
     # From invoices (Xero has client names, we have emails)
     # Match invoice.client_name → communications.from_email where subject mentions client
-    
+
     # From known patterns
     KNOWN_DOMAINS = {
         'gmg.ae': 'GMG Consumer LLC',
@@ -73,7 +73,7 @@ def build_identities():
 
 **Solution:** `lib/link_projects.py` exists but isn't being run automatically.
 
-**Action:** 
+**Action:**
 1. Add to autonomous loop after normalization
 2. Or run once manually to catch up
 
@@ -193,7 +193,7 @@ from .promise_tracker import COMMITMENT_SIGNALS, extract_deadline
 def extract_commitments(comm_id: str, body: str, client_id: str) -> list:
     """Extract commitments from a communication body."""
     commitments = []
-    
+
     for pattern in COMMITMENT_SIGNALS:
         matches = re.findall(pattern, body, re.IGNORECASE)
         for match in matches:
@@ -208,7 +208,7 @@ def extract_commitments(comm_id: str, body: str, client_id: str) -> list:
                 'status': 'open',
                 'confidence': 0.7,
             })
-    
+
     return commitments
 
 def run_extraction():
@@ -246,25 +246,25 @@ Builds team member registry from task assignees.
 def build_team_registry():
     # 1. Get distinct assignees from tasks
     assignees = query("SELECT DISTINCT assignee FROM tasks WHERE assignee IS NOT NULL AND assignee != 'unassigned'")
-    
+
     # 2. For each, create team_member record
     for assignee in assignees:
         # Infer lane from most common task lane
         lane = query("""
-            SELECT lane, COUNT(*) as cnt 
-            FROM tasks WHERE assignee = ? 
+            SELECT lane, COUNT(*) as cnt
+            FROM tasks WHERE assignee = ?
             GROUP BY lane ORDER BY cnt DESC LIMIT 1
         """, [assignee])
-        
+
         insert('team_members', {
             'id': generate_id(),
             'name': assignee,
             'default_lane': lane,
         })
-    
+
     # 3. Update tasks.assignee_id to point to team_members.id
     query("""
-        UPDATE tasks 
+        UPDATE tasks
         SET assignee_id = (SELECT id FROM team_members WHERE name = tasks.assignee)
         WHERE assignee IS NOT NULL
     """)
@@ -325,7 +325,7 @@ for gate, result in gates.items():
 def check_comm_coverage():
     """Verify communications are linked to clients."""
     result = query("""
-        SELECT 
+        SELECT
             COUNT(*) FILTER (WHERE client_id IS NOT NULL) as linked,
             COUNT(*) as total
         FROM communications
@@ -358,23 +358,23 @@ def check_comm_coverage():
 def run_cycle(self):
     # Phase 1: COLLECT
     self.collectors.sync_all()  # includes xero now
-    
+
     # Phase 1a: BUILD REGISTRIES (NEW)
     self._ensure_client_identities()
     self._ensure_team_registry()
-    
+
     # Phase 2: LINK (NEW - before normalize)
     self._link_projects_to_clients()
-    
+
     # Phase 3: NORMALIZE (existing)
     self._normalize_data()  # Now communications will link properly
-    
+
     # Phase 3a: EXTRACT COMMITMENTS (NEW)
     self._extract_commitments()
-    
+
     # Phase 4: GATES (existing)
     self._check_gates()
-    
+
     # ... rest of cycle
 ```
 

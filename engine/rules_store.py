@@ -2,8 +2,9 @@ import json
 import os
 from dataclasses import dataclass
 
+from lib import paths
 
-DEFAULT_PATH = "moh_time_os/out/rules_overrides.json"
+DEFAULT_PATH = str(paths.out_dir() / "rules_overrides.json")
 
 
 @dataclass
@@ -18,13 +19,19 @@ def load_rules(path: str = DEFAULT_PATH) -> RuleOverrides:
     if not os.path.exists(path):
         return RuleOverrides([], [], [])
     try:
-        data = json.loads(open(path, "r", encoding="utf-8").read())
+        data = json.loads(open(path, encoding="utf-8").read())
     except Exception:
         data = {}
     return RuleOverrides(
-        archive_sender_substr=list(dict.fromkeys(data.get("archive_sender_substr") or [])),
-        archive_subject_substr=list(dict.fromkeys(data.get("archive_subject_substr") or [])),
-        delegate_krystie_substr=list(dict.fromkeys(data.get("delegate_krystie_substr") or [])),
+        archive_sender_substr=list(
+            dict.fromkeys(data.get("archive_sender_substr") or [])
+        ),
+        archive_subject_substr=list(
+            dict.fromkeys(data.get("archive_subject_substr") or [])
+        ),
+        delegate_krystie_substr=list(
+            dict.fromkeys(data.get("delegate_krystie_substr") or [])
+        ),
     )
 
 

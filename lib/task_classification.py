@@ -15,88 +15,86 @@ Actual work (needs effort):
 - Client work
 """
 
+import logging
+import re
+
 # Projects that are tracking/pipeline (tasks = records, not work)
 TRACKING_PROJECTS = {
     # CRM & Sales
-    'crm',
-    'leads',
-    'pipeline',
-    'sales pipeline',
-    
+    "crm",
+    "leads",
+    "pipeline",
+    "sales pipeline",
     # Finance tracking
-    'outgoing invoice tracker',
-    'receivables',
-    'invoices',
-    
+    "outgoing invoice tracker",
+    "receivables",
+    "invoices",
     # HR tracking
-    'candidates',
-    'applicants',
-    'recruitment tracker',
-    
+    "candidates",
+    "applicants",
+    "recruitment tracker",
     # Asset tracking
-    'equipment monitoring',
-    'office equipment',
-    'inventory',
-    
+    "equipment monitoring",
+    "office equipment",
+    "inventory",
     # System/meta
-    'templates',
-    'workflows',
+    "templates",
+    "workflows",
 }
 
 # Task title patterns that indicate tracking (not work)
 TRACKING_PATTERNS = [
-    r'^[A-Z]{2,5}\s*[-:]\s*\d',  # "INV-001", "RFP: 123"
-    r'\b(invoice|inv)\s*#?\d',
-    r'\b(candidate|applicant)\s*[-:]\s',
-    r'\b(lead|contact)\s*[-:]\s',
-    r'\b(asset|equipment)\s*#?\d',
+    r"^[A-Z]{2,5}\s*[-:]\s*\d",  # "INV-001", "RFP: 123"
+    r"\b(invoice|inv)\s*#?\d",
+    r"\b(candidate|applicant)\s*[-:]\s",
+    r"\b(lead|contact)\s*[-:]\s",
+    r"\b(asset|equipment)\s*#?\d",
 ]
 
-import re
+
+logger = logging.getLogger(__name__)
 
 
 def is_tracking_item(task: dict) -> bool:
     """
     Determine if a task is a tracking record (not actual work).
-    
+
     Args:
         task: Dict with 'title', 'project', 'lane', etc.
-        
+
     Returns:
         True if this is a tracking item (0 effort)
     """
-    project = (task.get('project') or '').lower().strip()
-    title = (task.get('title') or '').lower().strip()
-    
+    project = (task.get("project") or "").lower().strip()
+    title = (task.get("title") or "").lower().strip()
+
     # Check if project is a tracking project
     for tracking_proj in TRACKING_PROJECTS:
         if tracking_proj in project:
             return True
-    
+
     # Check title patterns
-    for pattern in TRACKING_PATTERNS:
-        if re.search(pattern, title, re.IGNORECASE):
-            return True
-    
-    return False
+    return any(
+        re.search(pattern, title, re.IGNORECASE) for pattern in TRACKING_PATTERNS
+    )
 
 
 def classify_tasks(tasks: list) -> tuple:
     """
     Split tasks into work vs tracking.
-    
+
     Returns:
         (work_tasks, tracking_tasks)
     """
     work = []
     tracking = []
-    
+
     for task in tasks:
         if is_tracking_item(task):
             tracking.append(task)
         else:
             work.append(task)
-    
+
     return work, tracking
 
 
@@ -110,13 +108,12 @@ if __name__ == "__main__":
         {"title": "Asset #1234 - Laptop", "project": "Equipment Monitoring"},
         {"title": "Prepare monthly report", "project": "ret-monoprix"},
     ]
-    
+
     work, tracking = classify_tasks(test_tasks)
-    
-    print("WORK tasks:")
+
+    logger.info("WORK tasks:")
     for t in work:
-        print(f"  ✓ {t['title'][:40]} ({t['project']})")
-    
-    print("\nTRACKING items (0 effort):")
+        logger.info(f"  ✓ {t['title'][:40]} ({t['project']})")
+    logger.info("\nTRACKING items (0 effort):")
     for t in tracking:
-        print(f"  ○ {t['title'][:40]} ({t['project']})")
+        logger.info(f"  ○ {t['title'][:40]} ({t['project']})")

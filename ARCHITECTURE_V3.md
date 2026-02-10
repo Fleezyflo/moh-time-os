@@ -21,8 +21,8 @@ This transforms capacity from "my availability" to **organizational capacity tru
   • Contacts            • ALL team emails (opt-in)         • Tasks            • Responses
   • Payments            • Directory (org chart)            • Sections         • Contacts
   • AR aging            • Groups/Teams                     • Assignees        • Sentiment
-                        • Drive activity (opt)             • Due dates        
-                        • Meet recordings (opt)            • Comments         
+                        • Drive activity (opt)             • Due dates
+                        • Meet recordings (opt)            • Comments
 
                               ▼ ▼ ▼ ▼ ▼
                     ┌─────────────────────────────────────────────────────────────┐
@@ -44,12 +44,12 @@ class TeamCalendarIntelligence:
     Pulls and analyzes calendars for all team members.
     Requires: Google Workspace Admin API with calendar read scope.
     """
-    
+
     def __init__(self, workspace_domain: str = 'hrmny.co'):
         self.domain = workspace_domain
         self.admin_service = self._get_admin_service()
         self.calendar_service = self._get_calendar_service()
-    
+
     def get_team_members(self) -> List[Dict]:
         """Get all users in workspace."""
         users = self.admin_service.users().list(
@@ -57,7 +57,7 @@ class TeamCalendarIntelligence:
             maxResults=100,
             orderBy='email'
         ).execute()
-        
+
         return [
             {
                 'email': u['primaryEmail'],
@@ -69,7 +69,7 @@ class TeamCalendarIntelligence:
             for u in users.get('users', [])
             if not u.get('suspended')
         ]
-    
+
     def get_calendar_for_user(self, email: str, days_ahead: int = 7) -> Dict:
         """
         Get calendar events for a specific user.
@@ -77,11 +77,11 @@ class TeamCalendarIntelligence:
         """
         now = datetime.utcnow()
         end = now + timedelta(days=days_ahead)
-        
+
         # Impersonate user via domain-wide delegation
         delegated_creds = self._get_delegated_creds(email)
         service = build('calendar', 'v3', credentials=delegated_creds)
-        
+
         events = service.events().list(
             calendarId='primary',
             timeMin=now.isoformat() + 'Z',
@@ -89,13 +89,13 @@ class TeamCalendarIntelligence:
             singleEvents=True,
             orderBy='startTime',
         ).execute()
-        
+
         return self._parse_events(events.get('items', []), email)
-    
+
     def compute_team_capacity(self, horizon: str = 'THIS_WEEK') -> Dict:
         """
         Compute capacity for entire team.
-        
+
         Returns:
         {
             'total_available_hours': float,
@@ -119,18 +119,18 @@ class TeamCalendarIntelligence:
         team = self.get_team_members()
         days = 7 if horizon == 'THIS_WEEK' else 1 if horizon == 'TODAY' else 1
         base_hours = 40 if horizon == 'THIS_WEEK' else 8
-        
+
         results = []
         for member in team:
             cal = self.get_calendar_for_user(member['email'], days)
-            
+
             meeting_hours = cal['total_meeting_hours']
             available = max(0, base_hours - meeting_hours)
             utilization = meeting_hours / base_hours if base_hours > 0 else 0
-            
+
             status = 'overloaded' if utilization > 0.8 else \
                      'underutilized' if utilization < 0.5 else 'optimal'
-            
+
             results.append({
                 'email': member['email'],
                 'name': member['name'],
@@ -143,10 +143,10 @@ class TeamCalendarIntelligence:
                 'external_meeting_hours': cal['external_hours'],
                 'internal_meeting_hours': cal['internal_hours'],
             })
-        
+
         total_available = sum(r['available_hours'] for r in results)
         total_meeting = sum(r['meeting_hours'] for r in results)
-        
+
         return {
             'horizon': horizon,
             'team_size': len(results),
@@ -170,7 +170,7 @@ TEAM CAPACITY — THIS WEEK
 ═══════════════════════════════════════════════════════════════════════════
 
   TOTAL: 320h available across 10 people (avg 32h/person)
-  
+
   🔴 OVERLOADED (>80%)          🟡 OPTIMAL (50-80%)         🟢 AVAILABLE (<50%)
   ─────────────────────         ──────────────────          ──────────────────
   Molham      8h avail (80%)    Ramy       16h (60%)        Mark      32h (20%)
@@ -190,23 +190,23 @@ def suggest_assignee(self, task: Dict) -> Dict:
     """
     lane = task.get('lane', 'ops')
     client_id = task.get('client_id')
-    
+
     # Get team capacity
     capacity = self.team_calendar.compute_team_capacity('THIS_WEEK')
-    
+
     # Filter by lane/skill (from team_members table)
     candidates = [
         p for p in capacity['by_person']
         if self._matches_lane(p['email'], lane)
     ]
-    
+
     # Prefer people with client relationship
     if client_id:
         client_contacts = self._get_client_meeting_history(client_id)
         for c in candidates:
             if c['email'] in client_contacts:
                 c['relationship_bonus'] = 10
-    
+
     # Score: available_hours + relationship_bonus - current_load
     for c in candidates:
         c['score'] = (
@@ -214,9 +214,9 @@ def suggest_assignee(self, task: Dict) -> Dict:
             c.get('relationship_bonus', 0) -
             c['utilization_pct'] / 10
         )
-    
+
     best = max(candidates, key=lambda x: x['score'])
-    
+
     return {
         'recommended': best['email'],
         'reason': f"{best['available_hours']}h available, {best['utilization_pct']}% utilized",
@@ -233,7 +233,7 @@ def get_client_coverage(self, client_id: str) -> Dict:
     Who SHOULD be meeting with them?
     """
     client_domains = self._get_client_domains(client_id)
-    
+
     # Find all meetings with this client across ALL team calendars
     coverage = {}
     for member in self.get_team_members():
@@ -251,16 +251,16 @@ def get_client_coverage(self, client_id: str) -> Dict:
                     default=None
                 ),
             }
-    
+
     # Determine primary owner (most meetings)
     primary = max(coverage.items(), key=lambda x: x[1]['meeting_count'])[0] if coverage else None
-    
+
     # Check for gaps
     days_since_last = None
     if coverage:
         last_meeting = max(c['last_meeting'] for c in coverage.values())
         days_since_last = (datetime.now() - datetime.fromisoformat(last_meeting)).days
-    
+
     return {
         'client_id': client_id,
         'primary_owner': primary,
@@ -283,15 +283,15 @@ def analyze_meeting_distribution(self) -> Dict:
     Who's drowning in meetings? Who's isolated?
     """
     capacity = self.compute_team_capacity('THIS_WEEK')
-    
+
     meeting_hours = [p['meeting_hours'] for p in capacity['by_person']]
     avg = sum(meeting_hours) / len(meeting_hours)
     std_dev = (sum((h - avg) ** 2 for h in meeting_hours) / len(meeting_hours)) ** 0.5
-    
+
     # Flag extremes
     drowning = [p for p in capacity['by_person'] if p['meeting_hours'] > avg + std_dev]
     isolated = [p for p in capacity['by_person'] if p['meeting_hours'] < avg - std_dev]
-    
+
     return {
         'average_meeting_hours': round(avg, 1),
         'std_deviation': round(std_dev, 1),
@@ -387,17 +387,17 @@ class GoogleWorkspaceCollector:
     Collects data from Google Workspace Admin API.
     Requires superadmin privileges and domain-wide delegation.
     """
-    
+
     SCOPES = [
         'https://www.googleapis.com/auth/admin.directory.user.readonly',
         'https://www.googleapis.com/auth/calendar.readonly',
     ]
-    
+
     def __init__(self, config_path: str, store: StateStore):
         self.config_path = Path(config_path)
         self.store = store
         self.domain = 'hrmny.co'
-        
+
         # Load service account credentials
         creds_file = self.config_path / 'google_service_account.json'
         self.credentials = service_account.Credentials.from_service_account_file(
@@ -405,7 +405,7 @@ class GoogleWorkspaceCollector:
             scopes=self.SCOPES,
             subject='molham@hrmny.co'  # Superadmin to impersonate
         )
-    
+
     def sync_team_calendars(self) -> Dict:
         """
         Sync calendars for all team members.
@@ -416,20 +416,20 @@ class GoogleWorkspaceCollector:
             domain=self.domain,
             maxResults=100
         ).execute().get('users', [])
-        
+
         results = {'synced': 0, 'errors': []}
-        
+
         for user in users:
             if user.get('suspended'):
                 continue
-            
+
             email = user['primaryEmail']
-            
+
             try:
                 # Get delegated credentials for this user
                 user_creds = self.credentials.with_subject(email)
                 calendar_service = build('calendar', 'v3', credentials=user_creds)
-                
+
                 # Fetch events
                 now = datetime.utcnow()
                 events = calendar_service.events().list(
@@ -440,22 +440,22 @@ class GoogleWorkspaceCollector:
                     orderBy='startTime',
                     maxResults=100,
                 ).execute()
-                
+
                 # Store events
                 for event in events.get('items', []):
                     self._store_event(event, email)
-                
+
                 results['synced'] += 1
-                
+
             except Exception as e:
                 results['errors'].append({'email': email, 'error': str(e)})
-        
+
         return results
-    
+
     def _store_event(self, event: Dict, owner_email: str):
         """Store calendar event with owner attribution."""
         event_id = f"calendar_{owner_email}_{event['id']}"
-        
+
         self.store.upsert('events', {
             'id': event_id,
             'source': 'calendar',

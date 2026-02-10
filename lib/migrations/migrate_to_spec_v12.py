@@ -12,22 +12,27 @@ Legacy columns are preserved AFTER §12 columns.
 All runtime code must use §12 column names.
 """
 
-import sqlite3
+import logging
 import shutil
-from pathlib import Path
+import sqlite3
 from datetime import datetime
 
-DB_PATH = Path(__file__).parent.parent.parent / "data" / "state.db"
-BACKUP_DIR = DB_PATH.parent / "backups"
+from lib import paths
+
+logger = logging.getLogger(__name__)
+
+
+DB_PATH = paths.db_path()
+BACKUP_DIR = paths.data_dir() / "backups"
 
 
 def backup_db() -> Path:
     """Create timestamped backup."""
     BACKUP_DIR.mkdir(exist_ok=True)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_path = BACKUP_DIR / f"state.db.pre_v12.{ts}"
+    backup_path = BACKUP_DIR / f"moh_time_os.db.pre_v12.{ts}"
     shutil.copy(DB_PATH, backup_path)
-    print(f"✓ Backup: {backup_path}")
+    logger.info(f"✓ Backup: {backup_path}")
     return backup_path
 
 
@@ -44,18 +49,18 @@ def drop_all_views(conn):
     views = [r[0] for r in cursor.fetchall()]
     for v in views:
         cursor.execute(f"DROP VIEW IF EXISTS {v}")
-    print(f"✓ Dropped views: {views}")
+    logger.info(f"✓ Dropped views: {views}")
     return views
 
 
 def migrate_tasks(conn):
     """Migrate tasks to §12 schema."""
     cursor = conn.cursor()
-    
+
     # Count before
     cursor.execute("SELECT COUNT(*) FROM tasks")
     before = cursor.fetchone()[0]
-    
+
     # §12 tasks schema + legacy columns
     # Note: FOREIGN KEY constraints must come after ALL column definitions
     cursor.execute("""
@@ -70,9 +75,9 @@ def migrate_tasks(conn):
             project_id TEXT,
             brand_id TEXT,
             client_id TEXT,
-            project_link_status TEXT DEFAULT 'unlinked' 
+            project_link_status TEXT DEFAULT 'unlinked'
                 CHECK (project_link_status IN ('linked', 'partial', 'unlinked')),
-            client_link_status TEXT DEFAULT 'unlinked' 
+            client_link_status TEXT DEFAULT 'unlinked'
                 CHECK (client_link_status IN ('linked', 'unlinked', 'n/a')),
             assignee_id TEXT,
             assignee_raw TEXT,
@@ -115,7 +120,7 @@ def migrate_tasks(conn):
             FOREIGN KEY (assignee_id) REFERENCES team_members(id)
         )
     """)
-    
+
     # Migrate data
     cursor.execute("""
         INSERT INTO tasks_v12 (
@@ -131,9 +136,9 @@ def migrate_tasks(conn):
             priority_reasons, is_supervised, last_activity_at, stale_days,
             scheduled_block_id
         )
-        SELECT 
+        SELECT
             id, source, source_id, title, notes,
-            CASE WHEN status IN ('done', 'completed') THEN 'done' 
+            CASE WHEN status IN ('done', 'completed') THEN 'done'
                  WHEN status = 'archived' THEN 'archived'
                  WHEN status = 'pending' THEN 'active'
                  ELSE COALESCE(status, 'active') END,
@@ -155,30 +160,34 @@ def migrate_tasks(conn):
             scheduled_block_id
         FROM tasks
     """)
-    
+
     cursor.execute("DROP TABLE tasks")
     cursor.execute("ALTER TABLE tasks_v12 RENAME TO tasks")
-    
+
     # §12 indexes
     cursor.execute("CREATE INDEX idx_tasks_project ON tasks(project_id)")
     cursor.execute("CREATE INDEX idx_tasks_client ON tasks(client_id)")
-    cursor.execute("CREATE INDEX idx_tasks_project_link_status ON tasks(project_link_status)")
-    cursor.execute("CREATE INDEX idx_tasks_client_link_status ON tasks(client_link_status)")
+    cursor.execute(
+        "CREATE INDEX idx_tasks_project_link_status ON tasks(project_link_status)"
+    )
+    cursor.execute(
+        "CREATE INDEX idx_tasks_client_link_status ON tasks(client_link_status)"
+    )
     cursor.execute("CREATE INDEX idx_tasks_assignee ON tasks(assignee_id)")
-    
+
     cursor.execute("SELECT COUNT(*) FROM tasks")
     after = cursor.fetchone()[0]
-    print(f"✓ tasks: {before} → {after}")
+    logger.info(f"✓ tasks: {before} → {after}")
     assert before == after, f"Row count mismatch: {before} vs {after}"
 
 
 def migrate_communications(conn):
     """Migrate communications to §12 schema."""
     cursor = conn.cursor()
-    
+
     cursor.execute("SELECT COUNT(*) FROM communications")
     before = cursor.fetchone()[0]
-    
+
     cursor.execute("""
         CREATE TABLE communications_v12 (
             -- §12 REQUIRED COLUMNS
@@ -224,13 +233,13 @@ def migrate_communications(conn):
             FOREIGN KEY (client_id) REFERENCES clients(id)
         )
     """)
-    
+
     # Check if old table has from_email or from_address
     cursor.execute("PRAGMA table_info(communications)")
-    cols = {r['name'] for r in cursor.fetchall()}
-    from_col = 'from_email' if 'from_email' in cols else 'from_address'
-    to_col = 'to_emails' if 'to_emails' in cols else 'to_addresses'
-    
+    cols = {r["name"] for r in cursor.fetchall()}
+    from_col = "from_email" if "from_email" in cols else "from_address"
+    to_col = "to_emails" if "to_emails" in cols else "to_addresses"
+
     cursor.execute(f"""
         INSERT INTO communications_v12 (
             id, source, source_id, thread_id,
@@ -243,7 +252,7 @@ def migrate_communications(conn):
             response_urgency, expected_response_by, processed_at, action_taken,
             linked_task_id, age_hours
         )
-        SELECT 
+        SELECT
             id, source, source_id, thread_id,
             {from_col}, from_domain, {to_col},
             subject, snippet, body_text, content_hash, received_at,
@@ -256,30 +265,40 @@ def migrate_communications(conn):
             linked_task_id, age_hours
         FROM communications
     """)
-    
+
     cursor.execute("DROP TABLE communications")
     cursor.execute("ALTER TABLE communications_v12 RENAME TO communications")
-    
+
     # §12 indexes
-    cursor.execute("CREATE INDEX idx_communications_client ON communications(client_id)")
-    cursor.execute("CREATE INDEX idx_communications_processed ON communications(processed)")
-    cursor.execute("CREATE INDEX idx_communications_content_hash ON communications(content_hash)")
-    cursor.execute("CREATE INDEX idx_communications_from_email ON communications(from_email)")
-    cursor.execute("CREATE INDEX idx_communications_from_domain ON communications(from_domain)")
-    
+    cursor.execute(
+        "CREATE INDEX idx_communications_client ON communications(client_id)"
+    )
+    cursor.execute(
+        "CREATE INDEX idx_communications_processed ON communications(processed)"
+    )
+    cursor.execute(
+        "CREATE INDEX idx_communications_content_hash ON communications(content_hash)"
+    )
+    cursor.execute(
+        "CREATE INDEX idx_communications_from_email ON communications(from_email)"
+    )
+    cursor.execute(
+        "CREATE INDEX idx_communications_from_domain ON communications(from_domain)"
+    )
+
     cursor.execute("SELECT COUNT(*) FROM communications")
     after = cursor.fetchone()[0]
-    print(f"✓ communications: {before} → {after}")
+    logger.info(f"✓ communications: {before} → {after}")
     assert before == after
 
 
 def migrate_projects(conn):
     """Migrate projects to §12 schema."""
     cursor = conn.cursor()
-    
+
     cursor.execute("SELECT COUNT(*) FROM projects")
     before = cursor.fetchone()[0]
-    
+
     cursor.execute("""
         CREATE TABLE projects_v12 (
             -- §12 REQUIRED COLUMNS
@@ -342,10 +361,10 @@ def migrate_projects(conn):
             FOREIGN KEY (client_id) REFERENCES clients(id)
         )
     """)
-    
+
     cursor.execute("""
         INSERT INTO projects_v12
-        SELECT 
+        SELECT
             id, brand_id, client_id, COALESCE(is_internal, 0), name,
             COALESCE(type, 'project'), COALESCE(status, 'active'),
             COALESCE(created_at, datetime('now')), COALESCE(updated_at, datetime('now')),
@@ -360,28 +379,28 @@ def migrate_projects(conn):
             stakes, description, milestones, team, asana_project_id, proposed_at
         FROM projects
     """)
-    
+
     cursor.execute("DROP TABLE projects")
     cursor.execute("ALTER TABLE projects_v12 RENAME TO projects")
-    
+
     # §12 has no explicit indexes for projects, but we add useful ones
     cursor.execute("CREATE INDEX idx_projects_brand ON projects(brand_id)")
     cursor.execute("CREATE INDEX idx_projects_client ON projects(client_id)")
     cursor.execute("CREATE INDEX idx_projects_status ON projects(status)")
-    
+
     cursor.execute("SELECT COUNT(*) FROM projects")
     after = cursor.fetchone()[0]
-    print(f"✓ projects: {before} → {after}")
+    logger.info(f"✓ projects: {before} → {after}")
     assert before == after
 
 
 def migrate_clients(conn):
     """Migrate clients to §12 schema."""
     cursor = conn.cursor()
-    
+
     cursor.execute("SELECT COUNT(*) FROM clients")
     before = cursor.fetchone()[0]
-    
+
     cursor.execute("""
         CREATE TABLE clients_v12 (
             -- §12 REQUIRED COLUMNS
@@ -406,10 +425,10 @@ def migrate_clients(conn):
             xero_contact_id TEXT
         )
     """)
-    
+
     cursor.execute("""
         INSERT INTO clients_v12
-        SELECT 
+        SELECT
             id, name, COALESCE(tier, 'C'), health_score,
             COALESCE(created_at, datetime('now')), COALESCE(updated_at, datetime('now')),
             type, financial_annual_value, financial_ar_outstanding,
@@ -418,23 +437,23 @@ def migrate_clients(conn):
             contacts_json, active_projects_json, xero_contact_id
         FROM clients
     """)
-    
+
     cursor.execute("DROP TABLE clients")
     cursor.execute("ALTER TABLE clients_v12 RENAME TO clients")
-    
+
     cursor.execute("SELECT COUNT(*) FROM clients")
     after = cursor.fetchone()[0]
-    print(f"✓ clients: {before} → {after}")
+    logger.info(f"✓ clients: {before} → {after}")
     assert before == after
 
 
 def migrate_invoices(conn):
     """Migrate invoices to §12 schema."""
     cursor = conn.cursor()
-    
+
     cursor.execute("SELECT COUNT(*) FROM invoices")
     before = cursor.fetchone()[0]
-    
+
     cursor.execute("""
         CREATE TABLE invoices_v12 (
             -- §12 REQUIRED COLUMNS
@@ -459,37 +478,37 @@ def migrate_invoices(conn):
             FOREIGN KEY (project_id) REFERENCES projects(id)
         )
     """)
-    
+
     if before > 0:
         cursor.execute("""
             INSERT INTO invoices_v12
             SELECT * FROM invoices
         """)
-    
+
     cursor.execute("DROP TABLE invoices")
     cursor.execute("ALTER TABLE invoices_v12 RENAME TO invoices")
-    
+
     # §12 indexes
     cursor.execute("CREATE INDEX idx_invoices_client ON invoices(client_id)")
     cursor.execute("CREATE INDEX idx_invoices_status ON invoices(status)")
     cursor.execute("""
-        CREATE INDEX idx_invoices_ar ON invoices(status, paid_date) 
+        CREATE INDEX idx_invoices_ar ON invoices(status, paid_date)
         WHERE status IN ('sent', 'overdue') AND paid_date IS NULL
     """)
-    
+
     cursor.execute("SELECT COUNT(*) FROM invoices")
     after = cursor.fetchone()[0]
-    print(f"✓ invoices: {before} → {after}")
+    logger.info(f"✓ invoices: {before} → {after}")
     assert before == after
 
 
 def migrate_commitments(conn):
     """Migrate commitments to §12 schema."""
     cursor = conn.cursor()
-    
+
     cursor.execute("SELECT COUNT(*) FROM commitments")
     before = cursor.fetchone()[0]
-    
+
     cursor.execute("""
         CREATE TABLE commitments_v12 (
             -- §12 REQUIRED COLUMNS
@@ -511,34 +530,34 @@ def migrate_commitments(conn):
             FOREIGN KEY (task_id) REFERENCES tasks(id)
         )
     """)
-    
+
     if before > 0:
         cursor.execute("""
             INSERT INTO commitments_v12
             SELECT * FROM commitments
         """)
-    
+
     cursor.execute("DROP TABLE commitments")
     cursor.execute("ALTER TABLE commitments_v12 RENAME TO commitments")
-    
+
     # §12 indexes
     cursor.execute("CREATE INDEX idx_commitments_source ON commitments(source_id)")
     cursor.execute("CREATE INDEX idx_commitments_client ON commitments(client_id)")
-    
+
     cursor.execute("SELECT COUNT(*) FROM commitments")
     after = cursor.fetchone()[0]
-    print(f"✓ commitments: {before} → {after}")
+    logger.info(f"✓ commitments: {before} → {after}")
     assert before == after
 
 
 def ensure_spec_tables(conn):
     """Ensure all §12 tables exist (create if missing)."""
     cursor = conn.cursor()
-    
+
     # brands - check and recreate if needed
     cursor.execute("SELECT sql FROM sqlite_master WHERE name='brands'")
     brands_sql = cursor.fetchone()
-    if brands_sql and 'UNIQUE(client_id, name)' not in brands_sql[0]:
+    if brands_sql and "UNIQUE(client_id, name)" not in brands_sql[0]:
         cursor.execute("SELECT COUNT(*) FROM brands")
         before = cursor.fetchone()[0]
         cursor.execute("""
@@ -556,8 +575,7 @@ def ensure_spec_tables(conn):
         cursor.execute("ALTER TABLE brands_v12 RENAME TO brands")
         cursor.execute("SELECT COUNT(*) FROM brands")
         after = cursor.fetchone()[0]
-        print(f"✓ brands: {before} → {after}")
-    
+        logger.info(f"✓ brands: {before} → {after}")
     # client_identities
     cursor.execute("SELECT name FROM sqlite_master WHERE name='client_identities'")
     if not cursor.fetchone():
@@ -572,8 +590,7 @@ def ensure_spec_tables(conn):
                 UNIQUE(identity_type, identity_value)
             )
         """)
-        print("✓ client_identities: created")
-    
+        logger.info("✓ client_identities: created")
     # team_members
     cursor.execute("SELECT name FROM sqlite_master WHERE name='team_members'")
     if not cursor.fetchone():
@@ -588,8 +605,7 @@ def ensure_spec_tables(conn):
                 updated_at TEXT NOT NULL DEFAULT (datetime('now'))
             )
         """)
-        print("✓ team_members: created")
-    
+        logger.info("✓ team_members: created")
     # capacity_lanes
     cursor.execute("SELECT name FROM sqlite_master WHERE name='capacity_lanes'")
     if not cursor.fetchone():
@@ -604,12 +620,11 @@ def ensure_spec_tables(conn):
                 FOREIGN KEY (owner_id) REFERENCES team_members(id)
             )
         """)
-        print("✓ capacity_lanes: created")
-    
+        logger.info("✓ capacity_lanes: created")
     # resolution_queue
     cursor.execute("SELECT sql FROM sqlite_master WHERE name='resolution_queue'")
     rq_sql = cursor.fetchone()
-    if rq_sql and 'UNIQUE(entity_type, entity_id, issue_type)' not in rq_sql[0]:
+    if rq_sql and "UNIQUE(entity_type, entity_id, issue_type)" not in rq_sql[0]:
         cursor.execute("SELECT COUNT(*) FROM resolution_queue")
         before = cursor.fetchone()[0]
         cursor.execute("""
@@ -629,7 +644,7 @@ def ensure_spec_tables(conn):
             )
         """)
         cursor.execute("""
-            INSERT OR IGNORE INTO resolution_queue_v12 
+            INSERT OR IGNORE INTO resolution_queue_v12
             SELECT id, entity_type, entity_id, issue_type, priority, context,
                    created_at, expires_at, resolved_at, resolved_by, resolution_action
             FROM resolution_queue
@@ -637,14 +652,13 @@ def ensure_spec_tables(conn):
         cursor.execute("DROP TABLE resolution_queue")
         cursor.execute("ALTER TABLE resolution_queue_v12 RENAME TO resolution_queue")
         cursor.execute("""
-            CREATE INDEX idx_resolution_queue_pending 
-            ON resolution_queue(priority, created_at) 
+            CREATE INDEX idx_resolution_queue_pending
+            ON resolution_queue(priority, created_at)
             WHERE resolved_at IS NULL
         """)
         cursor.execute("SELECT COUNT(*) FROM resolution_queue")
         after = cursor.fetchone()[0]
-        print(f"✓ resolution_queue: {before} → {after}")
-    
+        logger.info(f"✓ resolution_queue: {before} → {after}")
     # pending_actions
     cursor.execute("SELECT name FROM sqlite_master WHERE name='pending_actions'")
     if not cursor.fetchone():
@@ -669,9 +683,10 @@ def ensure_spec_tables(conn):
                 created_at TEXT NOT NULL DEFAULT (datetime('now'))
             )
         """)
-        cursor.execute("CREATE INDEX idx_pending_actions_status ON pending_actions(status)")
-        print("✓ pending_actions: created")
-    
+        cursor.execute(
+            "CREATE INDEX idx_pending_actions_status ON pending_actions(status)"
+        )
+        logger.info("✓ pending_actions: created")
     # asana_project_map
     cursor.execute("SELECT name FROM sqlite_master WHERE name='asana_project_map'")
     if not cursor.fetchone():
@@ -684,8 +699,7 @@ def ensure_spec_tables(conn):
                 FOREIGN KEY (project_id) REFERENCES projects(id)
             )
         """)
-        print("✓ asana_project_map: created")
-    
+        logger.info("✓ asana_project_map: created")
     # asana_user_map
     cursor.execute("SELECT name FROM sqlite_master WHERE name='asana_user_map'")
     if not cursor.fetchone():
@@ -698,7 +712,7 @@ def ensure_spec_tables(conn):
                 FOREIGN KEY (team_member_id) REFERENCES team_members(id)
             )
         """)
-        print("✓ asana_user_map: created")
+        logger.info("✓ asana_user_map: created")
 
 
 def recreate_items_view(conn):
@@ -706,7 +720,7 @@ def recreate_items_view(conn):
     cursor = conn.cursor()
     cursor.execute("""
         CREATE VIEW IF NOT EXISTS items AS
-        SELECT 
+        SELECT
             id,
             title AS what,
             status,
@@ -744,67 +758,73 @@ def recreate_items_view(conn):
             delegated_at
         FROM tasks
     """)
-    print("✓ items view: created")
+    logger.info("✓ items view: created")
 
 
 def verify_schema(conn):
     """Verify §12 compliance."""
     cursor = conn.cursor()
-    print("\n" + "="*60)
-    print("§12 SCHEMA VERIFICATION")
-    print("="*60)
-    
+    logger.info("\n" + "=" * 60)
+    logger.info("§12 SCHEMA VERIFICATION")
+    logger.info("=" * 60)
     checks = []
-    
+
     # tasks checks
     cursor.execute("SELECT sql FROM sqlite_master WHERE name='tasks'")
     tasks_sql = cursor.fetchone()[0]
-    checks.append(("tasks.project_link_status CHECK", "CHECK (project_link_status IN" in tasks_sql))
-    checks.append(("tasks.client_link_status CHECK", "CHECK (client_link_status IN" in tasks_sql))
+    checks.append(
+        (
+            "tasks.project_link_status CHECK",
+            "CHECK (project_link_status IN" in tasks_sql,
+        )
+    )
+    checks.append(
+        ("tasks.client_link_status CHECK", "CHECK (client_link_status IN" in tasks_sql)
+    )
     checks.append(("tasks FK project_id", "FOREIGN KEY (project_id)" in tasks_sql))
     checks.append(("tasks FK client_id", "FOREIGN KEY (client_id)" in tasks_sql))
-    
+
     # communications checks
     cursor.execute("SELECT sql FROM sqlite_master WHERE name='communications'")
     comms_sql = cursor.fetchone()[0]
     checks.append(("communications.from_email exists", "from_email TEXT" in comms_sql))
     checks.append(("communications.to_emails exists", "to_emails TEXT" in comms_sql))
-    checks.append(("communications.link_status CHECK", "CHECK (link_status IN" in comms_sql))
-    
+    checks.append(
+        ("communications.link_status CHECK", "CHECK (link_status IN" in comms_sql)
+    )
+
     # projects checks
     cursor.execute("SELECT sql FROM sqlite_master WHERE name='projects'")
     proj_sql = cursor.fetchone()[0]
     checks.append(("projects.type CHECK", "CHECK (type IN" in proj_sql))
-    
+
     # invoices checks
     cursor.execute("SELECT sql FROM sqlite_master WHERE name='invoices'")
     inv_sql = cursor.fetchone()[0]
     checks.append(("invoices.status CHECK", "CHECK (status IN" in inv_sql))
     checks.append(("invoices.aging_bucket CHECK", "CHECK (aging_bucket IN" in inv_sql))
-    
+
     # Print results
     for name, passed in checks:
-        print(f"  {name}: {'✓' if passed else '✗'}")
-    
+        logger.info(f"  {name}: {'✓' if passed else '✗'}")
     all_passed = all(p for _, p in checks)
-    print(f"\nAll checks passed: {'✓' if all_passed else '✗'}")
+    logger.info(f"\nAll checks passed: {'✓' if all_passed else '✗'}")
     return all_passed
 
 
 def run_migration():
     """Execute full migration."""
-    print("="*60)
-    print("MIGRATION TO MASTER_SPEC.md §12")
-    print("="*60)
-    
+    logger.info("=" * 60)
+    logger.info("MIGRATION TO MASTER_SPEC.md §12")
+    logger.info("=" * 60)
     backup_path = backup_db()
-    
+
     conn = get_conn()
     conn.execute("PRAGMA foreign_keys=OFF")
-    
+
     try:
         drop_all_views(conn)
-        
+
         migrate_tasks(conn)
         migrate_communications(conn)
         migrate_projects(conn)
@@ -813,18 +833,18 @@ def run_migration():
         migrate_commitments(conn)
         ensure_spec_tables(conn)
         recreate_items_view(conn)
-        
+
         conn.commit()
-        
+
         if verify_schema(conn):
-            print("\n✓ MIGRATION SUCCESSFUL")
+            logger.info("\n✓ MIGRATION SUCCESSFUL")
         else:
             raise Exception("Schema verification failed")
-            
+
     except Exception as e:
         conn.rollback()
-        print(f"\n✗ MIGRATION FAILED: {e}")
-        print(f"  Restore from: {backup_path}")
+        logger.info(f"\n✗ MIGRATION FAILED: {e}")
+        logger.info(f"  Restore from: {backup_path}")
         raise
     finally:
         conn.close()

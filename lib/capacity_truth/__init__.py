@@ -20,4 +20,4 @@ Invariants:
 from .calculator import CapacityCalculator
 from .debt_tracker import DebtTracker
 
-__all__ = ['CapacityCalculator', 'DebtTracker']
+__all__ = ["CapacityCalculator", "DebtTracker"]

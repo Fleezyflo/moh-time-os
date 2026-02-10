@@ -4,7 +4,7 @@ Promise Debt Tracker — Captures and tracks commitments made in conversation.
 
 A "promise" is any commitment made to someone:
 - "I'll send you X by Friday"
-- "Will follow up with Y tomorrow"  
+- "Will follow up with Y tomorrow"
 - "Let me get back to you on Z"
 
 This module:
@@ -14,15 +14,18 @@ This module:
 4. Tracks completion status
 """
 
-import json
-import re
-from datetime import datetime, date, timedelta
-from pathlib import Path
-from typing import Optional
 import hashlib
+import json
+import logging
+import re
+from datetime import date, datetime, timedelta
+
+from lib import paths
+
+logger = logging.getLogger(__name__)
 
 # Storage
-PROMISES_FILE = Path(__file__).parent.parent / "data" / "promises.json"
+PROMISES_FILE = paths.data_dir() / "promises.json"
 
 # Commitment signal phrases
 COMMITMENT_SIGNALS = [
@@ -50,7 +53,15 @@ TIME_PATTERNS = {
     "eow": None,
 }
 
-WEEKDAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+WEEKDAYS = [
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+]
 
 
 def load_promises() -> list:
@@ -58,9 +69,10 @@ def load_promises() -> list:
     if not PROMISES_FILE.exists():
         return []
     try:
-        with open(PROMISES_FILE, "r") as f:
+        with open(PROMISES_FILE) as f:
             return json.load(f)
-    except:
+    except (json.JSONDecodeError, OSError) as e:
+        logger.warning(f"Could not load promises file: {e}")
         return []
 
 
@@ -76,25 +88,25 @@ def generate_id(text: str, timestamp: str) -> str:
     return hashlib.md5(f"{text}{timestamp}".encode()).hexdigest()[:8]
 
 
-def parse_due_date(text: str) -> Optional[date]:
+def parse_due_date(text: str) -> date | None:
     """Extract due date from text."""
     text_lower = text.lower()
     today = date.today()
-    
+
     # Check for explicit patterns
     if "today" in text_lower or "eod" in text_lower or "end of day" in text_lower:
         return today
-    
+
     if "tomorrow" in text_lower:
         return today + timedelta(days=1)
-    
+
     if "end of week" in text_lower or "eow" in text_lower:
         # Find next Friday
         days_until_friday = (4 - today.weekday()) % 7
         if days_until_friday == 0 and datetime.now().hour >= 17:
             days_until_friday = 7
         return today + timedelta(days=days_until_friday)
-    
+
     # Check for weekday names
     for i, day in enumerate(WEEKDAYS):
         if day in text_lower:
@@ -103,92 +115,100 @@ def parse_due_date(text: str) -> Optional[date]:
             if days_ahead <= 0:  # Already passed this week
                 days_ahead += 7
             return today + timedelta(days=days_ahead)
-    
+
     # Check for date patterns (Feb 5, 2/5, etc.)
-    date_match = re.search(r'\b(\d{1,2})[/-](\d{1,2})\b', text)
+    date_match = re.search(r"\b(\d{1,2})[/-](\d{1,2})\b", text)
     if date_match:
         month, day = int(date_match.group(1)), int(date_match.group(2))
         try:
             return date(today.year, month, day)
-        except:
+        except ValueError:
+            # Invalid date (e.g., 2/30)
             pass
-    
+
     return None
 
 
-def extract_recipient(text: str) -> Optional[str]:
+def extract_recipient(text: str) -> str | None:
     """Extract who the promise is to."""
     # Known team members (prioritize these)
     known_names = ["dana", "ayham", "krystie", "youssef", "john", "molham", "moh"]
     text_lower = text.lower()
-    
+
     for name in known_names:
         if name in text_lower:
             return name.capitalize()
-    
+
     # Pattern-based extraction
     patterns = [
         r"(?:follow up with|reach out to|check with|update|send to|share with)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)",
         r"(?:to|with)\s+([A-Z][a-z]+)\s+(?:on|about|by|before)",
         r"@([A-Za-z]+)",
     ]
-    
+
     for pattern in patterns:
         match = re.search(pattern, text)
         if match:
             recipient = match.group(1).strip()
             # Filter out common non-names
-            if recipient.lower() not in ["you", "them", "the", "a", "an", "this", "that", "me"]:
+            if recipient.lower() not in [
+                "you",
+                "them",
+                "the",
+                "a",
+                "an",
+                "this",
+                "that",
+                "me",
+            ]:
                 return recipient
-    
+
     return None
 
 
 def extract_action(text: str) -> str:
     """Extract the promised action."""
     # Remove time references for cleaner action
-    action = re.sub(r'\b(by|before)\s+(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|end of (day|week)|eod|eow|\d{1,2}[/-]\d{1,2})\b', '', text, flags=re.IGNORECASE)
-    action = re.sub(r'\s+', ' ', action).strip()
+    action = re.sub(
+        r"\b(by|before)\s+(today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|end of (day|week)|eod|eow|\d{1,2}[/-]\d{1,2})\b",
+        "",
+        text,
+        flags=re.IGNORECASE,
+    )
+    action = re.sub(r"\s+", " ", action).strip()
     return action[:200]  # Truncate if too long
 
 
 def detect_commitment(text: str) -> bool:
     """Check if text contains a commitment."""
     text_lower = text.lower()
-    
-    for pattern in COMMITMENT_SIGNALS:
-        if re.search(pattern, text_lower):
-            return True
-    
-    return False
+
+    return any(re.search(pattern, text_lower) for pattern in COMMITMENT_SIGNALS)
 
 
 def capture_promise(
-    text: str,
-    speaker: str = "Moh",
-    context: str = "",
-    force: bool = False
-) -> Optional[dict]:
+    text: str, speaker: str = "Moh", context: str = "", force: bool = False
+) -> dict | None:
     """
     Capture a promise from text.
-    
+
     Args:
         text: The message containing the promise
         speaker: Who made the promise
         context: Additional context (conversation, channel, etc.)
         force: Capture even if no commitment signal detected
-    
+
     Returns:
         Promise dict if captured, None otherwise
     """
     if not force and not detect_commitment(text):
         return None
-    
+
     now = datetime.now()
     due_date = parse_due_date(text)
     recipient = extract_recipient(text)
     action = extract_action(text)
-    
+
     promise = {
         "id": generate_id(text, now.isoformat()),
         "action": action,
@@ -200,12 +220,12 @@ def capture_promise(
         "status": "open",
         "original_text": text[:500],
     }
-    
+
     # Save
     promises = load_promises()
     promises.append(promise)
     save_promises(promises)
-    
+
     return promise
 
 
@@ -219,7 +239,7 @@ def get_overdue_promises() -> list:
     """Get promises that are past due."""
     today = date.today()
     open_promises = get_open_promises()
-    
+
     overdue = []
     for p in open_promises:
         if p.get("due"):
@@ -227,7 +247,7 @@ def get_overdue_promises() -> list:
             if due_date < today:
                 p["days_overdue"] = (today - due_date).days
                 overdue.append(p)
-    
+
     overdue.sort(key=lambda x: -x.get("days_overdue", 0))
     return overdue
 
@@ -244,7 +264,7 @@ def get_due_soon(days: int = 3) -> list:
     today = date.today()
     cutoff = today + timedelta(days=days)
     open_promises = get_open_promises()
-    
+
     upcoming = []
     for p in open_promises:
         if p.get("due"):
@@ -252,7 +272,7 @@ def get_due_soon(days: int = 3) -> list:
             if today <= due_date <= cutoff:
                 p["days_until"] = (due_date - today).days
                 upcoming.append(p)
-    
+
     upcoming.sort(key=lambda x: x.get("days_until", 999))
     return upcoming
 
@@ -287,13 +307,13 @@ def format_promise(p: dict) -> str:
     action = p.get("action", "")[:60]
     to = p.get("to", "")
     due = p.get("due", "")
-    
+
     parts = [f"- {action}"]
     if to:
         parts.append(f"→ {to}")
     if due:
         parts.append(f"(due {due})")
-    
+
     return " ".join(parts)
 
 
@@ -303,7 +323,7 @@ def generate_promise_report() -> dict:
     due_today = get_due_today()
     due_soon = get_due_soon(days=3)
     all_open = get_open_promises()
-    
+
     return {
         "overdue": overdue,
         "due_today": due_today,
@@ -315,7 +335,7 @@ def generate_promise_report() -> dict:
 def format_report(report: dict) -> str:
     """Format promise report as markdown."""
     lines = ["## 🤝 Promise Debt", ""]
-    
+
     overdue = report.get("overdue", [])
     if overdue:
         lines.append(f"### ⚠️ Overdue ({len(overdue)})")
@@ -323,50 +343,48 @@ def format_report(report: dict) -> str:
             days = p.get("days_overdue", 0)
             lines.append(f"{format_promise(p)} — {days}d overdue")
         lines.append("")
-    
+
     due_today = report.get("due_today", [])
     if due_today:
         lines.append(f"### 📅 Due Today ({len(due_today)})")
         for p in due_today:
             lines.append(format_promise(p))
         lines.append("")
-    
+
     due_soon = report.get("due_soon", [])
     if due_soon:
         lines.append(f"### 🔜 Due Soon ({len(due_soon)})")
         for p in due_soon[:5]:
             lines.append(format_promise(p))
         lines.append("")
-    
+
     if not overdue and not due_today and not due_soon:
         lines.append("*No promise debt tracked.*")
         lines.append("")
-    
+
     return "\n".join(lines)
 
 
 if __name__ == "__main__":
     # Test
-    print("Promise Tracker Test")
-    print("=" * 50)
-    
+    logger.info("Promise Tracker Test")
+    logger.info("=" * 50)
     test_messages = [
         "I'll send you the proposal by tomorrow",
         "Will follow up with Dana on the Ramadan campaign",
         "Let me get back to you on the GMG pricing by Friday",
         "Going to check with Ayham about the BinSina deliverables today",
     ]
-    
-    print("\nTesting commitment detection:")
+
+    logger.info("\nTesting commitment detection:")
     for msg in test_messages:
         is_commitment = detect_commitment(msg)
         due = parse_due_date(msg)
         recipient = extract_recipient(msg)
-        print(f"\n  '{msg[:50]}...'")
-        print(f"    Commitment: {is_commitment}")
-        print(f"    Due: {due}")
-        print(f"    To: {recipient}")
-    
-    print("\n\nCurrent promise debt:")
+        logger.info(f"\n  '{msg[:50]}...'")
+        logger.info(f"    Commitment: {is_commitment}")
+        logger.info(f"    Due: {due}")
+        logger.info(f"    To: {recipient}")
+    logger.info("\n\nCurrent promise debt:")
     report = generate_promise_report()
-    print(format_report(report))
+    logger.info(format_report(report))

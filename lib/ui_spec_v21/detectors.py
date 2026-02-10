@@ -178,9 +178,7 @@ class DetectorRunner:
                 # Clean body_text for snippet
                 import re as re_clean
 
-                clean_body = re_clean.sub(
-                    r"<[^>]*>", "", body_text, flags=re_clean.DOTALL
-                )
+                clean_body = re_clean.sub(r"<[^>]*>", "", body_text, flags=re_clean.DOTALL)
                 clean_body = re_clean.sub(r"\s+", " ", clean_body).strip()
                 derived_snippet = clean_body[:500]
             elif snippet and snippet != subject:
@@ -571,9 +569,7 @@ def _test_invoice_precedence():
     detector.run_invoice_detector()
 
     # Should create flagged_signal (not issue)
-    cursor = conn.execute(
-        "SELECT COUNT(*) FROM inbox_items WHERE type = 'flagged_signal'"
-    )
+    cursor = conn.execute("SELECT COUNT(*) FROM inbox_items WHERE type = 'flagged_signal'")
     flagged_count = cursor.fetchone()[0]
 
     cursor = conn.execute("SELECT COUNT(*) FROM issues WHERE type = 'financial'")

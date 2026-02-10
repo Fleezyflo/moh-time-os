@@ -3,7 +3,6 @@
 MOH TIME OS Setup - Initialize the system.
 """
 
-import os
 import sys
 from pathlib import Path
 
@@ -17,7 +16,7 @@ def main():
     print("═══════════════════════════════════════")
     print("  MOH TIME OS - Setup")
     print("═══════════════════════════════════════")
-    
+
     # Ensure directories exist
     base = Path(__file__).parent
     dirs = [
@@ -25,26 +24,26 @@ def main():
         base / "data" / "cache",
         base / "config",
     ]
-    
+
     for d in dirs:
         d.mkdir(parents=True, exist_ok=True)
         print(f"  ✓ {d.relative_to(base)}")
-    
+
     # Initialize database
     print("\nInitializing database...")
     store = get_store()
     print("  ✓ Database initialized")
-    
+
     # Check for config files
     print("\nChecking configuration...")
-    config_files = ['sources.yaml', 'intelligence.yaml', 'governance.yaml']
+    config_files = ["sources.yaml", "intelligence.yaml", "governance.yaml"]
     for cf in config_files:
         path = base / "config" / cf
         if path.exists():
             print(f"  ✓ {cf}")
         else:
             print(f"  ✗ {cf} missing")
-    
+
     print("\n═══════════════════════════════════════")
     print("  Setup complete!")
     print("═══════════════════════════════════════")
@@ -65,5 +64,5 @@ Next steps:
 """)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

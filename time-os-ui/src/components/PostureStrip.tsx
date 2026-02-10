@@ -1,33 +1,34 @@
-// PostureStrip — shows entity posture derived from proposals
+// PostureStrip — displays health/relationship status
 
 interface PostureStripProps {
-  posture: 'critical' | 'attention' | 'healthy' | 'inactive';
-  proposal_count: number;
-  issue_count: number;
-  confidence?: number;
+  health: 'excellent' | 'good' | 'fair' | 'poor' | 'critical' | null | undefined;
+  size?: 'sm' | 'md';
 }
 
-const postureConfig = {
-  critical: { icon: '🔴', color: 'text-red-500', bg: 'bg-red-500/10', text: 'Needs attention' },
-  attention: { icon: '⚠️', color: 'text-amber-500', bg: 'bg-amber-500/10', text: 'Review recommended' },
-  healthy: { icon: '✓', color: 'text-green-500', bg: 'bg-green-500/10', text: 'On track' },
-  inactive: { icon: '◯', color: 'text-slate-400', bg: 'bg-slate-500/10', text: 'No recent activity' }
+const healthConfig: Record<string, { icon: string; color: string; bg: string; text: string }> = {
+  excellent: { icon: '✓', color: 'text-green-400', bg: 'bg-green-500/10', text: 'Excellent' },
+  good: { icon: '✓', color: 'text-green-500', bg: 'bg-green-500/10', text: 'Good' },
+  fair: { icon: '◐', color: 'text-amber-400', bg: 'bg-amber-500/10', text: 'Fair' },
+  poor: { icon: '⚠️', color: 'text-orange-400', bg: 'bg-orange-500/10', text: 'Poor' },
+  critical: { icon: '🔴', color: 'text-red-400', bg: 'bg-red-500/10', text: 'Critical' },
 };
 
-export function PostureStrip({ posture, proposal_count, issue_count, confidence }: PostureStripProps) {
-  const config = postureConfig[posture];
-  
-  return (
-    <div className={`flex items-center gap-3 px-3 py-2 rounded-lg ${config.bg}`}>
-      <span className="text-lg">{config.icon}</span>
-      <span className={`text-sm font-medium ${config.color}`}>{config.text}</span>
-      <span className="text-slate-500">|</span>
-      <span className="text-xs text-slate-400">
-        {proposal_count} proposals · {issue_count} issues
+export function PostureStrip({ health, size = 'sm' }: PostureStripProps) {
+  if (!health) {
+    return (
+      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded ${size === 'sm' ? 'text-xs' : 'text-sm'} bg-slate-700 text-slate-400`}>
+        <span>◯</span>
+        <span>Unknown</span>
       </span>
-      {confidence != null && confidence < 0.70 && (
-        <span className="text-xs text-amber-400 ml-auto">⚠️ Weak linkage</span>
-      )}
-    </div>
+    );
+  }
+
+  const config = healthConfig[health] || healthConfig.fair;
+
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded ${size === 'sm' ? 'text-xs' : 'text-sm'} ${config.bg} ${config.color}`}>
+      <span>{config.icon}</span>
+      <span>{config.text}</span>
+    </span>
   );
 }

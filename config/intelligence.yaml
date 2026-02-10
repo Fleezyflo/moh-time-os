@@ -8,7 +8,7 @@ priority:
     sender_importance: 0.20
     project_criticality: 0.10
     recency: 0.10
-  
+
   due_date_scoring:
     overdue_base: 90
     overdue_per_day: 5    # +5 per day overdue

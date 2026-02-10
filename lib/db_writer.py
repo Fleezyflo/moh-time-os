@@ -7,89 +7,94 @@ After every write:
 3. Resolution queue refreshes
 """
 
+import json
 import sqlite3
 from pathlib import Path
-from typing import Dict, List, Any, Optional
-import json
+from typing import Any
 
-DB_PATH = Path(__file__).parent.parent / "data" / "state.db"
+from lib import paths
+
+DB_PATH = paths.db_path()
 
 
 class DBWriter:
     """Single point for all database writes. Triggers pipeline after each write."""
-    
+
     def __init__(self, db_path: Path = DB_PATH):
         self.db_path = db_path
         self._last_gate_results = {}
-    
+
     def _get_conn(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         conn.execute("PRAGMA foreign_keys=ON")
         return conn
-    
-    def _run_pipeline(self) -> Dict[str, Any]:
+
+    def _run_pipeline(self) -> dict[str, Any]:
         """Run post-write pipeline: Normalize → Gates → Resolution Queue."""
-        from lib.normalizer import Normalizer
         from lib.gates import GateEvaluator
+        from lib.normalizer import Normalizer
         from lib.resolution_queue import populate_queue
-        
+
         results = {}
-        
+
         # 1. Normalizer
         normalizer = Normalizer(self.db_path)
-        results['normalizer'] = normalizer.run()
-        
+        results["normalizer"] = normalizer.run()
+
         # 2. Gates
         evaluator = GateEvaluator(self.db_path)
-        results['gates'] = evaluator.evaluate_all()
-        self._last_gate_results = results['gates']
-        
+        results["gates"] = evaluator.evaluate_all()
+        self._last_gate_results = results["gates"]
+
         # 3. Resolution Queue
-        results['resolution_queue'] = populate_queue()
-        
+        results["resolution_queue"] = populate_queue()
+
         return results
-    
-    def insert(self, table: str, data: Dict) -> tuple[str, Dict]:
+
+    def insert(self, table: str, data: dict) -> tuple[str, dict]:
         """Insert row, run pipeline. Returns (id, pipeline_results)."""
         conn = self._get_conn()
         try:
             columns = list(data.keys())
             placeholders = ["?" for _ in columns]
-            values = [json.dumps(v) if isinstance(v, (dict, list)) else v for v in data.values()]
-            
+            values = [
+                json.dumps(v) if isinstance(v, (dict, list)) else v
+                for v in data.values()
+            ]
+
             cursor = conn.cursor()
             cursor.execute(
                 f"INSERT INTO {table} ({','.join(columns)}) VALUES ({','.join(placeholders)})",
-                values
+                values,
             )
             conn.commit()
-            row_id = data.get('id', cursor.lastrowid)
+            row_id = data.get("id", cursor.lastrowid)
         finally:
             conn.close()
-        
+
         pipeline = self._run_pipeline()
         return row_id, pipeline
-    
-    def update(self, table: str, row_id: str, data: Dict) -> Dict:
+
+    def update(self, table: str, row_id: str, data: dict) -> dict:
         """Update row, run pipeline. Returns pipeline_results."""
         conn = self._get_conn()
         try:
-            sets = [f"{k} = ?" for k in data.keys()]
-            values = [json.dumps(v) if isinstance(v, (dict, list)) else v for v in data.values()]
+            sets = [f"{k} = ?" for k in data]
+            values = [
+                json.dumps(v) if isinstance(v, (dict, list)) else v
+                for v in data.values()
+            ]
             values.append(row_id)
-            
-            conn.execute(
-                f"UPDATE {table} SET {', '.join(sets)} WHERE id = ?",
-                values
-            )
+
+            conn.execute(f"UPDATE {table} SET {', '.join(sets)} WHERE id = ?", values)
             conn.commit()
         finally:
             conn.close()
-        
+
         return self._run_pipeline()
-    
-    def delete(self, table: str, row_id: str) -> Dict:
+
+    def delete(self, table: str, row_id: str) -> dict:
         """Delete row, run pipeline. Returns pipeline_results."""
         conn = self._get_conn()
         try:
@@ -97,10 +102,10 @@ class DBWriter:
             conn.commit()
         finally:
             conn.close()
-        
+
         return self._run_pipeline()
-    
-    def execute(self, sql: str, params: List = None) -> Dict:
+
+    def execute(self, sql: str, params: list = None) -> dict:
         """Execute arbitrary write SQL, run pipeline."""
         conn = self._get_conn()
         try:
@@ -108,16 +113,17 @@ class DBWriter:
             conn.commit()
         finally:
             conn.close()
-        
+
         return self._run_pipeline()
-    
-    def get_last_gates(self) -> Dict:
+
+    def get_last_gates(self) -> dict:
         """Get most recent gate evaluation results."""
         return self._last_gate_results
 
 
 # Singleton
 _writer = None
+
 
 def get_writer() -> DBWriter:
     global _writer

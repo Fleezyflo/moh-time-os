@@ -7,7 +7,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap" rel="stylesheet">
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    
+
     :root {
       --base: #000000;
       --surface: #0a0a0a;
@@ -635,8 +635,8 @@
           <div class="problem-block">
             <div class="problem-title">Blocker</div>
             <div class="problem-text">
-              Campaign brief hasn't started. This blocks creative concepts, 
-              production planning, and media buying. Every day of delay 
+              Campaign brief hasn't started. This blocks creative concepts,
+              production planning, and media buying. Every day of delay
               compresses the remaining timeline exponentially.
             </div>
           </div>
@@ -645,8 +645,8 @@
         <div class="detail-section">
           <div class="detail-section-title">Recommendation</div>
           <div class="recommendation">
-            You have a GMG Campaign Review at 11:00 today. That's the right 
-            moment to escalate this directly. I can draft talking points for 
+            You have a GMG Campaign Review at 11:00 today. That's the right
+            moment to escalate this directly. I can draft talking points for
             that meeting.
           </div>
         </div>
@@ -722,7 +722,7 @@
           <div class="problem-block">
             <div class="problem-title">Escalation needed</div>
             <div class="problem-text">
-              Two email follow-ups sent with no response. At this aging level, 
+              Two email follow-ups sent with no response. At this aging level,
               phone call is the recommended next step.
             </div>
           </div>
@@ -768,7 +768,7 @@
         <div class="detail-section">
           <div class="detail-section-title">Recommendation</div>
           <div class="recommendation">
-            Block 90 minutes tomorrow afternoon to review the contract history 
+            Block 90 minutes tomorrow afternoon to review the contract history
             and renewal terms. I can pull the relevant emails and create a prep checklist.
           </div>
         </div>
@@ -805,9 +805,9 @@
     function openDetail(id) {
       const overlay = document.getElementById('detailOverlay');
       const panels = document.querySelectorAll('.detail-panel');
-      
+
       panels.forEach(p => p.style.display = 'none');
-      
+
       const panel = document.getElementById('detail-' + id);
       if (panel) {
         panel.style.display = 'block';
@@ -818,7 +818,7 @@
 
     function closeDetail(event) {
       if (event && event.target !== event.currentTarget) return;
-      
+
       const overlay = document.getElementById('detailOverlay');
       overlay.classList.remove('open');
       currentDetail = null;

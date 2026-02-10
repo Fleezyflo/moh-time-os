@@ -91,9 +91,7 @@ def client_health(
         Health = max(0, 100 - AR_penalty - Issue_penalty)
     """
     # Safe ratio calculation
-    overdue_ratio = (
-        0.0 if ar_outstanding == 0 else min(1.0, ar_overdue / ar_outstanding)
-    )
+    overdue_ratio = 0.0 if ar_outstanding == 0 else min(1.0, ar_overdue / ar_outstanding)
 
     # AR penalty: floor(min(40, ratio * 60))
     ar_penalty = floor(min(40, overdue_ratio * 60))

@@ -221,9 +221,7 @@ def create_invoice_evidence(
         payload["days_overdue"] = days_overdue
 
     # Construct display text
-    aging_text = (
-        f"({days_overdue}d overdue)" if days_overdue and days_overdue > 0 else ""
-    )
+    aging_text = f"({days_overdue}d overdue)" if days_overdue and days_overdue > 0 else ""
     display = f"{invoice_number} · {currency} {amount:,.0f}"
     if due_date:
         display += f" · Due {due_date}"
@@ -272,9 +270,7 @@ def create_asana_task_evidence(
     url = f"https://app.asana.com/0/{project_gid}/{task_gid}"
 
     # Display text
-    overdue_text = (
-        f" — {days_overdue}d overdue" if days_overdue and days_overdue > 0 else ""
-    )
+    overdue_text = f" — {days_overdue}d overdue" if days_overdue and days_overdue > 0 else ""
     assignee_text = f" ({assignee})" if assignee else ""
     display = f'"{name}"{overdue_text}{assignee_text}'
 
@@ -383,9 +379,7 @@ def create_gchat_evidence(
         "version": "v1",
         "kind": "gchat_message",
         "url": f"https://chat.google.com/room/{space_id}/{message_id}",
-        "display_text": f'"{snippet[:100]}..."'
-        if len(snippet) > 100
-        else f'"{snippet}"',
+        "display_text": f'"{snippet[:100]}..."' if len(snippet) > 100 else f'"{snippet}"',
         "source_system": "gchat",
         "source_id": message_id,
         "payload": {

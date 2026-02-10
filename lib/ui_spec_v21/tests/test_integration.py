@@ -211,9 +211,7 @@ def test_integration_inbox_to_issue_resolve():
         "SELECT state, regression_watch_until FROM issues WHERE id = ?", (issue_id,)
     )
     row = cursor.fetchone()
-    assert (
-        row["state"] == "regression_watch"
-    ), f"Expected regression_watch, got {row['state']}"
+    assert row["state"] == "regression_watch", f"Expected regression_watch, got {row['state']}"
     assert row["regression_watch_until"] is not None
 
     # Verify regression_watch_until is ~90 days in future
@@ -293,9 +291,7 @@ def test_integration_snooze_expiry():
 
     # Snooze for 1 day
     inbox_lifecycle = InboxLifecycleManager(conn)
-    result = inbox_lifecycle.execute_action(
-        inbox_id, "snooze", {"snooze_days": 1}, "user_1"
-    )
+    result = inbox_lifecycle.execute_action(inbox_id, "snooze", {"snooze_days": 1}, "user_1")
     conn.commit()
 
     assert result.success
@@ -303,9 +299,7 @@ def test_integration_snooze_expiry():
 
     # Manually set snooze_until to past
     past_time = to_iso(from_iso(now) - timedelta(hours=1))
-    conn.execute(
-        "UPDATE inbox_items SET snooze_until = ? WHERE id = ?", (past_time, inbox_id)
-    )
+    conn.execute("UPDATE inbox_items SET snooze_until = ? WHERE id = ?", (past_time, inbox_id))
     conn.commit()
 
     # Run snooze expiry
@@ -315,9 +309,7 @@ def test_integration_snooze_expiry():
     assert count == 1, f"Expected 1 item to resurface, got {count}"
 
     # Verify state and resurfaced_at
-    cursor = conn.execute(
-        "SELECT state, resurfaced_at FROM inbox_items WHERE id = ?", (inbox_id,)
-    )
+    cursor = conn.execute("SELECT state, resurfaced_at FROM inbox_items WHERE id = ?", (inbox_id,))
     row = cursor.fetchone()
     assert row["state"] == "proposed"
     assert row["resurfaced_at"] is not None

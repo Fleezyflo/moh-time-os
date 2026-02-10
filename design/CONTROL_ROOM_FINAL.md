@@ -37,7 +37,7 @@ Scale:
 Base:
   black:     #000000          (background)
   white:     #ffffff          (primary text)
-  
+
 Grey scale:
   grey-1:    #111111          (elevated surfaces)
   grey-2:    #222222          (borders, dividers)

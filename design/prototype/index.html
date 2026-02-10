@@ -663,7 +663,7 @@
     <!-- Today's Focus -->
     <section class="section">
       <div class="section-header">Today's Focus</div>
-      
+
       <div class="focus-card priority-red" onclick="openDetail('gmg')">
         <div class="focus-card-content">
           <div class="focus-card-tag">
@@ -704,7 +704,7 @@
     <!-- Domains -->
     <section class="section">
       <div class="section-header">Domains</div>
-      
+
       <div class="domain-grid">
         <div class="domain-tile" onclick="navigateTo('delivery')">
           <div class="domain-tile-name">Delivery</div>
@@ -765,7 +765,7 @@
       <div class="detail-panel-title">GMG Consumer LLC</div>
       <div class="detail-panel-badge">Tier A</div>
     </div>
-    
+
     <div class="detail-panel-content">
       <section class="detail-section">
         <div class="detail-section-title">Health</div>
@@ -829,14 +829,14 @@
             <span class="project-tree-name">GMG Ramadan Campaign</span>
             <span class="project-tree-meta">15% · at risk</span>
           </div>
-          
+
           <div class="project-tree-brand">Geant (1 project)</div>
           <div class="project-tree-item">
             <span class="project-tree-status yellow"></span>
             <span class="project-tree-name">Geant Monthly</span>
             <span class="project-tree-meta">45% · 2 overdue</span>
           </div>
-          
+
           <div class="project-tree-brand">Aswaaq (1 project)</div>
           <div class="project-tree-item">
             <span class="project-tree-status green"></span>
@@ -911,7 +911,7 @@
     function openDetail(type) {
       const panel = document.getElementById('detail-' + type);
       const overlay = document.getElementById('overlay');
-      
+
       if (panel) {
         panel.classList.add('open');
         overlay.classList.add('visible');

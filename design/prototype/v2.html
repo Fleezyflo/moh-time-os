@@ -654,7 +654,7 @@
         <div class="project-card">
           <div style="font-size: 32px; font-weight: 600; margin-bottom: 8px;">AED 75,245</div>
           <div style="font-size: 13px; color: var(--text-3); margin-bottom: 20px;">across 3 invoices</div>
-          
+
           <div style="display: flex; flex-direction: column; gap: 12px;">
             <div style="display: flex; justify-content: space-between; padding: 12px; background: var(--surface); border-radius: 8px;">
               <span style="font-size: 13px;">INV-1411</span>
@@ -715,7 +715,7 @@
               <div style="font-size: 13px; color: var(--text-3);">Friday, Feb 7 · 11:00 - 12:00</div>
             </div>
           </div>
-          
+
           <div style="padding: 14px; background: rgba(234,179,8,0.1); border: 1px solid rgba(234,179,8,0.2); border-radius: 8px;">
             <div style="font-size: 12px; font-weight: 500; color: var(--yellow); margin-bottom: 4px;">NO PREP DONE</div>
             <div style="font-size: 13px; color: var(--text-2);">Meeting is in 2 days. Contract renewal terms need review before the call.</div>
@@ -776,10 +776,10 @@
       // Hide all contexts
       document.querySelectorAll('.context-content').forEach(c => c.classList.remove('visible'));
       document.getElementById('context-empty').style.display = 'none';
-      
+
       // Show selected context
       document.getElementById('context-' + id).classList.add('visible');
-      
+
       // Update active state
       document.querySelectorAll('.focus-item').forEach(f => f.classList.remove('active'));
       event.currentTarget.classList.add('active');

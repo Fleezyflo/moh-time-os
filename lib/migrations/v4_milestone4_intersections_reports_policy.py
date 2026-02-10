@@ -8,11 +8,15 @@ Adds:
 - access_roles + entity_acl + retention_rules + redaction_markers
 """
 
-import sqlite3
+import logging
 import os
+import sqlite3
 from datetime import datetime
 
-DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'moh_time_os.db')
+logger = logging.getLogger(__name__)
+
+
+DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "moh_time_os.db")
 MIGRATION_VERSION = 4004
 
 SCHEMA_SQL = """
@@ -115,20 +119,21 @@ def run_migration():
         cursor.execute("SELECT MAX(version) FROM _schema_version")
         current = cursor.fetchone()[0] or 0
         if current >= MIGRATION_VERSION:
-            print(f"Migration {MIGRATION_VERSION} already applied.")
+            logger.info(f"Migration {MIGRATION_VERSION} already applied.")
             return
     except sqlite3.OperationalError:
-        print("_schema_version table missing. Run v4_milestone1 migration first.")
+        logger.info("_schema_version table missing. Run v4_milestone1 migration first.")
         return
 
     cursor.executescript(SCHEMA_SQL)
     cursor.execute(
         "INSERT INTO _schema_version (version, applied_at) VALUES (?, ?)",
-        (MIGRATION_VERSION, datetime.now().isoformat())
+        (MIGRATION_VERSION, datetime.now().isoformat()),
     )
     conn.commit()
     conn.close()
-    print(f"Migration {MIGRATION_VERSION} applied.")
+    logger.info(f"Migration {MIGRATION_VERSION} applied.")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     run_migration()

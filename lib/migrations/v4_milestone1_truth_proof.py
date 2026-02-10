@@ -14,11 +14,15 @@ Adds:
 Run: python -m lib.migrations.v4_milestone1_truth_proof
 """
 
-import sqlite3
+import logging
 import os
+import sqlite3
 from datetime import datetime
 
-DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'moh_time_os.db')
+logger = logging.getLogger(__name__)
+
+
+DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "moh_time_os.db")
 
 MIGRATION_VERSION = 4001  # V4, Milestone 1
 
@@ -38,7 +42,7 @@ CREATE TABLE IF NOT EXISTS artifacts (
     content_hash TEXT NOT NULL,  -- dedupe + integrity
     visibility_tags TEXT DEFAULT '[]',  -- JSON array for ACL/routing
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    
+
     UNIQUE(source, source_id)
 );
 
@@ -144,7 +148,7 @@ CREATE TABLE IF NOT EXISTS identity_claims (
     confidence REAL NOT NULL CHECK (confidence >= 0 AND confidence <= 1),
     status TEXT NOT NULL DEFAULT 'active',  -- active, superseded, rejected
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    
+
     UNIQUE(claim_type, claim_value_normalized)
 );
 
@@ -208,90 +212,101 @@ CREATE INDEX IF NOT EXISTS idx_fix_data_entity ON fix_data_queue(entity_type, en
 
 """
 
+
 def column_exists(cursor, table, column):
     """Check if a column exists in a table."""
     cursor.execute(f"PRAGMA table_info({table})")
     columns = [row[1] for row in cursor.fetchall()]
     return column in columns
 
+
 def add_column_if_not_exists(cursor, table, column, column_def):
     """Add a column to a table if it doesn't exist."""
     if not column_exists(cursor, table, column):
         try:
             cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {column_def}")
-            print(f"  Added column {table}.{column}")
+            logger.info(f"  Added column {table}.{column}")
             return True
         except sqlite3.OperationalError as e:
-            print(f"  Warning: Could not add {table}.{column}: {e}")
+            logger.info(f"  Warning: Could not add {table}.{column}: {e}")
             return False
     return False
 
+
 def run_migration():
     """Execute the migration."""
-    print(f"Running V4 Milestone 1 Migration...")
-    print(f"Database: {DB_PATH}")
-    
+    logger.info("Running V4 Milestone 1 Migration...")
+    logger.info(f"Database: {DB_PATH}")
     if not os.path.exists(DB_PATH):
-        print(f"ERROR: Database not found at {DB_PATH}")
+        logger.info(f"ERROR: Database not found at {DB_PATH}")
         return False
-    
+
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    
+
     try:
         # Check current schema version
         cursor.execute("SELECT MAX(version) FROM _schema_version")
         current_version = cursor.fetchone()[0] or 0
-        print(f"Current schema version: {current_version}")
-        
+        logger.info(f"Current schema version: {current_version}")
         if current_version >= MIGRATION_VERSION:
-            print(f"Migration {MIGRATION_VERSION} already applied. Skipping.")
+            logger.info(f"Migration {MIGRATION_VERSION} already applied. Skipping.")
             return True
-        
+
         # Execute main schema
-        print("Creating new tables...")
+        logger.info("Creating new tables...")
         cursor.executescript(SCHEMA_SQL)
-        
+
         # Add bridge columns to existing tables
-        print("Adding bridge columns to existing tables...")
-        
+        logger.info("Adding bridge columns to existing tables...")
         # clients table
-        add_column_if_not_exists(cursor, 'clients', 'identity_profile_id', 'TEXT')
-        add_column_if_not_exists(cursor, 'clients', 'source_artifact_id', 'TEXT')
-        
+        add_column_if_not_exists(cursor, "clients", "identity_profile_id", "TEXT")
+        add_column_if_not_exists(cursor, "clients", "source_artifact_id", "TEXT")
+
         # people table
-        add_column_if_not_exists(cursor, 'people', 'identity_profile_id', 'TEXT')
-        add_column_if_not_exists(cursor, 'people', 'source_artifact_id', 'TEXT')
-        
+        add_column_if_not_exists(cursor, "people", "identity_profile_id", "TEXT")
+        add_column_if_not_exists(cursor, "people", "source_artifact_id", "TEXT")
+
         # projects table
-        add_column_if_not_exists(cursor, 'projects', 'source_artifact_id', 'TEXT')
-        add_column_if_not_exists(cursor, 'projects', 'engagement_type', "TEXT DEFAULT 'project'")  # project or retainer
-        
+        add_column_if_not_exists(cursor, "projects", "source_artifact_id", "TEXT")
+        add_column_if_not_exists(
+            cursor, "projects", "engagement_type", "TEXT DEFAULT 'project'"
+        )  # project or retainer
+
         # Record migration version
         cursor.execute(
             "INSERT INTO _schema_version (version, applied_at) VALUES (?, ?)",
-            (MIGRATION_VERSION, datetime.now().isoformat())
+            (MIGRATION_VERSION, datetime.now().isoformat()),
         )
-        
+
         conn.commit()
-        print(f"Migration {MIGRATION_VERSION} applied successfully!")
-        
+        logger.info(f"Migration {MIGRATION_VERSION} applied successfully!")
         # Print summary
-        print("\n=== New Tables Created ===")
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+        logger.info("\n=== New Tables Created ===")
+        cursor.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+        )
         tables = [row[0] for row in cursor.fetchall()]
-        new_tables = ['artifacts', 'artifact_blobs', 'artifact_excerpts', 'entity_links', 
-                      'identity_profiles', 'identity_claims', 'identity_operations', 'fix_data_queue']
+        new_tables = [
+            "artifacts",
+            "artifact_blobs",
+            "artifact_excerpts",
+            "entity_links",
+            "identity_profiles",
+            "identity_claims",
+            "identity_operations",
+            "fix_data_queue",
+        ]
         for t in new_tables:
             status = "✓" if t in tables else "✗"
-            print(f"  {status} {t}")
-        
+            logger.info(f"  {status} {t}")
         return True
-        
+
     except Exception as e:
         conn.rollback()
-        print(f"ERROR: Migration failed: {e}")
+        logger.info(f"ERROR: Migration failed: {e}")
         import traceback
+
         traceback.print_exc()
         return False
     finally:
@@ -300,45 +315,50 @@ def run_migration():
 
 def verify_migration():
     """Verify the migration was successful."""
-    print("\n=== Verifying Migration ===")
-    
+    logger.info("\n=== Verifying Migration ===")
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    
+
     try:
         # Check all expected tables exist
         expected_tables = [
-            'artifacts', 'artifact_blobs', 'artifact_excerpts',
-            'entity_links', 'identity_profiles', 'identity_claims',
-            'identity_operations', 'fix_data_queue'
+            "artifacts",
+            "artifact_blobs",
+            "artifact_excerpts",
+            "entity_links",
+            "identity_profiles",
+            "identity_claims",
+            "identity_operations",
+            "fix_data_queue",
         ]
-        
+
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
         existing = {row[0] for row in cursor.fetchall()}
-        
+
         all_present = True
         for table in expected_tables:
             if table in existing:
                 # Count rows
                 cursor.execute(f"SELECT COUNT(*) FROM {table}")
                 count = cursor.fetchone()[0]
-                print(f"  ✓ {table}: {count} rows")
+                logger.info(f"  ✓ {table}: {count} rows")
             else:
-                print(f"  ✗ {table}: MISSING")
+                logger.info(f"  ✗ {table}: MISSING")
                 all_present = False
-        
+
         # Check indexes
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%'")
+        cursor.execute(
+            "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%'"
+        )
         indexes = [row[0] for row in cursor.fetchall()]
-        print(f"\n  Indexes created: {len(indexes)}")
-        
+        logger.info(f"\n  Indexes created: {len(indexes)}")
         return all_present
-        
+
     finally:
         conn.close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     success = run_migration()
     if success:
         verify_migration()

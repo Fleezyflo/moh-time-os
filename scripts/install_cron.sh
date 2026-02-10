@@ -29,7 +29,7 @@ cat >> /tmp/crontab_backup << EOF
 # Autonomous Loop - every 15 minutes
 */15 * * * * cd $PROJECT_DIR && $VENV_PYTHON -m lib.autonomous_loop run >> /tmp/time-os.log 2>&1
 
-# Full sync from external systems - every 5 minutes  
+# Full sync from external systems - every 5 minutes
 */5 * * * * cd $PROJECT_DIR && $VENV_PYTHON -m lib.collectors.orchestrator sync >> /tmp/time-os-sync.log 2>&1
 
 # Daily brief - 9:00 AM Dubai (UTC+4 = 05:00 UTC)

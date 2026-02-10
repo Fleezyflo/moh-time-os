@@ -7,7 +7,7 @@ feature_flags:
     status: active
     description: "Core scheduling - tasks, blocks, calendar"
     unlocked_at: "2026-02-02"
-    
+
   tier_1_commitment:
     name: "Commitment Truth"
     status: locked
@@ -18,7 +18,7 @@ feature_flags:
       - "Time Truth stable for 7 consecutive days"
       - "No scheduling validation errors"
       - "Calendar sync 95%+ success rate"
-    
+
   tier_2_capacity:
     name: "Capacity Truth"
     status: locked
@@ -28,7 +28,7 @@ feature_flags:
     unlock_criteria:
       - "Commitment Truth stable for 7 days"
       - "Tasks have lane assignments"
-    
+
   tier_3_client:
     name: "Client Truth"
     status: locked
@@ -38,7 +38,7 @@ feature_flags:
     unlock_criteria:
       - "Capacity Truth stable for 7 days"
       - "Client-task links populated"
-    
+
   tier_4_finance:
     name: "Financial Truth"
     status: locked

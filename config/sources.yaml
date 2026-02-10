@@ -12,7 +12,7 @@ sources:
           "High": 40
           "Medium": 20
           "Low": 0
-  
+
   gmail:
     enabled: true
     sync_interval: 120  # 2 minutes
@@ -28,7 +28,7 @@ sources:
       - "CATEGORY_PROMOTIONS"
       - "CATEGORY_UPDATES"
       - "CATEGORY_SOCIAL"
-  
+
   calendar:
     enabled: true
     sync_interval: 60  # 1 minute
@@ -38,11 +38,11 @@ sources:
     lookback_days: 30  # Past 30 days
     lookahead_days: 30  # Future 30 days
     prep_time_default: 15
-  
+
   xero:
     enabled: true
     sync_interval: 300  # 5 minutes
-  
+
   apollo:
     enabled: false  # Enable when ready
     sync_interval: 600  # 10 minutes

@@ -5,16 +5,16 @@ Each handler knows how to execute actions in its domain
 (tasks, calendar, email, delegation, notifications).
 """
 
-from .task import TaskHandler
 from .calendar import CalendarHandler
-from .notification import NotificationHandler
-from .email import EmailHandler
 from .delegation import DelegationHandler
+from .email import EmailHandler
+from .notification import NotificationHandler
+from .task import TaskHandler
 
 __all__ = [
-    'TaskHandler',
-    'CalendarHandler', 
-    'NotificationHandler',
-    'EmailHandler',
-    'DelegationHandler'
+    "TaskHandler",
+    "CalendarHandler",
+    "NotificationHandler",
+    "EmailHandler",
+    "DelegationHandler",
 ]

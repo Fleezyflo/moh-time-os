@@ -1,7 +1,7 @@
 # Time OS V4 — Executive Operating System Specification
 
-> **Status:** ACTIVE BUILD  
-> **Created:** 2026-02-05  
+> **Status:** ACTIVE BUILD
+> **Created:** 2026-02-05
 > **Purpose:** Evolve Time OS from "ranked surfaces over partially-linked data" into a closed-loop executive operating system.
 
 ---
@@ -89,7 +89,7 @@ CREATE TABLE artifacts (
     content_hash TEXT NOT NULL,  -- dedupe + integrity
     visibility_tags TEXT,  -- JSON array for ACL/routing
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    
+
     UNIQUE(source, source_id)
 );
 
@@ -177,7 +177,7 @@ CREATE TABLE identity_claims (
     source TEXT NOT NULL,
     confidence REAL NOT NULL CHECK (confidence >= 0 AND confidence <= 1),
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    
+
     UNIQUE(claim_type, claim_value)
 );
 
@@ -215,7 +215,7 @@ CREATE TABLE detector_versions (
     version TEXT NOT NULL,
     parameters TEXT NOT NULL,  -- JSON
     released_at TEXT NOT NULL DEFAULT (datetime('now')),
-    
+
     PRIMARY KEY (detector_id, version)
 );
 
@@ -314,7 +314,7 @@ CREATE TABLE issue_signals (
     issue_id TEXT NOT NULL REFERENCES issues(issue_id),
     signal_id TEXT NOT NULL REFERENCES signals(signal_id),
     attached_at TEXT NOT NULL DEFAULT (datetime('now')),
-    
+
     PRIMARY KEY (issue_id, signal_id)
 );
 
@@ -322,7 +322,7 @@ CREATE TABLE issue_evidence (
     issue_id TEXT NOT NULL REFERENCES issues(issue_id),
     excerpt_id TEXT NOT NULL REFERENCES artifact_excerpts(excerpt_id),
     attached_at TEXT NOT NULL DEFAULT (datetime('now')),
-    
+
     PRIMARY KEY (issue_id, excerpt_id)
 );
 
@@ -488,7 +488,7 @@ CREATE TABLE entity_acl (
     role_id TEXT NOT NULL REFERENCES access_roles(role_id),
     permission TEXT NOT NULL,  -- read, write, admin
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    
+
     UNIQUE(entity_type, entity_id, role_id)
 );
 

@@ -3,21 +3,21 @@
 Exports for cli_v2.py and other consumers.
 """
 
-from .store import init_db
+from .backup import backup_status, create_backup
+from .entities import find_client, list_clients
 from .health import startup_check, status_report
 from .queries import (
-    summary_stats,
-    open_items,
-    overdue,
-    due_today,
+    client_summary_by_name,
     due_this_week,
-    waiting,
+    due_today,
     generate_brief,
     needs_attention,
-    client_summary_by_name,
+    open_items,
+    overdue,
+    summary_stats,
+    waiting,
 )
-from .entities import list_clients, find_client
-from .backup import create_backup, backup_status
+from .store import init_db
 
 __all__ = [
     "init_db",

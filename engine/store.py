@@ -1,7 +1,7 @@
 import json
 import sqlite3
 import time
-from typing import Any, Optional
+from typing import Any
 
 
 def now_ms() -> int:
@@ -22,14 +22,24 @@ def upsert_config(con: sqlite3.Connection, key: str, value: Any) -> None:
     )
 
 
-def insert_raw_event(con: sqlite3.Connection, *, id: str, surface: str, source_ref: str, payload: Any) -> None:
+def insert_raw_event(
+    con: sqlite3.Connection, *, id: str, surface: str, source_ref: str, payload: Any
+) -> None:
     con.execute(
         "INSERT OR REPLACE INTO events_raw(id,surface,source_ref,captured_at_ms,payload_json) VALUES(?,?,?,?,?)",
         (id, surface, source_ref, now_ms(), json.dumps(payload, ensure_ascii=False)),
     )
 
 
-def insert_proposal(con: sqlite3.Connection, *, id: str, kind: str, payload: Any, attribution: Any, assumptions: Optional[Any] = None) -> None:
+def insert_proposal(
+    con: sqlite3.Connection,
+    *,
+    id: str,
+    kind: str,
+    payload: Any,
+    attribution: Any,
+    assumptions: Any | None = None,
+) -> None:
     con.execute(
         "INSERT OR REPLACE INTO proposals(id,kind,payload_json,attribution_json,assumptions_json,created_at_ms) VALUES(?,?,?,?,?,?)",
         (
@@ -37,7 +47,9 @@ def insert_proposal(con: sqlite3.Connection, *, id: str, kind: str, payload: Any
             kind,
             json.dumps(payload, ensure_ascii=False),
             json.dumps(attribution, ensure_ascii=False),
-            json.dumps(assumptions, ensure_ascii=False) if assumptions is not None else None,
+            json.dumps(assumptions, ensure_ascii=False)
+            if assumptions is not None
+            else None,
             now_ms(),
         ),
     )

@@ -1,17 +1,24 @@
 import html
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 
 def _now_iso() -> str:
-    return datetime.now(timezone.utc).replace(microsecond=0).isoformat()
+    return datetime.now(UTC).replace(microsecond=0).isoformat()
 
 
 def _h(s: Any) -> str:
     return html.escape("" if s is None else str(s))
 
 
-def render_operator_html(out_path: str, *, calendar_events: list[dict], chat_unread: dict, gmail_threads: list[dict], meta: dict[str, Any]) -> None:
+def render_operator_html(
+    out_path: str,
+    *,
+    calendar_events: list[dict],
+    chat_unread: dict,
+    gmail_threads: list[dict],
+    meta: dict[str, Any],
+) -> None:
     """Render a local operator console.
 
     Design targets (v0.3):
@@ -23,9 +30,38 @@ def render_operator_html(out_path: str, *, calendar_events: list[dict], chat_unr
     """
 
     # --- classification helpers (deterministic v0.1) ---
-    FIN_KW = ("invoice", "payment", "quote", "pricing", "po", "budget", "transfer", "vat", "receipt", "authorization", "bank")
-    LEGAL_KW = ("contract", "nda", "terms", "agreement", "signature", "clause", "ip", "liability")
-    SEC_KW = ("password", "access", "credentials", "breach", "2fa", "token", "dropbox sign in")
+    FIN_KW = (
+        "invoice",
+        "payment",
+        "quote",
+        "pricing",
+        "po",
+        "budget",
+        "transfer",
+        "vat",
+        "receipt",
+        "authorization",
+        "bank",
+    )
+    LEGAL_KW = (
+        "contract",
+        "nda",
+        "terms",
+        "agreement",
+        "signature",
+        "clause",
+        "ip",
+        "liability",
+    )
+    SEC_KW = (
+        "password",
+        "access",
+        "credentials",
+        "breach",
+        "2fa",
+        "token",
+        "dropbox sign in",
+    )
     URG_KW = ("urgent", "asap", "today", "eod", "deadline", "closing")
 
     def classify_lane(kind: str, context: dict) -> str:
@@ -91,7 +127,18 @@ def render_operator_html(out_path: str, *, calendar_events: list[dict], chat_unr
     def is_direct_ask_chat(txt: str) -> bool:
         t = txt.lower()
         # explicit asks: authorization/approve/release/specs
-        return any(k in t for k in ("authorization", "approve", "approval", "release", "send", "spec", "quotation"))
+        return any(
+            k in t
+            for k in (
+                "authorization",
+                "approve",
+                "approval",
+                "release",
+                "send",
+                "spec",
+                "quotation",
+            )
+        )
 
     def is_noise_mail(m: dict) -> bool:
         subj = (m.get("subject") or "").lower()
@@ -149,7 +196,10 @@ def render_operator_html(out_path: str, *, calendar_events: list[dict], chat_unr
                 "start": s,
                 "end": en,
                 "htmlLink": e.get("htmlLink"),
-                "meet": e.get("hangoutLink") or ((e.get("conferenceData") or {}).get("entryPoints") or [{}])[0].get("uri"),
+                "meet": e.get("hangoutLink")
+                or ((e.get("conferenceData") or {}).get("entryPoints") or [{}])[0].get(
+                    "uri"
+                ),
             }
         )
 
@@ -181,7 +231,11 @@ def render_operator_html(out_path: str, *, calendar_events: list[dict], chat_unr
             next_items.append(c)
 
     for m in mail_cards:
-        if "security" in (m.get("sens") or []) or "financial" in (m.get("sens") or []) or m.get("urg") == "high":
+        if (
+            "security" in (m.get("sens") or [])
+            or "financial" in (m.get("sens") or [])
+            or m.get("urg") == "high"
+        ):
             now_items.append(m)
         elif is_noise_mail(m):
             later_items.append(m)
@@ -241,7 +295,9 @@ details summary{cursor:pointer;color:var(--muted)}
         if kind == "calendar":
             links = []
             if item.get("htmlLink"):
-                links.append(f"<a href='{_h(item['htmlLink'])}' target='_blank'>open</a>")
+                links.append(
+                    f"<a href='{_h(item['htmlLink'])}' target='_blank'>open</a>"
+                )
             if item.get("meet"):
                 links.append(f"<a href='{_h(item['meet'])}' target='_blank'>meet</a>")
             lnk = (" · ".join(links)) if links else ""
@@ -318,7 +374,9 @@ window.addEventListener('DOMContentLoaded',()=>{
     html_out.append(f"<div class='pill'><b>{len(next_items)}</b> NEXT</div>")
     html_out.append(f"<div class='pill'><b>{len(later_items)}</b> LATER</div>")
     html_out.append(f"<div class='pill'><b>{len(cal_cards)}</b> calendar</div>")
-    html_out.append("</div><div class='small' style='margin-top:10px'>State is local to your browser (Done/Snooze). No writes to Google from this UI.</div></div>")
+    html_out.append(
+        "</div><div class='small' style='margin-top:10px'>State is local to your browser (Done/Snooze). No writes to Google from this UI.</div></div>"
+    )
 
     html_out.append("<div class='col col-4 card'><h2>Calendar (next 24h)</h2>")
     for e in cal_cards:
@@ -327,7 +385,9 @@ window.addEventListener('DOMContentLoaded',()=>{
         html_out.append("<div class='small'>No events.</div>")
     html_out.append("</div>")
 
-    html_out.append("<div class='col col-6 card'><h2>NOW (blocking)</h2><div class='small'>Approvals / explicit asks / financial / security</div>")
+    html_out.append(
+        "<div class='col col-6 card'><h2>NOW (blocking)</h2><div class='small'>Approvals / explicit asks / financial / security</div>"
+    )
     for it in now_items:
         html_out.append(render_item(it))
     if not now_items:

@@ -11,35 +11,40 @@ SQLite requires DROP+CREATE for adding CHECK constraints.
 Data is preserved via temporary tables.
 """
 
+import logging
 import sqlite3
-from pathlib import Path
 from datetime import datetime
 
-DB_PATH = Path(__file__).parent.parent.parent / "data" / "state.db"
-BACKUP_DIR = DB_PATH.parent / "backups"
+from lib import paths
+
+logger = logging.getLogger(__name__)
+
+
+DB_PATH = paths.db_path()
+BACKUP_DIR = paths.data_dir() / "backups"
 
 
 def backup_db():
     """Create backup before migration."""
     BACKUP_DIR.mkdir(exist_ok=True)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_path = BACKUP_DIR / f"state.db.pre_v12_rebuild.{timestamp}"
-    
+    backup_path = BACKUP_DIR / f"moh_time_os.db.pre_v12_rebuild.{timestamp}"
+
     import shutil
+
     shutil.copy(DB_PATH, backup_path)
-    print(f"Backup created: {backup_path}")
+    logger.info(f"Backup created: {backup_path}")
     return backup_path
 
 
 def rebuild_tasks(conn):
     """Rebuild tasks table to match §12."""
     cursor = conn.cursor()
-    
+
     # Check current row count
     cursor.execute("SELECT COUNT(*) FROM tasks")
     count_before = cursor.fetchone()[0]
-    print(f"Tasks before: {count_before}")
-    
+    logger.info(f"Tasks before: {count_before}")
     # Create new table with §12 schema
     cursor.execute("""
         CREATE TABLE tasks_new (
@@ -52,9 +57,9 @@ def rebuild_tasks(conn):
             project_id TEXT,
             brand_id TEXT,
             client_id TEXT,
-            project_link_status TEXT DEFAULT 'unlinked' 
+            project_link_status TEXT DEFAULT 'unlinked'
                 CHECK (project_link_status IN ('linked', 'partial', 'unlinked')),
-            client_link_status TEXT DEFAULT 'unlinked' 
+            client_link_status TEXT DEFAULT 'unlinked'
                 CHECK (client_link_status IN ('linked', 'unlinked', 'n/a')),
             assignee_id TEXT,
             assignee_raw TEXT,
@@ -96,13 +101,13 @@ def rebuild_tasks(conn):
             FOREIGN KEY (assignee_id) REFERENCES team_members(id)
         )
     """)
-    
+
     # Copy data - map old columns to new
     cursor.execute("""
-        INSERT INTO tasks_new 
-        SELECT 
+        INSERT INTO tasks_new
+        SELECT
             id, source, source_id, title, notes,
-            CASE WHEN status IN ('done', 'completed') THEN 'done' 
+            CASE WHEN status IN ('done', 'completed') THEN 'done'
                  WHEN status = 'archived' THEN 'archived'
                  ELSE 'active' END as status,
             project_id, brand_id, client_id,
@@ -124,40 +129,44 @@ def rebuild_tasks(conn):
             scheduled_block_id
         FROM tasks
     """)
-    
+
     # Drop old, rename new
     cursor.execute("DROP TABLE tasks")
     cursor.execute("ALTER TABLE tasks_new RENAME TO tasks")
-    
+
     # Recreate indexes
     cursor.execute("CREATE INDEX idx_tasks_project ON tasks(project_id)")
     cursor.execute("CREATE INDEX idx_tasks_client ON tasks(client_id)")
-    cursor.execute("CREATE INDEX idx_tasks_project_link_status ON tasks(project_link_status)")
-    cursor.execute("CREATE INDEX idx_tasks_client_link_status ON tasks(client_link_status)")
+    cursor.execute(
+        "CREATE INDEX idx_tasks_project_link_status ON tasks(project_link_status)"
+    )
+    cursor.execute(
+        "CREATE INDEX idx_tasks_client_link_status ON tasks(client_link_status)"
+    )
     cursor.execute("CREATE INDEX idx_tasks_assignee ON tasks(assignee_id)")
     cursor.execute("CREATE INDEX idx_tasks_status ON tasks(status)")
     cursor.execute("CREATE INDEX idx_tasks_due ON tasks(due_date)")
     cursor.execute("CREATE INDEX idx_tasks_lane ON tasks(lane)")
-    
+
     # Verify count
     cursor.execute("SELECT COUNT(*) FROM tasks")
     count_after = cursor.fetchone()[0]
-    print(f"Tasks after: {count_after}")
-    
+    logger.info(f"Tasks after: {count_after}")
     if count_before != count_after:
-        raise Exception(f"Row count mismatch! Before: {count_before}, After: {count_after}")
-    
+        raise Exception(
+            f"Row count mismatch! Before: {count_before}, After: {count_after}"
+        )
+
     return count_after
 
 
 def rebuild_communications(conn):
     """Rebuild communications table to match §12."""
     cursor = conn.cursor()
-    
+
     cursor.execute("SELECT COUNT(*) FROM communications")
     count_before = cursor.fetchone()[0]
-    print(f"Communications before: {count_before}")
-    
+    logger.info(f"Communications before: {count_before}")
     # Create new table with §12 schema
     cursor.execute("""
         CREATE TABLE communications_new (
@@ -202,11 +211,11 @@ def rebuild_communications(conn):
             FOREIGN KEY (client_id) REFERENCES clients(id)
         )
     """)
-    
+
     # Copy data - rename columns
     cursor.execute("""
-        INSERT INTO communications_new 
-        SELECT 
+        INSERT INTO communications_new
+        SELECT
             id, source, source_id, thread_id,
             from_address as from_email,
             from_domain,
@@ -225,35 +234,45 @@ def rebuild_communications(conn):
             linked_task_id, age_hours
         FROM communications
     """)
-    
+
     cursor.execute("DROP TABLE communications")
     cursor.execute("ALTER TABLE communications_new RENAME TO communications")
-    
+
     # Recreate indexes
-    cursor.execute("CREATE INDEX idx_communications_client ON communications(client_id)")
-    cursor.execute("CREATE INDEX idx_communications_processed ON communications(processed)")
-    cursor.execute("CREATE INDEX idx_communications_content_hash ON communications(content_hash)")
-    cursor.execute("CREATE INDEX idx_communications_from_email ON communications(from_email)")
-    cursor.execute("CREATE INDEX idx_communications_from_domain ON communications(from_domain)")
-    
+    cursor.execute(
+        "CREATE INDEX idx_communications_client ON communications(client_id)"
+    )
+    cursor.execute(
+        "CREATE INDEX idx_communications_processed ON communications(processed)"
+    )
+    cursor.execute(
+        "CREATE INDEX idx_communications_content_hash ON communications(content_hash)"
+    )
+    cursor.execute(
+        "CREATE INDEX idx_communications_from_email ON communications(from_email)"
+    )
+    cursor.execute(
+        "CREATE INDEX idx_communications_from_domain ON communications(from_domain)"
+    )
+
     cursor.execute("SELECT COUNT(*) FROM communications")
     count_after = cursor.fetchone()[0]
-    print(f"Communications after: {count_after}")
-    
+    logger.info(f"Communications after: {count_after}")
     if count_before != count_after:
-        raise Exception(f"Row count mismatch! Before: {count_before}, After: {count_after}")
-    
+        raise Exception(
+            f"Row count mismatch! Before: {count_before}, After: {count_after}"
+        )
+
     return count_after
 
 
 def rebuild_projects(conn):
     """Rebuild projects table to match §12."""
     cursor = conn.cursor()
-    
+
     cursor.execute("SELECT COUNT(*) FROM projects")
     count_before = cursor.fetchone()[0]
-    print(f"Projects before: {count_before}")
-    
+    logger.info(f"Projects before: {count_before}")
     cursor.execute("""
         CREATE TABLE projects_new (
             id TEXT PRIMARY KEY,
@@ -314,10 +333,10 @@ def rebuild_projects(conn):
             FOREIGN KEY (client_id) REFERENCES clients(id)
         )
     """)
-    
+
     cursor.execute("""
-        INSERT INTO projects_new 
-        SELECT 
+        INSERT INTO projects_new
+        SELECT
             id, brand_id, client_id, is_internal, name,
             COALESCE(type, 'project'),
             status,
@@ -335,21 +354,20 @@ def rebuild_projects(conn):
             stakes, description, milestones, team, asana_project_id, proposed_at
         FROM projects
     """)
-    
+
     cursor.execute("DROP TABLE projects")
     cursor.execute("ALTER TABLE projects_new RENAME TO projects")
-    
+
     cursor.execute("CREATE INDEX idx_projects_status ON projects(status)")
     cursor.execute("CREATE INDEX idx_projects_brand ON projects(brand_id)")
     cursor.execute("CREATE INDEX idx_projects_client ON projects(client_id)")
-    
+
     cursor.execute("SELECT COUNT(*) FROM projects")
     count_after = cursor.fetchone()[0]
-    print(f"Projects after: {count_after}")
-    
+    logger.info(f"Projects after: {count_after}")
     if count_before != count_after:
-        raise Exception(f"Row count mismatch!")
-    
+        raise Exception("Row count mismatch!")
+
     return count_after
 
 
@@ -358,13 +376,13 @@ def drop_views(conn):
     cursor = conn.cursor()
     cursor.execute("SELECT name FROM sqlite_master WHERE type='view'")
     views = [row[0] for row in cursor.fetchall()]
-    
+
     dropped = []
     for view in views:
         cursor.execute(f"DROP VIEW IF EXISTS {view}")
         dropped.append(view)
-    
-    print(f"Dropped views: {dropped}")
+
+    logger.info(f"Dropped views: {dropped}")
     return dropped
 
 
@@ -373,13 +391,13 @@ def recreate_items_view(conn):
     cursor = conn.cursor()
     cursor.execute("""
         CREATE VIEW items AS
-        SELECT 
+        SELECT
             id,
             title AS what,
-            CASE status 
+            CASE status
                 WHEN 'pending' THEN 'open'
                 WHEN 'completed' THEN 'done'
-                ELSE status 
+                ELSE status
             END AS status,
             assignee AS owner,
             assignee_id AS owner_id,
@@ -415,66 +433,61 @@ def recreate_items_view(conn):
             delegated_at
         FROM tasks
     """)
-    print("Recreated items view")
+    logger.info("Recreated items view")
 
 
 def run_migration():
     """Run full schema rebuild."""
-    print("=" * 60)
-    print("Schema Rebuild Migration to §12")
-    print("=" * 60)
-    
+    logger.info("=" * 60)
+    logger.info("Schema Rebuild Migration to §12")
+    logger.info("=" * 60)
     # Backup first
     backup_path = backup_db()
-    
+
     conn = sqlite3.connect(DB_PATH)
     conn.execute("PRAGMA foreign_keys=OFF")  # Disable during migration
-    
+
     try:
         # Drop dependent views first
-        print("\nDropping dependent views...")
-        dropped_views = drop_views(conn)
-        
-        print("\nRebuilding tasks...")
+        logger.info("\nDropping dependent views...")
+        drop_views(conn)
+
+        logger.info("\nRebuilding tasks...")
         rebuild_tasks(conn)
-        
-        print("\nRebuilding communications...")
+
+        logger.info("\nRebuilding communications...")
         rebuild_communications(conn)
-        
-        print("\nRebuilding projects...")
+
+        logger.info("\nRebuilding projects...")
         rebuild_projects(conn)
-        
+
         # Recreate views
-        print("\nRecreating views...")
+        logger.info("\nRecreating views...")
         recreate_items_view(conn)
-        
+
         conn.commit()
-        print("\n✓ Migration complete!")
-        
+        logger.info("\n✓ Migration complete!")
         # Verify CHECK constraints exist
-        print("\nVerifying CHECK constraints...")
+        logger.info("\nVerifying CHECK constraints...")
         cursor = conn.cursor()
         cursor.execute("SELECT sql FROM sqlite_master WHERE name='tasks'")
         tasks_sql = cursor.fetchone()[0]
         if "CHECK (project_link_status IN" in tasks_sql:
-            print("  ✓ tasks.project_link_status CHECK constraint exists")
+            logger.info("  ✓ tasks.project_link_status CHECK constraint exists")
         if "CHECK (client_link_status IN" in tasks_sql:
-            print("  ✓ tasks.client_link_status CHECK constraint exists")
-        
+            logger.info("  ✓ tasks.client_link_status CHECK constraint exists")
         cursor.execute("SELECT sql FROM sqlite_master WHERE name='communications'")
         comms_sql = cursor.fetchone()[0]
         if "CHECK (link_status IN" in comms_sql:
-            print("  ✓ communications.link_status CHECK constraint exists")
-        
+            logger.info("  ✓ communications.link_status CHECK constraint exists")
         cursor.execute("SELECT sql FROM sqlite_master WHERE name='projects'")
         proj_sql = cursor.fetchone()[0]
         if "CHECK (type IN" in proj_sql:
-            print("  ✓ projects.type CHECK constraint exists")
-        
+            logger.info("  ✓ projects.type CHECK constraint exists")
     except Exception as e:
         conn.rollback()
-        print(f"\n✗ Migration failed: {e}")
-        print(f"  Restore from: {backup_path}")
+        logger.info(f"\n✗ Migration failed: {e}")
+        logger.info(f"  Restore from: {backup_path}")
         raise
     finally:
         conn.close()
