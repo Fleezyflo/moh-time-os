@@ -7,8 +7,8 @@ Metrics are exposed via /api/metrics endpoint and can be scraped by Prometheus.
 
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Callable
 
 
 @dataclass
