@@ -18,18 +18,18 @@ Background
   base:           #000000
   surface:        #0a0a0a
   elevated:       #141414
-  
-Text  
+
+Text
   primary:        #ffffff
   secondary:      #8a8a8a
   tertiary:       #4a4a4a
 
 Signal
   critical:       #ff3b30
-  warning:        #ff9500  
+  warning:        #ff9500
   positive:       #30d158
   info:           #0a84ff
-  
+
 Accent
   brand:          #6366f1
 ```
@@ -421,12 +421,12 @@ Properties:
   situation:      string    (what's wrong)
   recommendation: string    (what A suggests)
   signal:         critical | warning | info
-  
+
 States:
   default:        bg elevated
   hover:          bg elevated + 8% white
   active:         border left brand
-  
+
 Behavior:
   click:          opens situation detail
   keyboard:       enter/space activates
@@ -438,12 +438,12 @@ Behavior:
 Properties:
   score:          number (0-100)
   trend:          up | down | stable
-  
+
 Rendering:
   >70:            green dot
   50-70:          amber dot
   <50:            red dot
-  
+
   trend up:       ↑ suffix
   trend down:     ↓ suffix
 ```
@@ -454,7 +454,7 @@ Rendering:
 Properties:
   value:          number (0-100)
   status:         on-track | at-risk | blocked
-  
+
 Rendering:
   height:         4px
   track:          tertiary @ 20%
@@ -469,13 +469,13 @@ Variants:
   primary:        brand bg, white text
   secondary:      transparent bg, border, secondary text
   ghost:          transparent, no border, secondary text
-  
+
 States:
   default
   hover:          darken/lighten 10%
   active:         darken/lighten 20%
   disabled:       50% opacity
-  
+
 Sizes:
   default:        12px vertical, 16px horizontal padding
   small:          8px vertical, 12px horizontal padding
@@ -556,7 +556,7 @@ When data confidence is degraded:
 - Full layout as specified
 - Quick nav in single row
 
-### Tablet (768-1199px)  
+### Tablet (768-1199px)
 - Quick nav wraps to 2x2
 - Cards stack vertically
 

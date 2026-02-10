@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  LaunchAgent for Time OS API server.
+
+  To install:
+    cp com.mohtimeos.api.plist ~/Library/LaunchAgents/
+    launchctl load ~/Library/LaunchAgents/com.mohtimeos.api.plist
+
+  Uses $HOME expansion via zsh -c (HOME is inherited from user session).
+  Logs go to /tmp for simplicity.
+-->
 <plist version="1.0">
 <dict>
     <key>Label</key>
@@ -8,17 +18,15 @@
     <array>
         <string>/bin/zsh</string>
         <string>-c</string>
-        <string>cd /Users/molhamhomsi/clawd/moh_time_os && source .venv/bin/activate && python api/server.py</string>
+        <string>cd "$HOME/clawd/moh_time_os" &amp;&amp; source .venv/bin/activate &amp;&amp; python api/server.py</string>
     </array>
     <key>RunAtLoad</key>
     <true/>
     <key>KeepAlive</key>
     <true/>
     <key>StandardOutPath</key>
-    <string>/Users/molhamhomsi/clawd/moh_time_os/logs/api.out.log</string>
+    <string>/tmp/mohtimeos-api.out.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/molhamhomsi/clawd/moh_time_os/logs/api.err.log</string>
-    <key>WorkingDirectory</key>
-    <string>/Users/molhamhomsi/clawd/moh_time_os</string>
+    <string>/tmp/mohtimeos-api.err.log</string>
 </dict>
 </plist>

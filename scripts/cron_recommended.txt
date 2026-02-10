@@ -1,0 +1,35 @@
+# MOH TIME OS - Canonical Cron Configuration
+#
+# This is the RECOMMENDED cron setup after collector cleanup.
+# Only TWO entries needed for collection.
+#
+# To install:
+#   crontab -e
+#   (paste the lines below, update paths as needed)
+
+# ============================================================
+# CANONICAL COLLECTION (every 15 minutes)
+# ============================================================
+# This is THE ONLY collection entry point.
+# Runs: calendar, gmail, tasks, chat, asana, xero, drive, contacts
+# Then: V4 ingest, entity linking, V5 detection, inbox enrichment
+*/15 * * * * cd /Users/molhamhomsi/clawd/moh_time_os && /Users/molhamhomsi/clawd/moh_time_os/.venv/bin/python collectors/scheduled_collect.py >> /tmp/time-os-collect.log 2>&1
+
+# ============================================================
+# V4 PIPELINE CYCLE (every 30 minutes)
+# ============================================================
+# Runs coupling detection, issue lifecycle, proposal generation
+*/30 * * * * cd /Users/molhamhomsi/clawd/moh_time_os && /Users/molhamhomsi/clawd/moh_time_os/.venv/bin/python cli_v4.py cycle >> /tmp/time-os-v4.log 2>&1
+
+# ============================================================
+# DEPRECATED - DO NOT USE
+# ============================================================
+# These entries were REMOVED during collector cleanup (2025-02-10):
+#
+# REMOVED: python -m lib.autonomous_loop run
+#   Reason: Uses CollectorOrchestrator which duplicates scheduled_collect.py
+#
+# REMOVED: python -m lib.collectors.orchestrator sync
+#   Reason: Duplicate of scheduled_collect.py, different target tables
+#
+# See COLLECTOR_AUDIT.md for full documentation.

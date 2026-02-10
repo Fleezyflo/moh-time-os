@@ -411,7 +411,7 @@ Button Ghost
 ```
 Health Circle
   ● (24px)           filled circle with status color
-  
+
 Tier Badge
   🅰️ 🅱️              text badge, small caps
 
