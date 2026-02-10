@@ -1,305 +1,302 @@
 """
-Gmail Collector - Pulls emails from Gmail via gog CLI.
-Uses REAL gog commands that actually work.
-Fetches FULL message body via gog gmail get <id>.
+Gmail Collector - Pulls emails from Gmail via Service Account API.
+Uses direct Google API with service account for domain-wide delegation.
 """
 
-import json
-import re
+import base64
 import hashlib
+import json
+import logging
 from datetime import datetime, timedelta
-from typing import Any, Dict, List
+from pathlib import Path
+from typing import Any
 
 from .base import BaseCollector
 
+logger = logging.getLogger(__name__)
+
+# Service account configuration
+SA_FILE = Path.home() / "Library/Application Support/gogcli/sa-bW9saGFtQGhybW55LmNv.json"
+SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
+DEFAULT_USER = "molham@hrmny.co"
+
 
 class GmailCollector(BaseCollector):
-    """Collects emails from Gmail."""
-    
-    source_name = 'gmail'
-    target_table = 'communications'
-    
-    def _fetch_message_body(self, thread_id: str) -> Dict[str, str]:
-        """
-        Fetch full message body for a thread.
-        Returns: {'body': str, 'body_source': 'html_stripped'|'plain'|'snippet_fallback'}
-        """
+    """Collects emails from Gmail using Service Account."""
+
+    source_name = "gmail"
+    target_table = "communications"
+
+    def __init__(self, config: dict, store=None):
+        super().__init__(config, store)
+        self._service = None
+
+    def _get_service(self, user: str = DEFAULT_USER):
+        """Get Gmail API service using service account."""
+        if self._service:
+            return self._service
+
         try:
-            output = self._run_command(f'gog gmail get {thread_id} --json 2>/dev/null', timeout=10)
-            if not output.strip():
-                return {'body': '', 'body_source': 'snippet_fallback'}
-            
-            data = self._parse_json_output(output)
-            raw_body = data.get('body', '')
-            
-            if not raw_body:
-                return {'body': '', 'body_source': 'snippet_fallback'}
-            
-            # Strip HTML tags if present
-            if '<html' in raw_body.lower() or '<body' in raw_body.lower() or '<div' in raw_body.lower():
-                # Remove style/script tags and their content
-                text = re.sub(r'<style[^>]*>.*?</style>', '', raw_body, flags=re.DOTALL | re.IGNORECASE)
-                text = re.sub(r'<script[^>]*>.*?</script>', '', text, flags=re.DOTALL | re.IGNORECASE)
-                # Remove all HTML tags
-                text = re.sub(r'<[^>]+>', ' ', text)
-                # Decode HTML entities
-                text = text.replace('&nbsp;', ' ').replace('&amp;', '&').replace('&lt;', '<').replace('&gt;', '>')
-                text = text.replace('&#39;', "'").replace('&quot;', '"')
-                # Normalize whitespace
-                text = re.sub(r'\s+', ' ', text).strip()
-                return {'body': text, 'body_source': 'html_stripped'}
-            else:
-                return {'body': raw_body.strip(), 'body_source': 'plain'}
-                
+            from google.oauth2 import service_account
+            from googleapiclient.discovery import build
+
+            creds = service_account.Credentials.from_service_account_file(
+                str(SA_FILE), scopes=SCOPES
+            )
+            creds = creds.with_subject(user)
+            self._service = build("gmail", "v1", credentials=creds)
+            return self._service
         except Exception as e:
-            self.logger.warning(f"Failed to fetch body for {thread_id}: {e}")
-            return {'body': '', 'body_source': 'snippet_fallback'}
-    
-    def collect(self) -> Dict[str, Any]:
-        """Fetch emails from Gmail using gog CLI."""
-        try:
-            all_threads = []
-            lookback_days = self.config.get('lookback_days', 90)
-            max_results = self.config.get('max_results', 500)
-            
-            # Get all emails from past 90 days (excluding promotions/updates/social)
-            # Handle pagination
-            page_token = None
-            fetched = 0
-            
-            while fetched < max_results:
-                page_arg = f'--page "{page_token}"' if page_token else ''
-                output = self._run_command(
-                    f'gog gmail search "newer_than:{lookback_days}d -category:promotions -category:updates -category:social" --max 100 {page_arg} --json 2>/dev/null',
-                    timeout=60
-                )
-                if not output.strip():
-                    break
-                    
-                data = self._parse_json_output(output)
-                threads = data.get('threads') or []
-                all_threads.extend(threads)
-                fetched += len(threads)
-                
-                # Check for more pages
-                page_token = data.get('nextPageToken')
-                if not page_token or len(threads) == 0:
-                    break
-            
-            # Deduplicate by thread id
-            seen = set()
-            unique = []
-            for thread in all_threads:
-                tid = thread.get('id')
-                if tid and tid not in seen:
-                    seen.add(tid)
-                    unique.append(thread)
-            
-            # Fetch full body for each thread (limit to avoid rate limits)
-            # Skip threads we already have body for (incremental fetch)
-            max_bodies = self.config.get('max_body_fetch', 100)
-            bodies_fetched = 0
-            
-            # Get existing thread IDs with body
-            existing_with_body = set()
+            self.logger.error(f"Failed to get Gmail service: {e}")
+            raise
+
+    def _extract_body(self, message: dict) -> str:
+        """Extract body text from message."""
+        payload = message.get("payload", {})
+
+        # Try direct body
+        body_data = payload.get("body", {}).get("data", "")
+        if body_data:
             try:
-                rows = self.store.query(
-                    "SELECT source_id FROM communications WHERE source = 'gmail' AND body_text IS NOT NULL AND body_text != '' AND body_text_source != 'snippet_fallback'"
-                )
-                existing_with_body = {r['source_id'] for r in rows}
-            except Exception:
-                pass  # If query fails, fetch all
-            
-            for thread in unique:
-                if bodies_fetched >= max_bodies:
-                    break
-                tid = thread.get('id', '')
-                if tid in existing_with_body:
-                    continue  # Skip, already have body
-                body_data = self._fetch_message_body(tid)
-                thread['body'] = body_data['body']
-                thread['body_source'] = body_data['body_source']
-                # Compute content hash on full body
-                if body_data['body']:
-                    thread['content_hash'] = hashlib.sha256(body_data['body'].encode()).hexdigest()[:16]
-                bodies_fetched += 1
-            
-            return {'threads': unique}
-            
+                return base64.urlsafe_b64decode(body_data).decode("utf-8", errors="ignore")
+            except (ValueError, UnicodeDecodeError) as e:
+                logger.debug(f"Could not decode body data: {e}")
+
+        # Try parts
+        for part in payload.get("parts", []):
+            if part.get("mimeType") == "text/plain":
+                data = part.get("body", {}).get("data", "")
+                if data:
+                    try:
+                        return base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
+                    except (ValueError, UnicodeDecodeError) as e:
+                        logger.debug(f"Could not decode part data: {e}")
+
+        return ""
+
+    def _get_header(self, headers: list[dict], name: str) -> str:
+        """Get header value by name."""
+        for h in headers:
+            if h.get("name", "").lower() == name.lower():
+                return h.get("value", "")
+        return ""
+
+    def collect(self) -> dict[str, Any]:
+        """Fetch emails from Gmail using Service Account API."""
+        try:
+            service = self._get_service()
+            all_threads = []
+            lookback_days = self.config.get("lookback_days", 90)
+            max_results = self.config.get("max_results", 200)
+
+            # Search for threads
+            query = f"newer_than:{lookback_days}d -category:promotions -category:updates -category:social"
+            results = (
+                service.users()
+                .threads()
+                .list(userId="me", maxResults=min(max_results, 100), q=query)
+                .execute()
+            )
+
+            thread_refs = results.get("threads", [])
+
+            # Fetch full thread details
+            for ref in thread_refs[:max_results]:
+                try:
+                    thread = (
+                        service.users()
+                        .threads()
+                        .get(userId="me", id=ref["id"], format="full")
+                        .execute()
+                    )
+
+                    messages = thread.get("messages", [])
+                    if not messages:
+                        continue
+
+                    first_msg = messages[0]
+                    headers = first_msg.get("payload", {}).get("headers", [])
+
+                    all_threads.append(
+                        {
+                            "id": thread["id"],
+                            "subject": self._get_header(headers, "Subject"),
+                            "from": self._get_header(headers, "From"),
+                            "to": self._get_header(headers, "To"),
+                            "date": self._get_header(headers, "Date"),
+                            "snippet": thread.get("snippet", ""),
+                            "body": self._extract_body(first_msg),
+                            "labels": first_msg.get("labelIds", []),
+                        }
+                    )
+                except Exception as e:
+                    self.logger.warning(f"Failed to fetch thread {ref['id']}: {e}")
+                    continue
+
+            return {"threads": all_threads}
+
         except Exception as e:
-            self.logger.warning(f"Gmail collection failed: {e}")
-            return {'threads': []}
-    
-    def transform(self, raw_data: Dict) -> List[Dict]:
+            self.logger.error(f"Gmail collection failed: {e}")
+            return {"threads": []}
+
+    def transform(self, raw_data: dict) -> list[dict]:
         """Transform Gmail threads to canonical format."""
-        now = datetime.now().isoformat()
+        datetime.now().isoformat()
         transformed = []
-        
-        for thread in raw_data.get('threads', []):
-            thread_id = thread.get('id')
+
+        for thread in raw_data.get("threads", []):
+            thread_id = thread.get("id")
             if not thread_id:
                 continue
-            
+
             # Skip promotional/update categories
-            labels = thread.get('labels', [])
-            if any(cat in labels for cat in ['CATEGORY_PROMOTIONS', 'CATEGORY_UPDATES', 'CATEGORY_SOCIAL']):
+            labels = thread.get("labels", [])
+            if any(
+                cat in labels
+                for cat in [
+                    "CATEGORY_PROMOTIONS",
+                    "CATEGORY_UPDATES",
+                    "CATEGORY_SOCIAL",
+                ]
+            ):
                 continue
-            
-            from_addr = self._extract_from(thread)
-            subject = thread.get('subject', '(no subject)')
-            
-            # Get full message body (fetched in collect phase)
-            body_text = thread.get('body', '') or thread.get('snippet', '') or subject
-            body_source = thread.get('body_source', 'snippet_fallback')
-            content_hash = thread.get('content_hash', '')
-            
-            # If body is too short, mark as snippet fallback
-            if len(body_text) < 50:
-                body_source = 'snippet_fallback'
-            
-            transformed.append({
-                'id': f"gmail_{thread_id}",
-                'source': 'gmail',
-                'content_hash': content_hash,
-                'body_text_source': body_source,
-                'source_id': thread_id,
-                'thread_id': thread_id,
-                'from_email': from_addr,
-                'to_emails': json.dumps([]),
-                'subject': subject,
-                'snippet': (body_text or subject)[:500],  # Store more text in snippet
-                'body_text': body_text,  # Full body for commitment extraction
-                'priority': self._compute_priority(thread),
-                'requires_response': 1 if self._needs_response(thread) else 0,
-                'response_deadline': self._compute_response_deadline(thread),
-                'sentiment': self._analyze_sentiment(thread),
-                'labels': json.dumps(labels),
-                'sensitivity': '',
-                'stakeholder_tier': '',
-                'processed': 0,
-                'created_at': self._parse_date(thread.get('date', ''))
-            })
-        
+
+            from_addr = self._extract_email(thread.get("from", ""))
+            subject = thread.get("subject", "(no subject)")
+            body_text = thread.get("body", "") or thread.get("snippet", "")
+
+            # Compute content hash
+            content_hash = ""
+            if body_text:
+                content_hash = hashlib.sha256(body_text.encode()).hexdigest()[:16]
+
+            transformed.append(
+                {
+                    "id": f"gmail_{thread_id}",
+                    "source": "gmail",
+                    "content_hash": content_hash,
+                    "body_text_source": "api" if thread.get("body") else "snippet",
+                    "source_id": thread_id,
+                    "thread_id": thread_id,
+                    "from_email": from_addr,
+                    "to_emails": json.dumps([]),
+                    "subject": subject,
+                    "snippet": (body_text or subject)[:500],
+                    "body_text": body_text,
+                    "priority": self._compute_priority(thread),
+                    "requires_response": 1 if self._needs_response(thread) else 0,
+                    "response_deadline": self._compute_response_deadline(thread),
+                    "sentiment": self._analyze_sentiment(thread),
+                    "labels": json.dumps(labels),
+                    "sensitivity": "",
+                    "stakeholder_tier": "",
+                    "processed": 0,
+                    "created_at": self._parse_date(thread.get("date", "")),
+                }
+            )
+
         return transformed
-    
-    def _extract_from(self, thread: Dict) -> str:
-        """Extract sender from thread."""
-        from_field = thread.get('from', '')
-        # Parse "Name <email>" format
-        if '<' in from_field and '>' in from_field:
-            start = from_field.index('<') + 1
-            end = from_field.index('>')
+
+    def _extract_email(self, from_field: str) -> str:
+        """Extract email from 'Name <email>' format."""
+        if "<" in from_field and ">" in from_field:
+            start = from_field.index("<") + 1
+            end = from_field.index(">")
             return from_field[start:end]
         return from_field
-    
+
     def _parse_date(self, date_str: str) -> str:
-        """Parse date from gog output format."""
+        """Parse date string to ISO format."""
         if not date_str:
             return datetime.now().isoformat()
-        
-        # Format: "2026-02-01 08:33"
-        try:
-            dt = datetime.strptime(date_str, '%Y-%m-%d %H:%M')
-            return dt.isoformat()
-        except ValueError:
-            return datetime.now().isoformat()
-    
-    def _compute_priority(self, thread: Dict) -> int:
+
+        # Try common formats
+        for fmt in ["%a, %d %b %Y %H:%M:%S %z", "%Y-%m-%d %H:%M"]:
+            try:
+                dt = datetime.strptime(date_str.split(" (")[0].strip(), fmt)
+                return dt.isoformat()
+            except ValueError:
+                continue
+
+        return datetime.now().isoformat()
+
+    def _compute_priority(self, thread: dict) -> int:
         """Compute email priority 0-100."""
         score = 50
-        
-        from_addr = self._extract_from(thread).lower()
-        labels = thread.get('labels', [])
-        subject = thread.get('subject', '').lower()
-        
+        from_addr = self._extract_email(thread.get("from", "")).lower()
+        labels = thread.get("labels", [])
+        subject = thread.get("subject", "").lower()
+
         # Sender importance
-        priority_domains = self.config.get('priority_senders', [])
-        for rule in priority_domains:
-            pattern = rule.get('pattern', '').lower()
-            if pattern in from_addr:
-                score += rule.get('boost', 0)
-        
-        # Important senders
-        if '@hrmny' in from_addr:
+        if "@hrmny" in from_addr:
             score += 25
-        if 'tax.gov' in from_addr or 'government' in from_addr:
+        if "tax.gov" in from_addr or "government" in from_addr:
             score += 20
-        
+
         # Label boosts
-        if 'IMPORTANT' in labels:
+        if "IMPORTANT" in labels:
             score += 15
-        if 'STARRED' in labels:
+        if "STARRED" in labels:
             score += 10
-        if 'UNREAD' in labels:
+        if "UNREAD" in labels:
             score += 5
-        
+
         # Subject keywords
-        urgent_words = ['urgent', 'asap', 'immediately', 'deadline', 'overdue']
-        if any(word in subject for word in urgent_words):
+        if any(
+            word in subject for word in ["urgent", "asap", "immediately", "deadline", "overdue"]
+        ):
             score += 15
-        
+
         return min(100, max(0, score))
-    
-    def _needs_response(self, thread: Dict) -> bool:
+
+    def _needs_response(self, thread: dict) -> bool:
         """Determine if email likely needs a response."""
-        subject = thread.get('subject', '').lower()
-        from_addr = self._extract_from(thread).lower()
-        snippet = thread.get('snippet', '').lower()
-        
+        from_addr = self._extract_email(thread.get("from", "")).lower()
+        subject = thread.get("subject", "").lower()
+        snippet = thread.get("snippet", "").lower()
+
         # Skip automated emails
-        no_reply_patterns = ['noreply', 'no-reply', 'donotreply', 'notification@', 
-                            'alert@', 'gemini-notes', 'calendar-notification',
-                            'mailer-daemon', 'automated', 'newsletter']
-        if any(pattern in from_addr for pattern in no_reply_patterns):
-            return False
-        
-        # Skip cancellation/FYI emails
-        skip_patterns = ['canceled event', 'declined:', 'accepted:', 
-                        'invitation:', 'updated invitation', 'notes:']
-        if any(pattern in subject for pattern in skip_patterns):
-            return False
-        
-        # Keywords indicating response needed (expanded)
-        response_indicators = [
-            # Explicit asks
-            'please respond', 'please reply', 'awaiting', 'let me know', 
-            'get back', 'your thoughts', 'action required', 'urgent', 
-            'confirm', 'approval', 'approve',
-            # Business patterns
-            'pricing', 'proposal', 'next steps', 'request', 'discuss',
-            'meeting', 'call', 'schedule', 'invoice', 'payment',
-            'contract', 'agreement', 're:', 'follow up', 'follow-up',
-            # Questions
-            '?'
+        no_reply = [
+            "noreply",
+            "no-reply",
+            "donotreply",
+            "notification@",
+            "mailer-daemon",
         ]
-        
-        # Check subject and snippet
-        text = subject + ' ' + snippet
-        return any(indicator in text for indicator in response_indicators)
-    
-    def _compute_response_deadline(self, thread: Dict) -> str:
+        if any(p in from_addr for p in no_reply):
+            return False
+
+        # Response indicators
+        indicators = [
+            "please respond",
+            "please reply",
+            "awaiting",
+            "let me know",
+            "get back",
+            "your thoughts",
+            "action required",
+            "confirm",
+            "?",
+        ]
+        return any(ind in subject + " " + snippet for ind in indicators)
+
+    def _compute_response_deadline(self, thread: dict) -> str:
         """Compute when a response should be sent."""
         if not self._needs_response(thread):
-            return ''
-        
-        # 48 hours from receipt
+            return ""
         try:
-            msg_date = datetime.fromisoformat(self._parse_date(thread.get('date', '')))
+            msg_date = datetime.fromisoformat(self._parse_date(thread.get("date", "")))
             deadline = msg_date + timedelta(hours=48)
             return deadline.isoformat()
-        except Exception:
-            return ''
-    
-    def _analyze_sentiment(self, thread: Dict) -> str:
+        except (ValueError, TypeError) as e:
+            logger.debug(f"Could not compute response deadline: {e}")
+            return ""
+
+    def _analyze_sentiment(self, thread: dict) -> str:
         """Simple sentiment analysis."""
-        subject = thread.get('subject', '').lower()
-        
-        urgent_words = ['urgent', 'asap', 'immediately', 'critical', 'emergency']
-        if any(word in subject for word in urgent_words):
-            return 'urgent'
-        
-        fyi_words = ['fyi', 'for your information', 'newsletter', 'update', 'announcement']
-        if any(word in subject for word in fyi_words):
-            return 'fyi'
-        
-        return 'normal'
+        subject = thread.get("subject", "").lower()
+        if any(word in subject for word in ["urgent", "asap", "critical"]):
+            return "urgent"
+        if any(word in subject for word in ["fyi", "newsletter", "update"]):
+            return "fyi"
+        return "normal"
