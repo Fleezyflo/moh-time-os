@@ -17,9 +17,8 @@ from pathlib import Path
 # Add repo root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from lib.db import ensure_db_ready, SCHEMA_VERSION
+from lib.db import run_migrations, SCHEMA_VERSION
 from lib.safety import run_safety_migrations
-from lib.backup import create_backup, restore_backup
 
 
 def run_smoke_check(conn: sqlite3.Connection) -> tuple[bool, str]:
@@ -65,12 +64,12 @@ def run_drill() -> bool:
         print("Step 1: Create initial database with test data")
         conn = sqlite3.connect(str(db_path))
         run_safety_migrations(conn)
-        ensure_db_ready(conn)
+        run_migrations(conn)
 
         # Insert test data
         conn.execute("""
-            INSERT OR REPLACE INTO clients (id, name, status, tier)
-            VALUES ('drill-001', 'Drill Client', 'active', 'A')
+            INSERT OR REPLACE INTO clients (id, name, tier)
+            VALUES ('drill-001', 'Drill Client', 'A')
         """)
         conn.commit()
 
@@ -94,8 +93,8 @@ def run_drill() -> bool:
 
         # Add some changes
         conn.execute("""
-            INSERT INTO clients (id, name, status, tier)
-            VALUES ('drill-002', 'New Client', 'active', 'B')
+            INSERT INTO clients (id, name, tier)
+            VALUES ('drill-002', 'New Client', 'B')
         """)
         conn.commit()
 

@@ -258,13 +258,13 @@ def export_spans_otlp(endpoint: str = "http://localhost:4318/v1/traces") -> int:
     }
 
     try:
-        req = urllib.request.Request(
+        req = urllib.request.Request(  # noqa: S310
             endpoint,
             data=json.dumps(payload).encode(),
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=5):
+        with urllib.request.urlopen(req, timeout=5):  # noqa: S310
             clear_span_buffer()
             return len(spans)
     except Exception:

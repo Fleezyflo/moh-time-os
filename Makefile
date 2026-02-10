@@ -388,14 +388,7 @@ ui-offline-test:
 # ==========================================
 trace-smoke:
 	@echo "🔍 Running trace correlation smoke test..."
-	@uv run python -c "\
-from lib.observability.tracing import SpanContext, get_trace_id, generate_trace_id; \
-import json; \
-with SpanContext('test_span', attributes={'test': 'smoke'}) as ctx: \
-    trace_id = get_trace_id(); \
-    print(f'Trace ID: {trace_id}'); \
-    assert trace_id is not None, 'Trace ID should be set'; \
-print('✅ Trace correlation working')"
+	@uv run python scripts/trace_smoke.py
 
 # ==========================================
 # COLLECTORS REPLAY
@@ -457,13 +450,7 @@ flags-check:
 
 flags-smoke:
 	@echo "🚩 Running flags smoke test..."
-	@uv run python -c "\
-from lib.features import is_enabled, get_flag, REGISTRY; \
-print('Registered flags:'); \
-for d in REGISTRY.get_definitions(): \
-    print(f'  {d[\"name\"]}: {d[\"current\"]} (default: {d[\"default\"]})'); \
-assert is_enabled('offline_mode'), 'offline_mode should be True by default'; \
-print('✅ Feature flags working')"
+	@uv run python scripts/flags_smoke.py
 
 # ==========================================
 # AUDIT TRAIL

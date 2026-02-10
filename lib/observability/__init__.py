@@ -28,15 +28,6 @@ from .context import RequestContext, get_request_id, set_request_id
 from .health import HealthChecker, HealthStatus
 from .log_schema import LOG_SCHEMA_VERSION, LogEntry, LogLevel, validate_log_entry
 from .logging import JSONFormatter, configure_logging, get_logger
-from .tracing import (
-    SpanContext,
-    generate_span_id,
-    generate_trace_id,
-    get_span_id,
-    get_trace_id,
-    parse_traceparent,
-    create_traceparent,
-)
 from .metrics import (
     REGISTRY,
     Counter,
@@ -51,6 +42,15 @@ from .metrics import (
     db_latency,
     db_queries,
     timed,
+)
+from .tracing import (
+    SpanContext,
+    create_traceparent,
+    generate_span_id,
+    generate_trace_id,
+    get_span_id,
+    get_trace_id,
+    parse_traceparent,
 )
 
 __all__ = [

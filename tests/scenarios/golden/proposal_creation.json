@@ -9,7 +9,7 @@
   },
   "recommended_actions": [
     "escalate",
-    "extend_deadline",
-    "reassign"
+    "reassign",
+    "extend_deadline"
   ]
 }

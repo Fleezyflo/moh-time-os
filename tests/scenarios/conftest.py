@@ -27,8 +27,10 @@ def temp_db():
 
     # Run safety migrations to set up schema
     from lib.safety import run_safety_migrations
+    from lib.db import run_migrations
 
     run_safety_migrations(conn)
+    run_migrations(conn)
 
     yield conn
 

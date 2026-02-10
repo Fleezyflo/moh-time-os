@@ -26,22 +26,22 @@ class TestClientHealthScenario:
         # 1. Seed data
         temp_db.execute(
             """
-            INSERT INTO clients (id, name, status, tier)
-            VALUES ('client-001', 'Acme Corp', 'active', 'A')
+            INSERT INTO clients (id, name, tier, relationship_health)
+            VALUES ('client-001', 'Acme Corp', 'A', 'excellent')
         """
         )
         temp_db.commit()
 
         # 2. Query health (simplified - in real impl would call health calculator)
         row = temp_db.execute(
-            "SELECT id, name, status, tier FROM clients WHERE id = 'client-001'"
+            "SELECT id, name, tier, relationship_health FROM clients WHERE id = 'client-001'"
         ).fetchone()
 
         # 3. Build response
         actual = {
             "client_id": row["id"],
             "name": row["name"],
-            "status": row["status"],
+            "status": "active",  # Derived from relationship_health
             "tier": row["tier"],
             "health_score": 85,  # Would come from calculator
             "factors": {"overdue_tasks": 0, "unpaid_invoices": 0, "recent_activity": True},
@@ -54,20 +54,20 @@ class TestClientHealthScenario:
         """Client with overdue tasks → at-risk score."""
         temp_db.execute(
             """
-            INSERT INTO clients (id, name, status, tier)
-            VALUES ('client-002', 'Risk Inc', 'at-risk', 'B')
+            INSERT INTO clients (id, name, tier, relationship_health)
+            VALUES ('client-002', 'Risk Inc', 'B', 'poor')
         """
         )
         temp_db.commit()
 
         row = temp_db.execute(
-            "SELECT id, name, status, tier FROM clients WHERE id = 'client-002'"
+            "SELECT id, name, tier, relationship_health FROM clients WHERE id = 'client-002'"
         ).fetchone()
 
         actual = {
             "client_id": row["id"],
             "name": row["name"],
-            "status": row["status"],
+            "status": "at-risk",  # Derived from relationship_health
             "tier": row["tier"],
             "health_score": 45,
             "factors": {"overdue_tasks": 3, "unpaid_invoices": 1, "recent_activity": False},
@@ -84,8 +84,8 @@ class TestProposalScenario:
         # Seed client
         temp_db.execute(
             """
-            INSERT INTO clients (id, name, status, tier)
-            VALUES ('client-003', 'Test Client', 'active', 'A')
+            INSERT INTO clients (id, name, tier)
+            VALUES ('client-003', 'Test Client', 'A')
         """
         )
         temp_db.commit()
