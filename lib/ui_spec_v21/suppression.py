@@ -312,9 +312,7 @@ class SuppressionManager:
 
         # Compute suppression key
         root_cause = compute_root_cause_fingerprint(issue_type, evidence_keys)
-        sk = suppression_key_for_issue(
-            issue_type, client_id, engagement_id, brand_id, root_cause
-        )
+        sk = suppression_key_for_issue(issue_type, client_id, engagement_id, brand_id, root_cause)
 
         # 1. Update inbox_items_v29
         self.conn.execute(
@@ -435,9 +433,7 @@ class SuppressionManager:
         evidence_keys = list(evidence.get("payload", {}).keys())
 
         root_cause = compute_root_cause_fingerprint(issue_type, evidence_keys)
-        sk = suppression_key_for_issue(
-            issue_type, client_id, engagement_id, brand_id, root_cause
-        )
+        sk = suppression_key_for_issue(issue_type, client_id, engagement_id, brand_id, root_cause)
 
         # 1. Update issues_v29.suppressed = false
         self.conn.execute(

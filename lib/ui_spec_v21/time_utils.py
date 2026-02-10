@@ -23,9 +23,7 @@ UTC = ZoneInfo("UTC")
 ISO_TIMESTAMP_REGEX = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$")
 
 # Regex patterns for normalization input formats
-OFFSET_REGEX = re.compile(
-    r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(\.\d+)?([+-]\d{2}:\d{2})$"
-)
+OFFSET_REGEX = re.compile(r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(\.\d+)?([+-]\d{2}:\d{2})$")
 ZULU_REGEX = re.compile(r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(\.\d+)?Z$")
 
 # DST-observing zones to reject (spec 0.1)
@@ -276,9 +274,7 @@ def run_normalization_test_vectors() -> tuple:
                     }
                 )
         except ValueError as e:
-            failures.append(
-                {"input": input_ts, "expected": expected_output, "error": str(e)}
-            )
+            failures.append({"input": input_ts, "expected": expected_output, "error": str(e)})
     return len(failures) == 0, failures
 
 
@@ -289,10 +285,7 @@ def now_utc() -> datetime:
 
 def now_iso() -> str:
     """Get current time as ISO string with milliseconds."""
-    return (
-        now_utc().strftime("%Y-%m-%dT%H:%M:%S.")
-        + f"{now_utc().microsecond // 1000:03d}Z"
-    )
+    return now_utc().strftime("%Y-%m-%dT%H:%M:%S.") + f"{now_utc().microsecond // 1000:03d}Z"
 
 
 def to_iso(dt: datetime) -> str:
@@ -586,9 +579,7 @@ def validate_timestamp_ordering(conn) -> list:
                 WHERE updated_at IS NOT NULL AND created_at IS NOT NULL AND updated_at < created_at
             """)
             for row in cursor.fetchall():
-                violations.append(
-                    (table, "updated_at", row[0], row[2], "updated_before_created")
-                )
+                violations.append((table, "updated_at", row[0], row[2], "updated_before_created"))
         except Exception:
             pass  # Table may not exist
 
@@ -599,9 +590,7 @@ def validate_timestamp_ordering(conn) -> list:
             WHERE resolved_at IS NOT NULL AND resolved_at < created_at
         """)
         for row in cursor.fetchall():
-            violations.append(
-                ("issues", "resolved_at", row[0], row[2], "resolved_before_created")
-            )
+            violations.append(("issues", "resolved_at", row[0], row[2], "resolved_before_created"))
     except Exception:
         pass
 
@@ -664,14 +653,10 @@ def validate_all_timestamps(conn) -> tuple:
     for table, columns in TIMESTAMP_COLUMNS.items():
         try:
             for col in columns:
-                cursor = conn.execute(
-                    f"SELECT id, {col} FROM {table} WHERE {col} IS NOT NULL"
-                )
+                cursor = conn.execute(f"SELECT id, {col} FROM {table} WHERE {col} IS NOT NULL")
                 for row in cursor.fetchall():
                     if not validate_timestamp_semantic(row[1]):
-                        violations.append(
-                            (table, col, row[0], row[1], "invalid_format")
-                        )
+                        violations.append((table, col, row[0], row[1], "invalid_format"))
         except Exception:
             pass  # Table or column may not exist
 

@@ -269,9 +269,7 @@ class InboxLifecycleManager:
         # Get item
         item = self.get_item(item_id)
         if not item:
-            return ActionResult(
-                success=False, inbox_item_state="", error="Item not found"
-            )
+            return ActionResult(success=False, inbox_item_state="", error="Item not found")
 
         # Validate action
         try:
@@ -286,9 +284,7 @@ class InboxLifecycleManager:
         # Validate payload
         is_valid, error = validate_action_payload(action_enum, payload)
         if not is_valid:
-            return ActionResult(
-                success=False, inbox_item_state=item["state"], error=error
-            )
+            return ActionResult(success=False, inbox_item_state=item["state"], error=error)
 
         # Dispatch to handler
         handlers = {
@@ -484,9 +480,7 @@ class InboxLifecycleManager:
                 client_id=item["client_id"],
                 engagement_id=item.get("engagement_id"),
                 brand_id=item.get("brand_id"),
-                evidence_keys=list(
-                    json.loads(item["evidence"]).get("payload", {}).keys()
-                ),
+                evidence_keys=list(json.loads(item["evidence"]).get("payload", {}).keys()),
                 user_id=user_id,
                 reason=note,
             )
@@ -655,9 +649,7 @@ class InboxLifecycleManager:
             # In real implementation, would include next_step_url
         )
 
-    def _create_issue_from_signal(
-        self, item: dict, user_id: str, note: str | None
-    ) -> str:
+    def _create_issue_from_signal(self, item: dict, user_id: str, note: str | None) -> str:
         """Create a new issue from signal-based inbox item."""
         issue_id = str(uuid4())
         now = now_iso()

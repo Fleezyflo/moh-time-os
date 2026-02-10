@@ -331,9 +331,7 @@ def test_spec_31_suppression_source_of_truth(db):
     """
     create_test_client(db)
 
-    sk = suppression_key_for_issue(
-        "financial", "client_1", None, None, "test_fingerprint"
-    )
+    sk = suppression_key_for_issue("financial", "client_1", None, None, "test_fingerprint")
     insert_suppression_rule(db, sk, "issue", "user_1")
     db.commit()
 
@@ -388,9 +386,7 @@ def test_spec_32_audit_key_preserved(db):
     db.commit()
 
     # Verify historical key preserved
-    cursor = db.execute(
-        "SELECT suppression_key FROM inbox_items WHERE id = ?", (item_id,)
-    )
+    cursor = db.execute("SELECT suppression_key FROM inbox_items WHERE id = ?", (item_id,))
     assert cursor.fetchone()[0] == sk
 
 
@@ -402,9 +398,7 @@ def test_spec_33_suppression_key_entropy(db):
     """
     key1 = suppression_key_for_issue("financial", "client_1", "eng_1", None, None)
     key2 = suppression_key_for_issue("financial", "client_1", "eng_2", None, None)
-    key3 = suppression_key_for_issue(
-        "schedule_delivery", "client_1", "eng_1", None, None
-    )
+    key3 = suppression_key_for_issue("schedule_delivery", "client_1", "eng_1", None, None)
 
     assert key1 != key2
     assert key1 != key3
@@ -580,9 +574,7 @@ def test_spec_23_issue_snooze_archives_inbox_item(db):
     db.commit()
 
     lifecycle = IssueLifecycleManager(db)
-    success, error = lifecycle.transition(
-        issue_id, "snooze", "user_1", {"snooze_days": 7}
-    )
+    success, error = lifecycle.transition(issue_id, "snooze", "user_1", {"snooze_days": 7})
     db.commit()
 
     assert success
@@ -600,9 +592,7 @@ def test_spec_24_inbox_snooze_independent_of_issue(db):
     """
     create_test_client(db)
     issue_id = create_test_issue(db, state="surfaced")
-    item_id = create_test_inbox_item(
-        db, item_type="issue", underlying_issue_id=issue_id
-    )
+    item_id = create_test_inbox_item(db, item_type="issue", underlying_issue_id=issue_id)
     db.commit()
 
     lifecycle = InboxLifecycleManager(db)
@@ -643,15 +633,11 @@ def test_spec_6_ambiguous_select_actionable(db):
     )
 
     signal_id = create_test_signal(db)
-    item_id = create_test_inbox_item(
-        db, item_type="ambiguous", underlying_signal_id=signal_id
-    )
+    item_id = create_test_inbox_item(db, item_type="ambiguous", underlying_signal_id=signal_id)
     db.commit()
 
     lifecycle = InboxLifecycleManager(db)
-    result = lifecycle.execute_action(
-        item_id, "select", {"select_candidate_id": eng_id}, "user_1"
-    )
+    result = lifecycle.execute_action(item_id, "select", {"select_candidate_id": eng_id}, "user_1")
     db.commit()
 
     assert result.success
@@ -1040,9 +1026,7 @@ def test_spec_19_action_payload_rejection(db):
     Call POST /api/inbox/:id/action with action = 'tag' and assign_to present.
     Expect 400 Bad Request.
     """
-    is_valid, error = validate_action_payload(
-        InboxAction.TAG, {"assign_to": "user_123"}
-    )
+    is_valid, error = validate_action_payload(InboxAction.TAG, {"assign_to": "user_123"})
 
     assert not is_valid
     assert "Unexpected field" in error
@@ -1145,9 +1129,7 @@ def test_spec_22_terminal_allows_new(db):
     db.commit()
 
     # Now can create new item (dismissed is terminal, so unique index doesn't block)
-    item_id2 = create_test_inbox_item(
-        db, item_type="issue", underlying_issue_id=issue_id
-    )
+    item_id2 = create_test_inbox_item(db, item_type="issue", underlying_issue_id=issue_id)
     db.commit()
 
     assert item_id2 is not None
@@ -1257,15 +1239,11 @@ def test_spec_29_assign_sets_tagged_by(db):
     """
     create_test_client(db)
     signal_id = create_test_signal(db)
-    item_id = create_test_inbox_item(
-        db, item_type="flagged_signal", underlying_signal_id=signal_id
-    )
+    item_id = create_test_inbox_item(db, item_type="flagged_signal", underlying_signal_id=signal_id)
     db.commit()
 
     lifecycle = InboxLifecycleManager(db)
-    result = lifecycle.execute_action(
-        item_id, "assign", {"assign_to": "user_2"}, "user_1"
-    )
+    result = lifecycle.execute_action(item_id, "assign", {"assign_to": "user_2"}, "user_1")
     db.commit()
 
     assert result.success
@@ -1424,17 +1402,13 @@ def test_spec_38_assign_after_tag_preserves_tagged_by(db):
 
     # Now assign
     lifecycle = IssueLifecycleManager(db)
-    success, error = lifecycle.transition(
-        issue_id, "assign", "user_2", {"assigned_to": "user_3"}
-    )
+    success, error = lifecycle.transition(issue_id, "assign", "user_2", {"assigned_to": "user_3"})
     db.commit()
 
     assert success
 
     # Verify tagged fields preserved
-    cursor = db.execute(
-        "SELECT tagged_by_user_id, tagged_at FROM issues WHERE id = ?", (issue_id,)
-    )
+    cursor = db.execute("SELECT tagged_by_user_id, tagged_at FROM issues WHERE id = ?", (issue_id,))
     row = cursor.fetchone()
 
     assert row[0] == "user_1"  # Original tagger preserved

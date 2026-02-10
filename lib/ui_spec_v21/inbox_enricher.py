@@ -276,13 +276,9 @@ def enrich_inbox_item(
         enrichment = enrich_with_llm(sender, subject, body)
         if not enrichment:
             # Fallback to heuristics if LLM fails
-            enrichment = enrich_from_heuristics(
-                sender, subject, body, priority, requires_response
-            )
+            enrichment = enrich_from_heuristics(sender, subject, body, priority, requires_response)
     else:
-        enrichment = enrich_from_heuristics(
-            sender, subject, body, priority, requires_response
-        )
+        enrichment = enrich_from_heuristics(sender, subject, body, priority, requires_response)
 
     # Parse existing evidence with strict error handling
     evidence_raw = item_dict.get("evidence")
@@ -296,9 +292,7 @@ def enrich_inbox_item(
         evidence = {}
         meta_trust["data_integrity"] = False
         meta_trust["errors"].append(f"evidence parse failed: {str(e)[:100]}")
-        meta_trust["debug"] = {
-            "evidence_raw_length": len(evidence_raw) if evidence_raw else 0
-        }
+        meta_trust["debug"] = {"evidence_raw_length": len(evidence_raw) if evidence_raw else 0}
 
     # Merge enrichment into payload
     if "payload" not in evidence:
@@ -325,16 +319,11 @@ def enrich_inbox_item(
     # Persist core payload fields (safety net if not set at write-time)
     evidence["payload"]["sender"] = evidence["payload"].get("sender") or sender
     evidence["payload"]["subject"] = evidence["payload"].get("subject") or subject
-    evidence["payload"]["snippet"] = (
-        evidence["payload"].get("snippet") or derived_snippet
-    )
+    evidence["payload"]["snippet"] = evidence["payload"].get("snippet") or derived_snippet
     evidence["payload"]["thread_id"] = evidence["payload"].get("thread_id") or thread_id
-    evidence["payload"]["received_at"] = (
-        evidence["payload"].get("received_at") or received_at
-    )
+    evidence["payload"]["received_at"] = evidence["payload"].get("received_at") or received_at
     evidence["payload"]["flagged_reason"] = (
-        evidence["payload"].get("flagged_reason")
-        or f"Priority {priority} communication"
+        evidence["payload"].get("flagged_reason") or f"Priority {priority} communication"
     )
 
     # Set URL at root level

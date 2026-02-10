@@ -26,9 +26,7 @@ from .time_utils import (
 logger = logging.getLogger(__name__)
 
 
-def safe_parse_evidence(
-    evidence_raw: str | None, item_id: str = "unknown"
-) -> dict[str, Any]:
+def safe_parse_evidence(evidence_raw: str | None, item_id: str = "unknown") -> dict[str, Any]:
     """
     Parse evidence JSON with strict error handling.
 
@@ -54,9 +52,7 @@ def safe_parse_evidence(
                     "errors": [f"evidence parse failed: {str(e)[:100]}"],
                     "debug": {
                         "raw_length": len(evidence_raw),
-                        "raw_prefix": evidence_raw[:50]
-                        if len(evidence_raw) > 50
-                        else evidence_raw,
+                        "raw_prefix": evidence_raw[:50] if len(evidence_raw) > 50 else evidence_raw,
                     },
                 }
             }
@@ -161,11 +157,7 @@ class ClientEndpoints:
                 status = CLIENT_STATUS_COLD
 
             # Apply filters
-            if (
-                filters.get("status")
-                and filters["status"] != "all"
-                and status != filters["status"]
-            ):
+            if filters.get("status") and filters["status"] != "all" and status != filters["status"]:
                 continue
 
             if filters.get("tier") and tier != filters["tier"]:
@@ -177,15 +169,10 @@ class ClientEndpoints:
             )
 
             # Apply additional filters
-            if filters.get("has_issues") and not client_data.get(
-                "open_issues_high_critical"
-            ):
+            if filters.get("has_issues") and not client_data.get("open_issues_high_critical"):
                 continue
 
-            if (
-                filters.get("has_overdue_ar")
-                and not client_data.get("ar_overdue", 0) > 0
-            ):
+            if filters.get("has_overdue_ar") and not client_data.get("ar_overdue", 0) > 0:
                 continue
 
             result[status].append(client_data)
@@ -275,9 +262,7 @@ class ClientEndpoints:
         Returns (data, error_code) - error_code is 403/400 if include forbidden/invalid
         """
         # Get client
-        cursor = self.conn.execute(
-            "SELECT id, name, tier FROM clients WHERE id = ?", (client_id,)
-        )
+        cursor = self.conn.execute("SELECT id, name, tier FROM clients WHERE id = ?", (client_id,))
         row = cursor.fetchone()
         if not row:
             return None, 404
@@ -304,10 +289,7 @@ class ClientEndpoints:
                 }, 400
 
             for section in include:
-                if (
-                    section not in allowed_sections
-                    and section not in CLIENT_BASE_FIELDS
-                ):
+                if section not in allowed_sections and section not in CLIENT_BASE_FIELDS:
                     return {
                         "error": "forbidden_section",
                         "message": f"Cannot include '{section}' for {status} client",
@@ -406,9 +388,7 @@ class ClientEndpoints:
             }, 400
 
         # Get client
-        cursor = self.conn.execute(
-            "SELECT id, name, tier FROM clients WHERE id = ?", (client_id,)
-        )
+        cursor = self.conn.execute("SELECT id, name, tier FROM clients WHERE id = ?", (client_id,))
         row = cursor.fetchone()
         if not row:
             return None, 404
@@ -442,9 +422,7 @@ class ClientEndpoints:
                     "id": item_dict["id"],
                     "type": item_dict["type"],
                     "title": item_dict["title"],
-                    "evidence": safe_parse_evidence(
-                        item_dict["evidence"], item_dict["id"]
-                    ),
+                    "evidence": safe_parse_evidence(item_dict["evidence"], item_dict["id"]),
                     "actions": self._get_inbox_actions(item_dict["type"]),
                 }
 
@@ -460,9 +438,7 @@ class ClientEndpoints:
                 result["context"]["issue"] = issue
 
         # Get related signals (max 5, last 90 days)
-        result["related_signals"] = self._get_related_signals(
-            client_id, issue_id, limit=5, days=90
-        )
+        result["related_signals"] = self._get_related_signals(client_id, issue_id, limit=5, days=90)
 
         return result, None
 
@@ -571,9 +547,7 @@ class ClientEndpoints:
         """Get overview section for active client."""
         return {
             "top_issues": self._get_top_issues(client_id, limit=5),
-            "recent_positive_signals": self._get_recent_positive_signals(
-                client_id, limit=3
-            ),
+            "recent_positive_signals": self._get_recent_positive_signals(client_id, limit=3),
         }
 
     def _get_top_issues(self, client_id: str, limit: int = 5) -> list[dict]:
@@ -601,19 +575,13 @@ class ClientEndpoints:
         issues = []
         for row in cursor.fetchall():
             issue = dict(row)
-            issue["evidence"] = safe_parse_evidence(
-                issue["evidence"], issue.get("id", "unknown")
-            )
-            issue["available_actions"] = AVAILABLE_ACTIONS.get(
-                IssueState(issue["state"]), []
-            )
+            issue["evidence"] = safe_parse_evidence(issue["evidence"], issue.get("id", "unknown"))
+            issue["available_actions"] = AVAILABLE_ACTIONS.get(IssueState(issue["state"]), [])
             issues.append(issue)
 
         return issues
 
-    def _get_recent_positive_signals(
-        self, client_id: str, limit: int = 3
-    ) -> list[dict]:
+    def _get_recent_positive_signals(self, client_id: str, limit: int = 3) -> list[dict]:
         """Get recent positive signals."""
         cursor = self.conn.execute(
             """
@@ -702,9 +670,7 @@ class ClientEndpoints:
 
     def _get_brands(self, client_id: str) -> list[str]:
         """Get brand names for client."""
-        cursor = self.conn.execute(
-            "SELECT name FROM brands WHERE client_id = ?", (client_id,)
-        )
+        cursor = self.conn.execute("SELECT name FROM brands WHERE client_id = ?", (client_id,))
         return [row[0] for row in cursor.fetchall()]
 
     def _get_last_invoices(self, client_id: str, limit: int = 5) -> list[dict]:
@@ -756,13 +722,9 @@ class ClientEndpoints:
         if not row:
             return None
         issue = dict(row)
-        issue["evidence"] = safe_parse_evidence(
-            issue["evidence"], issue.get("id", issue_id)
-        )
+        issue["evidence"] = safe_parse_evidence(issue["evidence"], issue.get("id", issue_id))
         # v2.9: Include available_actions (§7.6)
-        issue["available_actions"] = AVAILABLE_ACTIONS.get(
-            IssueState(issue["state"]), []
-        )
+        issue["available_actions"] = AVAILABLE_ACTIONS.get(IssueState(issue["state"]), [])
         return issue
 
     def _get_inbox_actions(self, item_type: str) -> list[str]:
@@ -826,9 +788,7 @@ class FinancialsEndpoints:
         self.conn = conn
         self.org_tz = org_tz
 
-    def get_invoices(
-        self, client_id: str, filters: dict | None = None
-    ) -> dict[str, Any]:
+    def get_invoices(self, client_id: str, filters: dict | None = None) -> dict[str, Any]:
         """
         GET /api/clients/:id/invoices
 
@@ -880,11 +840,7 @@ class FinancialsEndpoints:
                     inv["aging_bucket"] = "current"
 
             # Apply status filter
-            if (
-                filters.get("status")
-                and filters["status"] != "all"
-                and status != filters["status"]
-            ):
+            if filters.get("status") and filters["status"] != "all" and status != filters["status"]:
                 continue
 
             invoices.append(inv)
@@ -1108,9 +1064,7 @@ class InboxEndpoints:
             flagged_reason = "Email requires response"
 
         # Preserve any existing drill-down enrichment from stored evidence
-        existing_payload = (
-            evidence.get("payload", {}) if isinstance(evidence, dict) else {}
-        )
+        existing_payload = evidence.get("payload", {}) if isinstance(evidence, dict) else {}
         drill_down_fields = {
             "entities": existing_payload.get("entities", []),
             "rationale": existing_payload.get("rationale"),
@@ -1232,9 +1186,7 @@ class InboxEndpoints:
 
             # v2.9: Compute attention_age_start_at (§0.5)
             # attention_age_start_at = resurfaced_at ?? proposed_at
-            item["attention_age_start_at"] = item.get("resurfaced_at") or item.get(
-                "proposed_at"
-            )
+            item["attention_age_start_at"] = item.get("resurfaced_at") or item.get("proposed_at")
 
             # Get client info
             if item["client_id"]:

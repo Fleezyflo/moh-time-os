@@ -148,9 +148,7 @@ class EngagementLifecycleManager:
             return None
         return dict(row)
 
-    def validate_transition(
-        self, current_state: str, target_state: str
-    ) -> tuple[bool, str | None]:
+    def validate_transition(self, current_state: str, target_state: str) -> tuple[bool, str | None]:
         """
         Validate if a state transition is allowed.
 
@@ -201,9 +199,7 @@ class EngagementLifecycleManager:
         # Validate transition
         valid, error = self.validate_transition(current_state, target_state)
         if not valid:
-            return TransitionResult(
-                success=False, error=error, previous_state=current_state
-            )
+            return TransitionResult(success=False, error=error, previous_state=current_state)
 
         now = now_iso()
         transition_id = str(uuid.uuid4())
@@ -272,9 +268,7 @@ class EngagementLifecycleManager:
             ),
         )
 
-    def get_transition_history(
-        self, engagement_id: str, limit: int = 50
-    ) -> list[dict[str, Any]]:
+    def get_transition_history(self, engagement_id: str, limit: int = 50) -> list[dict[str, Any]]:
         """Get transition history for an engagement."""
         cursor = self.conn.execute(
             """
