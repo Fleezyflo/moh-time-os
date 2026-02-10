@@ -1,0 +1,1114 @@
+{
+  "api_routes": [
+    {
+      "method": "GET",
+      "path": "/",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/overview",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/time/blocks",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/time/summary",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/time/brief",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/time/schedule",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/time/unschedule",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/commitments",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/commitments/untracked",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/commitments/due",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/commitments/summary",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/commitments/{commitment_id}/link",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/commitments/{commitment_id}/done",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/capacity/lanes",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/capacity/utilization",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/capacity/forecast",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/capacity/debt",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/capacity/debt/accrue",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/capacity/debt/{debt_id}/resolve",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/clients/health",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/clients/at-risk",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/clients/{client_id}/health",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/clients/{client_id}/projects",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/clients/link",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/clients/linking-stats",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/tasks",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/tasks/{task_id}",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/tasks",
+      "source": "api/server.py"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/tasks/{task_id}",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/tasks/{task_id}/notes",
+      "source": "api/server.py"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/tasks/{task_id}",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/tasks/{task_id}/delegate",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/tasks/{task_id}/escalate",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/tasks/{task_id}/recall",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/delegations",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/data-quality",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/data-quality/cleanup/ancient",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/data-quality/cleanup/stale",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/data-quality/recalculate-priorities",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/data-quality/cleanup/legacy-signals",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/data-quality/preview/{cleanup_type}",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/team",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/calendar",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/delegations",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/inbox",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/insights",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/decisions",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/priorities/{item_id}/complete",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/priorities/{item_id}/snooze",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/priorities/{item_id}/delegate",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/decisions/{decision_id}",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/bundles",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/bundles/rollbackable",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/bundles/summary",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/bundles/rollback-last",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/bundles/{bundle_id}",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/bundles/{bundle_id}/rollback",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/calibration",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/calibration/run",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/feedback",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/priorities",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/priorities/{item_id}/complete",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/priorities/{item_id}/snooze",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/priorities/{item_id}/delegate",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/priorities/filtered",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/priorities/bulk",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/filters",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/priorities/advanced",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/priorities/archive-stale",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/events",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/day/{date}",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/week",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/emails",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/emails/{email_id}/mark-actionable",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/insights",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/anomalies",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/notifications/stats",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/notifications/{notif_id}/dismiss",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/notifications/dismiss-all",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/approvals",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/approvals/{decision_id}",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/approvals/{decision_id}/modify",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/governance",
+      "source": "api/server.py"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/governance/{domain}",
+      "source": "api/server.py"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/governance/{domain}/threshold",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/governance/history",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/governance/emergency-brake",
+      "source": "api/server.py"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/governance/emergency-brake",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/sync/status",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/sync",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/analyze",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/cycle",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/status",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/health",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/debug/db",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/summary",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/search",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/team/workload",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/priorities/grouped",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/clients",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/clients/portfolio",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/clients/{client_id}",
+      "source": "api/server.py"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/clients/{client_id}",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/projects",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/projects/candidates",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/projects/enrolled",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/{project_id}/enrollment",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/projects/detect",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/projects/{project_id}",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/sync/xero",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/tasks/link",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/projects/propose",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/emails",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/emails/{email_id}/dismiss",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/digest/weekly",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/tasks/{task_id}/block",
+      "source": "api/server.py"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/tasks/{task_id}/block/{blocker_id}",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/dependencies",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/control-room/proposals",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/control-room/issues",
+      "source": "api/server.py"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/control-room/issues/{issue_id}/resolve",
+      "source": "api/server.py"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/control-room/issues/{issue_id}/state",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/control-room/issues/{issue_id}/notes",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/control-room/watchers",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/control-room/watchers/{watcher_id}/dismiss",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/control-room/watchers/{watcher_id}/snooze",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/control-room/fix-data",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/control-room/issues",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/control-room/proposals/{proposal_id}",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/control-room/proposals/{proposal_id}/snooze",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/control-room/proposals/{proposal_id}/dismiss",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/control-room/fix-data/{item_type}/{item_id}/resolve",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/control-room/couplings",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/control-room/clients",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/control-room/team",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/control-room/evidence/{entity_type}/{entity_id}",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/control-room/health",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/admin/seed-identities",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/{path:path}",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/clients",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/clients/{client_id}",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/clients/{client_id}/snapshot",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/clients/{client_id}/invoices",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/clients/{client_id}/ar-aging",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/inbox",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/inbox/recent",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/inbox/counts",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "POST",
+      "path": "/inbox/{item_id}/action",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "POST",
+      "path": "/inbox/{item_id}/read",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/issues",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/issues/{issue_id}",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "POST",
+      "path": "/issues/{issue_id}/transition",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/clients/{client_id}/signals",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/clients/{client_id}/team",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/team",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/engagements",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/engagements/{engagement_id}",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "POST",
+      "path": "/engagements/{engagement_id}/transition",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "POST",
+      "path": "/jobs/snooze-expiry",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "POST",
+      "path": "/jobs/regression-watch",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/priorities",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/projects",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/events",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/invoices",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/proposals",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/watchers",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/couplings",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/fix-data",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/evidence/{entity_type}/{entity_id}",
+      "source": "api/spec_router.py"
+    }
+  ],
+  "collectors": [
+    {
+      "name": "tasks",
+      "source": "collectors/tasks.py"
+    },
+    {
+      "name": "asana",
+      "source": "collectors/asana.py"
+    },
+    {
+      "name": "xero",
+      "source": "collectors/xero.py"
+    },
+    {
+      "name": "calendar",
+      "source": "collectors/calendar.py"
+    },
+    {
+      "name": "gmail",
+      "source": "collectors/gmail.py"
+    }
+  ],
+  "db_tables": [
+    {
+      "name": "clients",
+      "source": "lib/db.py"
+    },
+    {
+      "name": "events",
+      "source": "lib/db.py"
+    },
+    {
+      "name": "invoices",
+      "source": "lib/db.py"
+    },
+    {
+      "name": "issues_v29",
+      "source": "lib/db.py"
+    },
+    {
+      "name": "issue_transitions_v29",
+      "source": "lib/db.py"
+    },
+    {
+      "name": "inbox_items_v29",
+      "source": "lib/db.py"
+    },
+    {
+      "name": "signals_v29",
+      "source": "lib/db.py"
+    },
+    {
+      "name": "inbox_suppression_rules_v29",
+      "source": "lib/db.py"
+    },
+    {
+      "name": "couplings",
+      "source": "migrations/v4_milestone4_intersections_reports_policy.py"
+    },
+    {
+      "name": "report_templates",
+      "source": "migrations/v4_milestone4_intersections_reports_policy.py"
+    },
+    {
+      "name": "report_snapshots",
+      "source": "migrations/v4_milestone4_intersections_reports_policy.py"
+    },
+    {
+      "name": "protocol_violations",
+      "source": "migrations/v4_milestone4_intersections_reports_policy.py"
+    },
+    {
+      "name": "access_roles",
+      "source": "migrations/v4_milestone4_intersections_reports_policy.py"
+    },
+    {
+      "name": "entity_acl",
+      "source": "migrations/v4_milestone4_intersections_reports_policy.py"
+    },
+    {
+      "name": "retention_rules",
+      "source": "migrations/v4_milestone4_intersections_reports_policy.py"
+    },
+    {
+      "name": "redaction_markers",
+      "source": "migrations/v4_milestone4_intersections_reports_policy.py"
+    },
+    {
+      "name": "artifacts",
+      "source": "migrations/v4_milestone1_truth_proof.py"
+    },
+    {
+      "name": "artifact_blobs",
+      "source": "migrations/v4_milestone1_truth_proof.py"
+    },
+    {
+      "name": "artifact_excerpts",
+      "source": "migrations/v4_milestone1_truth_proof.py"
+    },
+    {
+      "name": "entity_links",
+      "source": "migrations/v4_milestone1_truth_proof.py"
+    },
+    {
+      "name": "identity_profiles",
+      "source": "migrations/v4_milestone1_truth_proof.py"
+    },
+    {
+      "name": "identity_claims",
+      "source": "migrations/v4_milestone1_truth_proof.py"
+    },
+    {
+      "name": "identity_operations",
+      "source": "migrations/v4_milestone1_truth_proof.py"
+    },
+    {
+      "name": "fix_data_queue",
+      "source": "migrations/v4_milestone1_truth_proof.py"
+    },
+    {
+      "name": "engagements",
+      "source": "migrations/v29_engagement_lifecycle.py"
+    },
+    {
+      "name": "engagement_transitions",
+      "source": "migrations/v29_engagement_lifecycle.py"
+    },
+    {
+      "name": "org_settings",
+      "source": "migrations/v29_org_settings.py"
+    },
+    {
+      "name": "migrations",
+      "source": "v5/migrations/001_create_v5_schema.sql"
+    },
+    {
+      "name": "people",
+      "source": "v5/migrations/001_create_v5_schema.sql"
+    },
+    {
+      "name": "brands",
+      "source": "v5/migrations/001_create_v5_schema.sql"
+    },
+    {
+      "name": "projects_v5",
+      "source": "v5/migrations/001_create_v5_schema.sql"
+    },
+    {
+      "name": "retainers",
+      "source": "v5/migrations/001_create_v5_schema.sql"
+    },
+    {
+      "name": "retainer_cycles",
+      "source": "v5/migrations/001_create_v5_schema.sql"
+    },
+    {
+      "name": "tasks_v5",
+      "source": "v5/migrations/001_create_v5_schema.sql"
+    },
+    {
+      "name": "task_versions",
+      "source": "v5/migrations/001_create_v5_schema.sql"
+    },
+    {
+      "name": "signals_v5",
+      "source": "v5/migrations/001_create_v5_schema.sql"
+    },
+    {
+      "name": "issues_v5",
+      "source": "v5/migrations/001_create_v5_schema.sql"
+    },
+    {
+      "name": "xero_sync_state",
+      "source": "v5/migrations/001_create_v5_schema.sql"
+    },
+    {
+      "name": "gchat_sync_state",
+      "source": "v5/migrations/001_create_v5_schema.sql"
+    },
+    {
+      "name": "calendar_sync_state",
+      "source": "v5/migrations/001_create_v5_schema.sql"
+    },
+    {
+      "name": "xero_invoices",
+      "source": "v5/migrations/001_create_v5_schema.sql"
+    },
+    {
+      "name": "xero_payments",
+      "source": "v5/migrations/001_create_v5_schema.sql"
+    },
+    {
+      "name": "gchat_messages",
+      "source": "v5/migrations/001_create_v5_schema.sql"
+    },
+    {
+      "name": "calendar_events",
+      "source": "v5/migrations/001_create_v5_schema.sql"
+    },
+    {
+      "name": "gemini_notes",
+      "source": "v5/migrations/001_create_v5_schema.sql"
+    }
+  ],
+  "generated_by": "scripts/generate_system_map.py",
+  "summary": {
+    "api_routes_count": 171,
+    "collectors_count": 5,
+    "db_tables_count": 45,
+    "ui_routes_count": 10
+  },
+  "ui_api_calls": [],
+  "ui_routes": [
+    {
+      "path": "/",
+      "source": "router.tsx"
+    },
+    {
+      "path": "/snapshot",
+      "source": "router.tsx"
+    },
+    {
+      "path": "/issues",
+      "source": "router.tsx"
+    },
+    {
+      "path": "/clients",
+      "source": "router.tsx"
+    },
+    {
+      "path": "/clients/$clientId",
+      "source": "router.tsx"
+    },
+    {
+      "path": "/clients/$clientId/recently-active",
+      "source": "router.tsx"
+    },
+    {
+      "path": "/clients/cold",
+      "source": "router.tsx"
+    },
+    {
+      "path": "/team",
+      "source": "router.tsx"
+    },
+    {
+      "path": "/team/$id",
+      "source": "router.tsx"
+    },
+    {
+      "path": "/fix-data",
+      "source": "router.tsx"
+    }
+  ],
+  "version": "1.0.0"
+}

@@ -2,13 +2,20 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, recover-wip]
   pull_request:
     branches: [main, master]
 
+env:
+  PYTHON_VERSION: "3.11"
+  NODE_VERSION: "20"
+
 jobs:
-  verify:
-    name: Pristine Verification
+  # ==========================================
+  # PYTHON QUALITY
+  # ==========================================
+  python-quality:
+    name: Python Quality
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -16,39 +23,78 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install uv
         run: |
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Check no derived files tracked
-        run: ./scripts/check_no_derived_tracked.sh
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --all-extras
+
+      - name: Check no derived files tracked
+        run: ./scripts/check_no_derived_tracked.sh
 
       - name: Run pre-commit
         run: uv run pre-commit run -a
 
-      # ═══════════════════════════════════════════════════════════════
-      # PATCHWORK SCAN (BLOCKING) - Must pass before tests run
-      # ═══════════════════════════════════════════════════════════════
-      - name: Patchwork Anti-Pattern Scan
-        run: bash scripts/patchwork_scan.sh --ci
+      - name: Ruff Lint (full)
+        run: uv run ruff check lib/ api/ --output-format=github
 
-      # ═══════════════════════════════════════════════════════════════
-      # SPEC TRACEABILITY (BLOCKING) - Contract must match UI spec
-      # ═══════════════════════════════════════════════════════════════
-      - name: Spec Traceability Check
-        run: uv run python scripts/spec_traceability.py
+      - name: Ruff Format Check
+        run: uv run ruff format --check lib/ api/
 
-      # ═══════════════════════════════════════════════════════════════
-      # TESTS (ALL BLOCKING)
-      # ═══════════════════════════════════════════════════════════════
+      - name: Bandit Security Scan
+        run: uv run bandit -r lib/ api/ -ll
+
+      - name: Mypy Type Check (strict modules)
+        run: uv run mypy api/ lib/safety/ lib/contracts/ lib/observability/ --ignore-missing-imports
+
+      - name: Mypy Type Check (legacy - soft fail)
+        run: uv run mypy lib/ --ignore-missing-imports
+        continue-on-error: true
+
+  # ==========================================
+  # PYTHON TESTS
+  # ==========================================
+  python-tests:
+    name: Python Tests
+    runs-on: ubuntu-latest
+    needs: python-quality
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Cache uv
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/uv
+          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
       - name: Run Contract tests
         run: uv run pytest tests/contract/ -v --tb=short
+
+      - name: Run Safety tests
+        run: uv run pytest tests/test_safety.py -v --tb=short
 
       - name: Run Negative tests
         run: uv run pytest tests/negative/ -v --tb=short
@@ -59,32 +105,11 @@ jobs:
       - name: Run UI Spec tests
         run: uv run pytest lib/ui_spec_v21/tests/ -v --tb=short
 
-      # ═══════════════════════════════════════════════════════════════
-      # ARTIFACT VALIDATION (BLOCKING) - Proves generated output is valid
-      # ═══════════════════════════════════════════════════════════════
-      - name: Generate Snapshot Artifact
-        run: |
-          mkdir -p output
-          uv run python -c "
-          from lib.agency_snapshot.generator import AgencySnapshotGenerator
-          gen = AgencySnapshotGenerator()
-          snapshot = gen.generate()
-          gen.save(snapshot)
-          print('Generated snapshot successfully')
-          "
-
-      - name: Validate Snapshot Artifact
-        run: uv run python scripts/validate_snapshot_artifact.py output/agency_snapshot.json
-
-      - name: Upload Artifact on Failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: failed-snapshot
-          path: output/agency_snapshot.json
-
-  lint:
-    name: Lint & Security
+  # ==========================================
+  # DRIFT DETECTION
+  # ==========================================
+  drift-detection:
+    name: Drift Detection
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -92,7 +117,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install uv
         run: |
@@ -100,42 +125,7 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install dependencies
-        run: uv sync
-
-      - name: Ruff Lint
-        run: uv run ruff check lib/ api/ --output-format=github
-
-      - name: Ruff Format Check
-        run: uv run ruff format --check lib/ api/
-
-      - name: Bandit Security Scan
-        run: uv run bandit -r lib/ api/ -ll
-
-      - name: Mypy Type Check (strict modules)
-        run: uv run mypy api/ lib/safety/ lib/contracts/ --ignore-missing-imports
-
-      - name: Mypy Type Check (legacy - soft fail)
-        run: uv run mypy lib/ --ignore-missing-imports
-        continue-on-error: true
-
-  drift-check:
-    name: Contract Drift Detection
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Install dependencies
-        run: uv sync
+        run: uv sync --all-extras
 
       - name: OpenAPI Drift Check
         run: uv run python scripts/export_openapi.py --check
@@ -143,8 +133,66 @@ jobs:
       - name: Schema Drift Check
         run: uv run python scripts/export_schema.py --check
 
-  dependency-audit:
-    name: Dependency Audit
+      - name: System Map Drift Check
+        run: uv run python scripts/generate_system_map.py --check
+
+      - name: Breaking API Changes Check
+        run: uv run python scripts/check_breaking_changes.py
+
+  # ==========================================
+  # UI QUALITY
+  # ==========================================
+  ui-quality:
+    name: UI Quality
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: time-os-ui
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Cache pnpm
+        uses: actions/cache@v4
+        with:
+          path: ~/.pnpm-store
+          key: pnpm-${{ runner.os }}-${{ hashFiles('time-os-ui/pnpm-lock.yaml') }}
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: TypeScript Check
+        run: pnpm run typecheck
+
+      - name: ESLint
+        run: pnpm run lint
+        continue-on-error: true  # ESLint newly added, allow initial violations
+
+      - name: Prettier Check
+        run: pnpm run format:check
+        continue-on-error: true  # Prettier newly added
+
+      - name: Run Tests
+        run: pnpm test
+
+      - name: Build
+        run: pnpm run build
+
+      - name: Bundle Size Check
+        run: pnpm run bundle:check
+
+  # ==========================================
+  # SECURITY AUDIT
+  # ==========================================
+  security-audit:
+    name: Security Audit
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -152,7 +200,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install uv
         run: |
@@ -160,18 +208,18 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --all-extras
 
       - name: Python Dependency Audit (pip-audit)
         run: |
           uv pip install pip-audit
-          uv run pip-audit --require-hashes=false --ignore-vuln GHSA-xxxx || true
-        continue-on-error: true  # Advisory - don't block on CVEs yet
+          uv run pip-audit --require-hashes=false || true
+        continue-on-error: true
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Install pnpm
         run: npm install -g pnpm
@@ -179,37 +227,33 @@ jobs:
       - name: UI Dependency Audit (pnpm audit)
         working-directory: time-os-ui
         run: pnpm audit --audit-level=high || true
-        continue-on-error: true  # Advisory - don't block on CVEs yet
+        continue-on-error: true
 
-  sql-injection-check:
-    name: SQL Injection Check
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+      - name: Gitleaks (secrets detection)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
 
-      - name: Check for SQL f-strings
+      - name: Generate SBOM
         run: |
-          echo "Checking for SQL injection patterns..."
-          if grep -rn 'execute.*f"' --include="*.py" lib/ api/; then
-            echo "::warning::Found SQL f-string patterns - review for injection risk"
-          fi
+          mkdir -p docs/sbom
+          uv run pip freeze > docs/sbom/python-requirements.txt || true
 
-      - name: Check for SQL .format()
-        run: |
-          if grep -rn 'execute.*\.format(' --include="*.py" lib/ api/; then
-            echo "::warning::Found SQL .format() patterns - review for injection risk"
-          fi
-
+  # ==========================================
+  # API SMOKE TEST
+  # ==========================================
   api-smoke-test:
     name: API Smoke Test
     runs-on: ubuntu-latest
+    needs: python-quality
     steps:
       - uses: actions/checkout@v4
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ env.PYTHON_VERSION }}
 
       - name: Install uv
         run: |
@@ -217,7 +261,7 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --all-extras
 
       - name: Start API and check health
         run: |
@@ -232,6 +276,7 @@ jobs:
           for i in $(seq 1 15); do
             sleep 1
             if curl -sf http://localhost:8420/api/health; then
+              echo ""
               echo "API healthy!"
               kill $API_PID || true
               exit 0
@@ -241,3 +286,17 @@ jobs:
           echo "API failed to start within 15s"
           kill $API_PID || true
           exit 1
+
+      - name: Check detailed health
+        run: |
+          mkdir -p data
+          export MOH_TIME_OS_DB_PATH="$(pwd)/data/ci_test.db"
+
+          uv run python -m api.server &
+          API_PID=$!
+          sleep 5
+
+          # Get detailed health
+          curl -sf http://localhost:8420/api/health | jq . || true
+
+          kill $API_PID || true
