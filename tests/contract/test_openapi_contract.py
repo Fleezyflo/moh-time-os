@@ -9,6 +9,7 @@ These tests verify:
 
 import json
 from pathlib import Path
+
 import pytest
 
 
@@ -35,14 +36,14 @@ class TestRequiredEndpoints:
     def test_required_endpoints_exist(self, openapi_schema):
         """All required endpoints must be defined."""
         paths = openapi_schema.get("paths", {})
-        
+
         for endpoint in self.REQUIRED_ENDPOINTS:
             assert endpoint in paths, f"Required endpoint missing: {endpoint}"
 
     def test_health_endpoint_has_get(self, openapi_schema):
         """Health endpoints must have GET method."""
         paths = openapi_schema.get("paths", {})
-        
+
         for endpoint in ["/api/health", "/api/v2/health"]:
             if endpoint in paths:
                 assert "get" in paths[endpoint], f"{endpoint} missing GET method"
@@ -57,7 +58,7 @@ class TestResponseModels:
         health_path = paths.get("/api/health", {})
         get_op = health_path.get("get", {})
         responses = get_op.get("responses", {})
-        
+
         # Check 200 response exists
         assert "200" in responses, "/api/health missing 200 response"
 
@@ -65,7 +66,7 @@ class TestResponseModels:
         """Proposals endpoint should exist with GET method."""
         paths = openapi_schema.get("paths", {})
         proposals_path = paths.get("/api/control-room/proposals", {})
-        
+
         assert "get" in proposals_path, "Proposals endpoint missing GET method"
         assert "200" in proposals_path["get"].get("responses", {}), \
             "Proposals endpoint missing 200 response"
@@ -77,12 +78,12 @@ class TestSchemaStrictness:
     def test_no_root_additionalProperties_true(self, openapi_schema):
         """Root schemas should not allow arbitrary additional properties."""
         schemas = openapi_schema.get("components", {}).get("schemas", {})
-        
+
         permissive_schemas = []
         for name, schema in schemas.items():
             if schema.get("additionalProperties") is True:
                 permissive_schemas.append(name)
-        
+
         # Allow some flexibility but flag if too many
         max_permissive = 5
         if len(permissive_schemas) > max_permissive:
@@ -94,7 +95,7 @@ class TestSchemaStrictness:
     def test_any_type_responses_tracked(self, openapi_schema):
         """Track endpoints without defined schemas (burn-down target)."""
         paths = openapi_schema.get("paths", {})
-        
+
         any_type_endpoints = []
         for path, methods in paths.items():
             for method, op in methods.items():
@@ -104,7 +105,7 @@ class TestSchemaStrictness:
                         content = response.get("content", {})
                         json_content = content.get("application/json", {})
                         schema = json_content.get("schema", {})
-                        
+
                         # Flag if schema is just {} or {type: object} with no properties
                         if schema == {} or (
                             schema.get("type") == "object" and
@@ -112,7 +113,7 @@ class TestSchemaStrictness:
                             not schema.get("$ref")
                         ):
                             any_type_endpoints.append(f"{method.upper()} {path}")
-        
+
         # Current baseline: 165 any-type endpoints (legacy)
         # Target: reduce to <50 over time
         # For now, just track and don't fail
@@ -131,10 +132,10 @@ class TestEndpointCount:
         """Endpoint count should be in expected range."""
         paths = openapi_schema.get("paths", {})
         count = len(paths)
-        
+
         # Current count is ~159, allow some flexibility
         min_expected = 100
         max_expected = 250
-        
+
         assert min_expected <= count <= max_expected, \
             f"Endpoint count {count} outside expected range [{min_expected}, {max_expected}]"

@@ -30,12 +30,12 @@ def run_mypy() -> list[str]:
         *MYPY_FLAGS,
     ]
     result = subprocess.run(cmd, capture_output=True, text=True)
-    
+
     errors = []
     for line in result.stdout.split("\n"):
         if ": error:" in line and line.startswith(("api/", "lib/")):
             errors.append(line.strip())
-    
+
     return sorted(errors)
 
 

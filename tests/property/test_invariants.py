@@ -5,8 +5,10 @@ These tests stress system invariants with random inputs to find edge cases.
 """
 
 import json
-from hypothesis import given, strategies as st, settings, assume
+
 import pytest
+from hypothesis import assume, given, settings
+from hypothesis import strategies as st
 
 # ============================================================================
 # Schema Assertion Properties
@@ -122,10 +124,10 @@ def test_deduplication_is_idempotent(items: list[str]):
                 seen.add(item)
                 result.append(item)
         return result
-    
+
     once = dedupe(items)
     twice = dedupe(once)
-    
+
     # Idempotent: applying twice = applying once
     assert once == twice
     # All items unique
@@ -151,7 +153,7 @@ def test_dict_serialization_roundtrip(data: dict):
     # Simulate DB storage (JSON serialize)
     serialized = json.dumps(data, sort_keys=True)
     deserialized = json.loads(serialized)
-    
+
     # Re-serialize should be identical (deterministic)
     reserialized = json.dumps(deserialized, sort_keys=True)
     assert serialized == reserialized
