@@ -10,10 +10,15 @@ This migration:
 Run with: python -m lib.migrations.spec_schema_migration
 """
 
+import logging
 import sqlite3
-from pathlib import Path
 
-DB_PATH = Path(__file__).parent.parent.parent / "data" / "state.db"
+from lib import paths
+
+logger = logging.getLogger(__name__)
+
+
+DB_PATH = paths.db_path()
 
 
 def column_exists(cursor, table: str, column: str) -> bool:
@@ -23,151 +28,171 @@ def column_exists(cursor, table: str, column: str) -> bool:
 
 
 def table_exists(cursor, table: str) -> bool:
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,))
+    cursor.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,)
+    )
     return cursor.fetchone() is not None
 
 
 def index_exists(cursor, index_name: str) -> bool:
-    cursor.execute("SELECT name FROM sqlite_master WHERE type='index' AND name=?", (index_name,))
+    cursor.execute(
+        "SELECT name FROM sqlite_master WHERE type='index' AND name=?", (index_name,)
+    )
     return cursor.fetchone() is not None
 
 
 def migrate_tasks(cursor):
     """Add missing columns to tasks table."""
-    print("\n=== Migrating tasks table ===")
-    
+    logger.info("\n=== Migrating tasks table ===")
     # Add project_id (FK to projects) - currently have 'project' as TEXT
-    if not column_exists(cursor, 'tasks', 'project_id'):
-        print("Adding project_id column...")
+    if not column_exists(cursor, "tasks", "project_id"):
+        logger.info("Adding project_id column...")
         cursor.execute("ALTER TABLE tasks ADD COLUMN project_id TEXT")
     else:
-        print("project_id already exists")
-    
+        logger.info("project_id already exists")
     # Add brand_id
-    if not column_exists(cursor, 'tasks', 'brand_id'):
-        print("Adding brand_id column...")
+    if not column_exists(cursor, "tasks", "brand_id"):
+        logger.info("Adding brand_id column...")
         cursor.execute("ALTER TABLE tasks ADD COLUMN brand_id TEXT")
     else:
-        print("brand_id already exists")
-    
+        logger.info("brand_id already exists")
     # Add project_link_status
-    if not column_exists(cursor, 'tasks', 'project_link_status'):
-        print("Adding project_link_status column...")
-        cursor.execute("ALTER TABLE tasks ADD COLUMN project_link_status TEXT DEFAULT 'unlinked'")
+    if not column_exists(cursor, "tasks", "project_link_status"):
+        logger.info("Adding project_link_status column...")
+        cursor.execute(
+            "ALTER TABLE tasks ADD COLUMN project_link_status TEXT DEFAULT 'unlinked'"
+        )
     else:
-        print("project_link_status already exists")
-    
+        logger.info("project_link_status already exists")
     # Add client_link_status
-    if not column_exists(cursor, 'tasks', 'client_link_status'):
-        print("Adding client_link_status column...")
-        cursor.execute("ALTER TABLE tasks ADD COLUMN client_link_status TEXT DEFAULT 'unlinked'")
+    if not column_exists(cursor, "tasks", "client_link_status"):
+        logger.info("Adding client_link_status column...")
+        cursor.execute(
+            "ALTER TABLE tasks ADD COLUMN client_link_status TEXT DEFAULT 'unlinked'"
+        )
     else:
-        print("client_link_status already exists")
-    
+        logger.info("client_link_status already exists")
     # Create indexes
     indexes = [
-        ("idx_tasks_project", "CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id)"),
-        ("idx_tasks_project_link_status", "CREATE INDEX IF NOT EXISTS idx_tasks_project_link_status ON tasks(project_link_status)"),
-        ("idx_tasks_client_link_status", "CREATE INDEX IF NOT EXISTS idx_tasks_client_link_status ON tasks(client_link_status)"),
-        ("idx_tasks_client", "CREATE INDEX IF NOT EXISTS idx_tasks_client ON tasks(client_id)"),
-        ("idx_tasks_assignee", "CREATE INDEX IF NOT EXISTS idx_tasks_assignee ON tasks(assignee_id)"),
+        (
+            "idx_tasks_project",
+            "CREATE INDEX IF NOT EXISTS idx_tasks_project ON tasks(project_id)",
+        ),
+        (
+            "idx_tasks_project_link_status",
+            "CREATE INDEX IF NOT EXISTS idx_tasks_project_link_status ON tasks(project_link_status)",
+        ),
+        (
+            "idx_tasks_client_link_status",
+            "CREATE INDEX IF NOT EXISTS idx_tasks_client_link_status ON tasks(client_link_status)",
+        ),
+        (
+            "idx_tasks_client",
+            "CREATE INDEX IF NOT EXISTS idx_tasks_client ON tasks(client_id)",
+        ),
+        (
+            "idx_tasks_assignee",
+            "CREATE INDEX IF NOT EXISTS idx_tasks_assignee ON tasks(assignee_id)",
+        ),
     ]
     for idx_name, sql in indexes:
         if not index_exists(cursor, idx_name):
-            print(f"Creating index {idx_name}...")
+            logger.info(f"Creating index {idx_name}...")
             cursor.execute(sql)
         else:
-            print(f"Index {idx_name} already exists")
+            logger.info(f"Index {idx_name} already exists")
 
 
 def migrate_projects(cursor):
     """Add missing columns to projects table."""
-    print("\n=== Migrating projects table ===")
-    
+    logger.info("\n=== Migrating projects table ===")
     # Add brand_id
-    if not column_exists(cursor, 'projects', 'brand_id'):
-        print("Adding brand_id column...")
+    if not column_exists(cursor, "projects", "brand_id"):
+        logger.info("Adding brand_id column...")
         cursor.execute("ALTER TABLE projects ADD COLUMN brand_id TEXT")
     else:
-        print("brand_id already exists")
-    
+        logger.info("brand_id already exists")
     # Add is_internal
-    if not column_exists(cursor, 'projects', 'is_internal'):
-        print("Adding is_internal column...")
-        cursor.execute("ALTER TABLE projects ADD COLUMN is_internal INTEGER NOT NULL DEFAULT 0")
+    if not column_exists(cursor, "projects", "is_internal"):
+        logger.info("Adding is_internal column...")
+        cursor.execute(
+            "ALTER TABLE projects ADD COLUMN is_internal INTEGER NOT NULL DEFAULT 0"
+        )
     else:
-        print("is_internal already exists")
-    
+        logger.info("is_internal already exists")
     # Add type
-    if not column_exists(cursor, 'projects', 'type'):
-        print("Adding type column...")
-        cursor.execute("ALTER TABLE projects ADD COLUMN type TEXT NOT NULL DEFAULT 'project'")
+    if not column_exists(cursor, "projects", "type"):
+        logger.info("Adding type column...")
+        cursor.execute(
+            "ALTER TABLE projects ADD COLUMN type TEXT NOT NULL DEFAULT 'project'"
+        )
     else:
-        print("type already exists")
+        logger.info("type already exists")
 
 
 def migrate_clients(cursor):
     """Ensure clients table has health_score."""
-    print("\n=== Migrating clients table ===")
-    
-    if not column_exists(cursor, 'clients', 'health_score'):
-        print("Adding health_score column...")
+    logger.info("\n=== Migrating clients table ===")
+    if not column_exists(cursor, "clients", "health_score"):
+        logger.info("Adding health_score column...")
         cursor.execute("ALTER TABLE clients ADD COLUMN health_score REAL")
     else:
-        print("health_score already exists")
+        logger.info("health_score already exists")
 
 
 def migrate_communications(cursor):
     """Ensure communications table has required columns."""
-    print("\n=== Migrating communications table ===")
-    
-    if not column_exists(cursor, 'communications', 'from_domain'):
-        print("Adding from_domain column...")
+    logger.info("\n=== Migrating communications table ===")
+    if not column_exists(cursor, "communications", "from_domain"):
+        logger.info("Adding from_domain column...")
         cursor.execute("ALTER TABLE communications ADD COLUMN from_domain TEXT")
     else:
-        print("from_domain already exists")
-    
-    if not column_exists(cursor, 'communications', 'link_status'):
-        print("Adding link_status column...")
-        cursor.execute("ALTER TABLE communications ADD COLUMN link_status TEXT DEFAULT 'unlinked'")
+        logger.info("from_domain already exists")
+    if not column_exists(cursor, "communications", "link_status"):
+        logger.info("Adding link_status column...")
+        cursor.execute(
+            "ALTER TABLE communications ADD COLUMN link_status TEXT DEFAULT 'unlinked'"
+        )
     else:
-        print("link_status already exists")
-    
-    if not column_exists(cursor, 'communications', 'content_hash'):
-        print("Adding content_hash column...")
+        logger.info("link_status already exists")
+    if not column_exists(cursor, "communications", "content_hash"):
+        logger.info("Adding content_hash column...")
         cursor.execute("ALTER TABLE communications ADD COLUMN content_hash TEXT")
     else:
-        print("content_hash already exists")
-    
-    if not column_exists(cursor, 'communications', 'client_id'):
-        print("Adding client_id column...")
+        logger.info("content_hash already exists")
+    if not column_exists(cursor, "communications", "client_id"):
+        logger.info("Adding client_id column...")
         cursor.execute("ALTER TABLE communications ADD COLUMN client_id TEXT")
     else:
-        print("client_id already exists")
-    
+        logger.info("client_id already exists")
     # Create indexes (only if column exists)
-    if column_exists(cursor, 'communications', 'client_id'):
-        if not index_exists(cursor, 'idx_communications_client'):
-            print("Creating index idx_communications_client...")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_communications_client ON communications(client_id)")
-    
-    if not index_exists(cursor, 'idx_communications_from_domain'):
-        print("Creating index idx_communications_from_domain...")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_communications_from_domain ON communications(from_domain)")
-    
-    if not index_exists(cursor, 'idx_communications_content_hash'):
-        print("Creating index idx_communications_content_hash...")
-        cursor.execute("CREATE INDEX IF NOT EXISTS idx_communications_content_hash ON communications(content_hash)")
+    if column_exists(cursor, "communications", "client_id"):
+        if not index_exists(cursor, "idx_communications_client"):
+            logger.info("Creating index idx_communications_client...")
+            cursor.execute(
+                "CREATE INDEX IF NOT EXISTS idx_communications_client ON communications(client_id)"
+            )
+
+    if not index_exists(cursor, "idx_communications_from_domain"):
+        logger.info("Creating index idx_communications_from_domain...")
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_communications_from_domain ON communications(from_domain)"
+        )
+
+    if not index_exists(cursor, "idx_communications_content_hash"):
+        logger.info("Creating index idx_communications_content_hash...")
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_communications_content_hash ON communications(content_hash)"
+        )
 
 
 def create_brands_table(cursor):
     """Create brands table if not exists."""
-    print("\n=== Creating brands table ===")
-    
-    if table_exists(cursor, 'brands'):
-        print("brands table already exists")
+    logger.info("\n=== Creating brands table ===")
+    if table_exists(cursor, "brands"):
+        logger.info("brands table already exists")
         return
-    
+
     cursor.execute("""
         CREATE TABLE brands (
             id TEXT PRIMARY KEY,
@@ -178,17 +203,16 @@ def create_brands_table(cursor):
             UNIQUE(client_id, name)
         )
     """)
-    print("brands table created")
+    logger.info("brands table created")
 
 
 def create_client_identities_table(cursor):
     """Create client_identities table if not exists."""
-    print("\n=== Creating client_identities table ===")
-    
-    if table_exists(cursor, 'client_identities'):
-        print("client_identities table already exists")
+    logger.info("\n=== Creating client_identities table ===")
+    if table_exists(cursor, "client_identities"):
+        logger.info("client_identities table already exists")
         return
-    
+
     cursor.execute("""
         CREATE TABLE client_identities (
             id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
@@ -200,17 +224,16 @@ def create_client_identities_table(cursor):
             UNIQUE(identity_type, identity_value)
         )
     """)
-    print("client_identities table created")
+    logger.info("client_identities table created")
 
 
 def create_team_members_table(cursor):
     """Create team_members table if not exists."""
-    print("\n=== Creating team_members table ===")
-    
-    if table_exists(cursor, 'team_members'):
-        print("team_members table already exists")
+    logger.info("\n=== Creating team_members table ===")
+    if table_exists(cursor, "team_members"):
+        logger.info("team_members table already exists")
         return
-    
+
     cursor.execute("""
         CREATE TABLE team_members (
             id TEXT PRIMARY KEY,
@@ -222,17 +245,16 @@ def create_team_members_table(cursor):
             updated_at TEXT NOT NULL DEFAULT (datetime('now'))
         )
     """)
-    print("team_members table created")
+    logger.info("team_members table created")
 
 
 def create_invoices_table(cursor):
     """Create invoices table if not exists."""
-    print("\n=== Creating invoices table ===")
-    
-    if table_exists(cursor, 'invoices'):
-        print("invoices table already exists")
+    logger.info("\n=== Creating invoices table ===")
+    if table_exists(cursor, "invoices"):
+        logger.info("invoices table already exists")
         return
-    
+
     cursor.execute("""
         CREATE TABLE invoices (
             id TEXT PRIMARY KEY,
@@ -256,19 +278,20 @@ def create_invoices_table(cursor):
             FOREIGN KEY (project_id) REFERENCES projects(id)
         )
     """)
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_invoices_client ON invoices(client_id)")
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_invoices_client ON invoices(client_id)"
+    )
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status)")
-    print("invoices table created with indexes")
+    logger.info("invoices table created with indexes")
 
 
 def create_resolution_queue_table(cursor):
     """Create resolution_queue table if not exists."""
-    print("\n=== Creating resolution_queue table ===")
-    
-    if table_exists(cursor, 'resolution_queue'):
-        print("resolution_queue table already exists")
+    logger.info("\n=== Creating resolution_queue table ===")
+    if table_exists(cursor, "resolution_queue"):
+        logger.info("resolution_queue table already exists")
         return
-    
+
     cursor.execute("""
         CREATE TABLE resolution_queue (
             id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
@@ -286,21 +309,20 @@ def create_resolution_queue_table(cursor):
         )
     """)
     cursor.execute("""
-        CREATE INDEX IF NOT EXISTS idx_resolution_queue_pending 
-        ON resolution_queue(priority, created_at) 
+        CREATE INDEX IF NOT EXISTS idx_resolution_queue_pending
+        ON resolution_queue(priority, created_at)
         WHERE resolved_at IS NULL
     """)
-    print("resolution_queue table created with index")
+    logger.info("resolution_queue table created with index")
 
 
 def create_pending_actions_table(cursor):
     """Create pending_actions table if not exists."""
-    print("\n=== Creating pending_actions table ===")
-    
-    if table_exists(cursor, 'pending_actions'):
-        print("pending_actions table already exists")
+    logger.info("\n=== Creating pending_actions table ===")
+    if table_exists(cursor, "pending_actions"):
+        logger.info("pending_actions table already exists")
         return
-    
+
     cursor.execute("""
         CREATE TABLE pending_actions (
             id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
@@ -322,15 +344,16 @@ def create_pending_actions_table(cursor):
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         )
     """)
-    cursor.execute("CREATE INDEX IF NOT EXISTS idx_pending_actions_status ON pending_actions(status)")
-    print("pending_actions table created with index")
+    cursor.execute(
+        "CREATE INDEX IF NOT EXISTS idx_pending_actions_status ON pending_actions(status)"
+    )
+    logger.info("pending_actions table created with index")
 
 
 def create_asana_maps(cursor):
     """Create Asana mapping tables if not exist."""
-    print("\n=== Creating Asana mapping tables ===")
-    
-    if not table_exists(cursor, 'asana_project_map'):
+    logger.info("\n=== Creating Asana mapping tables ===")
+    if not table_exists(cursor, "asana_project_map"):
         cursor.execute("""
             CREATE TABLE asana_project_map (
                 asana_gid TEXT PRIMARY KEY,
@@ -340,11 +363,10 @@ def create_asana_maps(cursor):
                 FOREIGN KEY (project_id) REFERENCES projects(id)
             )
         """)
-        print("asana_project_map table created")
+        logger.info("asana_project_map table created")
     else:
-        print("asana_project_map already exists")
-    
-    if not table_exists(cursor, 'asana_user_map'):
+        logger.info("asana_project_map already exists")
+    if not table_exists(cursor, "asana_user_map"):
         cursor.execute("""
             CREATE TABLE asana_user_map (
                 asana_gid TEXT PRIMARY KEY,
@@ -354,67 +376,80 @@ def create_asana_maps(cursor):
                 FOREIGN KEY (team_member_id) REFERENCES team_members(id)
             )
         """)
-        print("asana_user_map table created")
+        logger.info("asana_user_map table created")
     else:
-        print("asana_user_map already exists")
+        logger.info("asana_user_map already exists")
 
 
 def verify_schema(cursor):
     """Verify schema matches spec requirements."""
-    print("\n=== Verifying Schema ===")
-    
+    logger.info("\n=== Verifying Schema ===")
     errors = []
-    
+
     # Check tasks columns
-    required_task_cols = ['id', 'project_id', 'brand_id', 'client_id', 'project_link_status', 'client_link_status']
+    required_task_cols = [
+        "id",
+        "project_id",
+        "brand_id",
+        "client_id",
+        "project_link_status",
+        "client_link_status",
+    ]
     cursor.execute("PRAGMA table_info(tasks)")
     task_cols = [row[1] for row in cursor.fetchall()]
     for col in required_task_cols:
         if col not in task_cols:
             errors.append(f"tasks missing column: {col}")
-    
+
     # Verify NO is_internal on tasks
-    if 'is_internal' in task_cols:
+    if "is_internal" in task_cols:
         errors.append("tasks should NOT have is_internal column (per spec)")
-    
+
     # Check projects columns
-    required_project_cols = ['id', 'brand_id', 'client_id', 'is_internal', 'type']
+    required_project_cols = ["id", "brand_id", "client_id", "is_internal", "type"]
     cursor.execute("PRAGMA table_info(projects)")
     project_cols = [row[1] for row in cursor.fetchall()]
     for col in required_project_cols:
         if col not in project_cols:
             errors.append(f"projects missing column: {col}")
-    
+
     # Check required tables exist
-    required_tables = ['brands', 'client_identities', 'invoices', 'team_members', 
-                       'resolution_queue', 'pending_actions', 'asana_project_map', 'asana_user_map']
+    required_tables = [
+        "brands",
+        "client_identities",
+        "invoices",
+        "team_members",
+        "resolution_queue",
+        "pending_actions",
+        "asana_project_map",
+        "asana_user_map",
+    ]
     for table in required_tables:
         if not table_exists(cursor, table):
             errors.append(f"missing table: {table}")
-    
+
     if errors:
-        print("ERRORS FOUND:")
+        logger.info("ERRORS FOUND:")
         for e in errors:
-            print(f"  - {e}")
+            logger.info(f"  - {e}")
         return False
-    else:
-        print("All schema requirements verified ✓")
-        return True
+    logger.info("All schema requirements verified ✓")
+    return True
 
 
 def run_migration():
     """Run the full migration."""
-    print(f"Connecting to {DB_PATH}")
+    logger.info(f"Connecting to {DB_PATH}")
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    
+
     try:
         # Migrate existing tables
         migrate_tasks(cursor)
         migrate_projects(cursor)
         migrate_clients(cursor)
         migrate_communications(cursor)
-        
+
         # Create missing tables
         create_brands_table(cursor)
         create_client_identities_table(cursor)
@@ -423,25 +458,25 @@ def run_migration():
         create_resolution_queue_table(cursor)
         create_pending_actions_table(cursor)
         create_asana_maps(cursor)
-        
+
         # Verify
         success = verify_schema(cursor)
-        
+
         if success:
             conn.commit()
-            print("\n✓ Migration committed successfully")
+            logger.info("\n✓ Migration committed successfully")
         else:
             conn.rollback()
-            print("\n✗ Migration rolled back due to errors")
+            logger.info("\n✗ Migration rolled back due to errors")
             return False
-            
+
     except Exception as e:
         conn.rollback()
-        print(f"\n✗ Migration failed: {e}")
+        logger.info(f"\n✗ Migration failed: {e}")
         raise
     finally:
         conn.close()
-    
+
     return True
 
 

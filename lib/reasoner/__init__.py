@@ -3,7 +3,7 @@ Reasoner - Decision engine.
 Makes decisions based on analysis and governance rules.
 """
 
-from .engine import ReasonerEngine
 from .decisions import DecisionMaker
+from .engine import ReasonerEngine
 
-__all__ = ['ReasonerEngine', 'DecisionMaker']
+__all__ = ["ReasonerEngine", "DecisionMaker"]

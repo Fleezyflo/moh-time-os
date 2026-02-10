@@ -7,4 +7,4 @@ Supports multiple channels (Clawdbot, push, email) with rate limiting.
 
 from .engine import NotificationEngine
 
-__all__ = ['NotificationEngine']
+__all__ = ["NotificationEngine"]

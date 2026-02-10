@@ -4,11 +4,6 @@ Executes approved decisions against external systems.
 """
 
 from .engine import ExecutorEngine
-from .handlers import TaskHandler, CalendarHandler, NotificationHandler
+from .handlers import CalendarHandler, NotificationHandler, TaskHandler
 
-__all__ = [
-    'ExecutorEngine',
-    'TaskHandler',
-    'CalendarHandler', 
-    'NotificationHandler'
-]
+__all__ = ["ExecutorEngine", "TaskHandler", "CalendarHandler", "NotificationHandler"]
