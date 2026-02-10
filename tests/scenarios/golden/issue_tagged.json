@@ -1,0 +1,17 @@
+{
+  "issue": {
+    "id": "issue-001",
+    "severity": "high",
+    "source_proposal_id": "prop-001",
+    "state": "open",
+    "title": "Critical task overdue",
+    "type": "overdue_task"
+  },
+  "transitions": [
+    {
+      "actor": "detector",
+      "from": null,
+      "to": "open"
+    }
+  ]
+}

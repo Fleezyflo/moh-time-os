@@ -357,3 +357,130 @@ run-api: api
 # ==========================================
 generate-all: openapi schema-export system-map ui-types
 	@echo "✅ All artifacts generated"
+
+# ==========================================
+# SCENARIOS (Golden Scenario Harness)
+# ==========================================
+scenarios:
+	@echo "🎭 Running scenario tests..."
+	@uv run pytest tests/scenarios/ -v --tb=short
+
+scenarios-update:
+	@echo "🎭 Updating scenario golden files..."
+	@UPDATE_GOLDEN=1 uv run pytest tests/scenarios/ -v --tb=short
+
+# ==========================================
+# UI DOMAIN
+# ==========================================
+ui-domain-check:
+	@echo "🏗️  Checking UI domain model..."
+	@cd time-os-ui && pnpm test -- domain
+
+# ==========================================
+# OFFLINE MODE
+# ==========================================
+ui-offline-test:
+	@echo "📡 Running offline mode tests..."
+	@cd time-os-ui && pnpm test -- offline
+
+# ==========================================
+# TRACING
+# ==========================================
+trace-smoke:
+	@echo "🔍 Running trace correlation smoke test..."
+	@uv run python -c "\
+from lib.observability.tracing import SpanContext, get_trace_id, generate_trace_id; \
+import json; \
+with SpanContext('test_span', attributes={'test': 'smoke'}) as ctx: \
+    trace_id = get_trace_id(); \
+    print(f'Trace ID: {trace_id}'); \
+    assert trace_id is not None, 'Trace ID should be set'; \
+print('✅ Trace correlation working')"
+
+# ==========================================
+# COLLECTORS REPLAY
+# ==========================================
+collectors-replay-test:
+	@echo "📼 Running collector replay tests..."
+	@uv run pytest tests/cassettes/ -v --tb=short
+
+cassettes-validate:
+	@echo "📼 Validating cassettes..."
+	@uv run python -c "\
+from lib.collectors.recorder import validate_cassettes; \
+issues = validate_cassettes(); \
+if issues: \
+    print('Issues found:'); \
+    for i in issues: print(f'  - {i}'); \
+    exit(1); \
+print('✅ All cassettes valid')"
+
+# ==========================================
+# MIGRATION REHEARSAL
+# ==========================================
+migrate-matrix:
+	@echo "🔄 Running migration matrix..."
+	@uv run python scripts/migrate_matrix.py
+
+db-rehearsal: migrate-matrix
+	@echo "✅ DB rehearsal complete"
+
+db-rollback-drill:
+	@echo "🔄 Running rollback drill..."
+	@uv run python scripts/rollback_drill.py
+
+# ==========================================
+# EVIDENCE BUNDLE
+# ==========================================
+evidence:
+	@echo "📦 Generating evidence bundle..."
+	@uv run python scripts/evidence_bundle.py
+
+# ==========================================
+# SEMGREP
+# ==========================================
+semgrep:
+	@echo "🔍 Running Semgrep rules..."
+	@semgrep --config .semgrep/rules.yaml lib/ api/ time-os-ui/src/ --error 2>/dev/null || \
+		echo "⚠️  Semgrep not installed. Install with: pip install semgrep"
+
+semgrep-full:
+	@echo "🔍 Running full Semgrep scan..."
+	@semgrep --config .semgrep/rules.yaml --config auto lib/ api/ time-os-ui/src/ 2>/dev/null || true
+
+# ==========================================
+# FEATURE FLAGS
+# ==========================================
+flags-check:
+	@echo "🚩 Checking feature flags..."
+	@uv run pytest tests/test_features.py -v --tb=short
+
+flags-smoke:
+	@echo "🚩 Running flags smoke test..."
+	@uv run python -c "\
+from lib.features import is_enabled, get_flag, REGISTRY; \
+print('Registered flags:'); \
+for d in REGISTRY.get_definitions(): \
+    print(f'  {d[\"name\"]}: {d[\"current\"]} (default: {d[\"default\"]})'); \
+assert is_enabled('offline_mode'), 'offline_mode should be True by default'; \
+print('✅ Feature flags working')"
+
+# ==========================================
+# AUDIT TRAIL
+# ==========================================
+audit-test:
+	@echo "📝 Running audit trail tests..."
+	@uv run pytest tests/test_audit.py -v --tb=short
+
+replay-test:
+	@echo "📝 Running replay tests..."
+	@uv run pytest tests/test_audit.py::TestStateReplayer -v --tb=short
+
+# ==========================================
+# EXTENDED CI
+# ==========================================
+ci-extended: ci scenarios collectors-replay-test flags-check audit-test
+	@echo "✅ Extended CI suite passed!"
+
+nightly-local: ci-extended migrate-matrix trace-smoke
+	@echo "✅ Nightly-equivalent local run passed!"

@@ -1,0 +1,22 @@
+{
+  "issue": {
+    "id": "issue-001",
+    "resolution": "Task completed by assignee",
+    "severity": "high",
+    "state": "resolved",
+    "title": "Critical task overdue",
+    "type": "overdue_task"
+  },
+  "transitions": [
+    {
+      "actor": "detector",
+      "from": null,
+      "to": "open"
+    },
+    {
+      "actor": "user",
+      "from": "open",
+      "to": "resolved"
+    }
+  ]
+}

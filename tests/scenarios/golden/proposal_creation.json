@@ -1,0 +1,15 @@
+{
+  "proposal": {
+    "client_id": "client-003",
+    "id": "prop-001",
+    "severity": "high",
+    "status": "open",
+    "title": "Task overdue by 5 days",
+    "type": "overdue_task"
+  },
+  "recommended_actions": [
+    "escalate",
+    "extend_deadline",
+    "reassign"
+  ]
+}

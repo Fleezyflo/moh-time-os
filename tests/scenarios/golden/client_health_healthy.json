@@ -1,0 +1,12 @@
+{
+  "client_id": "client-001",
+  "factors": {
+    "overdue_tasks": 0,
+    "recent_activity": true,
+    "unpaid_invoices": 0
+  },
+  "health_score": 85,
+  "name": "Acme Corp",
+  "status": "active",
+  "tier": "A"
+}

@@ -1,0 +1,12 @@
+{
+  "client_id": "client-002",
+  "factors": {
+    "overdue_tasks": 3,
+    "recent_activity": false,
+    "unpaid_invoices": 1
+  },
+  "health_score": 45,
+  "name": "Risk Inc",
+  "status": "at-risk",
+  "tier": "B"
+}

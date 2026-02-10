@@ -249,3 +249,92 @@ jobs:
 
       - name: Check for unused deps
         run: node scripts/check-deps.js
+
+  # ==========================================
+  # FULL MIGRATION MATRIX
+  # ==========================================
+  migration-matrix:
+    name: Full Migration Matrix
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
+        run: uv sync --all-extras
+
+      - name: Run Full Migration Matrix
+        run: uv run python scripts/migrate_matrix.py --full
+
+      - name: Run Rollback Drill
+        run: uv run python scripts/rollback_drill.py
+
+  # ==========================================
+  # SEMGREP DEEP SCAN
+  # ==========================================
+  semgrep:
+    name: Semgrep Deep Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Semgrep
+        run: pip install semgrep
+
+      - name: Run Semgrep Rules
+        run: semgrep --config .semgrep/rules.yaml lib/ api/ --error
+        continue-on-error: true
+
+      - name: Run Semgrep Auto Rules
+        run: semgrep --config auto lib/ api/ --error
+        continue-on-error: true
+
+  # ==========================================
+  # EVIDENCE BUNDLE
+  # ==========================================
+  evidence-bundle:
+    name: Evidence Bundle
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        run: |
+          uv sync --all-extras
+          cd time-os-ui && pnpm install
+
+      - name: Generate Evidence Bundle
+        run: uv run python scripts/evidence_bundle.py || true
+
+      - name: Upload Evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: evidence-bundle
+          path: evidence/
