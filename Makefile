@@ -399,14 +399,7 @@ collectors-replay-test:
 
 cassettes-validate:
 	@echo "📼 Validating cassettes..."
-	@uv run python -c "\
-from lib.collectors.recorder import validate_cassettes; \
-issues = validate_cassettes(); \
-if issues: \
-    print('Issues found:'); \
-    for i in issues: print(f'  - {i}'); \
-    exit(1); \
-print('✅ All cassettes valid')"
+	@uv run python -c "from lib.collectors.recorder import validate_cassettes; issues = validate_cassettes(); print('Issues found:') if issues else None; [print(f'  - {i}') for i in issues] if issues else None; exit(1) if issues else print('✅ All cassettes valid')"
 
 # ==========================================
 # MIGRATION REHEARSAL
