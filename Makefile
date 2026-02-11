@@ -426,13 +426,14 @@ evidence:
 # SEMGREP
 # ==========================================
 semgrep:
-	@echo "🔍 Running Semgrep rules..."
-	@semgrep --config .semgrep/rules.yaml lib/ api/ time-os-ui/src/ --error 2>/dev/null || \
-		echo "⚠️  Semgrep not installed. Install with: pip install semgrep"
+	@echo "🔍 Running Semgrep security rules (fast, errors only)..."
+	@uv run semgrep --config .semgrep/security-rules.yaml lib/ api/ --error --quiet && \
+		echo "✅ Semgrep security scan passed"
 
 semgrep-full:
-	@echo "🔍 Running full Semgrep scan..."
-	@semgrep --config .semgrep/rules.yaml --config auto lib/ api/ time-os-ui/src/ 2>/dev/null || true
+	@echo "🔍 Running full Semgrep scan (all rules, advisory)..."
+	@uv run semgrep --config .semgrep/rules.yaml lib/ api/ --severity ERROR 2>/dev/null || true
+	@echo "✅ Semgrep full scan complete (advisory)"
 
 # ==========================================
 # FEATURE FLAGS

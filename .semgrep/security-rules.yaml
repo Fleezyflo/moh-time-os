@@ -1,0 +1,93 @@
+rules:
+  # ============================================================================
+  # CRITICAL SECURITY RULES - Must pass for CI
+  # ============================================================================
+  # These rules catch actual security vulnerabilities, not style issues.
+  # Full code quality rules are in rules.yaml (run via make semgrep-full)
+
+  - id: no-eval
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: exec(...)
+    message: "SECURITY: eval/exec is banned. Use safe alternatives."
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - lib/
+        - api/
+
+  - id: no-os-system
+    pattern: os.system(...)
+    message: "SECURITY: os.system() is banned. Use subprocess with list args."
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - lib/
+        - api/
+        - scripts/
+
+  - id: no-hardcoded-secrets
+    patterns:
+      - pattern-either:
+          - pattern: |
+              $KEY = "sk-..."
+          - pattern: |
+              $KEY = "api_key_..."
+          - pattern: |
+              password = "..."
+          - pattern: |
+              api_key = "..."
+          - pattern: |
+              secret_key = "..."
+    message: "SECURITY: Hardcoded secrets detected. Use environment variables."
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - lib/
+        - api/
+      exclude:
+        - "**/*test*.py"
+        - "**/conftest.py"
+
+  - id: no-pickle-load
+    pattern-either:
+      - pattern: pickle.load(...)
+      - pattern: pickle.loads(...)
+    message: "SECURITY: pickle.load is dangerous with untrusted data."
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - lib/
+        - api/
+
+  - id: no-yaml-unsafe-load
+    patterns:
+      - pattern: yaml.load(..., Loader=yaml.UnsafeLoader)
+      - pattern: yaml.load(..., Loader=yaml.Loader)
+      - pattern: yaml.unsafe_load(...)
+    message: "SECURITY: Use yaml.safe_load() instead of yaml.load()."
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - lib/
+        - api/
+
+  # SQL injection check - only for user input in WHERE clauses
+  - id: sql-injection-user-input
+    patterns:
+      - pattern: |
+          $CURSOR.execute(f"... WHERE ... {$USER_INPUT} ...")
+      - metavariable-regex:
+          metavariable: $USER_INPUT
+          regex: ^(request\.|body\.|query\.|params\.)
+    message: "SECURITY: Possible SQL injection with user input."
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - api/
