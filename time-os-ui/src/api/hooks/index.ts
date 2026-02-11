@@ -20,10 +20,6 @@ import {
   tagProposalResponseSchema,
   resolveIssueResponseSchema,
   type HealthResponse,
-  type Client,
-  type Proposal,
-  type Issue,
-  type TeamMember,
 } from '../schemas';
 import { z } from 'zod';
 

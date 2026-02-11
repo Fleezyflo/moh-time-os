@@ -79,16 +79,12 @@ export function Clients() {
   const totalRevenue = clients.reduce((sum: number, c: Client) => sum + (c.lifetime_revenue || 0), 0);
   const ytdRevenue = clients.reduce((sum: number, c: Client) => sum + (c.ytd_revenue || 0), 0);
   const atRiskCount = clients.filter((c: Client) => c.computed_at_risk || (c.health_score !== null && c.health_score < 50)).length;
-  const criticalCount = clients.filter((c: Client) => c.health_score !== null ? c.health_score < 30 : c.relationship_health === 'critical').length;
   const overdueAR = clients.reduce((sum: number, c: Client) => {
     if (c.financial_ar_aging_bucket && c.financial_ar_aging_bucket !== 'current') {
       return sum + (c.financial_ar_total || 0);
     }
     return sum;
   }, 0);
-  const avgHealthScore = clients.filter((c: Client) => c.health_score !== null).length > 0
-    ? Math.round(clients.reduce((sum: number, c: Client) => sum + (c.health_score || 0), 0) / clients.filter((c: Client) => c.health_score !== null).length)
-    : null;
 
   return (
     <div>

@@ -3,7 +3,7 @@
 
 import { useState, useEffect } from 'react';
 import { Link, useParams } from '@tanstack/react-router';
-import type { Tier, Severity, Issue, HealthScore } from '../types/spec';
+import type { Tier, Severity } from '../types/spec';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v2';
 

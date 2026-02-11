@@ -65,33 +65,33 @@ export function TeamDetail() {
   const hasOverdue = (member.overdue_tasks || 0) > 0;
 
   const handleTag = async (proposal: Proposal) => {
-    const result = await api.tagProposal(proposal.proposal_id);
+    const result = await api.tagProposal(proposal.proposal_id ?? '');
     if (result.success) { refetchProposals(); refetchIssues(); setProposalDrawerOpen(false); setSelectedProposal(null); }
   };
 
   const handleSnooze = async (proposal: Proposal) => {
-    const result = await api.snoozeProposal(proposal.proposal_id, 7);
+    const result = await api.snoozeProposal(proposal.proposal_id ?? '', 7);
     if (result.success) { refetchProposals(); setProposalDrawerOpen(false); setSelectedProposal(null); }
   };
 
   const handleDismiss = async (proposal: Proposal) => {
-    const result = await api.dismissProposal(proposal.proposal_id);
+    const result = await api.dismissProposal(proposal.proposal_id ?? '');
     if (result.success) { refetchProposals(); setProposalDrawerOpen(false); setSelectedProposal(null); }
   };
 
   const handleResolveIssue = async (issue: Issue) => {
-    const result = await api.resolveIssue(issue.issue_id);
+    const result = await api.resolveIssue(issue.issue_id ?? '');
     if (result.success) refetchIssues();
     else throw new Error(result.error || 'Failed to resolve');
   };
 
   const handleAddIssueNote = async (issue: Issue, text: string) => {
-    const result = await api.addIssueNote(issue.issue_id, text);
+    const result = await api.addIssueNote(issue.issue_id ?? '', text);
     if (!result.success) throw new Error(result.error || 'Failed to add note');
   };
 
   const handleChangeIssueState = async (issue: Issue, newState: IssueState) => {
-    const result = await api.changeIssueState(issue.issue_id, newState);
+    const result = await api.changeIssueState(issue.issue_id ?? '', newState);
     if (result.success) {
       refetchIssues();
     } else {
@@ -230,11 +230,11 @@ export function TeamDetail() {
                   <div className="flex items-center gap-2 mb-2">
                     <span className={issue.state === 'open' ? 'text-blue-400' : 'text-amber-400'}>●</span>
                     <h3 className="font-medium text-slate-200 truncate flex-1">{issue.headline}</h3>
-                    <span className={`text-xs px-2 py-0.5 rounded ${priorityBadgeClass(issue.priority)}`}>
-                      {priorityLabel(issue.priority).charAt(0).toUpperCase() + priorityLabel(issue.priority).slice(1)}
+                    <span className={`text-xs px-2 py-0.5 rounded ${priorityBadgeClass(issue.priority ?? 0)}`}>
+                      {priorityLabel(issue.priority ?? 0).charAt(0).toUpperCase() + priorityLabel(issue.priority ?? 0).slice(1)}
                     </span>
                   </div>
-                  <p className="text-sm text-slate-500">{issue.issue_type}</p>
+                  <p className="text-sm text-slate-500">{issue.type || (issue as unknown as { issue_type?: string }).issue_type || 'Issue'}</p>
                 </div>
               ))}
             </div>

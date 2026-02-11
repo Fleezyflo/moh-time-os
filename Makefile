@@ -232,7 +232,7 @@ ui-lint:
 
 ui-typecheck:
 	@echo "🔍 Running TypeScript..."
-	@cd time-os-ui && pnpm run typecheck || true
+	@cd time-os-ui && pnpm run typecheck
 
 ui-test:
 	@echo "🧪 Running Vitest..."

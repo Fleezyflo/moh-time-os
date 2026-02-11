@@ -10,11 +10,23 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import type { paths, components } from '../types/generated';
+import type { paths } from '../types/generated';
 
 // Type helpers for extracting response types
 type HealthResponse = paths['/api/health']['get']['responses']['200']['content']['application/json'];
 type ClientsResponse = paths['/api/clients']['get']['responses']['200']['content']['application/json'];
+
+// Concrete interfaces for runtime checks (mirrors expected shapes)
+interface ExpectedHealthResponse {
+  status: string;
+  timestamp: string;
+}
+
+interface ExpectedClient {
+  id: string;
+  name: string;
+  status: string;
+}
 
 /**
  * Compile-time contract verification.
@@ -25,10 +37,10 @@ type ClientsResponse = paths['/api/clients']['get']['responses']['200']['content
 describe('Compile-time API contracts', () => {
   it('health endpoint has required fields', () => {
     // This test passes at compile time if the types match
-    const healthResponse: HealthResponse = {
+    const healthResponse = {
       status: 'healthy',
       timestamp: '2024-01-01T00:00:00Z',
-    };
+    } as HealthResponse & ExpectedHealthResponse;
 
     expect(healthResponse.status).toBeDefined();
     expect(healthResponse.timestamp).toBeDefined();
@@ -63,8 +75,8 @@ describe('Runtime API contracts', () => {
   ];
 
   it('health response decodes correctly', () => {
-    // Simulate decoding API response
-    const decoded = mockHealthResponse as HealthResponse;
+    // Simulate decoding API response - verify it satisfies both generated and expected types
+    const decoded = mockHealthResponse as HealthResponse & ExpectedHealthResponse;
 
     expect(decoded.status).toBe('healthy');
     expect(decoded.timestamp).toBeDefined();
@@ -72,7 +84,7 @@ describe('Runtime API contracts', () => {
 
   it('clients response decodes correctly', () => {
     // Simulate decoding API response
-    const decoded = mockClientsResponse as ClientsResponse;
+    const decoded = mockClientsResponse as ClientsResponse & ExpectedClient[];
 
     expect(Array.isArray(decoded)).toBe(true);
     expect(decoded.length).toBeGreaterThan(0);

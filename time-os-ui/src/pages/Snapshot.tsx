@@ -115,7 +115,7 @@ export function Snapshot() {
 
   const handleResolveIssue = async () => {
     if (!selectedIssue) return;
-    await api.resolveIssue(selectedIssue.issue_id);
+    await api.resolveIssue(selectedIssue.issue_id ?? '');
     refetchIssues();
     setIssueDrawerOpen(false);
     setSelectedIssue(null);
@@ -123,13 +123,13 @@ export function Snapshot() {
 
   const handleAddIssueNote = async (text: string) => {
     if (!selectedIssue) return;
-    await api.addIssueNote(selectedIssue.issue_id, text);
+    await api.addIssueNote(selectedIssue.issue_id ?? '', text);
     refetchIssues();
   };
 
   const handleChangeIssueState = async (newState: IssueState) => {
     if (!selectedIssue) return;
-    await api.changeIssueState(selectedIssue.issue_id, newState);
+    await api.changeIssueState(selectedIssue.issue_id ?? '', newState);
     refetchIssues();
   };
 
@@ -154,8 +154,7 @@ export function Snapshot() {
   }
 
   // Quick pulse metrics
-  const criticalIssues = currentIssues.filter((i: Issue) => i.priority >= 80).length;
-  const blockedIssues = currentIssues.filter((i: Issue) => i.state === 'blocked').length;
+  const criticalIssues = currentIssues.filter((i: Issue) => (i.priority ?? 0) >= 80).length;
   const atRiskClients = clientOptions.filter((c) => c.relationship_health === 'critical' || c.relationship_health === 'poor').length;
   const totalAR = clientOptions.reduce((sum, c) => sum + (c.financial_ar_total || 0), 0);
 
@@ -255,7 +254,7 @@ export function Snapshot() {
                   onClick={() => handleOpenIssue(issue)}
                   className="flex items-center gap-2 text-sm w-full text-left hover:bg-slate-700/50 rounded px-2 py-1 -mx-2 transition-colors"
                 >
-                  <span className={priorityBadgeClass(issue.priority).includes('red') ? 'text-red-400' : 'text-amber-400'}>●</span>
+                  <span className={priorityBadgeClass(issue.priority ?? 0).includes('red') ? 'text-red-400' : 'text-amber-400'}>●</span>
                   <span className="text-slate-300 truncate flex-1">{cleanHeadline}</span>
                   <span className="text-slate-500 text-xs">→</span>
                 </button>

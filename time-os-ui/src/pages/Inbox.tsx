@@ -298,7 +298,8 @@ export function Inbox() {
       <div className="flex items-center justify-between border-b border-slate-700">
         <div className="flex gap-1">
           {TABS.map((tab) => {
-            const count = counts?.[tab.countKey] ?? 0;
+            const countValue = counts?.[tab.countKey];
+            const count = typeof countValue === 'number' ? countValue : 0;
             const isActive = activeTab === tab.id;
 
             return (
@@ -618,22 +619,22 @@ function InboxDrawer({ item, onClose, onAction, formatAge }: InboxDrawerProps) {
           {item.evidence && (
             <div className="p-3 bg-slate-700/50 rounded space-y-2">
               {/* Why flagged */}
-              {item.evidence.payload?.flagged_reason && (
+              {(item.evidence.payload as { flagged_reason?: string })?.flagged_reason && (
                 <div className="flex items-center gap-2 text-xs text-amber-400">
                   <span>⚡</span>
-                  <span>{item.evidence.payload.flagged_reason}</span>
+                  <span>{String((item.evidence.payload as { flagged_reason?: string }).flagged_reason)}</span>
                 </div>
               )}
 
               {/* Sender */}
-              {item.evidence.payload?.sender && (
-                <p className="text-xs text-slate-400">From: {item.evidence.payload.sender}</p>
+              {(item.evidence.payload as { sender?: string })?.sender && (
+                <p className="text-xs text-slate-400">From: {String((item.evidence.payload as { sender?: string }).sender)}</p>
               )}
 
               {/* Snippet preview - only show if actual body content exists */}
-              {item.evidence.payload?.snippet && (
+              {(item.evidence.payload as { snippet?: string })?.snippet && (
                 <div className="text-sm text-slate-300 bg-slate-800/50 p-2 rounded border-l-2 border-slate-600">
-                  {item.evidence.payload.snippet}
+                  {String((item.evidence.payload as { snippet?: string }).snippet)}
                 </div>
               )}
 

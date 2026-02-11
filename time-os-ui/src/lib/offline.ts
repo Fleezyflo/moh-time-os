@@ -103,7 +103,7 @@ export function persistQueryCache(queryClient: QueryClient): void {
   }
 }
 
-export function restoreQueryCache(queryClient: QueryClient): void {
+export function restoreQueryCache(_queryClient: QueryClient): void {
   try {
     const cached = localStorage.getItem(CACHE_KEY);
     if (cached) {

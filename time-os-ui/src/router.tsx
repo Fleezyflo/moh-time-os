@@ -7,7 +7,7 @@ import {
   Outlet,
   Link,
 } from '@tanstack/react-router'
-import { Snapshot, Issues, Clients, ClientDetail, Team, TeamDetail, FixData, type ScopeSearch } from './pages'
+import { Snapshot, Issues, Team, TeamDetail, FixData, type ScopeSearch } from './pages'
 import Inbox from './pages/Inbox'
 import ClientIndex from './pages/ClientIndex'
 import ClientDetailSpec from './pages/ClientDetailSpec'

@@ -39,33 +39,33 @@ export function ClientDetail() {
   const evidenceItems = apiEvidence?.items || [];
 
   const handleTag = async (proposal: Proposal) => {
-    const result = await api.tagProposal(proposal.proposal_id);
+    const result = await api.tagProposal(proposal.proposal_id ?? '');
     if (result.success) { refetchProposals(); refetchIssues(); setProposalDrawerOpen(false); setSelectedProposal(null); }
   };
 
   const handleSnooze = async (proposal: Proposal) => {
-    const result = await api.snoozeProposal(proposal.proposal_id, 7);
+    const result = await api.snoozeProposal(proposal.proposal_id ?? '', 7);
     if (result.success) { refetchProposals(); setProposalDrawerOpen(false); setSelectedProposal(null); }
   };
 
   const handleDismiss = async (proposal: Proposal) => {
-    const result = await api.dismissProposal(proposal.proposal_id);
+    const result = await api.dismissProposal(proposal.proposal_id ?? '');
     if (result.success) { refetchProposals(); setProposalDrawerOpen(false); setSelectedProposal(null); }
   };
 
   const handleResolveIssue = async (issue: Issue) => {
-    const result = await api.resolveIssue(issue.issue_id);
+    const result = await api.resolveIssue(issue.issue_id ?? '');
     if (result.success) refetchIssues();
     else throw new Error(result.error || 'Failed to resolve');
   };
 
   const handleAddIssueNote = async (issue: Issue, text: string) => {
-    const result = await api.addIssueNote(issue.issue_id, text);
+    const result = await api.addIssueNote(issue.issue_id ?? '', text);
     if (!result.success) throw new Error(result.error || 'Failed to add note');
   };
 
   const handleChangeIssueState = async (issue: Issue, newState: IssueState) => {
-    const result = await api.changeIssueState(issue.issue_id, newState);
+    const result = await api.changeIssueState(issue.issue_id ?? '', newState);
     if (result.success) {
       refetchIssues();
     } else {
@@ -113,7 +113,7 @@ export function ClientDetail() {
           <div className="text-xs text-slate-400 uppercase tracking-wide">AR Outstanding</div>
           <div className="text-xl font-semibold text-slate-100 mt-1">
             {client.financial_ar_total != null
-              ? `$${formatNumber(client.financial_ar_total)}`
+              ? `$${formatNumber(client.financial_ar_total ?? 0)}`
               : '—'}
           </div>
           {client.financial_ar_aging_bucket && (
@@ -128,12 +128,12 @@ export function ClientDetail() {
           <div className="text-xs text-slate-400 uppercase tracking-wide">Last Interaction</div>
           <div className="text-lg font-medium text-slate-100 mt-1">
             {client.relationship_last_interaction
-              ? formatRelative(client.relationship_last_interaction)
+              ? formatRelative(client.relationship_last_interaction ?? '')
               : '—'}
           </div>
           {client.relationship_last_interaction && (
             <div className="text-xs text-slate-500 mt-1">
-              {formatDate(client.relationship_last_interaction)}
+              {formatDate(client.relationship_last_interaction ?? '')}
             </div>
           )}
         </div>
@@ -183,8 +183,8 @@ export function ClientDetail() {
                   <div className="flex items-center gap-2">
                     <span className={issue.state === 'open' ? 'text-blue-400' : 'text-amber-400'}>●</span>
                     <span className="text-slate-200 flex-1 truncate">{issue.headline}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded ${priorityBadgeClass(issue.priority)}`}>
-                      {priorityLabel(issue.priority).charAt(0).toUpperCase() + priorityLabel(issue.priority).slice(1)}
+                    <span className={`text-xs px-2 py-0.5 rounded ${priorityBadgeClass(issue.priority ?? 0)}`}>
+                      {priorityLabel(issue.priority ?? 0).charAt(0).toUpperCase() + priorityLabel(issue.priority ?? 0).slice(1)}
                     </span>
                   </div>
                 </div>

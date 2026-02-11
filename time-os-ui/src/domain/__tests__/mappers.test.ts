@@ -6,7 +6,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { mapClient, mapClients } from '../client';
-import { mapProposal, mapProposals } from '../proposal';
+import { mapProposal } from '../proposal';
 import { mapIssue, mapIssues } from '../issue';
 
 describe('Client Mapper', () => {

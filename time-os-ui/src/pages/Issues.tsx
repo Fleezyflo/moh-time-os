@@ -53,7 +53,7 @@ const getIssuePriority = (issue: Issue): number => issue.priority ?? severityToP
 const getIssueLastActivity = (issue: Issue): string => issue.updated_at || issue.last_activity_at || '';
 
 // Get issue type (v29: type, legacy: issue_type)
-const getIssueType = (issue: Issue): string => issue.type || (issue as Record<string, unknown>).issue_type as string || '';
+const getIssueType = (issue: Issue): string => issue.type || (issue as unknown as { issue_type?: string }).issue_type || '';
 
 interface IssuesSearch {
   state?: string;
