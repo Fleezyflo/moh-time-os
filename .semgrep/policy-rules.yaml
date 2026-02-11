@@ -2,7 +2,7 @@ rules:
   # ============================================================================
   # TIER 1: PR-BLOCKING POLICY RULES
   # ============================================================================
-  # High-signal only. Target: <10s, 0 findings in clean codebase.
+  # High-signal, repo-specific enforcement. Target: <10s, 0 findings.
 
   # --------------------------------------------------------------------------
   # (1) UI API DISCIPLINE
@@ -24,7 +24,10 @@ rules:
         - "**/__tests__/**"
         - "**/*.test.ts"
         - "**/*.test.tsx"
-        # BASELINE: Legacy files (migration: Q2 2026)
+        # BASELINE [ui-no-direct-fetch]: Legacy files predating API client
+        # Migration: Replace fetch() with http.ts client
+        # Tracking: Internal backlog
+        # Deadline: Q2 2026
         - "**/time-os-ui/src/lib/api.ts"
         - "**/time-os-ui/src/pages/ClientDetailSpec.tsx"
         - "**/time-os-ui/src/pages/ClientIndex.tsx"
@@ -49,8 +52,9 @@ rules:
         - "**/__tests__/**"
 
   # --------------------------------------------------------------------------
-  # (2) SUBPROCESS: shell=True banned
+  # (2) SUBPROCESS POLICY
   # --------------------------------------------------------------------------
+  # Rule 2a: shell=True is banned
   - id: subprocess-no-shell-true
     patterns:
       - pattern-either:
@@ -69,15 +73,140 @@ rules:
         - "**/api/**"
         - "**/scripts/**"
       exclude:
-        # BASELINE: Legacy (refactor: Q2 2026)
+        # BASELINE [subprocess-no-shell-true]: Legacy shell command execution
+        # Why: Runs external CLI tools (gog) with complex args
+        # Migration: Refactor to use list args with shutil.which
+        # Deadline: Q2 2026
         - "**/lib/collectors/base.py"
         - "**/lib/executor/handlers.py"
 
+  # Rule 2b: Literal string command banned (f-string or plain string)
+  - id: subprocess-literal-string-cmd
+    patterns:
+      - pattern-either:
+          - pattern: subprocess.run("...", ...)
+          - pattern: subprocess.run(f"...", ...)
+          - pattern: subprocess.Popen("...", ...)
+          - pattern: subprocess.Popen(f"...", ...)
+          - pattern: subprocess.call("...", ...)
+          - pattern: subprocess.call(f"...", ...)
+    message: |
+      POLICY: String command banned. Use list args: subprocess.run(["cmd", "arg"])
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - "**/lib/**"
+        - "**/api/**"
+        - "**/scripts/**"
+      exclude:
+        # Same baseline as subprocess-no-shell-true
+        - "**/lib/collectors/base.py"
+        - "**/lib/executor/handlers.py"
+
+  # Rule 2c: Known tools must use shutil.which
+  - id: subprocess-bare-git
+    patterns:
+      - pattern-either:
+          - pattern: subprocess.run(["git", ...], ...)
+          - pattern: subprocess.Popen(["git", ...], ...)
+      - pattern-not-inside: |
+          $EXE = shutil.which("git")
+          ...
+    message: |
+      POLICY: Resolve git with shutil.which() first.
+      Example: git = shutil.which("git"); subprocess.run([git, "status"])
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - "**/lib/**"
+        - "**/api/**"
+        - "**/scripts/**"
+      exclude:
+        # BASELINE [subprocess-bare-git]: Already uses shutil.which
+        - "**/lib/safety/utils.py"
+
+  - id: subprocess-bare-rg
+    patterns:
+      - pattern-either:
+          - pattern: subprocess.run(["rg", ...], ...)
+          - pattern: subprocess.Popen(["rg", ...], ...)
+      - pattern-not-inside: |
+          $EXE = shutil.which("rg")
+          ...
+    message: |
+      POLICY: Resolve rg with shutil.which() first.
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - "**/lib/**"
+        - "**/api/**"
+        - "**/scripts/**"
+      exclude:
+        # BASELINE [subprocess-bare-rg]: Already uses shutil.which
+        - "**/lib/safety/schema.py"
+
   # --------------------------------------------------------------------------
-  # (3) SQL: .format() in execute() banned
+  # (3) SQL POLICY - Execute Interpolation
   # --------------------------------------------------------------------------
+  # Rule 3a: f-string in execute() banned (except migrations and DDL files)
+  - id: sql-fstring-execute
+    patterns:
+      - pattern-either:
+          - pattern: $CURSOR.execute(f"...", ...)
+          - pattern: $CURSOR.execute(f"...")
+          - pattern: $CONN.execute(f"...", ...)
+          - pattern: $CONN.execute(f"...")
+          - pattern: cursor.execute(f"...", ...)
+          - pattern: cursor.execute(f"...")
+          - pattern: conn.execute(f"...", ...)
+          - pattern: conn.execute(f"...")
+    message: |
+      POLICY: f-string in execute() banned. Use parameterized queries.
+      Example: cursor.execute("SELECT * WHERE id = ?", (id,))
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - "**/lib/**"
+        - "**/api/**"
+      exclude:
+        # Migration directories (DDL allowed)
+        - "**/lib/migrations/**"
+        - "**/lib/v5/migrations/**"
+        - "**/lib/ui_spec_v21/migrations/**"
+        # BASELINE [sql-fstring-execute]: Safe DDL patterns (PRAGMA, ALTER, dynamic columns)
+        # Why: These interpolate table/column names from code, not user input
+        # Migration: Extract DDL to migration files
+        # Deadline: Q3 2026
+        - "**/lib/db.py"
+        - "**/lib/db_writer.py"
+        - "**/lib/state_store.py"
+        - "**/lib/store.py"
+        - "**/lib/entities.py"
+        - "**/lib/items.py"
+        - "**/lib/safety/schema.py"
+        - "**/lib/safety/migrations.py"
+        - "**/lib/ui_spec_v21/time_utils.py"
+        - "**/lib/ui_spec_v21/endpoints.py"
+        - "**/lib/v4/identity_service.py"
+        - "**/lib/v4/issue_service.py"
+        - "**/lib/v4/proposal_aggregator.py"
+        - "**/lib/v4/signal_service.py"
+        - "**/lib/v5/repositories/signal_repository.py"
+        - "**/api/spec_router.py"
+        - "**/api/server.py"
+
+  # Rule 3b: .format() in execute() banned
   - id: sql-format-execute
-    pattern: $CURSOR.execute($SQL.format(...), ...)
+    patterns:
+      - pattern-either:
+          - pattern: $CURSOR.execute($SQL.format(...), ...)
+          - pattern: $CONN.execute($SQL.format(...), ...)
+          - pattern: cursor.execute($SQL.format(...), ...)
+          - pattern: conn.execute($SQL.format(...), ...)
     message: |
       POLICY: .format() in execute() banned. Use parameterized queries.
     languages: [python]
@@ -87,17 +216,45 @@ rules:
         - "**/lib/**"
         - "**/api/**"
       exclude:
-        # BASELINE: Safe IN-clause builder (refactor: Q3 2026)
+        # Migration directories
+        - "**/lib/migrations/**"
+        - "**/lib/v5/migrations/**"
+        - "**/lib/ui_spec_v21/migrations/**"
+        # BASELINE [sql-format-execute]: Safe IN-clause placeholder builder
+        # Why: Builds "?,?,?" placeholders for IN clause, values are parameterized
+        # Migration: Use helper function for IN-clause building
+        # Deadline: Q3 2026
         - "**/lib/v4/signal_service.py"
 
+  # Rule 3c: % formatting in execute() banned
+  - id: sql-percent-execute
+    patterns:
+      - pattern-either:
+          - pattern: $CURSOR.execute($SQL % $ARGS, ...)
+          - pattern: $CONN.execute($SQL % $ARGS, ...)
+          - pattern: cursor.execute($SQL % $ARGS, ...)
+          - pattern: conn.execute($SQL % $ARGS, ...)
+    message: |
+      POLICY: % formatting in execute() banned. Use parameterized queries.
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - "**/lib/**"
+        - "**/api/**"
+      exclude:
+        - "**/lib/migrations/**"
+        - "**/lib/v5/migrations/**"
+        - "**/lib/ui_spec_v21/migrations/**"
+
   # --------------------------------------------------------------------------
-  # (4) ROUTE LINEAGE: V2 routes on @app banned in server.py
+  # (4) ROUTE LINEAGE: V2 routes MUST use spec_router
   # --------------------------------------------------------------------------
   - id: route-v2-on-app-banned
     pattern-regex: "@app\\.(get|post|put|patch|delete)\\s*\\(\\s*[\"']/api/v2/"
     message: |
-      POLICY: V2 routes on @app are banned in server.py.
-      Use @spec_router in api/spec_router.py for proper lineage tags.
+      POLICY: V2 routes on @app banned. Use @spec_router in api/spec_router.py.
+      The spec_router provides lineage tags=["Spec v2.9"].
     languages: [python]
     severity: ERROR
     paths:
