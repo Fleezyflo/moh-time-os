@@ -233,6 +233,7 @@ def collect_gmail_for_user(
 ) -> dict[str, Any]:
     """
     Collect Gmail for a single user with date range and pagination.
+    Uses stored cursor to advance since parameter for incremental sync.
     Returns: {ok: bool, count: int, error: str|None, is_invalid_subject: bool}
     """
     result: dict[str, Any] = {"ok": False, "count": 0, "error": None, "is_invalid_subject": False}
@@ -240,9 +241,31 @@ def collect_gmail_for_user(
     try:
         svc = get_gmail_service(user)
 
+        # Check stored cursor - advance since if cursor is more recent
+        stored_cursor = get_cursor(db_path, "gmail", user, "last_until")
+        effective_since = since
+
+        if stored_cursor:
+            try:
+                cursor_dt = datetime.fromisoformat(
+                    stored_cursor.replace("Z", "+00:00")
+                    if "T" in stored_cursor
+                    else stored_cursor + "T00:00:00+00:00"
+                )
+                since_dt_check = datetime.fromisoformat(
+                    since.replace("Z", "+00:00") if "T" in since else since + "T00:00:00+00:00"
+                )
+                if cursor_dt > since_dt_check:
+                    effective_since = stored_cursor
+                    debug_print(f"CURSOR: gmail read old={since} -> advancing to {effective_since}")
+            except ValueError:
+                pass  # Invalid cursor format, use CLI since
+
         # Convert dates to Gmail query format: after:YYYY/MM/DD before:YYYY/MM/DD
         since_dt = datetime.fromisoformat(
-            since.replace("Z", "+00:00") if "T" in since else since + "T00:00:00+00:00"
+            effective_since.replace("Z", "+00:00")
+            if "T" in effective_since
+            else effective_since + "T00:00:00+00:00"
         )
         until_dt = datetime.fromisoformat(
             until.replace("Z", "+00:00") if "T" in until else until + "T23:59:59+00:00"
@@ -285,6 +308,7 @@ def collect_gmail_for_user(
 
         # Store cursor (last_until timestamp)
         set_cursor(db_path, "gmail", user, "last_until", until)
+        debug_print(f"CURSOR: gmail write new={until}")
 
         result["ok"] = True
         result["count"] = total_count
@@ -313,6 +337,7 @@ def collect_calendar_for_user(
 ) -> dict[str, Any]:
     """
     Collect Calendar events for ALL calendars for a single user.
+    Uses stored cursor to advance since parameter for incremental sync.
     Returns: {ok: bool, count: int, calendars: list[str], error: str|None, is_invalid_subject: bool}
     """
     result: dict[str, Any] = {
@@ -326,8 +351,30 @@ def collect_calendar_for_user(
     try:
         svc = get_calendar_service(user)
 
+        # Check stored cursor - advance since if cursor is more recent
+        stored_cursor = get_cursor(db_path, "calendar", user, "last_until")
+        effective_since = since
+
+        if stored_cursor:
+            try:
+                cursor_dt = datetime.fromisoformat(
+                    stored_cursor.replace("Z", "+00:00")
+                    if "T" in stored_cursor
+                    else stored_cursor + "T00:00:00+00:00"
+                )
+                since_dt_check = datetime.fromisoformat(
+                    since.replace("Z", "+00:00") if "T" in since else since + "T00:00:00+00:00"
+                )
+                if cursor_dt > since_dt_check:
+                    effective_since = stored_cursor
+                    debug_print(
+                        f"CURSOR: calendar read old={since} -> advancing to {effective_since}"
+                    )
+            except ValueError:
+                pass
+
         # Convert dates to RFC3339
-        since_rfc = since if "T" in since else since + "T00:00:00Z"
+        since_rfc = effective_since if "T" in effective_since else effective_since + "T00:00:00Z"
         until_rfc = until if "T" in until else until + "T23:59:59Z"
 
         # Step 1: Get all calendars for this user (with pagination)
@@ -405,8 +452,12 @@ def collect_calendar_for_user(
                     debug_print(f"ERROR fetching events from {cal_id[:30]}...: {e}")
                     break
 
-            # Store cursor per calendar
+            # Store cursor per calendar (for per-calendar sync if needed later)
             set_cursor(db_path, "calendar", user, f"calendar:{cal_id}:last_until", until)
+
+        # Store user-level cursor for incremental sync
+        set_cursor(db_path, "calendar", user, "last_until", until)
+        debug_print(f"CURSOR: calendar write new={until}")
 
         result["ok"] = True
         result["count"] = total_events
@@ -435,6 +486,7 @@ def collect_chat_for_user(
 ) -> dict[str, Any]:
     """
     Collect Chat spaces and messages for a single user.
+    Uses stored cursor to advance since parameter for incremental sync.
     Returns: {ok: bool, count: int, spaces_count: int, error: str|None, is_invalid_subject: bool}
     """
     result: dict[str, Any] = {
@@ -448,9 +500,31 @@ def collect_chat_for_user(
     try:
         svc = get_chat_service(user)
 
+        # Check stored cursor - advance since if cursor is more recent
+        stored_cursor = get_cursor(db_path, "chat", user, "last_until")
+        effective_since = since
+
+        if stored_cursor:
+            try:
+                cursor_dt = datetime.fromisoformat(
+                    stored_cursor.replace("Z", "+00:00")
+                    if "T" in stored_cursor
+                    else stored_cursor + "T00:00:00+00:00"
+                )
+                since_dt_check = datetime.fromisoformat(
+                    since.replace("Z", "+00:00") if "T" in since else since + "T00:00:00+00:00"
+                )
+                if cursor_dt > since_dt_check:
+                    effective_since = stored_cursor
+                    debug_print(f"CURSOR: chat read old={since} -> advancing to {effective_since}")
+            except ValueError:
+                pass
+
         # Parse since/until for local filtering
         since_dt = datetime.fromisoformat(
-            since.replace("Z", "+00:00") if "T" in since else since + "T00:00:00+00:00"
+            effective_since.replace("Z", "+00:00")
+            if "T" in effective_since
+            else effective_since + "T00:00:00+00:00"
         )
         until_dt = datetime.fromisoformat(
             until.replace("Z", "+00:00") if "T" in until else until + "T23:59:59+00:00"
@@ -545,6 +619,7 @@ def collect_chat_for_user(
 
         # Store cursor
         set_cursor(db_path, "chat", user, "last_until", until)
+        debug_print(f"CURSOR: chat write new={until}")
 
         result["ok"] = True
         result["count"] = total_messages
@@ -570,6 +645,7 @@ def collect_drive_for_user(
 ) -> dict[str, Any]:
     """
     Collect Drive files for a single user with date range and pagination.
+    Uses stored cursor to advance since parameter for incremental sync.
     Returns: {ok: bool, count: int, docs_count: int, doc_ids: list, error: str|None, is_invalid_subject: bool}
     """
     result: dict[str, Any] = {
@@ -584,8 +660,28 @@ def collect_drive_for_user(
     try:
         svc = get_drive_service(user)
 
+        # Check stored cursor - advance since if cursor is more recent
+        stored_cursor = get_cursor(db_path, "drive", user, "last_until")
+        effective_since = since
+
+        if stored_cursor:
+            try:
+                cursor_dt = datetime.fromisoformat(
+                    stored_cursor.replace("Z", "+00:00")
+                    if "T" in stored_cursor
+                    else stored_cursor + "T00:00:00+00:00"
+                )
+                since_dt_check = datetime.fromisoformat(
+                    since.replace("Z", "+00:00") if "T" in since else since + "T00:00:00+00:00"
+                )
+                if cursor_dt > since_dt_check:
+                    effective_since = stored_cursor
+                    debug_print(f"CURSOR: drive read old={since} -> advancing to {effective_since}")
+            except ValueError:
+                pass
+
         # Build query with modifiedTime filter
-        since_rfc = since if "T" in since else since + "T00:00:00Z"
+        since_rfc = effective_since if "T" in effective_since else effective_since + "T00:00:00Z"
         until_rfc = until if "T" in until else until + "T23:59:59Z"
 
         query = (
@@ -628,6 +724,7 @@ def collect_drive_for_user(
 
         # Store cursor
         set_cursor(db_path, "drive", user, "last_until", until)
+        debug_print(f"CURSOR: drive write new={until}")
 
         result["ok"] = True
         result["count"] = len(files)
