@@ -2,35 +2,18 @@ rules:
   # ============================================================================
   # TIER 1: PR-BLOCKING POLICY RULES
   # ============================================================================
-  # High-signal, repo-specific wiring discipline. All findings are blocking.
-  # Target: <30s scan time, 0 findings in clean codebase.
-  #
-  # BASELINE: Some legacy files are excluded. New code must comply.
-  # Legacy files are tracked in comments for future migration.
+  # High-signal only. Target: <10s, 0 findings in clean codebase.
 
   # --------------------------------------------------------------------------
   # (1) UI API DISCIPLINE
   # --------------------------------------------------------------------------
-  # All HTTP calls in the UI must go through src/api/.
-  # Direct fetch/axios outside API layer is banned.
-  #
-  # LEGACY EXCLUSIONS (TODO: migrate to API client):
-  #   - src/lib/api.ts (legacy wrapper, 330 lines)
-  #   - src/pages/ClientDetailSpec.tsx
-  #   - src/pages/ClientIndex.tsx
-  #   - src/pages/ColdClients.tsx
-  #   - src/pages/Inbox.tsx
-  #   - src/pages/RecentlyActiveDrilldown.tsx
-  #   - src/pages/FixData.tsx
-
   - id: ui-no-direct-fetch
     patterns:
       - pattern-either:
           - pattern: fetch($URL, ...)
           - pattern: fetch($URL)
     message: |
-      POLICY: Direct fetch() is banned outside the API client layer.
-      Use the HTTP client from 'src/api/http.ts' instead.
+      POLICY: Direct fetch() banned outside API layer. Use 'src/api/http.ts'.
     languages: [typescript, javascript]
     severity: ERROR
     paths:
@@ -38,25 +21,24 @@ rules:
         - "**/time-os-ui/src/**"
       exclude:
         - "**/time-os-ui/src/api/**"
+        - "**/__tests__/**"
+        - "**/*.test.ts"
+        - "**/*.test.tsx"
+        # BASELINE: Legacy files (migration: Q2 2026)
         - "**/time-os-ui/src/lib/api.ts"
-        # Legacy pages (baselined, migration pending):
         - "**/time-os-ui/src/pages/ClientDetailSpec.tsx"
         - "**/time-os-ui/src/pages/ClientIndex.tsx"
         - "**/time-os-ui/src/pages/ColdClients.tsx"
         - "**/time-os-ui/src/pages/Inbox.tsx"
         - "**/time-os-ui/src/pages/RecentlyActiveDrilldown.tsx"
         - "**/time-os-ui/src/pages/FixData.tsx"
-        # Tests allowed:
-        - "**/__tests__/**"
-        - "**/*.test.ts"
-        - "**/*.test.tsx"
 
   - id: ui-no-axios
     pattern-either:
       - pattern: axios.$METHOD(...)
       - pattern: axios(...)
     message: |
-      POLICY: axios is banned. Use the HTTP client from 'src/api/http.ts'.
+      POLICY: axios banned. Use 'src/api/http.ts'.
     languages: [typescript, javascript]
     severity: ERROR
     paths:
@@ -64,17 +46,11 @@ rules:
         - "**/time-os-ui/src/**"
       exclude:
         - "**/time-os-ui/src/api/**"
+        - "**/__tests__/**"
 
   # --------------------------------------------------------------------------
-  # (2) SUBPROCESS POLICY (Python)
+  # (2) SUBPROCESS: shell=True banned
   # --------------------------------------------------------------------------
-  # shell=True is banned (command injection risk).
-  # Safe pattern: shutil.which() + list args + shell=False (default).
-  #
-  # LEGACY EXCLUSIONS (TODO: refactor to list args):
-  #   - lib/collectors/base.py (runs gog CLI with shell)
-  #   - lib/executor/handlers.py (runs arbitrary shell commands)
-
   - id: subprocess-no-shell-true
     patterns:
       - pattern-either:
@@ -84,8 +60,7 @@ rules:
           - pattern: subprocess.check_output(..., shell=True, ...)
           - pattern: subprocess.check_call(..., shell=True, ...)
     message: |
-      POLICY: shell=True is banned. Use list args: subprocess.run(["cmd", "arg"])
-      If you need shell features, refactor to avoid them.
+      POLICY: shell=True banned. Use list args: subprocess.run(["cmd", "arg"])
     languages: [python]
     severity: ERROR
     paths:
@@ -94,27 +69,17 @@ rules:
         - "**/api/**"
         - "**/scripts/**"
       exclude:
-        # Legacy (baselined, refactor pending):
+        # BASELINE: Legacy (refactor: Q2 2026)
         - "**/lib/collectors/base.py"
         - "**/lib/executor/handlers.py"
 
   # --------------------------------------------------------------------------
-  # (3) DYNAMIC SQL - USER INPUT INTERPOLATION
+  # (3) SQL: .format() in execute() banned
   # --------------------------------------------------------------------------
-  # Ban f-strings that interpolate request/user variables directly into SQL.
-  # Safe: DDL (ALTER, CREATE, PRAGMA), dynamic WHERE builders with params.
-  # Dangerous: f"...WHERE col = {user_input}..." without parameterization.
-
-  - id: sql-injection-user-input
-    patterns:
-      - pattern: |
-          $CURSOR.execute(f"...$VAR...")
-      - metavariable-regex:
-          metavariable: $VAR
-          regex: .*(request|body|params|user_input|query\[|args\[|form\[).*
+  - id: sql-format-execute
+    pattern: $CURSOR.execute($SQL.format(...), ...)
     message: |
-      POLICY: User input interpolated into SQL is banned.
-      Use parameterized queries: cursor.execute("...?...", (value,))
+      POLICY: .format() in execute() banned. Use parameterized queries.
     languages: [python]
     severity: ERROR
     paths:
@@ -122,25 +87,19 @@ rules:
         - "**/lib/**"
         - "**/api/**"
       exclude:
-        - "**/migrations/**"
+        # BASELINE: Safe IN-clause builder (refactor: Q3 2026)
+        - "**/lib/v4/signal_service.py"
 
   # --------------------------------------------------------------------------
-  # (4) API ROUTE LINEAGE - V2 ROUTES ON SPEC ROUTER
+  # (4) ROUTE LINEAGE: V2 routes on @app banned in server.py
   # --------------------------------------------------------------------------
-  # New /api/v2/* routes should be on spec_router (has tags).
-  # Advisory for now - existing legacy routes in server.py are grandfathered.
-
-  - id: route-v2-use-spec-router
-    patterns:
-      - pattern: |
-          @app.$METHOD("/api/v2/...")
-          def $FUNC(...):
-              ...
+  - id: route-v2-on-app-banned
+    pattern-regex: "@app\\.(get|post|put|patch|delete)\\s*\\(\\s*[\"']/api/v2/"
     message: |
-      POLICY: V2 API routes should be on spec_router (api/spec_router.py).
-      The spec_router has proper tags=["Spec v2.9"] for lineage.
+      POLICY: V2 routes on @app are banned in server.py.
+      Use @spec_router in api/spec_router.py for proper lineage tags.
     languages: [python]
-    severity: WARNING
+    severity: ERROR
     paths:
       include:
         - "**/api/server.py"
