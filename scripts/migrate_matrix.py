@@ -69,11 +69,12 @@ def run_migration(db_path: str) -> dict:
     start_version = conn.execute("PRAGMA user_version").fetchone()[0]
 
     try:
-        # Run safety migrations
-        result = run_safety_migrations(conn)
-
-        # Run main DB setup
+        # Run main DB setup first (creates tables)
         run_migrations(conn)
+
+        # Run safety migrations after tables exist
+        # (triggers require inbox_items_v29 etc. to be present)
+        result = run_safety_migrations(conn, verbose=False)
 
         # Get final version
         end_version = conn.execute("PRAGMA user_version").fetchone()[0]
@@ -87,6 +88,7 @@ def run_migration(db_path: str) -> dict:
             "start_version": start_version,
             "end_version": end_version,
             "tables_created": result.get("tables_created", []),
+            "triggers_created": result.get("triggers_created", []),
             "violations": [v.message for v in violations],
         }
 

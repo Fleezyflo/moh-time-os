@@ -63,8 +63,8 @@ def run_drill() -> bool:
         # Step 1: Create initial database with data
         print("Step 1: Create initial database with test data")
         conn = sqlite3.connect(str(db_path))
-        run_safety_migrations(conn)
         run_migrations(conn)
+        run_safety_migrations(conn)  # After main migrations (triggers need tables)
 
         # Insert test data
         conn.execute("""
