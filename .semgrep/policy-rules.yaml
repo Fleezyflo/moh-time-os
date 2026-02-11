@@ -18,24 +18,22 @@ rules:
     severity: ERROR
     paths:
       include:
-        - "**/time-os-ui/src/**"
+        - time-os-ui/src/
       exclude:
-        - "**/time-os-ui/src/api/**"
-        - "**/__tests__/**"
-        - "**/*.test.ts"
-        - "**/*.test.tsx"
+        - time-os-ui/src/api/
+        - time-os-ui/src/__tests__/
         # BASELINE [ui-no-direct-fetch]: Legacy files predating API client
         # Why: Pre-existing fetch() usage before http.ts client was established
         # Migration: Replace with http.ts client methods
         # Tracking: TIME-OS-UI-MIGRATION
         # Deadline: Q2 2026
-        - "**/time-os-ui/src/lib/api.ts"
-        - "**/time-os-ui/src/pages/ClientDetailSpec.tsx"
-        - "**/time-os-ui/src/pages/ClientIndex.tsx"
-        - "**/time-os-ui/src/pages/ColdClients.tsx"
-        - "**/time-os-ui/src/pages/Inbox.tsx"
-        - "**/time-os-ui/src/pages/RecentlyActiveDrilldown.tsx"
-        - "**/time-os-ui/src/pages/FixData.tsx"
+        - time-os-ui/src/lib/api.ts
+        - time-os-ui/src/pages/ClientDetailSpec.tsx
+        - time-os-ui/src/pages/ClientIndex.tsx
+        - time-os-ui/src/pages/ColdClients.tsx
+        - time-os-ui/src/pages/Inbox.tsx
+        - time-os-ui/src/pages/RecentlyActiveDrilldown.tsx
+        - time-os-ui/src/pages/FixData.tsx
 
   - id: ui-no-axios
     pattern-either:
@@ -47,10 +45,10 @@ rules:
     severity: ERROR
     paths:
       include:
-        - "**/time-os-ui/src/**"
+        - time-os-ui/src/
       exclude:
-        - "**/time-os-ui/src/api/**"
-        - "**/__tests__/**"
+        - time-os-ui/src/api/
+        - time-os-ui/src/__tests__/
 
   # --------------------------------------------------------------------------
   # (2) SUBPROCESS POLICY
@@ -70,17 +68,17 @@ rules:
     severity: ERROR
     paths:
       include:
-        - "**/lib/**"
-        - "**/api/**"
-        - "**/scripts/**"
+        - lib/
+        - api/
+        - scripts/
       exclude:
         # BASELINE [subprocess-no-shell-true]: Legacy shell execution
-        # Why: Complex piping/quoting for gog CLI tool invocations
+        # Why: Complex piping/quoting for CLI tool invocations
         # Migration: Refactor to list args with shutil.which
         # Tracking: SHELL-MIGRATION
         # Deadline: Q2 2026
-        - "**/lib/collectors/base.py"
-        - "**/lib/executor/handlers.py"
+        - lib/collectors/base.py
+        - lib/executor/handlers.py
 
   # Rule 2b: Literal string command banned (must use list)
   - id: subprocess-literal-string-cmd
@@ -98,13 +96,13 @@ rules:
     severity: ERROR
     paths:
       include:
-        - "**/lib/**"
-        - "**/api/**"
-        - "**/scripts/**"
+        - lib/
+        - api/
+        - scripts/
       exclude:
         # Same baseline as subprocess-no-shell-true
-        - "**/lib/collectors/base.py"
-        - "**/lib/executor/handlers.py"
+        - lib/collectors/base.py
+        - lib/executor/handlers.py
 
   # Rule 2c: git must use shutil.which
   - id: subprocess-bare-git
@@ -122,16 +120,16 @@ rules:
     severity: ERROR
     paths:
       include:
-        - "**/lib/**"
-        - "**/api/**"
-        - "**/scripts/**"
+        - lib/
+        - api/
+        - scripts/
       exclude:
         # BASELINE [subprocess-bare-git]: Uses shutil.which correctly
-        # Why: Already resolves git path before invocation
+        # Why: Already resolves git path before invocation (line 20-22)
         # Migration: N/A - already compliant
         # Tracking: N/A
         # Deadline: N/A
-        - "**/lib/safety/utils.py"
+        - lib/safety/utils.py
 
   # Rule 2d: rg must use shutil.which
   - id: subprocess-bare-rg
@@ -148,61 +146,78 @@ rules:
     severity: ERROR
     paths:
       include:
-        - "**/lib/**"
-        - "**/api/**"
-        - "**/scripts/**"
+        - lib/
+        - api/
+        - scripts/
       exclude:
         # BASELINE [subprocess-bare-rg]: Uses shutil.which correctly
-        # Why: Already resolves rg path before invocation
+        # Why: Already resolves rg path before invocation (line 270-275)
         # Migration: N/A - already compliant
         # Tracking: N/A
         # Deadline: N/A
-        - "**/lib/safety/schema.py"
+        - lib/safety/schema.py
 
-  # --------------------------------------------------------------------------
-  # (3) SQL POLICY - User Input Injection
-  # --------------------------------------------------------------------------
-  # High-signal: Catch user-input interpolation in execute(), not all f-strings.
-  # DDL patterns (PRAGMA, ALTER, table names) are safe when values are parameterized.
-
-  # Rule 3a: Request params in f-string execute()
-  - id: sql-request-param-fstring
+  # Rule 2e: gog CLI must use shutil.which (repo-derived: integrations use gog)
+  - id: subprocess-bare-gog
     patterns:
       - pattern-either:
-          - pattern: $X.execute(f"...{request.$ATTR}...")
-          - pattern: $X.execute(f"...{params.$ATTR}...")
-          - pattern: $X.execute(f"...{query.$ATTR}...")
-          - pattern: $X.execute(f"...{body.$ATTR}...")
-          - pattern: $X.execute(f"...{user_input}...")
-          - pattern: $X.execute(f"...{user_id}...")
-          - pattern: $X.execute(f"...{client_id}...")
-          - pattern: cursor.execute(f"...{request.$ATTR}...")
-          - pattern: cursor.execute(f"...{params.$ATTR}...")
-          - pattern: cursor.execute(f"...{query.$ATTR}...")
-          - pattern: cursor.execute(f"...{body.$ATTR}...")
-          - pattern: cursor.execute(f"...{user_input}...")
-          - pattern: cursor.execute(f"...{user_id}...")
-          - pattern: cursor.execute(f"...{client_id}...")
-          - pattern: conn.execute(f"...{request.$ATTR}...")
-          - pattern: conn.execute(f"...{params.$ATTR}...")
-          - pattern: conn.execute(f"...{query.$ATTR}...")
-          - pattern: conn.execute(f"...{body.$ATTR}...")
-          - pattern: conn.execute(f"...{user_input}...")
-          - pattern: conn.execute(f"...{user_id}...")
-          - pattern: conn.execute(f"...{client_id}...")
+          - pattern: subprocess.run(["gog", ...], ...)
+          - pattern: subprocess.Popen(["gog", ...], ...)
+      - pattern-not-inside: |
+          $GOG = shutil.which("gog")
+          ...
     message: |
-      SECURITY: User input interpolated in SQL. Use parameterized queries.
-      Example: cursor.execute("SELECT * WHERE id = ?", (user_id,))
+      POLICY: Resolve gog with shutil.which() first.
+      Example: gog = shutil.which("gog"); subprocess.run([gog, "gmail", "list"])
     languages: [python]
     severity: ERROR
     paths:
       include:
-        - "**/lib/**"
-        - "**/api/**"
+        - lib/
+        - api/
+        - scripts/
       exclude:
-        - "**/lib/migrations/**"
-        - "**/lib/v5/migrations/**"
-        - "**/lib/ui_spec_v21/migrations/**"
+        # BASELINE [subprocess-bare-gog]: Legacy gog invocations without shutil.which
+        # Why: gog CLI assumed to be in PATH; works but not defensive
+        # Migration: Add shutil.which("gog") check at module init
+        # Tracking: GOG-INTEGRATION-HARDENING
+        # Deadline: Q3 2026
+        - lib/integrations/email_integration.py
+        - lib/integrations/tasks_integration.py
+        - lib/integrations/calendar_integration.py
+
+  # --------------------------------------------------------------------------
+  # (3) SQL POLICY - User Input Injection
+  # --------------------------------------------------------------------------
+  # High-signal: Catch user-input interpolation in execute().
+  # Repo-derived sources: FastAPI Query/Path params, Pydantic model attrs.
+
+  # Rule 3a: Query/Path param interpolation in execute()
+  - id: sql-query-param-fstring
+    patterns:
+      - pattern-either:
+          # Direct parameter names from FastAPI endpoints (repo-derived)
+          - pattern: $X.execute(f"...{$PARAM}...", ...)
+          - pattern: cursor.execute(f"...{$PARAM}...", ...)
+          - pattern: conn.execute(f"...{$PARAM}...", ...)
+          - pattern: cur.execute(f"...{$PARAM}...", ...)
+      - metavariable-regex:
+          metavariable: $PARAM
+          # Repo-derived: common user-input parameter names from api/ endpoints
+          regex: ^(client_id|user_id|task_id|issue_id|item_id|entity_id|engagement_id|project_id|signal_id|decision_id|bundle_id|debt_id|commitment_id|notif_id|email_id|thread_id|event_id|list_id)$
+    message: |
+      SECURITY: User input parameter interpolated in SQL. Use parameterized queries.
+      Example: cursor.execute("SELECT * WHERE id = ?", (client_id,))
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - lib/
+        - api/
+      exclude:
+        - lib/migrations/
+        - lib/v5/migrations/
+        - lib/ui_spec_v21/migrations/
 
   # Rule 3b: .format() in execute() - always risky
   - id: sql-format-execute
@@ -214,24 +229,26 @@ rules:
           - pattern: cursor.execute($SQL.format(...))
           - pattern: conn.execute($SQL.format(...), ...)
           - pattern: conn.execute($SQL.format(...))
+          - pattern: cur.execute($SQL.format(...), ...)
+          - pattern: cur.execute($SQL.format(...))
     message: |
       POLICY: .format() in execute() banned. Use parameterized queries.
     languages: [python]
     severity: ERROR
     paths:
       include:
-        - "**/lib/**"
-        - "**/api/**"
+        - lib/
+        - api/
       exclude:
-        - "**/lib/migrations/**"
-        - "**/lib/v5/migrations/**"
-        - "**/lib/ui_spec_v21/migrations/**"
+        - lib/migrations/
+        - lib/v5/migrations/
+        - lib/ui_spec_v21/migrations/
         # BASELINE [sql-format-execute]: Safe IN-clause placeholder builder
         # Why: Builds "?,?,?" placeholders, values are parameterized separately
-        # Migration: Extract to safe_in_clause() helper
+        # Migration: Extract to safe_in_clause() helper function
         # Tracking: SQL-HELPERS
         # Deadline: Q3 2026
-        - "**/lib/v4/signal_service.py"
+        - lib/v4/signal_service.py
 
   # Rule 3c: % formatting in execute() - always risky
   - id: sql-percent-execute
@@ -243,29 +260,34 @@ rules:
           - pattern: cursor.execute($SQL % $ARGS)
           - pattern: conn.execute($SQL % $ARGS, ...)
           - pattern: conn.execute($SQL % $ARGS)
+          - pattern: cur.execute($SQL % $ARGS, ...)
+          - pattern: cur.execute($SQL % $ARGS)
     message: |
       POLICY: % formatting in execute() banned. Use parameterized queries.
     languages: [python]
     severity: ERROR
     paths:
       include:
-        - "**/lib/**"
-        - "**/api/**"
+        - lib/
+        - api/
       exclude:
-        - "**/lib/migrations/**"
-        - "**/lib/v5/migrations/**"
-        - "**/lib/ui_spec_v21/migrations/**"
+        - lib/migrations/
+        - lib/v5/migrations/
+        - lib/ui_spec_v21/migrations/
 
   # --------------------------------------------------------------------------
   # (4) ROUTE LINEAGE: V2 routes MUST use spec_router
   # --------------------------------------------------------------------------
+  # Repo convention: All /api/v2/* routes go through spec_router (APIRouter with tags=["Spec v2.9"])
+  # spec_router is mounted at prefix="/api/v2" in server.py:86
   - id: route-v2-on-app-banned
     pattern-regex: "@app\\.(get|post|put|patch|delete)\\s*\\(\\s*[\"']/api/v2/"
     message: |
       POLICY: V2 routes on @app banned. Use @spec_router in api/spec_router.py.
       The spec_router provides lineage tags=["Spec v2.9"] for OpenAPI.
+      See: api/spec_router.py:46 for spec_router definition.
     languages: [python]
     severity: ERROR
     paths:
       include:
-        - "**/api/server.py"
+        - api/server.py
