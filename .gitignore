@@ -91,3 +91,4 @@ dashboard/
 /out/*.html
 .hypothesis/
 evidence/
+coverage.json
