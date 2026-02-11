@@ -1,0 +1,62 @@
+{
+  "_comment": "Pinned seed data for deterministic golden tests. DO NOT MODIFY without updating GOLDEN_EXPECTATIONS.",
+  "_golden_expectations": {
+    "active_project_count": 5,
+    "unpaid_invoice_count": 3,
+    "total_valid_ar_aed": 15000.00,
+    "open_commitment_count": 4,
+    "client_count": 3,
+    "active_people_count": 3,
+    "communication_count": 5
+  },
+  "clients": [
+    {"id": "client-001", "name": "Acme Corp", "tier": "A", "health_status": "healthy"},
+    {"id": "client-002", "name": "Beta Inc", "tier": "B", "health_status": "at_risk"},
+    {"id": "client-003", "name": "Gamma LLC", "tier": "C", "health_status": "healthy"}
+  ],
+  "brands": [
+    {"id": "brand-001", "client_id": "client-001", "name": "Acme Brand"},
+    {"id": "brand-002", "client_id": "client-002", "name": "Beta Brand"},
+    {"id": "brand-003", "client_id": "client-003", "name": "Gamma Brand"}
+  ],
+  "projects": [
+    {"id": "proj-001", "brand_id": "brand-001", "client_id": "client-001", "name": "Website Redesign", "status": "execution", "health_status": "on_track"},
+    {"id": "proj-002", "brand_id": "brand-001", "client_id": "client-001", "name": "Mobile App", "status": "kickoff", "health_status": "on_track"},
+    {"id": "proj-003", "brand_id": "brand-002", "client_id": "client-002", "name": "Brand Refresh", "status": "execution", "health_status": "at_risk"},
+    {"id": "proj-004", "brand_id": "brand-002", "client_id": "client-002", "name": "Social Campaign", "status": "delivery", "health_status": "on_track"},
+    {"id": "proj-005", "brand_id": "brand-003", "client_id": "client-003", "name": "Annual Report", "status": "execution", "health_status": "on_track"}
+  ],
+  "invoices": [
+    {"id": "inv-001", "client_id": "client-001", "invoice_number": "INV-2026-001", "amount": 5000.00, "currency": "AED", "status": "sent", "payment_date": null, "due_date": "2026-02-15"},
+    {"id": "inv-002", "client_id": "client-002", "invoice_number": "INV-2026-002", "amount": 7500.00, "currency": "AED", "status": "overdue", "payment_date": null, "due_date": "2026-01-31"},
+    {"id": "inv-003", "client_id": "client-003", "invoice_number": "INV-2026-003", "amount": 2500.00, "currency": "AED", "status": "sent", "payment_date": null, "due_date": "2026-02-28"},
+    {"id": "inv-004", "client_id": "client-001", "invoice_number": "INV-2026-004", "amount": 3000.00, "currency": "AED", "status": "paid", "payment_date": "2026-01-15", "due_date": "2026-01-20"}
+  ],
+  "commitments": [
+    {"id": "commit-001", "client_id": "client-001", "description": "Deliver wireframes", "status": "open", "due_date": "2026-02-15"},
+    {"id": "commit-002", "client_id": "client-001", "description": "Send proposal", "status": "pending", "due_date": "2026-02-10"},
+    {"id": "commit-003", "client_id": "client-002", "description": "Review feedback", "status": "open", "due_date": "2026-02-12"},
+    {"id": "commit-004", "client_id": "client-003", "description": "Final presentation", "status": "in_progress", "due_date": "2026-02-20"},
+    {"id": "commit-005", "client_id": "client-001", "description": "Completed task", "status": "fulfilled", "due_date": "2026-01-30"}
+  ],
+  "people": [
+    {"id": "person-001", "name": "Alice Designer", "email": "alice@hrmny.io", "person_type": "team", "is_active": true},
+    {"id": "person-002", "name": "Bob Developer", "email": "bob@hrmny.io", "person_type": "team", "is_active": true},
+    {"id": "person-003", "name": "Carol Manager", "email": "carol@hrmny.io", "person_type": "team", "is_active": true},
+    {"id": "person-004", "name": "Dave Inactive", "email": "dave@hrmny.io", "person_type": "team", "is_active": false}
+  ],
+  "tasks": [
+    {"id": "task-001", "project_id": "proj-001", "title": "Design homepage", "status": "in_progress", "assignee_id": "person-001", "hours_estimate": 8},
+    {"id": "task-002", "project_id": "proj-001", "title": "Build frontend", "status": "in_progress", "assignee_id": "person-002", "hours_estimate": 16},
+    {"id": "task-003", "project_id": "proj-002", "title": "Project planning", "status": "in_progress", "assignee_id": "person-003", "hours_estimate": 4},
+    {"id": "task-004", "project_id": "proj-003", "title": "Brand guidelines", "status": "in_progress", "assignee_id": "person-001", "hours_estimate": 12},
+    {"id": "task-005", "project_id": "proj-001", "title": "Completed task", "status": "done", "assignee_id": "person-002", "hours_estimate": 4}
+  ],
+  "communications": [
+    {"id": "comm-001", "client_id": "client-001", "channel": "email", "direction": "inbound", "subject": "Project kickoff", "received_at": "2026-02-01T10:00:00"},
+    {"id": "comm-002", "client_id": "client-001", "channel": "email", "direction": "outbound", "subject": "Proposal sent", "received_at": "2026-02-02T14:00:00"},
+    {"id": "comm-003", "client_id": "client-002", "channel": "email", "direction": "inbound", "subject": "Feedback request", "received_at": "2026-02-03T09:00:00"},
+    {"id": "comm-004", "client_id": "client-003", "channel": "slack", "direction": "inbound", "subject": "Quick question", "received_at": "2026-02-04T11:00:00"},
+    {"id": "comm-005", "client_id": "client-002", "channel": "email", "direction": "outbound", "subject": "Status update", "received_at": "2026-02-05T16:00:00"}
+  ]
+}

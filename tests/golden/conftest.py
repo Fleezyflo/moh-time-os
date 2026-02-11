@@ -1,41 +1,62 @@
 """
-Golden Test Configuration
+Golden Test Configuration - DETERMINISTIC FIXTURE-BASED
 
-FROZEN EXPECTATIONS - hand-verified values from the real database.
-Any change to these values requires explicit justification in PR description.
+Golden tests use a fixture database with pinned seed data, NOT the live database.
+This ensures CI determinism and removes dependency on external systems.
 
-Source: data/moh_time_os.db as of 2026-02-09
-Verification method: Direct SQL queries against the database
+Seed data: tests/fixtures/golden_seed.json
+Fixture factory: tests/fixtures/fixture_db.py
+
+GOLDEN EXPECTATIONS must match the seeded fixture data exactly.
+Any change to seed data requires updating these expectations.
 """
 
 from pathlib import Path
 
 import pytest
 
-# Path to the real database
-DB_PATH = Path(__file__).parent.parent.parent / "data" / "moh_time_os.db"
+from tests.fixtures.fixture_db import create_fixture_db, get_fixture_db_path, guard_no_live_db
+
+# Block access to live DB
+LIVE_DB_PATH = Path(__file__).parent.parent.parent / "data" / "moh_time_os.db"
 
 # =============================================================================
-# GOLDEN EXPECTATIONS - HAND VERIFIED, DO NOT CHANGE WITHOUT JUSTIFICATION
+# GOLDEN EXPECTATIONS - DERIVED FROM tests/fixtures/golden_seed.json
 # =============================================================================
+# These values are deterministic because they come from pinned seed data.
+# If you change golden_seed.json, update these values to match.
 
 GOLDEN_EXPECTATIONS = {
-    # Source: SELECT COUNT(*) FROM projects WHERE status NOT IN ('completed', 'cancelled', 'archived')
-    "active_project_count": 354,
-    # Source: SELECT COUNT(*) FROM invoices WHERE status IN ('sent', 'overdue') AND payment_date IS NULL
-    # Updated 2026-02-11: Data changed - 1 invoice paid (34 → 33)
-    "unpaid_invoice_count": 33,
-    # Source: SELECT SUM(amount) FROM invoices WHERE status IN ('sent', 'overdue') AND payment_date IS NULL
-    # Updated 2026-02-11: Data changed - 1 invoice paid (~2151 AED reduction)
-    "total_valid_ar_aed": 1025020.48,
-    # Source: SELECT COUNT(*) FROM commitments WHERE status NOT IN ('fulfilled', 'closed')
-    "open_commitment_count": 37,
-    # Source: SELECT COUNT(*) FROM clients
-    "client_count": 25,
-    # Source: SELECT COUNT(DISTINCT assignee) FROM tasks WHERE assignee IS NOT NULL AND status NOT IN ('done', 'completed', 'archived')
-    "active_people_count": 22,
-    # Source: SELECT COUNT(*) FROM communications WHERE received_at IS NOT NULL OR created_at IS NOT NULL
-    "communication_count": 116,
+    # Fixture: 5 projects with status in (execution, kickoff, delivery) - none completed/cancelled/archived
+    "active_project_count": 5,
+
+    # Fixture: 3 invoices with status in (sent, overdue) and payment_date IS NULL
+    # inv-001: sent, no payment
+    # inv-002: overdue, no payment
+    # inv-003: sent, no payment
+    # inv-004: paid (excluded)
+    "unpaid_invoice_count": 3,
+
+    # Fixture: sum of amounts for unpaid invoices = 5000 + 7500 + 2500 = 15000.00
+    "total_valid_ar_aed": 15000.00,
+
+    # Fixture: 4 commitments with status NOT IN (fulfilled, closed)
+    # commit-001: open
+    # commit-002: pending
+    # commit-003: open
+    # commit-004: in_progress
+    # commit-005: fulfilled (excluded)
+    "open_commitment_count": 4,
+
+    # Fixture: 3 clients
+    "client_count": 3,
+
+    # Fixture: 3 distinct assignees with active tasks (status NOT IN done, completed, archived)
+    # person-001, person-002, person-003 all have in_progress tasks
+    "active_people_count": 3,
+
+    # Fixture: 5 communications with received_at set
+    "communication_count": 5,
 }
 
 
@@ -46,6 +67,39 @@ def golden():
 
 
 @pytest.fixture
-def db_path():
-    """Return path to real database."""
-    return DB_PATH
+def db_path(tmp_path):
+    """
+    Return path to a DETERMINISTIC fixture database.
+
+    This fixture creates a fresh temp DB with pinned seed data for each test.
+    Tests MUST NOT access the live data/moh_time_os.db.
+    """
+    return get_fixture_db_path(tmp_path)
+
+
+@pytest.fixture(autouse=True)
+def block_live_db_access(monkeypatch):
+    """
+    Guard that fails tests if they try to access the live database.
+
+    This ensures golden tests remain deterministic and don't depend on
+    user-local data or external system state.
+    """
+    import sqlite3
+    original_connect = sqlite3.connect
+
+    def guarded_connect(database, *args, **kwargs):
+        if isinstance(database, (str, Path)):
+            db_str = str(database)
+            if "moh_time_os.db" in db_str and "fixture" not in db_str:
+                # Allow if it's clearly a test/fixture path
+                resolved = Path(database).resolve() if Path(database).exists() else None
+                if resolved and resolved == LIVE_DB_PATH.resolve():
+                    raise RuntimeError(
+                        f"DETERMINISM VIOLATION: Test attempted to access live DB.\n"
+                        f"Path: {database}\n"
+                        "Golden tests must use fixture DB only."
+                    )
+        return original_connect(database, *args, **kwargs)
+
+    monkeypatch.setattr(sqlite3, "connect", guarded_connect)
