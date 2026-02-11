@@ -18,22 +18,22 @@ rules:
     severity: ERROR
     paths:
       include:
-        - time-os-ui/src/
+        - /time-os-ui/src/
       exclude:
-        - time-os-ui/src/api/
-        - time-os-ui/src/__tests__/
+        - /time-os-ui/src/api/
+        - /time-os-ui/src/__tests__/
         # BASELINE [ui-no-direct-fetch]: Legacy files predating API client
         # Why: Pre-existing fetch() usage before http.ts client was established
         # Migration: Replace with http.ts client methods
         # Tracking: TIME-OS-UI-MIGRATION
         # Deadline: Q2 2026
         # ALIGNED: ESLint eslint.config.js no-restricted-globals exclusions match exactly
-        - time-os-ui/src/lib/api.ts
-        - time-os-ui/src/pages/ClientDetailSpec.tsx
-        - time-os-ui/src/pages/ClientIndex.tsx
-        - time-os-ui/src/pages/ColdClients.tsx
-        - time-os-ui/src/pages/Inbox.tsx
-        - time-os-ui/src/pages/RecentlyActiveDrilldown.tsx
+        - /time-os-ui/src/lib/api.ts
+        - /time-os-ui/src/pages/ClientDetailSpec.tsx
+        - /time-os-ui/src/pages/ClientIndex.tsx
+        - /time-os-ui/src/pages/ColdClients.tsx
+        - /time-os-ui/src/pages/Inbox.tsx
+        - /time-os-ui/src/pages/RecentlyActiveDrilldown.tsx
 
   - id: ui-no-axios
     pattern-either:
@@ -45,10 +45,10 @@ rules:
     severity: ERROR
     paths:
       include:
-        - time-os-ui/src/
+        - /time-os-ui/src/
       exclude:
-        - time-os-ui/src/api/
-        - time-os-ui/src/__tests__/
+        - /time-os-ui/src/api/
+        - /time-os-ui/src/__tests__/
 
   # --------------------------------------------------------------------------
   # (2) SUBPROCESS POLICY
@@ -68,17 +68,17 @@ rules:
     severity: ERROR
     paths:
       include:
-        - lib/
-        - api/
-        - scripts/
+        - /lib/
+        - /api/
+        - /scripts/
       exclude:
         # BASELINE [subprocess-no-shell-true]: Legacy shell execution
         # Why: Complex piping/quoting for CLI tool invocations
         # Migration: Refactor to list args with shutil.which
         # Tracking: SHELL-MIGRATION
         # Deadline: Q2 2026
-        - lib/collectors/base.py
-        - lib/executor/handlers.py
+        - /lib/collectors/base.py
+        - /lib/executor/handlers.py
 
   # Rule 2b: Literal string command banned (must use list)
   - id: subprocess-literal-string-cmd
@@ -96,13 +96,13 @@ rules:
     severity: ERROR
     paths:
       include:
-        - lib/
-        - api/
-        - scripts/
+        - /lib/
+        - /api/
+        - /scripts/
       exclude:
         # Same baseline as subprocess-no-shell-true
-        - lib/collectors/base.py
-        - lib/executor/handlers.py
+        - /lib/collectors/base.py
+        - /lib/executor/handlers.py
 
   # Rule 2c: git must use shutil.which
   - id: subprocess-bare-git
@@ -120,16 +120,16 @@ rules:
     severity: ERROR
     paths:
       include:
-        - lib/
-        - api/
-        - scripts/
+        - /lib/
+        - /api/
+        - /scripts/
       exclude:
         # BASELINE [subprocess-bare-git]: Uses shutil.which correctly
         # Why: Already resolves git path before invocation (line 20-22)
         # Migration: N/A - already compliant
         # Tracking: N/A
         # Deadline: N/A
-        - lib/safety/utils.py
+        - /lib/safety/utils.py
 
   # Rule 2d: rg must use shutil.which
   - id: subprocess-bare-rg
@@ -146,16 +146,16 @@ rules:
     severity: ERROR
     paths:
       include:
-        - lib/
-        - api/
-        - scripts/
+        - /lib/
+        - /api/
+        - /scripts/
       exclude:
         # BASELINE [subprocess-bare-rg]: Uses shutil.which correctly
         # Why: Already resolves rg path before invocation (line 270-275)
         # Migration: N/A - already compliant
         # Tracking: N/A
         # Deadline: N/A
-        - lib/safety/schema.py
+        - /lib/safety/schema.py
 
   # Rule 2e: gog CLI must use shutil.which (repo-derived: integrations use gog)
   - id: subprocess-bare-gog
@@ -173,18 +173,18 @@ rules:
     severity: ERROR
     paths:
       include:
-        - lib/
-        - api/
-        - scripts/
+        - /lib/
+        - /api/
+        - /scripts/
       exclude:
         # BASELINE [subprocess-bare-gog]: Legacy gog invocations without shutil.which
         # Why: gog CLI assumed to be in PATH; works but not defensive
         # Migration: Add shutil.which("gog") check at module init
         # Tracking: GOG-INTEGRATION-HARDENING
         # Deadline: Q3 2026
-        - lib/integrations/email_integration.py
-        - lib/integrations/tasks_integration.py
-        - lib/integrations/calendar_integration.py
+        - /lib/integrations/email_integration.py
+        - /lib/integrations/tasks_integration.py
+        - /lib/integrations/calendar_integration.py
 
   # --------------------------------------------------------------------------
   # (3) SQL POLICY - User Input Injection
@@ -212,12 +212,12 @@ rules:
     severity: ERROR
     paths:
       include:
-        - lib/
-        - api/
+        - /lib/
+        - /api/
       exclude:
-        - lib/migrations/
-        - lib/v5/migrations/
-        - lib/ui_spec_v21/migrations/
+        - /lib/migrations/
+        - /lib/v5/migrations/
+        - /lib/ui_spec_v21/migrations/
 
   # Rule 3b: .format() in execute() - always risky
   - id: sql-format-execute
@@ -237,18 +237,18 @@ rules:
     severity: ERROR
     paths:
       include:
-        - lib/
-        - api/
+        - /lib/
+        - /api/
       exclude:
-        - lib/migrations/
-        - lib/v5/migrations/
-        - lib/ui_spec_v21/migrations/
+        - /lib/migrations/
+        - /lib/v5/migrations/
+        - /lib/ui_spec_v21/migrations/
         # BASELINE [sql-format-execute]: Safe IN-clause placeholder builder
         # Why: Builds "?,?,?" placeholders, values are parameterized separately
         # Migration: Extract to safe_in_clause() helper function
         # Tracking: SQL-HELPERS
         # Deadline: Q3 2026
-        - lib/v4/signal_service.py
+        - /lib/v4/signal_service.py
 
   # Rule 3c: % formatting in execute() - always risky
   - id: sql-percent-execute
@@ -268,12 +268,12 @@ rules:
     severity: ERROR
     paths:
       include:
-        - lib/
-        - api/
+        - /lib/
+        - /api/
       exclude:
-        - lib/migrations/
-        - lib/v5/migrations/
-        - lib/ui_spec_v21/migrations/
+        - /lib/migrations/
+        - /lib/v5/migrations/
+        - /lib/ui_spec_v21/migrations/
 
   # --------------------------------------------------------------------------
   # (4) ROUTE LINEAGE: V2 routes MUST use spec_router
@@ -290,4 +290,4 @@ rules:
     severity: ERROR
     paths:
       include:
-        - api/server.py
+        - /api/server.py
