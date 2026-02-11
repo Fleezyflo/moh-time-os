@@ -31,6 +31,14 @@ logger = logging.getLogger(__name__)
 SA_FILE = Path.home() / "Library/Application Support/gogcli/sa-bW9saGFtQGhybW55LmNv.json"
 GMAIL_SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 CALENDAR_SCOPES = ["https://www.googleapis.com/auth/calendar"]
+CHAT_SCOPES = [
+    "https://www.googleapis.com/auth/chat.spaces.readonly",
+    "https://www.googleapis.com/auth/chat.messages.readonly",
+]
+DRIVE_SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
+
+# All supported services
+ALL_SERVICES = ["gmail", "calendar", "chat", "drive", "docs"]
 
 AUTH_DEBUG = os.environ.get("AUTH_DEBUG", "0") == "1"
 
@@ -180,6 +188,40 @@ def get_calendar_service(user: str):
     )
     creds = creds.with_subject(user)
     return build("calendar", "v3", credentials=creds)
+
+
+def get_chat_service(user: str):
+    """Get Chat API service with SA+DWD."""
+    from google.oauth2 import service_account
+    from googleapiclient.discovery import build
+
+    if AUTH_DEBUG:
+        with open(SA_FILE) as f:
+            sa_data = json.load(f)
+        debug_print(f"SA_EMAIL: {sa_data.get('client_email')}")
+        debug_print(f"SUBJECT: {user}")
+        debug_print(f"SCOPES: {CHAT_SCOPES}")
+
+    creds = service_account.Credentials.from_service_account_file(str(SA_FILE), scopes=CHAT_SCOPES)
+    creds = creds.with_subject(user)
+    return build("chat", "v1", credentials=creds)
+
+
+def get_drive_service(user: str):
+    """Get Drive API service with SA+DWD."""
+    from google.oauth2 import service_account
+    from googleapiclient.discovery import build
+
+    if AUTH_DEBUG:
+        with open(SA_FILE) as f:
+            sa_data = json.load(f)
+        debug_print(f"SA_EMAIL: {sa_data.get('client_email')}")
+        debug_print(f"SUBJECT: {user}")
+        debug_print(f"SCOPES: {DRIVE_SCOPES}")
+
+    creds = service_account.Credentials.from_service_account_file(str(SA_FILE), scopes=DRIVE_SCOPES)
+    creds = creds.with_subject(user)
+    return build("drive", "v3", credentials=creds)
 
 
 def collect_gmail_for_user(
@@ -384,19 +426,306 @@ def collect_calendar_for_user(
     return result
 
 
+def collect_chat_for_user(
+    user: str,
+    since: str,
+    until: str,
+    limit: int,
+    db_path: Path,
+) -> dict[str, Any]:
+    """
+    Collect Chat spaces and messages for a single user.
+    Returns: {ok: bool, count: int, spaces_count: int, error: str|None, is_invalid_subject: bool}
+    """
+    result: dict[str, Any] = {
+        "ok": False,
+        "count": 0,
+        "spaces_count": 0,
+        "error": None,
+        "is_invalid_subject": False,
+    }
+
+    try:
+        svc = get_chat_service(user)
+
+        # Parse since/until for local filtering
+        since_dt = datetime.fromisoformat(
+            since.replace("Z", "+00:00") if "T" in since else since + "T00:00:00+00:00"
+        )
+        until_dt = datetime.fromisoformat(
+            until.replace("Z", "+00:00") if "T" in until else until + "T23:59:59+00:00"
+        )
+
+        # Step 1: List all spaces with pagination
+        debug_print("ENDPOINT: chat.spaces.list")
+        spaces: list[dict[str, Any]] = []
+        page_token = None
+
+        while len(spaces) < limit:
+            list_params = {"pageSize": min(100, limit - len(spaces))}
+            if page_token:
+                list_params["pageToken"] = page_token
+
+            response = svc.spaces().list(**list_params).execute()
+            items = response.get("spaces", [])
+            spaces.extend(items)
+
+            debug_print(f"STATUS: 200 OK, {len(items)} spaces this page (total: {len(spaces)})")
+
+            next_page_token = response.get("nextPageToken")
+            if not next_page_token:
+                break
+            page_token = next_page_token
+            debug_print("nextPageToken present for spaces, continuing...")
+
+        result["spaces_count"] = len(spaces)
+
+        # Step 2: For each space, get messages with pagination
+        total_messages = 0
+        messages_per_space = max(1, limit // max(1, len(spaces))) if spaces else limit
+
+        for space in spaces:
+            if total_messages >= limit:
+                break
+
+            space_name = space.get("name", "")
+            debug_print(f"ENDPOINT: chat.spaces.messages.list({space_name[:30]}...)")
+
+            space_messages = 0
+            page_token = None
+            pages_fetched = 0
+            max_pages_per_space = 5  # Limit pagination to avoid runaway loops
+
+            while (
+                space_messages < messages_per_space
+                and total_messages < limit
+                and pages_fetched < max_pages_per_space
+            ):
+                msg_params = {
+                    "parent": space_name,
+                    "pageSize": min(100, limit - total_messages),
+                }
+                if page_token:
+                    msg_params["pageToken"] = page_token
+
+                try:
+                    msg_response = svc.spaces().messages().list(**msg_params).execute()
+                    messages = msg_response.get("messages", [])
+                    pages_fetched += 1
+
+                    # Filter by createTime within since/until window
+                    filtered_count = 0
+                    for msg in messages:
+                        create_time = msg.get("createTime", "")
+                        if create_time:
+                            try:
+                                msg_dt = datetime.fromisoformat(create_time.replace("Z", "+00:00"))
+                                if since_dt <= msg_dt <= until_dt:
+                                    filtered_count += 1
+                            except ValueError:
+                                filtered_count += 1  # Include if can't parse
+                        else:
+                            filtered_count += 1
+
+                    space_messages += filtered_count
+                    total_messages += filtered_count
+
+                    debug_print(
+                        f"STATUS: 200 OK, {len(messages)} messages ({filtered_count} in window) from {space_name[:20]}..."
+                    )
+
+                    next_page_token = msg_response.get("nextPageToken")
+                    if not next_page_token:
+                        break
+                    page_token = next_page_token
+
+                except Exception as e:
+                    debug_print(f"ERROR fetching messages from {space_name[:20]}...: {e}")
+                    break
+
+        # Store cursor
+        set_cursor(db_path, "chat", user, "last_until", until)
+
+        result["ok"] = True
+        result["count"] = total_messages
+
+    except Exception as e:
+        error_str = str(e)
+        result["error"] = error_str
+        debug_print(f"ERROR: {error_str}")
+
+        if "invalid_grant" in error_str.lower():
+            result["is_invalid_subject"] = True
+            add_to_blocklist(db_path, user, "invalid_grant", error_str[:500])
+
+    return result
+
+
+def collect_drive_for_user(
+    user: str,
+    since: str,
+    until: str,
+    limit: int,
+    db_path: Path,
+) -> dict[str, Any]:
+    """
+    Collect Drive files for a single user with date range and pagination.
+    Returns: {ok: bool, count: int, docs_count: int, doc_ids: list, error: str|None, is_invalid_subject: bool}
+    """
+    result: dict[str, Any] = {
+        "ok": False,
+        "count": 0,
+        "docs_count": 0,
+        "doc_ids": [],
+        "error": None,
+        "is_invalid_subject": False,
+    }
+
+    try:
+        svc = get_drive_service(user)
+
+        # Build query with modifiedTime filter
+        since_rfc = since if "T" in since else since + "T00:00:00Z"
+        until_rfc = until if "T" in until else until + "T23:59:59Z"
+
+        query = (
+            f"modifiedTime >= '{since_rfc}' and modifiedTime <= '{until_rfc}' and trashed = false"
+        )
+
+        debug_print(f"ENDPOINT: drive.files.list(q='{query[:50]}...')")
+
+        files: list[dict[str, Any]] = []
+        doc_ids: list[str] = []
+        page_token = None
+
+        while len(files) < limit:
+            list_params = {
+                "pageSize": min(100, limit - len(files)),
+                "q": query,
+                "fields": "nextPageToken, files(id, name, mimeType, modifiedTime, owners)",
+                "supportsAllDrives": True,
+                "includeItemsFromAllDrives": True,
+            }
+            if page_token:
+                list_params["pageToken"] = page_token
+
+            response = svc.files().list(**list_params).execute()
+            items = response.get("files", [])
+            files.extend(items)
+
+            # Track Google Docs for docs extraction
+            for f in items:
+                if f.get("mimeType") == "application/vnd.google-apps.document":
+                    doc_ids.append(f.get("id"))
+
+            debug_print(f"STATUS: 200 OK, {len(items)} files this page (total: {len(files)})")
+
+            next_page_token = response.get("nextPageToken")
+            if not next_page_token:
+                break
+            page_token = next_page_token
+            debug_print("nextPageToken present for files, continuing...")
+
+        # Store cursor
+        set_cursor(db_path, "drive", user, "last_until", until)
+
+        result["ok"] = True
+        result["count"] = len(files)
+        result["docs_count"] = len(doc_ids)
+        result["doc_ids"] = doc_ids[:limit]  # Limit doc IDs for docs extraction
+
+    except Exception as e:
+        error_str = str(e)
+        result["error"] = error_str
+        debug_print(f"ERROR: {error_str}")
+
+        if "invalid_grant" in error_str.lower():
+            result["is_invalid_subject"] = True
+            add_to_blocklist(db_path, user, "invalid_grant", error_str[:500])
+
+    return result
+
+
+def collect_docs_for_user(
+    user: str,
+    doc_ids: list[str],
+    limit: int,
+    db_path: Path,
+) -> dict[str, Any]:
+    """
+    Extract text content from Google Docs using drive.readonly export.
+    Returns: {ok: bool, count: int, sample_text: str|None, error: str|None, is_invalid_subject: bool}
+    """
+    result: dict[str, Any] = {
+        "ok": False,
+        "count": 0,
+        "sample_text": None,
+        "error": None,
+        "is_invalid_subject": False,
+    }
+
+    if not doc_ids:
+        result["ok"] = True
+        return result
+
+    try:
+        svc = get_drive_service(user)  # Reuse drive.readonly for export
+
+        debug_print(f"ENDPOINT: drive.files.export (docs extraction for {len(doc_ids)} docs)")
+
+        extracted_count = 0
+        sample_text = None
+
+        for doc_id in doc_ids[:limit]:
+            try:
+                # Export as plain text
+                response = svc.files().export(fileId=doc_id, mimeType="text/plain").execute()
+                text = response.decode("utf-8") if isinstance(response, bytes) else str(response)
+                extracted_count += 1
+
+                # Keep first sample for proof
+                if sample_text is None and len(text) > 100:
+                    sample_text = text[:500]
+
+                debug_print(f"STATUS: 200 OK, exported doc {doc_id[:15]}... ({len(text)} chars)")
+
+            except Exception as e:
+                debug_print(f"ERROR exporting doc {doc_id[:15]}...: {e}")
+                continue
+
+        result["ok"] = True
+        result["count"] = extracted_count
+        result["sample_text"] = sample_text
+
+    except Exception as e:
+        error_str = str(e)
+        result["error"] = error_str
+        debug_print(f"ERROR: {error_str}")
+
+        if "invalid_grant" in error_str.lower():
+            result["is_invalid_subject"] = True
+
+    return result
+
+
 def run_all_users(
     since: str,
     until: str,
     limit_users: int | None = None,
     limit_per_user: int = 50,
     dry_run: bool = False,
+    services: list[str] | None = None,
 ) -> dict[str, Any]:
     """
-    Run Gmail + Calendar collection for all internal users.
+    Run collection for all internal users across specified services.
     Returns coverage report JSON with detailed categorization.
     """
     db_path = paths.db_path()
     ensure_tables(db_path)
+
+    # Default to all services if none specified
+    if services is None:
+        services = ALL_SERVICES.copy()
 
     users = get_internal_users(db_path)
     people_inventory_count = len(users)
@@ -404,7 +733,9 @@ def run_all_users(
     if limit_users:
         users = users[:limit_users]
 
-    logger.info(f"Running collection for {len(users)} users, since={since}, until={until}")
+    logger.info(
+        f"Running collection for {len(users)} users, services={services}, since={since}, until={until}"
+    )
 
     if dry_run:
         # Check blocklist status for each user
@@ -421,6 +752,7 @@ def run_all_users(
             json.dumps(
                 {
                     "dry_run": True,
+                    "services": services,
                     "since": since,
                     "until": until,
                     "people_inventory_count": people_inventory_count,
@@ -437,6 +769,7 @@ def run_all_users(
     report: dict[str, Any] = {
         "since": since,
         "until": until,
+        "services": services,
         "people_inventory_count": people_inventory_count,
         "per_user": {},
         "totals": {
@@ -446,6 +779,10 @@ def run_all_users(
             "failed_other_count": 0,
             "gmail_count": 0,
             "calendar_event_count": 0,
+            "chat_message_count": 0,
+            "chat_space_count": 0,
+            "drive_file_count": 0,
+            "docs_extracted_count": 0,
         },
     }
 
@@ -464,51 +801,94 @@ def run_all_users(
         logger.info(f"[{i+1}/{len(users)}] Processing: {user}")
         report["totals"]["attempted_count"] += 1
 
-        user_report: dict[str, Any] = {
-            "status": "attempted",
-            "gmail": {"ok": False, "count": 0, "error": None},
-            "calendar": {"ok": False, "count": 0, "error": None},
-        }
+        user_report: dict[str, Any] = {"status": "attempted"}
+        is_invalid = False
+        any_success = False
+        doc_ids: list[str] = []
 
         # Gmail collection
-        gmail_result = collect_gmail_for_user(user, since, until, limit_per_user, db_path)
-        user_report["gmail"] = {
-            "ok": gmail_result["ok"],
-            "count": gmail_result["count"],
-            "error": gmail_result.get("error"),
-        }
+        if "gmail" in services:
+            gmail_result = collect_gmail_for_user(user, since, until, limit_per_user, db_path)
+            user_report["gmail"] = {
+                "ok": gmail_result["ok"],
+                "count": gmail_result["count"],
+                "error": gmail_result.get("error"),
+            }
+            if gmail_result.get("is_invalid_subject"):
+                is_invalid = True
+            elif gmail_result["ok"]:
+                any_success = True
+                report["totals"]["gmail_count"] += gmail_result["count"]
 
         # Calendar collection
-        calendar_result = collect_calendar_for_user(user, since, until, limit_per_user, db_path)
-        user_report["calendar"] = {
-            "ok": calendar_result["ok"],
-            "count": calendar_result["count"],
-            "error": calendar_result.get("error"),
-        }
+        if "calendar" in services:
+            calendar_result = collect_calendar_for_user(user, since, until, limit_per_user, db_path)
+            user_report["calendar"] = {
+                "ok": calendar_result["ok"],
+                "count": calendar_result["count"],
+                "error": calendar_result.get("error"),
+            }
+            if calendar_result.get("is_invalid_subject"):
+                is_invalid = True
+            elif calendar_result["ok"]:
+                any_success = True
+                report["totals"]["calendar_event_count"] += calendar_result["count"]
+
+        # Chat collection
+        if "chat" in services:
+            chat_result = collect_chat_for_user(user, since, until, limit_per_user, db_path)
+            user_report["chat"] = {
+                "ok": chat_result["ok"],
+                "count": chat_result["count"],
+                "spaces_count": chat_result.get("spaces_count", 0),
+                "error": chat_result.get("error"),
+            }
+            if chat_result.get("is_invalid_subject"):
+                is_invalid = True
+            elif chat_result["ok"]:
+                any_success = True
+                report["totals"]["chat_message_count"] += chat_result["count"]
+                report["totals"]["chat_space_count"] += chat_result.get("spaces_count", 0)
+
+        # Drive collection
+        if "drive" in services:
+            drive_result = collect_drive_for_user(user, since, until, limit_per_user, db_path)
+            user_report["drive"] = {
+                "ok": drive_result["ok"],
+                "count": drive_result["count"],
+                "docs_count": drive_result.get("docs_count", 0),
+                "error": drive_result.get("error"),
+            }
+            if drive_result.get("is_invalid_subject"):
+                is_invalid = True
+            elif drive_result["ok"]:
+                any_success = True
+                report["totals"]["drive_file_count"] += drive_result["count"]
+                doc_ids = drive_result.get("doc_ids", [])
+
+        # Docs extraction (depends on drive results)
+        if "docs" in services and doc_ids:
+            docs_result = collect_docs_for_user(user, doc_ids, limit_per_user, db_path)
+            user_report["docs"] = {
+                "ok": docs_result["ok"],
+                "count": docs_result["count"],
+                "sample_text": docs_result.get("sample_text"),
+                "error": docs_result.get("error"),
+            }
+            if docs_result.get("is_invalid_subject"):
+                is_invalid = True
+            elif docs_result["ok"]:
+                any_success = True
+                report["totals"]["docs_extracted_count"] += docs_result["count"]
 
         # Categorize outcome
-        gmail_invalid = gmail_result.get("is_invalid_subject", False)
-        cal_invalid = calendar_result.get("is_invalid_subject", False)
-
-        if gmail_invalid or cal_invalid:
-            # Invalid subject - already added to blocklist by collect functions
+        if is_invalid:
             user_report["status"] = "invalid_subject"
             report["totals"]["skipped_invalid_subject_count"] += 1
-        elif gmail_result["ok"] and calendar_result["ok"]:
+        elif any_success:
             user_report["status"] = "succeeded"
             report["totals"]["succeeded_count"] += 1
-            report["totals"]["gmail_count"] += gmail_result["count"]
-            report["totals"]["calendar_event_count"] += calendar_result["count"]
-        elif gmail_result["ok"] or calendar_result["ok"]:
-            # Partial success
-            user_report["status"] = "partial"
-            report["totals"]["succeeded_count"] += 1
-            if gmail_result["ok"]:
-                report["totals"]["gmail_count"] += gmail_result["count"]
-            if calendar_result["ok"]:
-                report["totals"]["calendar_event_count"] += calendar_result["count"]
         else:
-            # Both failed for other reasons
             user_report["status"] = "failed"
             report["totals"]["failed_other_count"] += 1
 
@@ -521,7 +901,7 @@ def run_all_users(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="All-Users Gmail + Calendar Collector")
+    parser = argparse.ArgumentParser(description="All-Users Multi-Service Collector")
     parser.add_argument("--since", default="2025-06-01", help="Start date (YYYY-MM-DD)")
     parser.add_argument(
         "--until", default=datetime.now(UTC).strftime("%Y-%m-%d"), help="End date (YYYY-MM-DD)"
@@ -531,10 +911,22 @@ def main():
         "--limit-per-user", type=int, default=50, help="Limit items per user per service"
     )
     parser.add_argument(
+        "--services",
+        default=",".join(ALL_SERVICES),
+        help=f"Comma-separated list of services ({','.join(ALL_SERVICES)})",
+    )
+    parser.add_argument(
         "--dry-run", action="store_true", help="Print planned users without calling APIs"
     )
 
     args = parser.parse_args()
+
+    # Parse services
+    services = [s.strip() for s in args.services.split(",") if s.strip()]
+    invalid_services = [s for s in services if s not in ALL_SERVICES]
+    if invalid_services:
+        logger.error(f"Invalid services: {invalid_services}. Valid: {ALL_SERVICES}")
+        sys.exit(1)
 
     report = run_all_users(
         since=args.since,
@@ -542,6 +934,7 @@ def main():
         limit_users=args.limit_users,
         limit_per_user=args.limit_per_user,
         dry_run=args.dry_run,
+        services=services,
     )
 
     if report:
