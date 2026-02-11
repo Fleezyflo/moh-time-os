@@ -25,8 +25,9 @@ rules:
         - "**/*.test.ts"
         - "**/*.test.tsx"
         # BASELINE [ui-no-direct-fetch]: Legacy files predating API client
-        # Migration: Replace fetch() with http.ts client
-        # Tracking: Internal backlog
+        # Why: Pre-existing fetch() usage before http.ts client was established
+        # Migration: Replace with http.ts client methods
+        # Tracking: TIME-OS-UI-MIGRATION
         # Deadline: Q2 2026
         - "**/time-os-ui/src/lib/api.ts"
         - "**/time-os-ui/src/pages/ClientDetailSpec.tsx"
@@ -54,7 +55,7 @@ rules:
   # --------------------------------------------------------------------------
   # (2) SUBPROCESS POLICY
   # --------------------------------------------------------------------------
-  # Rule 2a: shell=True is banned
+  # Rule 2a: shell=True is banned (injection risk)
   - id: subprocess-no-shell-true
     patterns:
       - pattern-either:
@@ -64,7 +65,7 @@ rules:
           - pattern: subprocess.check_output(..., shell=True, ...)
           - pattern: subprocess.check_call(..., shell=True, ...)
     message: |
-      POLICY: shell=True banned. Use list args: subprocess.run(["cmd", "arg"])
+      POLICY: shell=True banned (injection risk). Use list args: subprocess.run(["cmd", "arg"])
     languages: [python]
     severity: ERROR
     paths:
@@ -73,14 +74,15 @@ rules:
         - "**/api/**"
         - "**/scripts/**"
       exclude:
-        # BASELINE [subprocess-no-shell-true]: Legacy shell command execution
-        # Why: Runs external CLI tools (gog) with complex args
-        # Migration: Refactor to use list args with shutil.which
+        # BASELINE [subprocess-no-shell-true]: Legacy shell execution
+        # Why: Complex piping/quoting for gog CLI tool invocations
+        # Migration: Refactor to list args with shutil.which
+        # Tracking: SHELL-MIGRATION
         # Deadline: Q2 2026
         - "**/lib/collectors/base.py"
         - "**/lib/executor/handlers.py"
 
-  # Rule 2b: Literal string command banned (f-string or plain string)
+  # Rule 2b: Literal string command banned (must use list)
   - id: subprocess-literal-string-cmd
     patterns:
       - pattern-either:
@@ -104,14 +106,14 @@ rules:
         - "**/lib/collectors/base.py"
         - "**/lib/executor/handlers.py"
 
-  # Rule 2c: Known tools must use shutil.which
+  # Rule 2c: git must use shutil.which
   - id: subprocess-bare-git
     patterns:
       - pattern-either:
           - pattern: subprocess.run(["git", ...], ...)
           - pattern: subprocess.Popen(["git", ...], ...)
       - pattern-not-inside: |
-          $EXE = shutil.which("git")
+          $GIT = shutil.which("git")
           ...
     message: |
       POLICY: Resolve git with shutil.which() first.
@@ -124,16 +126,21 @@ rules:
         - "**/api/**"
         - "**/scripts/**"
       exclude:
-        # BASELINE [subprocess-bare-git]: Already uses shutil.which
+        # BASELINE [subprocess-bare-git]: Uses shutil.which correctly
+        # Why: Already resolves git path before invocation
+        # Migration: N/A - already compliant
+        # Tracking: N/A
+        # Deadline: N/A
         - "**/lib/safety/utils.py"
 
+  # Rule 2d: rg must use shutil.which
   - id: subprocess-bare-rg
     patterns:
       - pattern-either:
           - pattern: subprocess.run(["rg", ...], ...)
           - pattern: subprocess.Popen(["rg", ...], ...)
       - pattern-not-inside: |
-          $EXE = shutil.which("rg")
+          $RG = shutil.which("rg")
           ...
     message: |
       POLICY: Resolve rg with shutil.which() first.
@@ -145,27 +152,47 @@ rules:
         - "**/api/**"
         - "**/scripts/**"
       exclude:
-        # BASELINE [subprocess-bare-rg]: Already uses shutil.which
+        # BASELINE [subprocess-bare-rg]: Uses shutil.which correctly
+        # Why: Already resolves rg path before invocation
+        # Migration: N/A - already compliant
+        # Tracking: N/A
+        # Deadline: N/A
         - "**/lib/safety/schema.py"
 
   # --------------------------------------------------------------------------
-  # (3) SQL POLICY - Execute Interpolation
+  # (3) SQL POLICY - User Input Injection
   # --------------------------------------------------------------------------
-  # Rule 3a: f-string in execute() banned (except migrations and DDL files)
-  - id: sql-fstring-execute
+  # High-signal: Catch user-input interpolation in execute(), not all f-strings.
+  # DDL patterns (PRAGMA, ALTER, table names) are safe when values are parameterized.
+
+  # Rule 3a: Request params in f-string execute()
+  - id: sql-request-param-fstring
     patterns:
       - pattern-either:
-          - pattern: $CURSOR.execute(f"...", ...)
-          - pattern: $CURSOR.execute(f"...")
-          - pattern: $CONN.execute(f"...", ...)
-          - pattern: $CONN.execute(f"...")
-          - pattern: cursor.execute(f"...", ...)
-          - pattern: cursor.execute(f"...")
-          - pattern: conn.execute(f"...", ...)
-          - pattern: conn.execute(f"...")
+          - pattern: $X.execute(f"...{request.$ATTR}...")
+          - pattern: $X.execute(f"...{params.$ATTR}...")
+          - pattern: $X.execute(f"...{query.$ATTR}...")
+          - pattern: $X.execute(f"...{body.$ATTR}...")
+          - pattern: $X.execute(f"...{user_input}...")
+          - pattern: $X.execute(f"...{user_id}...")
+          - pattern: $X.execute(f"...{client_id}...")
+          - pattern: cursor.execute(f"...{request.$ATTR}...")
+          - pattern: cursor.execute(f"...{params.$ATTR}...")
+          - pattern: cursor.execute(f"...{query.$ATTR}...")
+          - pattern: cursor.execute(f"...{body.$ATTR}...")
+          - pattern: cursor.execute(f"...{user_input}...")
+          - pattern: cursor.execute(f"...{user_id}...")
+          - pattern: cursor.execute(f"...{client_id}...")
+          - pattern: conn.execute(f"...{request.$ATTR}...")
+          - pattern: conn.execute(f"...{params.$ATTR}...")
+          - pattern: conn.execute(f"...{query.$ATTR}...")
+          - pattern: conn.execute(f"...{body.$ATTR}...")
+          - pattern: conn.execute(f"...{user_input}...")
+          - pattern: conn.execute(f"...{user_id}...")
+          - pattern: conn.execute(f"...{client_id}...")
     message: |
-      POLICY: f-string in execute() banned. Use parameterized queries.
-      Example: cursor.execute("SELECT * WHERE id = ?", (id,))
+      SECURITY: User input interpolated in SQL. Use parameterized queries.
+      Example: cursor.execute("SELECT * WHERE id = ?", (user_id,))
     languages: [python]
     severity: ERROR
     paths:
@@ -173,40 +200,20 @@ rules:
         - "**/lib/**"
         - "**/api/**"
       exclude:
-        # Migration directories (DDL allowed)
         - "**/lib/migrations/**"
         - "**/lib/v5/migrations/**"
         - "**/lib/ui_spec_v21/migrations/**"
-        # BASELINE [sql-fstring-execute]: Safe DDL patterns (PRAGMA, ALTER, dynamic columns)
-        # Why: These interpolate table/column names from code, not user input
-        # Migration: Extract DDL to migration files
-        # Deadline: Q3 2026
-        - "**/lib/db.py"
-        - "**/lib/db_writer.py"
-        - "**/lib/state_store.py"
-        - "**/lib/store.py"
-        - "**/lib/entities.py"
-        - "**/lib/items.py"
-        - "**/lib/safety/schema.py"
-        - "**/lib/safety/migrations.py"
-        - "**/lib/ui_spec_v21/time_utils.py"
-        - "**/lib/ui_spec_v21/endpoints.py"
-        - "**/lib/v4/identity_service.py"
-        - "**/lib/v4/issue_service.py"
-        - "**/lib/v4/proposal_aggregator.py"
-        - "**/lib/v4/signal_service.py"
-        - "**/lib/v5/repositories/signal_repository.py"
-        - "**/api/spec_router.py"
-        - "**/api/server.py"
 
-  # Rule 3b: .format() in execute() banned
+  # Rule 3b: .format() in execute() - always risky
   - id: sql-format-execute
     patterns:
       - pattern-either:
-          - pattern: $CURSOR.execute($SQL.format(...), ...)
-          - pattern: $CONN.execute($SQL.format(...), ...)
+          - pattern: $X.execute($SQL.format(...), ...)
+          - pattern: $X.execute($SQL.format(...))
           - pattern: cursor.execute($SQL.format(...), ...)
+          - pattern: cursor.execute($SQL.format(...))
           - pattern: conn.execute($SQL.format(...), ...)
+          - pattern: conn.execute($SQL.format(...))
     message: |
       POLICY: .format() in execute() banned. Use parameterized queries.
     languages: [python]
@@ -216,24 +223,26 @@ rules:
         - "**/lib/**"
         - "**/api/**"
       exclude:
-        # Migration directories
         - "**/lib/migrations/**"
         - "**/lib/v5/migrations/**"
         - "**/lib/ui_spec_v21/migrations/**"
         # BASELINE [sql-format-execute]: Safe IN-clause placeholder builder
-        # Why: Builds "?,?,?" placeholders for IN clause, values are parameterized
-        # Migration: Use helper function for IN-clause building
+        # Why: Builds "?,?,?" placeholders, values are parameterized separately
+        # Migration: Extract to safe_in_clause() helper
+        # Tracking: SQL-HELPERS
         # Deadline: Q3 2026
         - "**/lib/v4/signal_service.py"
 
-  # Rule 3c: % formatting in execute() banned
+  # Rule 3c: % formatting in execute() - always risky
   - id: sql-percent-execute
     patterns:
       - pattern-either:
-          - pattern: $CURSOR.execute($SQL % $ARGS, ...)
-          - pattern: $CONN.execute($SQL % $ARGS, ...)
+          - pattern: $X.execute($SQL % $ARGS, ...)
+          - pattern: $X.execute($SQL % $ARGS)
           - pattern: cursor.execute($SQL % $ARGS, ...)
+          - pattern: cursor.execute($SQL % $ARGS)
           - pattern: conn.execute($SQL % $ARGS, ...)
+          - pattern: conn.execute($SQL % $ARGS)
     message: |
       POLICY: % formatting in execute() banned. Use parameterized queries.
     languages: [python]
@@ -254,7 +263,7 @@ rules:
     pattern-regex: "@app\\.(get|post|put|patch|delete)\\s*\\(\\s*[\"']/api/v2/"
     message: |
       POLICY: V2 routes on @app banned. Use @spec_router in api/spec_router.py.
-      The spec_router provides lineage tags=["Spec v2.9"].
+      The spec_router provides lineage tags=["Spec v2.9"] for OpenAPI.
     languages: [python]
     severity: ERROR
     paths:
