@@ -55,8 +55,8 @@ def get_internal_users(db_path: Path) -> list[str]:
     return emails
 
 
-def ensure_sync_cursor_table(db_path: Path) -> None:
-    """Create sync_cursor table if not exists."""
+def ensure_tables(db_path: Path) -> None:
+    """Create required tables if not exist."""
     conn = sqlite3.connect(str(db_path))
     conn.execute("""
         CREATE TABLE IF NOT EXISTS sync_cursor (
@@ -68,8 +68,56 @@ def ensure_sync_cursor_table(db_path: Path) -> None:
             PRIMARY KEY (service, subject, key)
         )
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS subject_blocklist (
+            subject TEXT PRIMARY KEY,
+            reason TEXT NOT NULL,
+            error_detail TEXT,
+            updated_at TEXT NOT NULL
+        )
+    """)
     conn.commit()
     conn.close()
+
+
+def is_blocklisted(db_path: Path, subject: str) -> tuple[bool, str | None]:
+    """Check if subject is blocklisted. Returns (is_blocked, reason)."""
+    conn = sqlite3.connect(str(db_path))
+    cursor = conn.execute(
+        "SELECT reason FROM subject_blocklist WHERE subject=?",
+        (subject,),
+    )
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return True, row[0]
+    return False, None
+
+
+def add_to_blocklist(
+    db_path: Path, subject: str, reason: str, error_detail: str | None = None
+) -> None:
+    """Add subject to blocklist."""
+    conn = sqlite3.connect(str(db_path))
+    conn.execute(
+        """
+        INSERT OR REPLACE INTO subject_blocklist (subject, reason, error_detail, updated_at)
+        VALUES (?, ?, ?, ?)
+        """,
+        (subject, reason, error_detail, datetime.now(UTC).isoformat()),
+    )
+    conn.commit()
+    conn.close()
+
+
+def get_blocklist_count(db_path: Path) -> int:
+    """Get count of blocklisted subjects."""
+    conn = sqlite3.connect(str(db_path))
+    cursor = conn.execute("SELECT COUNT(*) FROM subject_blocklist")
+    row = cursor.fetchone()
+    count: int = row[0] if row else 0
+    conn.close()
+    return count
 
 
 def get_cursor(db_path: Path, service: str, subject: str, key: str) -> str | None:
@@ -140,12 +188,12 @@ def collect_gmail_for_user(
     until: str,
     limit: int,
     db_path: Path,
-) -> dict[str, bool | int | str | None]:
+) -> dict[str, Any]:
     """
     Collect Gmail for a single user with date range and pagination.
-    Returns: {ok: bool, count: int, error: str|None}
+    Returns: {ok: bool, count: int, error: str|None, is_invalid_subject: bool}
     """
-    result: dict[str, bool | int | str | None] = {"ok": False, "count": 0, "error": None}
+    result: dict[str, Any] = {"ok": False, "count": 0, "error": None, "is_invalid_subject": False}
 
     try:
         svc = get_gmail_service(user)
@@ -204,8 +252,11 @@ def collect_gmail_for_user(
         result["error"] = error_str
         debug_print(f"ERROR: {error_str}")
 
-        # Log full error for scope diagnosis
-        if "403" in error_str or "401" in error_str:
+        # Detect invalid_grant (not a valid workspace user)
+        if "invalid_grant" in error_str.lower():
+            result["is_invalid_subject"] = True
+            add_to_blocklist(db_path, user, "invalid_grant", error_str[:500])
+        elif "403" in error_str or "401" in error_str:
             logger.error(f"Gmail auth error for {user}: {error_str}")
 
     return result
@@ -217,16 +268,17 @@ def collect_calendar_for_user(
     until: str,
     limit: int,
     db_path: Path,
-) -> dict[str, bool | int | list[str] | str | None]:
+) -> dict[str, Any]:
     """
     Collect Calendar events for ALL calendars for a single user.
-    Returns: {ok: bool, count: int, calendars: list[str], error: str|None}
+    Returns: {ok: bool, count: int, calendars: list[str], error: str|None, is_invalid_subject: bool}
     """
-    result: dict[str, bool | int | list[str] | str | None] = {
+    result: dict[str, Any] = {
         "ok": False,
         "count": 0,
         "calendars": [],
         "error": None,
+        "is_invalid_subject": False,
     }
 
     try:
@@ -322,7 +374,11 @@ def collect_calendar_for_user(
         result["error"] = error_str
         debug_print(f"ERROR: {error_str}")
 
-        if "403" in error_str or "401" in error_str:
+        # Detect invalid_grant (not a valid workspace user)
+        if "invalid_grant" in error_str.lower():
+            result["is_invalid_subject"] = True
+            add_to_blocklist(db_path, user, "invalid_grant", error_str[:500])
+        elif "403" in error_str or "401" in error_str:
             logger.error(f"Calendar auth error for {user}: {error_str}")
 
     return result
@@ -337,12 +393,13 @@ def run_all_users(
 ) -> dict[str, Any]:
     """
     Run Gmail + Calendar collection for all internal users.
-    Returns coverage report JSON.
+    Returns coverage report JSON with detailed categorization.
     """
     db_path = paths.db_path()
-    ensure_sync_cursor_table(db_path)
+    ensure_tables(db_path)
 
     users = get_internal_users(db_path)
+    people_inventory_count = len(users)
 
     if limit_users:
         users = users[:limit_users]
@@ -350,14 +407,27 @@ def run_all_users(
     logger.info(f"Running collection for {len(users)} users, since={since}, until={until}")
 
     if dry_run:
+        # Check blocklist status for each user
+        blocklisted = []
+        active = []
+        for u in users:
+            blocked, reason = is_blocklisted(db_path, u)
+            if blocked:
+                blocklisted.append({"email": u, "reason": reason})
+            else:
+                active.append(u)
+
         print(
             json.dumps(
                 {
                     "dry_run": True,
                     "since": since,
                     "until": until,
-                    "users_total": len(users),
-                    "users": users,
+                    "people_inventory_count": people_inventory_count,
+                    "users_to_attempt": len(active),
+                    "users_blocklisted": len(blocklisted),
+                    "active_users": active,
+                    "blocklisted_users": blocklisted,
                 },
                 indent=2,
             )
@@ -367,44 +437,85 @@ def run_all_users(
     report: dict[str, Any] = {
         "since": since,
         "until": until,
-        "users_total": len(users),
+        "people_inventory_count": people_inventory_count,
         "per_user": {},
         "totals": {
+            "attempted_count": 0,
+            "succeeded_count": 0,
+            "skipped_invalid_subject_count": 0,
+            "failed_other_count": 0,
             "gmail_count": 0,
             "calendar_event_count": 0,
-            "failures": 0,
         },
     }
 
     for i, user in enumerate(users):
+        # Check blocklist first
+        blocked, block_reason = is_blocklisted(db_path, user)
+        if blocked:
+            logger.info(f"[{i+1}/{len(users)}] SKIP (blocklisted): {user} - {block_reason}")
+            report["per_user"][user] = {
+                "status": "skipped",
+                "reason": f"blocklisted: {block_reason}",
+            }
+            report["totals"]["skipped_invalid_subject_count"] += 1
+            continue
+
         logger.info(f"[{i+1}/{len(users)}] Processing: {user}")
+        report["totals"]["attempted_count"] += 1
 
         user_report: dict[str, Any] = {
+            "status": "attempted",
             "gmail": {"ok": False, "count": 0, "error": None},
             "calendar": {"ok": False, "count": 0, "error": None},
         }
 
         # Gmail collection
         gmail_result = collect_gmail_for_user(user, since, until, limit_per_user, db_path)
-        user_report["gmail"] = gmail_result
-        if gmail_result["ok"]:
-            report["totals"]["gmail_count"] += gmail_result["count"]
-        else:
-            report["totals"]["failures"] += 1
+        user_report["gmail"] = {
+            "ok": gmail_result["ok"],
+            "count": gmail_result["count"],
+            "error": gmail_result.get("error"),
+        }
 
         # Calendar collection
         calendar_result = collect_calendar_for_user(user, since, until, limit_per_user, db_path)
         user_report["calendar"] = {
             "ok": calendar_result["ok"],
             "count": calendar_result["count"],
-            "error": calendar_result["error"],
+            "error": calendar_result.get("error"),
         }
-        if calendar_result["ok"]:
+
+        # Categorize outcome
+        gmail_invalid = gmail_result.get("is_invalid_subject", False)
+        cal_invalid = calendar_result.get("is_invalid_subject", False)
+
+        if gmail_invalid or cal_invalid:
+            # Invalid subject - already added to blocklist by collect functions
+            user_report["status"] = "invalid_subject"
+            report["totals"]["skipped_invalid_subject_count"] += 1
+        elif gmail_result["ok"] and calendar_result["ok"]:
+            user_report["status"] = "succeeded"
+            report["totals"]["succeeded_count"] += 1
+            report["totals"]["gmail_count"] += gmail_result["count"]
             report["totals"]["calendar_event_count"] += calendar_result["count"]
+        elif gmail_result["ok"] or calendar_result["ok"]:
+            # Partial success
+            user_report["status"] = "partial"
+            report["totals"]["succeeded_count"] += 1
+            if gmail_result["ok"]:
+                report["totals"]["gmail_count"] += gmail_result["count"]
+            if calendar_result["ok"]:
+                report["totals"]["calendar_event_count"] += calendar_result["count"]
         else:
-            report["totals"]["failures"] += 1
+            # Both failed for other reasons
+            user_report["status"] = "failed"
+            report["totals"]["failed_other_count"] += 1
 
         report["per_user"][user] = user_report
+
+    # Add blocklist count to report
+    report["totals"]["blocklist_total"] = get_blocklist_count(db_path)
 
     return report
 
