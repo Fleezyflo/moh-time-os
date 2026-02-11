@@ -27,13 +27,13 @@ rules:
         # Migration: Replace with http.ts client methods
         # Tracking: TIME-OS-UI-MIGRATION
         # Deadline: Q2 2026
+        # ALIGNED: ESLint eslint.config.js no-restricted-globals exclusions match exactly
         - time-os-ui/src/lib/api.ts
         - time-os-ui/src/pages/ClientDetailSpec.tsx
         - time-os-ui/src/pages/ClientIndex.tsx
         - time-os-ui/src/pages/ColdClients.tsx
         - time-os-ui/src/pages/Inbox.tsx
         - time-os-ui/src/pages/RecentlyActiveDrilldown.tsx
-        - time-os-ui/src/pages/FixData.tsx
 
   - id: ui-no-axios
     pattern-either:

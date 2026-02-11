@@ -31,6 +31,8 @@ export default tseslint.config(
   },
   // Ban direct fetch/axios usage outside allowed modules
   // All API calls MUST go through src/api/http.ts (or legacy src/lib/api.ts)
+  // BASELINE [ui-no-direct-fetch]: Aligned with .semgrep/policy-rules.yaml
+  // Tracking: TIME-OS-UI-MIGRATION | Deadline: Q2 2026
   {
     files: ['src/**/*.{ts,tsx}'],
     ignores: [
@@ -38,7 +40,8 @@ export default tseslint.config(
       'src/lib/api.ts',                       // Legacy API module (pending migration)
       'src/**/__tests__/**',
       'src/**/*.test.{ts,tsx}',
-      // Spec pages use v2 API directly (per UI spec requirements)
+      // BASELINE: Legacy pages predating http.ts client
+      // (must match .semgrep/policy-rules.yaml ui-no-direct-fetch exclusions)
       'src/pages/ClientDetailSpec.tsx',
       'src/pages/ClientIndex.tsx',
       'src/pages/ColdClients.tsx',
