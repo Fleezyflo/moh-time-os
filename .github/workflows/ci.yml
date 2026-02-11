@@ -57,6 +57,11 @@ jobs:
       - name: Mypy Baseline Check
         run: uv run python scripts/check_mypy_baseline.py
 
+      - name: Semgrep Security Scan
+        run: |
+          uv run semgrep --version
+          uv run semgrep --config .semgrep/security-rules.yaml lib/ api/ --error
+
   # ==========================================
   # PYTHON TESTS
   # ==========================================

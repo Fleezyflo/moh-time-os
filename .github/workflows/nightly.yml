@@ -287,15 +287,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Semgrep
-        run: pip install semgrep
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
 
-      - name: Run Semgrep Rules
-        run: semgrep --config .semgrep/rules.yaml lib/ api/ --error
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        run: uv sync --frozen --group dev
+
+      - name: Run Semgrep Security Rules (gating)
+        run: |
+          uv run semgrep --version
+          uv run semgrep --config .semgrep/security-rules.yaml lib/ api/ --error
+
+      - name: Run Semgrep Full Rules (advisory)
+        run: uv run semgrep --config .semgrep/rules.yaml lib/ api/ --severity ERROR
         continue-on-error: true
 
-      - name: Run Semgrep Auto Rules
-        run: semgrep --config auto lib/ api/ --error
+      - name: Run Semgrep Auto Rules (advisory)
+        run: uv run semgrep --config auto lib/ api/ --error
         continue-on-error: true
 
   # ==========================================

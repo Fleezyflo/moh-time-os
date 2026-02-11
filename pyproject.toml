@@ -36,7 +36,7 @@ dev = [
     "pip-audit>=2.0.0",
     "vulture>=2.0.0",
     "mutmut>=2.4.0",
-    "semgrep>=1.60.0,<2.0.0",
+    "semgrep==1.151.0",
 ]
 
 [build-system]
@@ -144,5 +144,5 @@ timeout = 30
 
 [dependency-groups]
 dev = [
-    "semgrep>=1.151.0",
+    "semgrep==1.151.0",
 ]
