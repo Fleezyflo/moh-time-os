@@ -12,12 +12,12 @@ function useFetch<T>(fetcher: () => Promise<T>, deps: unknown[] = []) {
   const doFetch = useCallback(() => {
     setLoading(true);
     return fetcher()
-      .then(result => {
+      .then((result) => {
         setData(result);
         setError(null);
         return result;
       })
-      .catch(err => {
+      .catch((err) => {
         setError(err);
         // Only log once per error in dev mode
         if (retryCount === 0 && import.meta.env.DEV) {
@@ -37,12 +37,15 @@ function useFetch<T>(fetcher: () => Promise<T>, deps: unknown[] = []) {
       // Error already handled in doFetch
       // Future: check controller.cancelled before state updates
     });
-    return () => { controller.cancelled = true; };
+    return () => {
+      controller.cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deps spread is intentional for dynamic dependencies
   }, [...deps, retryCount]);
 
   // Refetch clears error and retries
   const refetch = useCallback(() => {
-    setRetryCount(c => c + 1);
+    setRetryCount((c) => c + 1);
   }, []);
 
   // Reset error without refetching (keeps last-good-data if present)
@@ -54,13 +57,25 @@ function useFetch<T>(fetcher: () => Promise<T>, deps: unknown[] = []) {
 }
 
 // Proposals
-export function useProposals(limit = 7, status = 'open', days = 7, clientId?: string, memberId?: string) {
-  return useFetch(() => api.fetchProposals(limit, status, days, clientId, memberId), [limit, status, days, clientId, memberId]);
+export function useProposals(
+  limit = 7,
+  status = 'open',
+  days = 7,
+  clientId?: string,
+  memberId?: string
+) {
+  return useFetch(
+    () => api.fetchProposals(limit, status, days, clientId, memberId),
+    [limit, status, days, clientId, memberId]
+  );
 }
 
 // Issues
 export function useIssues(limit = 5, days = 7, clientId?: string, memberId?: string) {
-  return useFetch(() => api.fetchIssues(limit, days, clientId, memberId), [limit, days, clientId, memberId]);
+  return useFetch(
+    () => api.fetchIssues(limit, days, clientId, memberId),
+    [limit, days, clientId, memberId]
+  );
 }
 
 // Watchers
@@ -75,10 +90,7 @@ export function useFixData() {
 
 // Couplings for specific anchor
 export function useCouplings(anchorType: string, anchorId: string) {
-  return useFetch(
-    () => api.fetchCouplings(anchorType, anchorId),
-    [anchorType, anchorId]
-  );
+  return useFetch(() => api.fetchCouplings(anchorType, anchorId), [anchorType, anchorId]);
 }
 
 // All couplings
@@ -103,8 +115,5 @@ export function useTasks(assignee?: string, status?: string, limit = 20) {
 
 // Evidence for an entity
 export function useEvidence(entityType: string, entityId: string) {
-  return useFetch(
-    () => api.fetchEvidence(entityType, entityId),
-    [entityType, entityId]
-  );
+  return useFetch(() => api.fetchEvidence(entityType, entityId), [entityType, entityId]);
 }

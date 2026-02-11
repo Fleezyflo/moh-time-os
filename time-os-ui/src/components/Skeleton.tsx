@@ -6,9 +6,7 @@ interface SkeletonProps {
 
 // Base skeleton with animation
 function SkeletonBase({ className = '' }: SkeletonProps) {
-  return (
-    <div className={`animate-pulse bg-slate-700/50 rounded ${className}`} />
-  );
+  return <div className={`animate-pulse bg-slate-700/50 rounded ${className}`} />;
 }
 
 // Single row skeleton (for issues, watchers, etc.)
@@ -63,7 +61,10 @@ export function SkeletonPanel({ rows = 3, className = '' }: SkeletonProps & { ro
 }
 
 // List of cards skeleton
-export function SkeletonCardList({ count = 3, className = '' }: SkeletonProps & { count?: number }) {
+export function SkeletonCardList({
+  count = 3,
+  className = '',
+}: SkeletonProps & { count?: number }) {
   return (
     <div className={`space-y-4 ${className}`}>
       {Array.from({ length: count }).map((_, i) => (
@@ -74,7 +75,10 @@ export function SkeletonCardList({ count = 3, className = '' }: SkeletonProps & 
 }
 
 // Grid of cards skeleton (for portfolio pages)
-export function SkeletonCardGrid({ count = 6, className = '' }: SkeletonProps & { count?: number }) {
+export function SkeletonCardGrid({
+  count = 6,
+  className = '',
+}: SkeletonProps & { count?: number }) {
   return (
     <div className={`grid gap-4 sm:grid-cols-2 lg:grid-cols-3 ${className}`}>
       {Array.from({ length: count }).map((_, i) => (

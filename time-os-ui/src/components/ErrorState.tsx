@@ -9,14 +9,19 @@ interface ErrorStateProps {
   className?: string;
 }
 
-function getErrorInfo(error: Error): { icon: string; title: string; message: string; canRetry: boolean } {
+function getErrorInfo(error: Error): {
+  icon: string;
+  title: string;
+  message: string;
+  canRetry: boolean;
+} {
   if (error instanceof ApiError) {
     if (error.isNetworkError) {
       return {
         icon: '📡',
         title: 'Connection Error',
         message: 'Unable to connect to the server. Check your internet connection.',
-        canRetry: true
+        canRetry: true,
       };
     }
     if (error.isUnauthorized) {
@@ -24,15 +29,15 @@ function getErrorInfo(error: Error): { icon: string; title: string; message: str
         icon: '🔒',
         title: 'Unauthorized',
         message: 'Your session may have expired. Please refresh the page.',
-        canRetry: false
+        canRetry: false,
       };
     }
     if (error.isForbidden) {
       return {
         icon: '🚫',
         title: 'Access Denied',
-        message: 'You don\'t have permission to access this resource.',
-        canRetry: false
+        message: "You don't have permission to access this resource.",
+        canRetry: false,
       };
     }
     if (error.isNotFound) {
@@ -40,7 +45,7 @@ function getErrorInfo(error: Error): { icon: string; title: string; message: str
         icon: '🔍',
         title: 'Not Found',
         message: 'The requested resource could not be found.',
-        canRetry: false
+        canRetry: false,
       };
     }
     if (error.isServerError) {
@@ -48,7 +53,7 @@ function getErrorInfo(error: Error): { icon: string; title: string; message: str
         icon: '🔥',
         title: 'Server Error',
         message: error.message || 'The server encountered an error. Please try again later.',
-        canRetry: true
+        canRetry: true,
       };
     }
   }
@@ -56,19 +61,29 @@ function getErrorInfo(error: Error): { icon: string; title: string; message: str
     icon: '⚠️',
     title: 'Something went wrong',
     message: error.message,
-    canRetry: true
+    canRetry: true,
   };
 }
 
-export function ErrorState({ error, onRetry, onDismiss, hasData, className = '' }: ErrorStateProps) {
+export function ErrorState({
+  error,
+  onRetry,
+  onDismiss,
+  hasData,
+  className = '',
+}: ErrorStateProps) {
   const errorInfo = getErrorInfo(error);
   // Non-blocking banner when we have stale data
   if (hasData) {
     return (
-      <div className={`bg-amber-900/20 border border-amber-700/50 rounded-lg p-3 mb-4 flex items-center justify-between ${className}`}>
+      <div
+        className={`bg-amber-900/20 border border-amber-700/50 rounded-lg p-3 mb-4 flex items-center justify-between ${className}`}
+      >
         <div className="flex items-center gap-2">
           <span className="text-amber-400">{errorInfo.icon}</span>
-          <span className="text-sm text-amber-300">{errorInfo.title}: {errorInfo.message}</span>
+          <span className="text-sm text-amber-300">
+            {errorInfo.title}: {errorInfo.message}
+          </span>
         </div>
         <div className="flex gap-2">
           {onRetry && errorInfo.canRetry && (
@@ -94,7 +109,9 @@ export function ErrorState({ error, onRetry, onDismiss, hasData, className = '' 
 
   // Blocking error state when no data available
   return (
-    <div className={`bg-red-900/20 border border-red-700/50 rounded-lg p-8 text-center ${className}`}>
+    <div
+      className={`bg-red-900/20 border border-red-700/50 rounded-lg p-8 text-center ${className}`}
+    >
       <div className="text-red-400 text-2xl mb-2">{errorInfo.icon}</div>
       <div className="text-red-300 text-lg font-medium mb-2">{errorInfo.title}</div>
       <p className="text-slate-400 text-sm mb-4">{errorInfo.message}</p>

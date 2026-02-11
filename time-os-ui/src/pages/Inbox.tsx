@@ -142,22 +142,20 @@ export function Inbox() {
 
     // Apply type filter
     if (typeFilter !== 'all') {
-      result = result.filter(item => item.type === typeFilter);
+      result = result.filter((item) => item.type === typeFilter);
     }
 
     // Apply severity filter
     if (severityFilter !== 'all') {
-      result = result.filter(item =>
-        (item.display_severity || item.severity || 'medium') === severityFilter
+      result = result.filter(
+        (item) => (item.display_severity || item.severity || 'medium') === severityFilter
       );
     }
 
     // Apply client filter (search)
     if (clientFilter.trim()) {
       const search = clientFilter.toLowerCase();
-      result = result.filter(item =>
-        item.client?.name?.toLowerCase().includes(search)
-      );
+      result = result.filter((item) => item.client?.name?.toLowerCase().includes(search));
     }
 
     // Apply sort
@@ -169,12 +167,16 @@ export function Inbox() {
           return sevA - sevB;
         }
         case 'age': {
-          return new Date(a.attention_age_start_at).getTime() -
-                 new Date(b.attention_age_start_at).getTime();
+          return (
+            new Date(a.attention_age_start_at).getTime() -
+            new Date(b.attention_age_start_at).getTime()
+          );
         }
         case 'age_desc': {
-          return new Date(b.attention_age_start_at).getTime() -
-                 new Date(a.attention_age_start_at).getTime();
+          return (
+            new Date(b.attention_age_start_at).getTime() -
+            new Date(a.attention_age_start_at).getTime()
+          );
         }
         case 'client': {
           const nameA = a.client?.name || '';
@@ -190,7 +192,11 @@ export function Inbox() {
   }, [items, typeFilter, severityFilter, clientFilter, sortBy]);
 
   // Execute action on inbox item
-  const executeAction = async (itemId: string, action: string, payload: Record<string, unknown> = {}) => {
+  const executeAction = async (
+    itemId: string,
+    action: string,
+    payload: Record<string, unknown> = {}
+  ) => {
     try {
       const res = await fetch(`${API_BASE}/inbox/${itemId}/action?actor=user`, {
         method: 'POST',
@@ -253,42 +259,44 @@ export function Inbox() {
           {counts.by_severity && (
             <div className="flex items-center gap-2">
               <span className="text-slate-400">Severity:</span>
-              {Object.entries(counts.by_severity).map(([sev, count]) => (
-                count > 0 && (
-                  <button
-                    key={sev}
-                    onClick={() => setSeverityFilter(severityFilter === sev ? 'all' : sev)}
-                    className={`px-1.5 py-0.5 rounded ${
-                      severityFilter === sev
-                        ? SEVERITY_COLORS[sev as Severity]
-                        : 'bg-slate-700 text-slate-300'
-                    }`}
-                  >
-                    {sev}: {count}
-                  </button>
-                )
-              ))}
+              {Object.entries(counts.by_severity).map(
+                ([sev, count]) =>
+                  count > 0 && (
+                    <button
+                      key={sev}
+                      onClick={() => setSeverityFilter(severityFilter === sev ? 'all' : sev)}
+                      className={`px-1.5 py-0.5 rounded ${
+                        severityFilter === sev
+                          ? SEVERITY_COLORS[sev as Severity]
+                          : 'bg-slate-700 text-slate-300'
+                      }`}
+                    >
+                      {sev}: {count}
+                    </button>
+                  )
+              )}
             </div>
           )}
           {/* by_type */}
           {counts.by_type && (
             <div className="flex items-center gap-2">
               <span className="text-slate-400">Type:</span>
-              {Object.entries(counts.by_type).map(([type, count]) => (
-                count > 0 && (
-                  <button
-                    key={type}
-                    onClick={() => setTypeFilter(typeFilter === type ? 'all' : type)}
-                    className={`px-1.5 py-0.5 rounded ${
-                      typeFilter === type
-                        ? 'bg-blue-600 text-white'
-                        : 'bg-slate-700 text-slate-300'
-                    }`}
-                  >
-                    {TYPE_ICONS[type as InboxItemType]} {count}
-                  </button>
-                )
-              ))}
+              {Object.entries(counts.by_type).map(
+                ([type, count]) =>
+                  count > 0 && (
+                    <button
+                      key={type}
+                      onClick={() => setTypeFilter(typeFilter === type ? 'all' : type)}
+                      className={`px-1.5 py-0.5 rounded ${
+                        typeFilter === type
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-slate-700 text-slate-300'
+                      }`}
+                    >
+                      {TYPE_ICONS[type as InboxItemType]} {count}
+                    </button>
+                  )
+              )}
             </div>
           )}
         </div>
@@ -308,16 +316,19 @@ export function Inbox() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`
                   px-4 py-2 text-sm font-medium rounded-t-lg transition-colors
-                  ${isActive
-                    ? 'bg-slate-700 text-white border-b-2 border-blue-500'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                  ${
+                    isActive
+                      ? 'bg-slate-700 text-white border-b-2 border-blue-500'
+                      : 'text-slate-400 hover:text-white hover:bg-slate-800'
                   }
                 `}
               >
                 {tab.label}
-                <span className={`ml-2 px-1.5 py-0.5 rounded text-xs ${
-                  isActive ? 'bg-blue-500' : 'bg-slate-600'
-                }`}>
+                <span
+                  className={`ml-2 px-1.5 py-0.5 rounded text-xs ${
+                    isActive ? 'bg-blue-500' : 'bg-slate-600'
+                  }`}
+                >
                   {count}
                 </span>
               </button>
@@ -329,9 +340,7 @@ export function Inbox() {
         <div className="flex items-center gap-2 pb-2">
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`px-2 py-1 text-sm rounded ${
-              showFilters ? 'bg-blue-600' : 'bg-slate-700'
-            }`}
+            className={`px-2 py-1 text-sm rounded ${showFilters ? 'bg-blue-600' : 'bg-slate-700'}`}
           >
             🔍 Filters
           </button>
@@ -340,8 +349,10 @@ export function Inbox() {
             onChange={(e) => setSortBy(e.target.value as SortOption)}
             className="bg-slate-700 border-none rounded px-2 py-1 text-sm"
           >
-            {SORT_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            {SORT_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
             ))}
           </select>
         </div>
@@ -424,11 +435,7 @@ export function Inbox() {
         ) : displayItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-slate-400">
             <span className="text-4xl mb-2">✨</span>
-            <span>
-              {items.length === 0
-                ? 'Nothing here'
-                : 'No items match filters'}
-            </span>
+            <span>{items.length === 0 ? 'Nothing here' : 'No items match filters'}</span>
           </div>
         ) : (
           <div className="space-y-2">
@@ -491,17 +498,15 @@ function InboxCard({ item, onSelect, onAction, formatAge }: InboxCardProps) {
         <div className="flex-1 min-w-0">
           {/* Header row */}
           <div className="flex items-center gap-2 mb-1">
-            <span className={`px-1.5 py-0.5 rounded text-xs font-medium ${SEVERITY_COLORS[severity]}`}>
+            <span
+              className={`px-1.5 py-0.5 rounded text-xs font-medium ${SEVERITY_COLORS[severity]}`}
+            >
               {severity}
             </span>
             {item.client && (
-              <span className="text-sm text-slate-400 truncate">
-                {item.client.name}
-              </span>
+              <span className="text-sm text-slate-400 truncate">{item.client.name}</span>
             )}
-            <span className="text-xs text-slate-500">
-              {formatAge(item.attention_age_start_at)}
-            </span>
+            <span className="text-xs text-slate-500">{formatAge(item.attention_age_start_at)}</span>
           </div>
 
           {/* Title */}
@@ -568,14 +573,13 @@ function InboxDrawer({ item, onClose, onAction, formatAge }: InboxDrawerProps) {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-xl">{TYPE_ICONS[item.type]}</span>
-              <span className={`px-2 py-0.5 rounded text-sm font-medium ${SEVERITY_COLORS[severity]}`}>
+              <span
+                className={`px-2 py-0.5 rounded text-sm font-medium ${SEVERITY_COLORS[severity]}`}
+              >
                 {severity}
               </span>
             </div>
-            <button
-              onClick={onClose}
-              className="p-2 rounded hover:bg-slate-700 text-slate-400"
-            >
+            <button onClick={onClose} className="p-2 rounded hover:bg-slate-700 text-slate-400">
               ✕
             </button>
           </div>
@@ -622,13 +626,17 @@ function InboxDrawer({ item, onClose, onAction, formatAge }: InboxDrawerProps) {
               {(item.evidence.payload as { flagged_reason?: string })?.flagged_reason && (
                 <div className="flex items-center gap-2 text-xs text-amber-400">
                   <span>⚡</span>
-                  <span>{String((item.evidence.payload as { flagged_reason?: string }).flagged_reason)}</span>
+                  <span>
+                    {String((item.evidence.payload as { flagged_reason?: string }).flagged_reason)}
+                  </span>
                 </div>
               )}
 
               {/* Sender */}
               {(item.evidence.payload as { sender?: string })?.sender && (
-                <p className="text-xs text-slate-400">From: {String((item.evidence.payload as { sender?: string }).sender)}</p>
+                <p className="text-xs text-slate-400">
+                  From: {String((item.evidence.payload as { sender?: string }).sender)}
+                </p>
               )}
 
               {/* Snippet preview - only show if actual body content exists */}
@@ -672,7 +680,7 @@ function InboxDrawer({ item, onClose, onAction, formatAge }: InboxDrawerProps) {
             <div className="p-3 bg-slate-700 rounded">
               <h4 className="text-sm font-medium mb-2">Snooze duration</h4>
               <div className="flex gap-2">
-                {[1, 3, 7, 14, 30].map(days => (
+                {[1, 3, 7, 14, 30].map((days) => (
                   <button
                     key={days}
                     onClick={() => setSnoozeDays(days)}
@@ -747,7 +755,10 @@ const ACTION_LABELS: Record<string, { label: string; style: string }> = {
 };
 
 function ActionButton({ action, onAction }: ActionButtonProps) {
-  const config = ACTION_LABELS[action] || { label: action, style: 'bg-slate-600 hover:bg-slate-500' };
+  const config = ACTION_LABELS[action] || {
+    label: action,
+    style: 'bg-slate-600 hover:bg-slate-500',
+  };
 
   const handleClick = () => {
     if (action === 'assign') {

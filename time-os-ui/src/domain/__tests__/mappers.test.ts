@@ -67,7 +67,10 @@ describe('Client Mapper', () => {
   });
 
   it('maps array of clients', () => {
-    const dtos = [{ id: '1', name: 'A' }, { id: '2', name: 'B' }];
+    const dtos = [
+      { id: '1', name: 'A' },
+      { id: '2', name: 'B' },
+    ];
     const result = mapClients(dtos);
 
     expect(result).toHaveLength(2);

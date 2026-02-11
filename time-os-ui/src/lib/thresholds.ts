@@ -2,10 +2,10 @@
 
 // Team workload thresholds
 export const WORKLOAD_THRESHOLDS = {
-  overloaded: 20,  // Tasks above this = overloaded
-  heavy: 10,       // Tasks above this = heavy load
-  normal: 5,       // Tasks above this = normal
-  light: 0,        // Below normal = light
+  overloaded: 20, // Tasks above this = overloaded
+  heavy: 10, // Tasks above this = heavy load
+  normal: 5, // Tasks above this = normal
+  light: 0, // Below normal = light
 } as const;
 
 export function getLoadLevel(taskCount: number): 'overloaded' | 'heavy' | 'normal' | 'light' {
@@ -30,7 +30,7 @@ export { COUPLING_THRESHOLDS } from './coupling';
 
 // AR aging thresholds
 export const AR_AGING_THRESHOLDS = {
-  critical: 90,  // Days overdue
+  critical: 90, // Days overdue
   high: 60,
   medium: 30,
   low: 0,

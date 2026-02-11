@@ -1,7 +1,7 @@
 /**
  * Zod schemas for API response validation.
  * All API responses MUST be validated through these schemas.
- * 
+ *
  * This ensures:
  * 1. Runtime type safety - catch API contract violations early
  * 2. Drift detection - schema changes fail fast in tests
@@ -18,12 +18,14 @@ export const healthResponseSchema = z.object({
   status: z.enum(['healthy', 'unhealthy']),
   timestamp: z.string(),
   version: z.string().optional(),
-  database: z.object({
-    connected: z.boolean(),
-    signals: z.number(),
-    issues: z.number(),
-    clients: z.number(),
-  }).optional(),
+  database: z
+    .object({
+      connected: z.boolean(),
+      signals: z.number(),
+      issues: z.number(),
+      clients: z.number(),
+    })
+    .optional(),
   error: z.string().optional(),
 });
 

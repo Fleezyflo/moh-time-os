@@ -31,9 +31,7 @@ export function EmptyState({ icon, title, description, action }: EmptyStateProps
         {displayIcon}
       </span>
       <h3 className="text-lg font-medium text-slate-300 mb-2">{title}</h3>
-      {description && (
-        <p className="text-sm text-slate-500 max-w-sm mb-4">{description}</p>
-      )}
+      {description && <p className="text-sm text-slate-500 max-w-sm mb-4">{description}</p>}
       {action && (
         <button
           onClick={action.onClick}
@@ -132,7 +130,7 @@ export function NoResults({ query }: { query?: string }) {
     <EmptyState
       icon="🔍"
       title="No results"
-      description={query ? `No results found for "${query}"` : "No results match your search."}
+      description={query ? `No results found for "${query}"` : 'No results match your search.'}
     />
   );
 }

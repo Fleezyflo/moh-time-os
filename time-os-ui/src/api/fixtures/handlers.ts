@@ -1,6 +1,6 @@
 /**
  * MSW Request Handlers for API Mocking.
- * 
+ *
  * These handlers provide consistent mock responses for testing.
  * Fixtures are validated against zod schemas to ensure contract compliance.
  */
@@ -42,22 +42,52 @@ export const fixtures = {
 
   proposals: {
     items: [
-      { id: 'prop-1', type: 'overdue_task', title: 'Task overdue by 3 days', severity: 'high', client_id: 'client-1', client_name: 'Acme Corp', status: 'open' },
-      { id: 'prop-2', type: 'at_risk', title: 'Client health declining', severity: 'medium', client_id: 'client-3', client_name: 'StartupCo', status: 'open' },
+      {
+        id: 'prop-1',
+        type: 'overdue_task',
+        title: 'Task overdue by 3 days',
+        severity: 'high',
+        client_id: 'client-1',
+        client_name: 'Acme Corp',
+        status: 'open',
+      },
+      {
+        id: 'prop-2',
+        type: 'at_risk',
+        title: 'Client health declining',
+        severity: 'medium',
+        client_id: 'client-3',
+        client_name: 'StartupCo',
+        status: 'open',
+      },
     ],
     total: 2,
   },
 
   issues: {
     items: [
-      { id: 'issue-1', type: 'overdue_task', title: 'Critical task overdue', severity: 'high', state: 'open', client_id: 'client-1', client_name: 'Acme Corp' },
+      {
+        id: 'issue-1',
+        type: 'overdue_task',
+        title: 'Critical task overdue',
+        severity: 'high',
+        state: 'open',
+        client_id: 'client-1',
+        client_name: 'Acme Corp',
+      },
     ],
     total: 1,
   },
 
   team: {
     items: [
-      { id: 'member-1', name: 'Alice', email: 'alice@example.com', role: 'developer', workload: 0.8 },
+      {
+        id: 'member-1',
+        name: 'Alice',
+        email: 'alice@example.com',
+        role: 'developer',
+        workload: 0.8,
+      },
       { id: 'member-2', name: 'Bob', email: 'bob@example.com', role: 'designer', workload: 0.6 },
     ],
     total: 2,

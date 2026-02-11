@@ -12,9 +12,9 @@ export interface CouplingThresholds {
 
 // Default thresholds for coupling strength
 export const COUPLING_THRESHOLDS: CouplingThresholds = {
-  strong: 0.80,
-  medium: 0.60,
-  minimum: 0.50
+  strong: 0.8,
+  medium: 0.6,
+  minimum: 0.5,
 };
 
 // Get coupling strength level
@@ -34,9 +34,12 @@ export function couplingLabel(strength: number): string {
 export function couplingBadgeClass(strength: number): string {
   const level = couplingLevel(strength);
   switch (level) {
-    case 'strong': return 'bg-green-900/30 text-green-400';
-    case 'medium': return 'bg-amber-900/30 text-amber-400';
-    case 'weak': return 'bg-red-900/30 text-red-400';
+    case 'strong':
+      return 'bg-green-900/30 text-green-400';
+    case 'medium':
+      return 'bg-amber-900/30 text-amber-400';
+    case 'weak':
+      return 'bg-red-900/30 text-red-400';
   }
 }
 
@@ -49,5 +52,5 @@ export function couplingStrokeColor(confidence: number): string {
 
 // Filter couplings by minimum strength
 export function filterByMinimumStrength<T extends { strength: number }>(couplings: T[]): T[] {
-  return couplings.filter(c => c.strength > COUPLING_THRESHOLDS.minimum);
+  return couplings.filter((c) => c.strength > COUPLING_THRESHOLDS.minimum);
 }

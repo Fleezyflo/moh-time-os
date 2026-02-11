@@ -8,11 +8,7 @@ interface SuspenseWrapperProps {
 }
 
 export function SuspenseWrapper({ children, fallback }: SuspenseWrapperProps) {
-  return (
-    <Suspense fallback={fallback || <DefaultFallback />}>
-      {children}
-    </Suspense>
-  );
+  return <Suspense fallback={fallback || <DefaultFallback />}>{children}</Suspense>;
 }
 
 function DefaultFallback() {
@@ -25,11 +21,7 @@ function DefaultFallback() {
 
 // Page-level suspense with full-page loader
 export function PageSuspense({ children }: { children: ReactNode }) {
-  return (
-    <Suspense fallback={<PageLoader />}>
-      {children}
-    </Suspense>
-  );
+  return <Suspense fallback={<PageLoader />}>{children}</Suspense>;
 }
 
 function PageLoader() {

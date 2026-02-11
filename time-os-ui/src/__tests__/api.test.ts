@@ -17,7 +17,6 @@ beforeAll(async () => {
 });
 
 describe('Real API Integration', () => {
-
   describe('GET /proposals', () => {
     it('should return proposals array from real database', async () => {
       if (!backendAvailable) return; // Skip if backend down
@@ -148,7 +147,9 @@ describe('Real API Integration', () => {
 
       // Log for visibility - backend generates IDs from signal_id[:16] which can collide
       if (duplicateCount > 0) {
-        console.warn(`[DATA DEFECT] ${duplicateCount} duplicate proposal_ids found (${uniqueIds.size} unique / ${ids.length} total)`);
+        console.warn(
+          `[DATA DEFECT] ${duplicateCount} duplicate proposal_ids found (${uniqueIds.size} unique / ${ids.length} total)`
+        );
       }
 
       // Test passes - this documents the defect, fix is in backend
@@ -166,7 +167,9 @@ describe('Real API Integration', () => {
       const duplicateCount = ids.length - uniqueIds.size;
 
       if (duplicateCount > 0) {
-        console.warn(`[DATA DEFECT] ${duplicateCount} duplicate issue_ids found (${uniqueIds.size} unique / ${ids.length} total)`);
+        console.warn(
+          `[DATA DEFECT] ${duplicateCount} duplicate issue_ids found (${uniqueIds.size} unique / ${ids.length} total)`
+        );
       }
 
       expect(data.items).toBeDefined();
@@ -193,7 +196,7 @@ describe('Real API Integration', () => {
       const issuesData = await issuesRes.json();
 
       if (issuesData.items.length === 0) {
-        console.log('No issues to test resolve action');
+        console.warn('[TEST] No issues to test resolve action');
         return;
       }
 
@@ -207,7 +210,9 @@ describe('Real API Integration', () => {
 
       // Endpoint may not exist until backend restart - document the expected behavior
       if (res.status === 405) {
-        console.warn('[ACTION TEST] PATCH /issues/:id/resolve not yet deployed - backend restart needed');
+        console.warn(
+          '[ACTION TEST] PATCH /issues/:id/resolve not yet deployed - backend restart needed'
+        );
         expect(true).toBe(true); // Pass test, endpoint wired but not deployed
         return;
       }
@@ -225,7 +230,7 @@ describe('Real API Integration', () => {
       const issuesData = await issuesRes.json();
 
       if (issuesData.items.length === 0) {
-        console.log('No issues to test add note action');
+        console.warn('[TEST] No issues to test add note action');
         return;
       }
 
@@ -238,7 +243,9 @@ describe('Real API Integration', () => {
       });
 
       if (res.status === 405 || res.status === 404) {
-        console.warn('[ACTION TEST] POST /issues/:id/notes not yet deployed - backend restart needed');
+        console.warn(
+          '[ACTION TEST] POST /issues/:id/notes not yet deployed - backend restart needed'
+        );
         expect(true).toBe(true);
         return;
       }
@@ -257,7 +264,7 @@ describe('Real API Integration', () => {
       const proposalsData = await proposalsRes.json();
 
       if (proposalsData.items.length === 0) {
-        console.log('No proposals to test dismiss action');
+        console.warn('[TEST] No proposals to test dismiss action');
         return;
       }
 
@@ -280,7 +287,9 @@ describe('Real API Integration', () => {
       if (res.status === 400 || res.status === 500) {
         // Endpoint exists but proposal not found (ID mismatch) - this is expected
         // since proposals are generated from signals, not stored in proposals table
-        console.log('[ACTION TEST] Dismiss endpoint wired - proposal not in DB (expected for signal-based proposals)');
+        console.warn(
+          '[TEST] [ACTION TEST] Dismiss endpoint wired - proposal not in DB (expected for signal-based proposals)'
+        );
         expect(true).toBe(true);
         return;
       }

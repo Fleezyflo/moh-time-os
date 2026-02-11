@@ -1,11 +1,11 @@
 /**
  * API Integration Tests - UI client ↔ MSW fixtures
- * 
+ *
  * These tests verify:
  * 1. API client correctly makes requests
  * 2. Zod schemas correctly validate responses
  * 3. Error handling works as expected
- * 
+ *
  * Run time target: <30s for PR CI
  */
 
@@ -95,9 +95,7 @@ describe('API Client Integration', () => {
 describe('Error Handling', () => {
   it('throws ApiError on network failure', async () => {
     // This will fail because no handler is registered for this URL
-    await expect(get('http://invalid-host/api/test', healthResponseSchema))
-      .rejects
-      .toThrow();
+    await expect(get('http://invalid-host/api/test', healthResponseSchema)).rejects.toThrow();
   });
 
   it('throws validation error on schema mismatch', async () => {

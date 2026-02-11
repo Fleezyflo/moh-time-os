@@ -77,18 +77,28 @@ export class ApiError extends Error {
     this.isNetworkError = false;
   }
 
-  get isUnauthorized() { return this.status === 401; }
-  get isForbidden() { return this.status === 403; }
-  get isNotFound() { return this.status === 404; }
-  get isServerError() { return this.status >= 500; }
-  get isClientError() { return this.status >= 400 && this.status < 500; }
+  get isUnauthorized() {
+    return this.status === 401;
+  }
+  get isForbidden() {
+    return this.status === 403;
+  }
+  get isNotFound() {
+    return this.status === 404;
+  }
+  get isServerError() {
+    return this.status >= 500;
+  }
+  get isClientError() {
+    return this.status >= 400 && this.status < 500;
+  }
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
   let res: Response;
   try {
     res = await fetch(url);
-  } catch (err) {
+  } catch {
     // Network error (offline, CORS, etc.)
     const apiError = new ApiError(0, 'Network Error', 'Unable to connect to server');
     apiError.isNetworkError = true;
@@ -149,12 +159,17 @@ export async function fetchWatchers(hours = 24): Promise<ApiListResponse<Watcher
 }
 
 /** Dismiss a watcher */
-export async function dismissWatcher(watcherId: string): Promise<{ success: boolean; error?: string }> {
+export async function dismissWatcher(
+  watcherId: string
+): Promise<{ success: boolean; error?: string }> {
   return postJson(`${API_BASE}/watchers/${watcherId}/dismiss`, { actor: getActor() });
 }
 
 /** Snooze a watcher for N hours */
-export async function snoozeWatcher(watcherId: string, hours = 24): Promise<{ success: boolean; error?: string }> {
+export async function snoozeWatcher(
+  watcherId: string,
+  hours = 24
+): Promise<{ success: boolean; error?: string }> {
   return postJson(`${API_BASE}/watchers/${watcherId}/snooze`, { hours, actor: getActor() });
 }
 
@@ -162,7 +177,10 @@ export async function fetchFixData(): Promise<FixData> {
   return fetchJson(`${API_BASE}/fix-data`);
 }
 
-export async function fetchCouplings(anchorType?: string, anchorId?: string): Promise<ApiListResponse<Coupling>> {
+export async function fetchCouplings(
+  anchorType?: string,
+  anchorId?: string
+): Promise<ApiListResponse<Coupling>> {
   let url = `${API_BASE}/couplings`;
   if (anchorType && anchorId) {
     url += `?anchor_type=${anchorType}&anchor_id=${anchorId}`;
@@ -196,7 +214,10 @@ export async function fetchTasks(
   return fetchJson(url);
 }
 
-export async function fetchEvidence(entityType: string, entityId: string): Promise<ApiListResponse<Evidence>> {
+export async function fetchEvidence(
+  entityType: string,
+  entityId: string
+): Promise<ApiListResponse<Evidence>> {
   return fetchJson(`${API_BASE}/evidence/${entityType}/${entityId}`);
 }
 
@@ -220,22 +241,40 @@ async function postJson<T>(url: string, body: Record<string, unknown>): Promise<
 }
 
 /** Tag a proposal to create an Issue */
-export async function tagProposal(proposalId: string, actor = getActor()): Promise<{ success: boolean; issue?: Issue; error?: string }> {
-  const result = await postJson<{ success: boolean; issue?: Issue; error?: string }>(`${API_BASE}/issues`, { proposal_id: proposalId, actor });
+export async function tagProposal(
+  proposalId: string,
+  actor = getActor()
+): Promise<{ success: boolean; issue?: Issue; error?: string }> {
+  const result = await postJson<{ success: boolean; issue?: Issue; error?: string }>(
+    `${API_BASE}/issues`,
+    { proposal_id: proposalId, actor }
+  );
   if (result.success) invalidateCache('proposals');
   return result;
 }
 
 /** Snooze a proposal for N days */
-export async function snoozeProposal(proposalId: string, days = 7): Promise<{ success: boolean; error?: string }> {
-  const result = await postJson<{ success: boolean; error?: string }>(`${API_BASE}/proposals/${proposalId}/snooze`, { days });
+export async function snoozeProposal(
+  proposalId: string,
+  days = 7
+): Promise<{ success: boolean; error?: string }> {
+  const result = await postJson<{ success: boolean; error?: string }>(
+    `${API_BASE}/proposals/${proposalId}/snooze`,
+    { days }
+  );
   if (result.success) invalidateCache('proposals');
   return result;
 }
 
 /** Dismiss a proposal */
-export async function dismissProposal(proposalId: string, reason = 'Dismissed by user'): Promise<{ success: boolean; error?: string }> {
-  const result = await postJson<{ success: boolean; error?: string }>(`${API_BASE}/proposals/${proposalId}/dismiss`, { reason });
+export async function dismissProposal(
+  proposalId: string,
+  reason = 'Dismissed by user'
+): Promise<{ success: boolean; error?: string }> {
+  const result = await postJson<{ success: boolean; error?: string }>(
+    `${API_BASE}/proposals/${proposalId}/dismiss`,
+    { reason }
+  );
   if (result.success) invalidateCache('proposals');
   return result;
 }
@@ -246,7 +285,10 @@ export async function resolveFixDataItem(
   itemId: string,
   resolution = 'manually_resolved'
 ): Promise<{ success: boolean; error?: string }> {
-  return postJson(`${API_BASE}/fix-data/${itemType}/${itemId}/resolve`, { resolution, actor: getActor() });
+  return postJson(`${API_BASE}/fix-data/${itemType}/${itemId}/resolve`, {
+    resolution,
+    actor: getActor(),
+  });
 }
 
 /** Resolve an issue */
@@ -265,7 +307,11 @@ export async function changeIssueState(
   newState: IssueState,
   reason?: string
 ): Promise<{ success: boolean; issue_id?: string; state?: string; error?: string }> {
-  return patchJson(`${API_BASE}/issues/${issueId}/state`, { state: newState, reason, actor: getActor() });
+  return patchJson(`${API_BASE}/issues/${issueId}/state`, {
+    state: newState,
+    reason,
+    actor: getActor(),
+  });
 }
 
 /** Block an issue */

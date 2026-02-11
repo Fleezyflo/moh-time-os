@@ -1,8 +1,8 @@
 // Fix Data page
-import { useState } from 'react'
-import { FixDataCard, SkeletonCardList, ErrorState, useToast } from '../components'
-import { useFixData } from '../lib/hooks'
-import { resolveFixDataItem } from '../lib/api'
+import { useState } from 'react';
+import { FixDataCard, SkeletonCardList, ErrorState, useToast } from '../components';
+import { useFixData } from '../lib/hooks';
+import { resolveFixDataItem } from '../lib/api';
 
 export function FixData() {
   const toast = useToast();
@@ -11,7 +11,12 @@ export function FixData() {
   const [resolveError, setResolveError] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkResolving, setIsBulkResolving] = useState(false);
-  const [confirmDialog, setConfirmDialog] = useState<{ show: boolean; itemId?: string; itemType?: 'identity_conflict' | 'ambiguous_link'; bulk?: boolean }>({ show: false });
+  const [confirmDialog, setConfirmDialog] = useState<{
+    show: boolean;
+    itemId?: string;
+    itemType?: 'identity_conflict' | 'ambiguous_link';
+    bulk?: boolean;
+  }>({ show: false });
   const { data: apiFixData, loading, error, refetch } = useFixData();
 
   if (loading) return <SkeletonCardList count={4} />;
@@ -23,27 +28,26 @@ export function FixData() {
   const totalIssues = identityCount + linkCount;
 
   // Combine identity_conflicts and ambiguous_links into a single list
-  const identityConflicts = (apiFixData?.identity_conflicts || []).map(item => ({
+  const identityConflicts = (apiFixData?.identity_conflicts || []).map((item) => ({
     ...item,
-    issue_type: 'identity_conflict' as const
+    issue_type: 'identity_conflict' as const,
   }));
-  const ambiguousLinks = (apiFixData?.ambiguous_links || []).map(item => ({
+  const ambiguousLinks = (apiFixData?.ambiguous_links || []).map((item) => ({
     ...item,
-    issue_type: 'ambiguous_link' as const
+    issue_type: 'ambiguous_link' as const,
   }));
   const allItems = [...identityConflicts, ...ambiguousLinks];
 
-  const filtered = allItems
-    .filter(item => {
-      if (search === '') return true;
-      const searchLower = search.toLowerCase();
-      // Use display_name for identity conflicts, entity_id for ambiguous links
-      const searchableText = 'display_name' in item ? item.display_name : item.entity_id;
-      return (searchableText || '').toLowerCase().includes(searchLower);
-    });
+  const filtered = allItems.filter((item) => {
+    if (search === '') return true;
+    const searchLower = search.toLowerCase();
+    // Use display_name for identity conflicts, entity_id for ambiguous links
+    const searchableText = 'display_name' in item ? item.display_name : item.entity_id;
+    return (searchableText || '').toLowerCase().includes(searchLower);
+  });
 
   const toggleSelect = (id: string) => {
-    setSelectedIds(prev => {
+    setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) {
         next.delete(id);
@@ -58,11 +62,14 @@ export function FixData() {
     if (selectedIds.size === filtered.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filtered.map(item => item.id)));
+      setSelectedIds(new Set(filtered.map((item) => item.id)));
     }
   };
 
-  const handleResolveConfirmed = async (itemId: string, itemType: 'identity_conflict' | 'ambiguous_link') => {
+  const handleResolveConfirmed = async (
+    itemId: string,
+    itemType: 'identity_conflict' | 'ambiguous_link'
+  ) => {
     setResolvingId(itemId);
     setResolveError(null);
     setConfirmDialog({ show: false });
@@ -94,7 +101,7 @@ export function FixData() {
     setIsBulkResolving(true);
     setResolveError(null);
 
-    const itemsToResolve = filtered.filter(item => selectedIds.has(item.id));
+    const itemsToResolve = filtered.filter((item) => selectedIds.has(item.id));
     let successCount = 0;
     let failCount = 0;
 
@@ -133,8 +140,12 @@ export function FixData() {
     <div>
       {/* Summary Banner */}
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <div className={`bg-slate-800 rounded-lg p-4 border ${totalIssues > 0 ? 'border-amber-900/50' : 'border-slate-700'}`}>
-          <div className={`text-2xl font-bold ${totalIssues > 0 ? 'text-amber-400' : 'text-green-400'}`}>
+        <div
+          className={`bg-slate-800 rounded-lg p-4 border ${totalIssues > 0 ? 'border-amber-900/50' : 'border-slate-700'}`}
+        >
+          <div
+            className={`text-2xl font-bold ${totalIssues > 0 ? 'text-amber-400' : 'text-green-400'}`}
+          >
             {totalIssues}
           </div>
           <div className="text-sm text-slate-400">Total Issues</div>
@@ -153,7 +164,9 @@ export function FixData() {
         <div>
           <h1 className="text-2xl font-semibold">Fix Data</h1>
           <p className="text-sm text-slate-500 mt-1">
-            {totalIssues === 0 ? '✓ No issues — data quality is good!' : `${totalIssues} items need attention`}
+            {totalIssues === 0
+              ? '✓ No issues — data quality is good!'
+              : `${totalIssues} items need attention`}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -198,7 +211,12 @@ export function FixData() {
       {resolveError && (
         <div className="mb-4 p-3 bg-red-900/20 border border-red-700/50 rounded text-red-400 text-sm">
           {resolveError}
-          <button onClick={() => setResolveError(null)} className="ml-2 text-red-300 hover:text-red-200">×</button>
+          <button
+            onClick={() => setResolveError(null)}
+            className="ml-2 text-red-300 hover:text-red-200"
+          >
+            ×
+          </button>
         </div>
       )}
 
@@ -208,7 +226,7 @@ export function FixData() {
         </div>
       ) : (
         <div className="space-y-4">
-          {filtered.map(item => (
+          {filtered.map((item) => (
             <div key={item.id} className="flex items-start gap-3">
               <input
                 type="checkbox"
@@ -232,7 +250,10 @@ export function FixData() {
       {/* Confirmation Dialog */}
       {confirmDialog.show && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setConfirmDialog({ show: false })} />
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setConfirmDialog({ show: false })}
+          />
           <div className="relative bg-slate-800 border border-slate-700 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
             <h3 className="text-lg font-medium text-slate-100 mb-2">Confirm Resolution</h3>
             <p className="text-slate-400 mb-4">

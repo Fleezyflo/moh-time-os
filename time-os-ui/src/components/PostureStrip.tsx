@@ -16,7 +16,9 @@ const healthConfig: Record<string, { icon: string; color: string; bg: string; te
 export function PostureStrip({ health, size = 'sm' }: PostureStripProps) {
   if (!health) {
     return (
-      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded ${size === 'sm' ? 'text-xs' : 'text-sm'} bg-slate-700 text-slate-400`}>
+      <span
+        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded ${size === 'sm' ? 'text-xs' : 'text-sm'} bg-slate-700 text-slate-400`}
+      >
         <span>◯</span>
         <span>Unknown</span>
       </span>
@@ -26,7 +28,9 @@ export function PostureStrip({ health, size = 'sm' }: PostureStripProps) {
   const config = healthConfig[health] || healthConfig.fair;
 
   return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded ${size === 'sm' ? 'text-xs' : 'text-sm'} ${config.bg} ${config.color}`}>
+    <span
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded ${size === 'sm' ? 'text-xs' : 'text-sm'} ${config.bg} ${config.color}`}
+    >
       <span>{config.icon}</span>
       <span>{config.text}</span>
     </span>

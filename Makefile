@@ -227,8 +227,8 @@ ui-check: ui-lint ui-typecheck ui-test ui-build
 
 ui-lint:
 	@echo "🔍 Running ESLint + Prettier..."
-	@cd time-os-ui && pnpm run lint || true
-	@cd time-os-ui && pnpm run format:check || true
+	@cd time-os-ui && pnpm run lint
+	@cd time-os-ui && pnpm run format:check
 
 ui-typecheck:
 	@echo "🔍 Running TypeScript..."

@@ -45,9 +45,7 @@ export function mapClients(dtos: ClientDTO[]): ClientViewModel[] {
 // Helpers
 // ============================================================================
 
-function normalizeStatus(
-  status: string | null | undefined
-): ClientViewModel['status'] {
+function normalizeStatus(status: string | null | undefined): ClientViewModel['status'] {
   switch (status?.toLowerCase()) {
     case 'active':
       return 'active';
@@ -63,9 +61,7 @@ function normalizeStatus(
   }
 }
 
-function normalizeTier(
-  tier: string | null | undefined
-): ClientViewModel['tier'] {
+function normalizeTier(tier: string | null | undefined): ClientViewModel['tier'] {
   switch (tier?.toUpperCase()) {
     case 'A':
       return 'A';

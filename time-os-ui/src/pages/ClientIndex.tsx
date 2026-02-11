@@ -82,7 +82,7 @@ export function ClientIndex() {
   }, [tierFilter, hasIssuesFilter, hasOverdueFilter]);
 
   const toggleSection = (section: string) => {
-    setExpandedSections(prev => ({ ...prev, [section]: !prev[section] }));
+    setExpandedSections((prev) => ({ ...prev, [section]: !prev[section] }));
   };
 
   if (loading) {
@@ -197,9 +197,7 @@ function Swimlane({ title, count, expanded, onToggle, clients, status }: Swimlan
         className="w-full px-4 py-3 flex items-center justify-between hover:bg-slate-750 transition-colors"
       >
         <div className="flex items-center gap-2">
-          <span className={`transform transition-transform ${expanded ? 'rotate-90' : ''}`}>
-            ▶
-          </span>
+          <span className={`transform transition-transform ${expanded ? 'rotate-90' : ''}`}>▶</span>
           <span className="font-medium">{title}</span>
           <span className="px-2 py-0.5 bg-slate-700 rounded text-sm">{count}</span>
         </div>
@@ -297,7 +295,11 @@ function ActiveClientCard({ client }: { client: ClientCard }) {
         </div>
         <div className="flex justify-between">
           <span className="text-slate-400">Overdue</span>
-          <span className={client.ar_overdue_pct && client.ar_overdue_pct > 30 ? 'text-red-400' : 'text-white'}>
+          <span
+            className={
+              client.ar_overdue_pct && client.ar_overdue_pct > 30 ? 'text-red-400' : 'text-white'
+            }
+          >
             {formatCurrency(client.ar_overdue ?? 0)} ({client.ar_overdue_pct ?? 0}%)
           </span>
         </div>
@@ -325,7 +327,9 @@ function RecentlyActiveCard({ client }: { client: ClientCard }) {
       {/* Row 1: Name + Badge */}
       <div className="flex items-center justify-between mb-3">
         <h3 className="font-semibold text-white truncate">{client.name}</h3>
-        <span className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS.recently_active}`}>
+        <span
+          className={`px-2 py-0.5 rounded text-xs font-medium ${STATUS_COLORS.recently_active}`}
+        >
           Recently Active
         </span>
       </div>
@@ -335,18 +339,23 @@ function RecentlyActiveCard({ client }: { client: ClientCard }) {
         <div>
           <div className="text-slate-400 text-xs">ISSUED</div>
           <div className="text-white">Last 12m: {formatCurrency(client.issued_last_12m ?? 0)}</div>
-          <div className="text-slate-300">Prev 12m: {formatCurrency(client.issued_prev_12m ?? 0)}</div>
+          <div className="text-slate-300">
+            Prev 12m: {formatCurrency(client.issued_prev_12m ?? 0)}
+          </div>
         </div>
         <div>
           <div className="text-slate-400 text-xs">PAID</div>
           <div className="text-white">Last 12m: {formatCurrency(client.paid_last_12m ?? 0)}</div>
-          <div className="text-slate-300">Prev 12m: {formatCurrency(client.paid_prev_12m ?? 0)}</div>
+          <div className="text-slate-300">
+            Prev 12m: {formatCurrency(client.paid_prev_12m ?? 0)}
+          </div>
         </div>
       </div>
 
       {/* Row 4: Historical */}
       <div className="text-sm text-slate-400 mb-1">
-        Historical: {formatCurrency(client.issued_lifetime ?? 0)} issued / {formatCurrency(client.paid_lifetime ?? 0)} paid
+        Historical: {formatCurrency(client.issued_lifetime ?? 0)} issued /{' '}
+        {formatCurrency(client.paid_lifetime ?? 0)} paid
       </div>
 
       {/* Row 5: Last Invoice */}
@@ -371,7 +380,8 @@ function ColdClientCard({ client }: { client: ClientCard }) {
 
       {/* Row 2: Historical */}
       <div className="text-sm text-slate-400 mb-1">
-        Historical: {formatCurrency(client.issued_lifetime ?? 0)} issued / {formatCurrency(client.paid_lifetime ?? 0)} paid
+        Historical: {formatCurrency(client.issued_lifetime ?? 0)} issued /{' '}
+        {formatCurrency(client.paid_lifetime ?? 0)} paid
       </div>
 
       {/* Row 3: Last Invoice */}

@@ -1,6 +1,6 @@
 /**
  * TanStack Query hooks for API data fetching.
- * 
+ *
  * Standardized query keys and hooks for all API endpoints.
  * Features:
  * - Consistent stale times and retry policies
@@ -158,7 +158,11 @@ export function useResolveIssue() {
 
   return useMutation({
     mutationFn: ({ issueId, resolution }: { issueId: string; resolution?: string }) =>
-      patch(`/issues/${issueId}/resolve`, { resolution: resolution || 'resolved' }, resolveIssueResponseSchema),
+      patch(
+        `/issues/${issueId}/resolve`,
+        { resolution: resolution || 'resolved' },
+        resolveIssueResponseSchema
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['issues'] });
     },
@@ -170,7 +174,11 @@ export function useDismissProposal() {
 
   return useMutation({
     mutationFn: ({ proposalId, reason }: { proposalId: string; reason?: string }) =>
-      post(`/proposals/${proposalId}/dismiss`, { reason: reason || 'Dismissed' }, mutationResponseSchema),
+      post(
+        `/proposals/${proposalId}/dismiss`,
+        { reason: reason || 'Dismissed' },
+        mutationResponseSchema
+      ),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['proposals'] });
     },

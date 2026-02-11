@@ -1,13 +1,13 @@
 // Issues Inbox page with hierarchy view
-import { useState, useMemo, useEffect } from 'react'
-import { useNavigate, useSearch } from '@tanstack/react-router'
-import { IssueDrawer, SkeletonCardList } from '../components'
-import type { IssueState } from '../lib/api'
-import { priorityLabel, priorityBadgeClass, matchesPriorityFilter } from '../lib/priority'
-import type { Issue } from '../types/api'
-import { useIssues } from '../lib/hooks'
-import { useDebounce } from '../lib/useDebounce'
-import * as api from '../lib/api'
+import { useState, useMemo, useEffect } from 'react';
+import { useNavigate, useSearch } from '@tanstack/react-router';
+import { IssueDrawer, SkeletonCardList } from '../components';
+import type { IssueState } from '../lib/api';
+import { priorityLabel, priorityBadgeClass, matchesPriorityFilter } from '../lib/priority';
+import type { Issue } from '../types/api';
+import { useIssues } from '../lib/hooks';
+import { useDebounce } from '../lib/useDebounce';
+import * as api from '../lib/api';
 
 const stateIcons: Record<string, { icon: string; color: string }> = {
   // v29 states
@@ -31,12 +31,18 @@ const stateIcons: Record<string, { icon: string; color: string }> = {
 // Convert v29 severity to legacy priority number
 const severityToPriority = (severity: string | undefined): number => {
   switch (severity) {
-    case 'critical': return 90;
-    case 'high': return 70;
-    case 'medium': return 50;
-    case 'low': return 30;
-    case 'info': return 10;
-    default: return 50;
+    case 'critical':
+      return 90;
+    case 'high':
+      return 70;
+    case 'medium':
+      return 50;
+    case 'low':
+      return 30;
+    case 'info':
+      return 10;
+    default:
+      return 50;
   }
 };
 
@@ -47,13 +53,16 @@ const getIssueTitle = (issue: Issue): string => issue.title || issue.headline ||
 const getIssueId = (issue: Issue): string => issue.id || issue.issue_id || '';
 
 // Get issue priority (v29: severity→number, legacy: priority)
-const getIssuePriority = (issue: Issue): number => issue.priority ?? severityToPriority(issue.severity);
+const getIssuePriority = (issue: Issue): number =>
+  issue.priority ?? severityToPriority(issue.severity);
 
 // Get last activity (v29: updated_at, legacy: last_activity_at)
-const getIssueLastActivity = (issue: Issue): string => issue.updated_at || issue.last_activity_at || '';
+const getIssueLastActivity = (issue: Issue): string =>
+  issue.updated_at || issue.last_activity_at || '';
 
 // Get issue type (v29: type, legacy: issue_type)
-const getIssueType = (issue: Issue): string => issue.type || (issue as unknown as { issue_type?: string }).issue_type || '';
+const getIssueType = (issue: Issue): string =>
+  issue.type || (issue as unknown as { issue_type?: string }).issue_type || '';
 
 interface IssuesSearch {
   state?: string;
@@ -102,11 +111,16 @@ export function Issues() {
     navigate({
       to: '/issues',
       search: Object.keys(params).length > 0 ? params : undefined,
-      replace: true
+      replace: true,
     });
   }, [stateFilter, priorityFilter, search, viewMode, navigate, searchParams.client_id]);
 
-  const { data: apiIssues, loading, error, refetch: refetchIssues } = useIssues(100, 30, searchParams.client_id, undefined);
+  const {
+    data: apiIssues,
+    loading,
+    error,
+    refetch: refetchIssues,
+  } = useIssues(100, 30, searchParams.client_id, undefined);
 
   const handleResolveIssue = async (issue: Issue) => {
     const result = await api.resolveIssue(getIssueId(issue));
@@ -139,8 +153,13 @@ export function Issues() {
   // Memoize filtered list
   const allIssues = apiIssues?.items || [];
   const filteredIssues = useMemo(() => {
-    return allIssues
-      .filter((i: Issue) => debouncedSearch === '' || getIssueTitle(i).toLowerCase().includes(debouncedSearch.toLowerCase()))
+    const issues = apiIssues?.items || [];
+    return issues
+      .filter(
+        (i: Issue) =>
+          debouncedSearch === '' ||
+          getIssueTitle(i).toLowerCase().includes(debouncedSearch.toLowerCase())
+      )
       .filter((i: Issue) => stateFilter === 'all' || i.state === stateFilter)
       .filter((i: Issue) => {
         if (priorityFilter === 'all') return true;
@@ -149,9 +168,11 @@ export function Issues() {
       .sort((a: Issue, b: Issue) => {
         const priorityDiff = getIssuePriority(b) - getIssuePriority(a);
         if (priorityDiff !== 0) return priorityDiff;
-        return new Date(getIssueLastActivity(b)).getTime() - new Date(getIssueLastActivity(a)).getTime();
+        return (
+          new Date(getIssueLastActivity(b)).getTime() - new Date(getIssueLastActivity(a)).getTime()
+        );
       });
-  }, [allIssues, debouncedSearch, stateFilter, priorityFilter]);
+  }, [apiIssues?.items, debouncedSearch, stateFilter, priorityFilter]);
 
   // Build hierarchy from issues
   const hierarchy = useMemo(() => {
@@ -161,7 +182,10 @@ export function Issues() {
       // Extract hierarchy from title/headline or ref
       // Format: "ClientName > ProjectName: Issue" or "ClientName: Issue"
       const title = getIssueTitle(issue);
-      const parts = title.split(':')[0].split('>').map(s => s.trim());
+      const parts = title
+        .split(':')[0]
+        .split('>')
+        .map((s) => s.trim());
       const clientName = parts[0] || 'Unknown Client';
       const projectName = parts[1] || null;
 
@@ -181,7 +205,7 @@ export function Issues() {
 
       if (projectName) {
         // Find or create project node under client
-        let projectNode = clientNode.children.find(c => c.name === projectName);
+        let projectNode = clientNode.children.find((c) => c.name === projectName);
         if (!projectNode) {
           projectNode = {
             id: `project-${clientName}-${projectName}`,
@@ -211,7 +235,7 @@ export function Issues() {
   }, [filteredIssues]);
 
   const toggleNode = (nodeId: string) => {
-    setExpandedNodes(prev => {
+    setExpandedNodes((prev) => {
       const next = new Set(prev);
       if (next.has(nodeId)) {
         next.delete(nodeId);
@@ -223,13 +247,24 @@ export function Issues() {
   };
 
   // Summary stats from all issues (unfiltered)
-  const criticalCount = allIssues.filter((i: Issue) => getIssuePriority(i) >= 80 || i.severity === 'critical').length;
-  const highCount = allIssues.filter((i: Issue) => (getIssuePriority(i) >= 60 && getIssuePriority(i) < 80) || i.severity === 'high').length;
-  const openCount = allIssues.filter((i: Issue) => i.state === 'open' || i.state === 'surfaced' || i.state === 'detected').length;
-  const blockedCount = allIssues.filter((i: Issue) => i.state === 'blocked' || i.state === 'addressing').length;
+  const criticalCount = allIssues.filter(
+    (i: Issue) => getIssuePriority(i) >= 80 || i.severity === 'critical'
+  ).length;
+  const highCount = allIssues.filter(
+    (i: Issue) => (getIssuePriority(i) >= 60 && getIssuePriority(i) < 80) || i.severity === 'high'
+  ).length;
+  const openCount = allIssues.filter(
+    (i: Issue) => i.state === 'open' || i.state === 'surfaced' || i.state === 'detected'
+  ).length;
+  const blockedCount = allIssues.filter(
+    (i: Issue) => i.state === 'blocked' || i.state === 'addressing'
+  ).length;
 
   if (loading) return <SkeletonCardList count={5} />;
-  if (error) return <div className="text-red-400 p-8 text-center">Error loading issues: {error.message}</div>;
+  if (error)
+    return (
+      <div className="text-red-400 p-8 text-center">Error loading issues: {error.message}</div>
+    );
 
   // Render a single issue row
   const renderIssueRow = (issue: Issue, indent: number = 0) => {
@@ -242,7 +277,10 @@ export function Issues() {
     return (
       <div
         key={getIssueId(issue)}
-        onClick={() => { setSelectedIssue(issue); setDrawerOpen(true); }}
+        onClick={() => {
+          setSelectedIssue(issue);
+          setDrawerOpen(true);
+        }}
         className="bg-slate-800/50 rounded border border-slate-700/50 p-3 cursor-pointer hover:border-slate-600 transition-colors"
         style={{ marginLeft: indent * 16 }}
       >
@@ -261,22 +299,27 @@ export function Issues() {
   const renderHierarchyNode = (node: HierarchyNode, depth: number = 0) => {
     const isExpanded = expandedNodes.has(node.id);
     const hasChildren = node.children.length > 0 || node.issues.length > 0;
-    const priorityColor = node.maxPriority >= 80 ? 'text-red-400' : node.maxPriority >= 60 ? 'text-orange-400' : 'text-slate-400';
+    const priorityColor =
+      node.maxPriority >= 80
+        ? 'text-red-400'
+        : node.maxPriority >= 60
+          ? 'text-orange-400'
+          : 'text-slate-400';
 
     return (
       <div key={node.id} className="mb-1">
         {/* Node header */}
         <div
           className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-colors ${
-            depth === 0 ? 'bg-slate-800 hover:bg-slate-700' : 'bg-slate-800/30 hover:bg-slate-800/50'
+            depth === 0
+              ? 'bg-slate-800 hover:bg-slate-700'
+              : 'bg-slate-800/30 hover:bg-slate-800/50'
           }`}
           style={{ marginLeft: depth * 16 }}
           onClick={() => hasChildren && toggleNode(node.id)}
         >
           {hasChildren && (
-            <span className="text-slate-500 w-4 text-center">
-              {isExpanded ? '▼' : '▶'}
-            </span>
+            <span className="text-slate-500 w-4 text-center">{isExpanded ? '▼' : '▶'}</span>
           )}
           {!hasChildren && <span className="w-4" />}
 
@@ -284,16 +327,22 @@ export function Issues() {
             {node.type === 'client' ? '🏢' : node.type === 'project' ? '📁' : '📋'}
           </span>
 
-          <span className={`flex-1 font-medium ${depth === 0 ? 'text-slate-100' : 'text-slate-300'}`}>
+          <span
+            className={`flex-1 font-medium ${depth === 0 ? 'text-slate-100' : 'text-slate-300'}`}
+          >
             {node.name}
           </span>
 
           {node.tier && (
-            <span className={`px-1.5 py-0.5 text-xs rounded border ${
-              node.tier === 'A' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
-              node.tier === 'B' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
-              'bg-slate-500/20 text-slate-400 border-slate-500/30'
-            }`}>
+            <span
+              className={`px-1.5 py-0.5 text-xs rounded border ${
+                node.tier === 'A'
+                  ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                  : node.tier === 'B'
+                    ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
+                    : 'bg-slate-500/20 text-slate-400 border-slate-500/30'
+              }`}
+            >
               {node.tier}
             </span>
           )}
@@ -307,10 +356,10 @@ export function Issues() {
         {isExpanded && (
           <div className="mt-1 space-y-1">
             {/* Render child nodes (projects) */}
-            {node.children.map(child => renderHierarchyNode(child, depth + 1))}
+            {node.children.map((child) => renderHierarchyNode(child, depth + 1))}
 
             {/* Render direct issues */}
-            {node.issues.map(issue => renderIssueRow(issue, depth + 1))}
+            {node.issues.map((issue) => renderIssueRow(issue, depth + 1))}
           </div>
         )}
       </div>
@@ -381,7 +430,13 @@ export function Issues() {
             <option value="blocked">Blocked</option>
           </select>
           <div className="flex gap-1">
-            {[['all', 'All'], [80, 'Critical'], [60, 'High'], [40, 'Medium'], [0, 'Low']].map(([value, label]) => (
+            {[
+              ['all', 'All'],
+              [80, 'Critical'],
+              [60, 'High'],
+              [40, 'Medium'],
+              [0, 'Low'],
+            ].map(([value, label]) => (
               <button
                 key={String(value)}
                 onClick={() => setPriorityFilter(value as number | 'all')}
@@ -395,7 +450,9 @@ export function Issues() {
       </div>
 
       {search || stateFilter !== 'all' || priorityFilter !== 'all' ? (
-        <p className="text-sm text-slate-500 mb-4">{filteredIssues.length} of {allIssues.length} issues</p>
+        <p className="text-sm text-slate-500 mb-4">
+          {filteredIssues.length} of {allIssues.length} issues
+        </p>
       ) : null}
 
       {filteredIssues.length === 0 ? (
@@ -404,9 +461,7 @@ export function Issues() {
         </div>
       ) : viewMode === 'hierarchy' ? (
         /* Hierarchy View */
-        <div className="space-y-2">
-          {hierarchy.map(node => renderHierarchyNode(node))}
-        </div>
+        <div className="space-y-2">{hierarchy.map((node) => renderHierarchyNode(node))}</div>
       ) : (
         /* Flat View */
         <div className="space-y-3">
@@ -423,7 +478,10 @@ export function Issues() {
             return (
               <div
                 key={getIssueId(issue)}
-                onClick={() => { setSelectedIssue(issue); setDrawerOpen(true); }}
+                onClick={() => {
+                  setSelectedIssue(issue);
+                  setDrawerOpen(true);
+                }}
                 className="bg-slate-800 rounded-lg border border-slate-700 p-4 cursor-pointer hover:border-slate-600 transition-colors"
               >
                 <div className="flex items-center gap-3">
@@ -433,7 +491,9 @@ export function Issues() {
                     <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">
                       <span>{issueType}</span>
                       <span>•</span>
-                      <span>{lastActivity ? new Date(lastActivity).toLocaleDateString() : 'N/A'}</span>
+                      <span>
+                        {lastActivity ? new Date(lastActivity).toLocaleDateString() : 'N/A'}
+                      </span>
                     </div>
                   </div>
                   <span className={`text-xs px-2 py-1 rounded ${pColor}`}>{pLabelCap}</span>
@@ -447,10 +507,15 @@ export function Issues() {
       <IssueDrawer
         issue={selectedIssue}
         open={drawerOpen}
-        onClose={() => { setDrawerOpen(false); setSelectedIssue(null); }}
+        onClose={() => {
+          setDrawerOpen(false);
+          setSelectedIssue(null);
+        }}
         onResolve={selectedIssue ? () => handleResolveIssue(selectedIssue) : undefined}
         onAddNote={selectedIssue ? (text) => handleAddIssueNote(selectedIssue, text) : undefined}
-        onChangeState={selectedIssue ? (newState) => handleChangeIssueState(selectedIssue, newState) : undefined}
+        onChangeState={
+          selectedIssue ? (newState) => handleChangeIssueState(selectedIssue, newState) : undefined
+        }
       />
     </div>
   );

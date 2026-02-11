@@ -13,7 +13,7 @@ export const ISSUE_STATE_LABELS: Record<IssueState, string> = {
   acknowledged: 'Acknowledged',
   addressing: 'Addressing',
   awaiting_resolution: 'Awaiting Resolution',
-  resolved: 'Resolved',  // Note: Never persisted per spec
+  resolved: 'Resolved', // Note: Never persisted per spec
   regression_watch: 'Resolved (watching)',
   closed: 'Closed',
   regressed: 'Regressed',

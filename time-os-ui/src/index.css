@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* Base styles */
 :root {
@@ -25,7 +25,9 @@ body {
 }
 
 /* Touch-friendly tap targets */
-button, a, [role="button"] {
+button,
+a,
+[role='button'] {
   min-height: 44px;
   min-width: 44px;
 }

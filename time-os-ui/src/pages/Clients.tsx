@@ -1,29 +1,84 @@
 // Clients Portfolio page
-import { useState } from 'react'
-import { Link } from '@tanstack/react-router'
-import { SkeletonCardGrid } from '../components'
-import { useClients } from '../lib/hooks'
-import { formatCurrency } from '../lib/format'
-import type { Client } from '../types/api'
+import { useState } from 'react';
+import { Link } from '@tanstack/react-router';
+import { SkeletonCardGrid } from '../components';
+import { useClients } from '../lib/hooks';
+import { formatCurrency } from '../lib/format';
+import type { Client } from '../types/api';
 
 // Health score ranges (0-100)
 function getHealthStyle(score: number | null, dbHealth: string | null) {
   // Use computed score if available, fall back to DB health
   if (score !== null) {
-    if (score < 30) return { bg: 'bg-red-900/50', text: 'text-red-300', label: `${score}`, border: 'border-red-900/50' };
-    if (score < 50) return { bg: 'bg-orange-900/50', text: 'text-orange-300', label: `${score}`, border: 'border-orange-900/50' };
-    if (score < 70) return { bg: 'bg-amber-900/50', text: 'text-amber-300', label: `${score}`, border: 'border-slate-700' };
-    if (score < 85) return { bg: 'bg-green-900/50', text: 'text-green-300', label: `${score}`, border: 'border-slate-700' };
-    return { bg: 'bg-emerald-900/50', text: 'text-emerald-300', label: `${score}`, border: 'border-slate-700' };
+    if (score < 30)
+      return {
+        bg: 'bg-red-900/50',
+        text: 'text-red-300',
+        label: `${score}`,
+        border: 'border-red-900/50',
+      };
+    if (score < 50)
+      return {
+        bg: 'bg-orange-900/50',
+        text: 'text-orange-300',
+        label: `${score}`,
+        border: 'border-orange-900/50',
+      };
+    if (score < 70)
+      return {
+        bg: 'bg-amber-900/50',
+        text: 'text-amber-300',
+        label: `${score}`,
+        border: 'border-slate-700',
+      };
+    if (score < 85)
+      return {
+        bg: 'bg-green-900/50',
+        text: 'text-green-300',
+        label: `${score}`,
+        border: 'border-slate-700',
+      };
+    return {
+      bg: 'bg-emerald-900/50',
+      text: 'text-emerald-300',
+      label: `${score}`,
+      border: 'border-slate-700',
+    };
   }
   // Fallback to DB health string
-  const healthStyles: Record<string, { bg: string; text: string; label: string; border: string }> = {
-    critical: { bg: 'bg-red-900/50', text: 'text-red-300', label: 'Critical', border: 'border-red-900/50' },
-    poor: { bg: 'bg-orange-900/50', text: 'text-orange-300', label: 'Poor', border: 'border-orange-900/50' },
-    fair: { bg: 'bg-amber-900/50', text: 'text-amber-300', label: 'Fair', border: 'border-slate-700' },
-    good: { bg: 'bg-green-900/50', text: 'text-green-300', label: 'Good', border: 'border-slate-700' },
-    excellent: { bg: 'bg-emerald-900/50', text: 'text-emerald-300', label: 'Excellent', border: 'border-slate-700' },
-  };
+  const healthStyles: Record<string, { bg: string; text: string; label: string; border: string }> =
+    {
+      critical: {
+        bg: 'bg-red-900/50',
+        text: 'text-red-300',
+        label: 'Critical',
+        border: 'border-red-900/50',
+      },
+      poor: {
+        bg: 'bg-orange-900/50',
+        text: 'text-orange-300',
+        label: 'Poor',
+        border: 'border-orange-900/50',
+      },
+      fair: {
+        bg: 'bg-amber-900/50',
+        text: 'text-amber-300',
+        label: 'Fair',
+        border: 'border-slate-700',
+      },
+      good: {
+        bg: 'bg-green-900/50',
+        text: 'text-green-300',
+        label: 'Good',
+        border: 'border-slate-700',
+      },
+      excellent: {
+        bg: 'bg-emerald-900/50',
+        text: 'text-emerald-300',
+        label: 'Excellent',
+        border: 'border-slate-700',
+      },
+    };
   return healthStyles[dbHealth || 'good'] || healthStyles.good;
 }
 
@@ -34,7 +89,7 @@ const trendIcons: Record<string, string> = {
 };
 
 const agingStyles: Record<string, { bg: string; text: string }> = {
-  'current': { bg: 'bg-slate-700', text: 'text-slate-300' },
+  current: { bg: 'bg-slate-700', text: 'text-slate-300' },
   '30': { bg: 'bg-amber-900/50', text: 'text-amber-300' },
   '60': { bg: 'bg-orange-900/50', text: 'text-orange-300' },
   '90+': { bg: 'bg-red-900/50', text: 'text-red-300' },
@@ -59,26 +114,44 @@ export function Clients() {
 
   const tierOrder: Record<string, number> = { A: 0, B: 1, C: 2 };
 
+  // Helper to get health score for sorting
+  const getHealthScore = (c: Client): number =>
+    c.health_score ??
+    (c.relationship_health === 'critical'
+      ? 10
+      : c.relationship_health === 'poor'
+        ? 30
+        : c.relationship_health === 'fair'
+          ? 50
+          : 70);
+
   const sorted = [...filtered].sort((a: Client, b: Client) => {
     switch (sortBy) {
       case 'health':
-        // Sort by computed health score (lowest first), then fallback to relationship_health
-        const aScore = a.health_score ?? (a.relationship_health === 'critical' ? 10 : a.relationship_health === 'poor' ? 30 : a.relationship_health === 'fair' ? 50 : 70);
-        const bScore = b.health_score ?? (b.relationship_health === 'critical' ? 10 : b.relationship_health === 'poor' ? 30 : b.relationship_health === 'fair' ? 50 : 70);
-        return aScore - bScore;
-      case 'name': return a.name.localeCompare(b.name);
-      case 'tier': return (tierOrder[a.tier || ''] ?? 3) - (tierOrder[b.tier || ''] ?? 3);
-      case 'ar': return (b.financial_ar_total || 0) - (a.financial_ar_total || 0);
-      case 'revenue': return (b.lifetime_revenue || 0) - (a.lifetime_revenue || 0);
-      default: return 0;
+        return getHealthScore(a) - getHealthScore(b);
+      case 'name':
+        return a.name.localeCompare(b.name);
+      case 'tier':
+        return (tierOrder[a.tier || ''] ?? 3) - (tierOrder[b.tier || ''] ?? 3);
+      case 'ar':
+        return (b.financial_ar_total || 0) - (a.financial_ar_total || 0);
+      case 'revenue':
+        return (b.lifetime_revenue || 0) - (a.lifetime_revenue || 0);
+      default:
+        return 0;
     }
   });
 
   // Summary stats
   const totalAR = clients.reduce((sum: number, c: Client) => sum + (c.financial_ar_total || 0), 0);
-  const totalRevenue = clients.reduce((sum: number, c: Client) => sum + (c.lifetime_revenue || 0), 0);
+  const totalRevenue = clients.reduce(
+    (sum: number, c: Client) => sum + (c.lifetime_revenue || 0),
+    0
+  );
   const ytdRevenue = clients.reduce((sum: number, c: Client) => sum + (c.ytd_revenue || 0), 0);
-  const atRiskCount = clients.filter((c: Client) => c.computed_at_risk || (c.health_score !== null && c.health_score < 50)).length;
+  const atRiskCount = clients.filter(
+    (c: Client) => c.computed_at_risk || (c.health_score !== null && c.health_score < 50)
+  ).length;
   const overdueAR = clients.reduce((sum: number, c: Client) => {
     if (c.financial_ar_aging_bucket && c.financial_ar_aging_bucket !== 'current') {
       return sum + (c.financial_ar_total || 0);
@@ -159,9 +232,12 @@ export function Clients() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {sorted.map((client: Client) => {
             const health = getHealthStyle(client.health_score, client.relationship_health);
-            const aging = client.financial_ar_aging_bucket ? agingStyles[client.financial_ar_aging_bucket] : null;
+            const aging = client.financial_ar_aging_bucket
+              ? agingStyles[client.financial_ar_aging_bucket]
+              : null;
             const hasAR = (client.financial_ar_total || 0) > 0;
-            const isAtRisk = client.computed_at_risk || (client.health_score !== null && client.health_score < 50);
+            const isAtRisk =
+              client.computed_at_risk || (client.health_score !== null && client.health_score < 50);
             const trend = client.health_trend || client.relationship_trend;
 
             return (
@@ -170,7 +246,9 @@ export function Clients() {
                 to="/clients/$clientId"
                 params={{ clientId: client.id }}
                 className={`block bg-slate-800 rounded-lg border transition-colors p-4 ${
-                  isAtRisk ? 'border-red-900/50 hover:border-red-700' : 'border-slate-700 hover:border-slate-600'
+                  isAtRisk
+                    ? 'border-red-900/50 hover:border-red-700'
+                    : 'border-slate-700 hover:border-slate-600'
                 }`}
               >
                 {/* Header */}
@@ -189,10 +267,17 @@ export function Clients() {
                     </div>
                   </div>
                   {client.tier && (
-                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${
-                      client.tier === 'A' ? 'bg-green-900/50 text-green-300' :
-                      client.tier === 'B' ? 'bg-blue-900/50 text-blue-300' : 'bg-slate-700 text-slate-300'
-                    }`}>Tier {client.tier}</span>
+                    <span
+                      className={`px-2 py-0.5 rounded text-xs font-medium ${
+                        client.tier === 'A'
+                          ? 'bg-green-900/50 text-green-300'
+                          : client.tier === 'B'
+                            ? 'bg-blue-900/50 text-blue-300'
+                            : 'bg-slate-700 text-slate-300'
+                      }`}
+                    >
+                      Tier {client.tier}
+                    </span>
                   )}
                 </div>
 
@@ -201,13 +286,21 @@ export function Clients() {
                   <div className="grid grid-cols-4 gap-1 text-xs mb-3">
                     {client.health_factors.completion_rate !== undefined && (
                       <div className="text-center">
-                        <div className="text-slate-300">{Math.round(client.health_factors.completion_rate * 100)}%</div>
+                        <div className="text-slate-300">
+                          {Math.round(client.health_factors.completion_rate * 100)}%
+                        </div>
                         <div className="text-slate-500">Done</div>
                       </div>
                     )}
                     {client.health_factors.overdue_count !== undefined && (
                       <div className="text-center">
-                        <div className={client.health_factors.overdue_count > 0 ? 'text-red-400' : 'text-slate-300'}>
+                        <div
+                          className={
+                            client.health_factors.overdue_count > 0
+                              ? 'text-red-400'
+                              : 'text-slate-300'
+                          }
+                        >
                           {client.health_factors.overdue_count}
                         </div>
                         <div className="text-slate-500">Overdue</div>
@@ -221,7 +314,9 @@ export function Clients() {
                     )}
                     {client.health_factors.commitment_score !== undefined && (
                       <div className="text-center">
-                        <div className="text-slate-300">{client.health_factors.commitment_score}</div>
+                        <div className="text-slate-300">
+                          {client.health_factors.commitment_score}
+                        </div>
                         <div className="text-slate-500">Commit</div>
                       </div>
                     )}
@@ -234,7 +329,9 @@ export function Clients() {
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-slate-400">Lifetime Revenue</span>
                       {(client.ytd_revenue || 0) > 0 && (
-                        <span className="text-xs text-emerald-400">YTD: {formatCurrency(client.ytd_revenue)}</span>
+                        <span className="text-xs text-emerald-400">
+                          YTD: {formatCurrency(client.ytd_revenue)}
+                        </span>
                       )}
                     </div>
                     <div className="text-lg font-semibold text-green-400">
@@ -250,7 +347,9 @@ export function Clients() {
                       <span className="text-xs text-slate-400">AR Outstanding</span>
                       {client.financial_ar_aging_bucket && (
                         <span className={`text-xs ${aging?.text || 'text-slate-400'}`}>
-                          {client.financial_ar_aging_bucket === 'current' ? 'Current' : `${client.financial_ar_aging_bucket} days`}
+                          {client.financial_ar_aging_bucket === 'current'
+                            ? 'Current'
+                            : `${client.financial_ar_aging_bucket} days`}
                         </span>
                       )}
                     </div>
@@ -261,7 +360,7 @@ export function Clients() {
                 )}
 
                 {/* Task counts */}
-                {(client.open_task_count || client.overdue_task_count) ? (
+                {client.open_task_count || client.overdue_task_count ? (
                   <div className="mt-2 flex gap-3 text-xs">
                     {client.open_task_count ? (
                       <span className="text-slate-400">{client.open_task_count} tasks</span>

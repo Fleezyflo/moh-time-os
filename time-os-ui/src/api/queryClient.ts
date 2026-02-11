@@ -1,6 +1,6 @@
 /**
  * TanStack Query Client configuration.
- * 
+ *
  * Centralized query client with standardized settings.
  */
 

@@ -12,10 +12,10 @@ export interface InboxItem {
   type: InboxItemType;
   state: InboxItemState;
   severity: Severity;
-  display_severity: Severity;  // max(inbox.severity, issue.severity)
+  display_severity: Severity; // max(inbox.severity, issue.severity)
   proposed_at: string;
   resurfaced_at: string | null;
-  attention_age_start_at: string;  // resurfaced_at ?? proposed_at
+  attention_age_start_at: string; // resurfaced_at ?? proposed_at
   read_at: string | null;
   resolved_at: string | null;
   snooze_until: string | null;
@@ -201,9 +201,9 @@ export interface ClientIndexResponse {
 // ==== Health Types (§6.6) ====
 
 export interface HealthScore {
-  score: number | null;  // 0-100 or null if gated
+  score: number | null; // 0-100 or null if gated
   label: 'Poor' | 'Fair' | 'Good' | 'N/A';
-  gating_reason: string | null;  // 'no_tasks' | 'task_linking_incomplete' | null
+  gating_reason: string | null; // 'no_tasks' | 'task_linking_incomplete' | null
 }
 
 // ==== Action Request Types ====
@@ -218,7 +218,14 @@ export interface InboxActionRequest {
 }
 
 export interface IssueTransitionRequest {
-  action: 'acknowledge' | 'assign' | 'snooze' | 'unsnooze' | 'resolve' | 'escalate' | 'mark_awaiting';
+  action:
+    | 'acknowledge'
+    | 'assign'
+    | 'snooze'
+    | 'unsnooze'
+    | 'resolve'
+    | 'escalate'
+    | 'mark_awaiting';
   assigned_to?: string;
   snooze_days?: number;
   note?: string;

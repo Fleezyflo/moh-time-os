@@ -84,9 +84,12 @@ export function ColdClients() {
   // Summary stats
   const totalLifetimeIssued = clients.reduce((sum, c) => sum + (c.issued_lifetime || 0), 0);
   const totalLifetimePaid = clients.reduce((sum, c) => sum + (c.paid_lifetime || 0), 0);
-  const avgDaysSince = clients.length > 0
-    ? Math.round(clients.reduce((sum, c) => sum + (c.days_since_last_invoice || 0), 0) / clients.length)
-    : 0;
+  const avgDaysSince =
+    clients.length > 0
+      ? Math.round(
+          clients.reduce((sum, c) => sum + (c.days_since_last_invoice || 0), 0) / clients.length
+        )
+      : 0;
 
   if (loading) {
     return (
@@ -169,9 +172,7 @@ export function ColdClients() {
           </select>
         </div>
 
-        <div className="ml-auto text-sm text-slate-400">
-          Showing {sortedClients.length} clients
-        </div>
+        <div className="ml-auto text-sm text-slate-400">Showing {sortedClients.length} clients</div>
       </div>
 
       {/* Client List */}
@@ -182,7 +183,7 @@ export function ColdClients() {
         </div>
       ) : (
         <div className="space-y-2">
-          {sortedClients.map(client => (
+          {sortedClients.map((client) => (
             <ColdClientCard key={client.id} client={client} />
           ))}
         </div>
@@ -215,7 +216,9 @@ function ColdClientCard({ client }: { client: ColdClient }) {
         <div className="text-right">
           <div className="text-sm">
             <span className="text-slate-400">Issued:</span>
-            <span className="ml-2 text-slate-200">{formatCurrency(client.issued_lifetime || 0)}</span>
+            <span className="ml-2 text-slate-200">
+              {formatCurrency(client.issued_lifetime || 0)}
+            </span>
           </div>
           <div className="text-sm">
             <span className="text-slate-400">Paid:</span>

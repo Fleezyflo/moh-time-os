@@ -38,12 +38,18 @@ const priorityColors: Record<string, string> = {
 // Convert v29 severity to priority number
 const severityToPriority = (severity: string | undefined): number => {
   switch (severity) {
-    case 'critical': return 90;
-    case 'high': return 70;
-    case 'medium': return 50;
-    case 'low': return 30;
-    case 'info': return 10;
-    default: return 50;
+    case 'critical':
+      return 90;
+    case 'high':
+      return 70;
+    case 'medium':
+      return 50;
+    case 'low':
+      return 30;
+    case 'info':
+      return 10;
+    default:
+      return 50;
   }
 };
 
@@ -63,7 +69,7 @@ function getPriorityInfo(priority: number): { label: string; color: string } {
   const label = priorityLabel(priority);
   return {
     label: label.charAt(0).toUpperCase() + label.slice(1),
-    color: priorityColors[label] || priorityColors.medium
+    color: priorityColors[label] || priorityColors.medium,
   };
 }
 

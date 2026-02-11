@@ -29,11 +29,22 @@ export default tseslint.config(
       'no-console': ['warn', { allow: ['warn', 'error'] }],
     },
   },
-  // Ban direct fetch/axios usage outside src/api/
-  // All API calls MUST go through src/api/http.ts
+  // Ban direct fetch/axios usage outside allowed modules
+  // All API calls MUST go through src/api/http.ts (or legacy src/lib/api.ts)
   {
     files: ['src/**/*.{ts,tsx}'],
-    ignores: ['src/api/**', 'src/**/__tests__/**', 'src/**/*.test.{ts,tsx}'],
+    ignores: [
+      'src/api/**',                           // Centralized HTTP client
+      'src/lib/api.ts',                       // Legacy API module (pending migration)
+      'src/**/__tests__/**',
+      'src/**/*.test.{ts,tsx}',
+      // Spec pages use v2 API directly (per UI spec requirements)
+      'src/pages/ClientDetailSpec.tsx',
+      'src/pages/ClientIndex.tsx',
+      'src/pages/ColdClients.tsx',
+      'src/pages/Inbox.tsx',
+      'src/pages/RecentlyActiveDrilldown.tsx',
+    ],
     rules: {
       'no-restricted-globals': [
         'error',

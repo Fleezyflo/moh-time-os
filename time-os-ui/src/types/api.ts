@@ -57,12 +57,22 @@ export interface Issue {
   // v29 format (spec-compliant)
   id: string;
   type: 'financial' | 'schedule_delivery' | 'communication' | 'risk';
-  state:
-    // v29 states
-    | 'detected' | 'surfaced' | 'snoozed' | 'acknowledged' | 'addressing'
-    | 'awaiting_resolution' | 'regression_watch' | 'closed' | 'regressed'
+  state: // v29 states
+    | 'detected'
+    | 'surfaced'
+    | 'snoozed'
+    | 'acknowledged'
+    | 'addressing'
+    | 'awaiting_resolution'
+    | 'regression_watch'
+    | 'closed'
+    | 'regressed'
     // Legacy states
-    | 'open' | 'monitoring' | 'awaiting' | 'blocked' | 'resolved';
+    | 'open'
+    | 'monitoring'
+    | 'awaiting'
+    | 'blocked'
+    | 'resolved';
   severity: 'critical' | 'high' | 'medium' | 'low' | 'info';
   client_id: string;
   title: string;
@@ -105,7 +115,7 @@ export interface Client {
   created_at: string;
   updated_at: string;
   // COMPUTED health (from HealthCalculator)
-  health_score: number | null;  // 0-100 computed score
+  health_score: number | null; // 0-100 computed score
   health_trend: 'improving' | 'stable' | 'declining' | null;
   health_factors: {
     completion_rate?: number;
@@ -167,7 +177,7 @@ export interface CouplingWhy {
   communication_frequency?: number;
   ar_exposure?: number;
   delivery_dependency?: number;
-  [key: string]: unknown;  // Allow additional fields
+  [key: string]: unknown; // Allow additional fields
 }
 
 export interface Coupling {
@@ -198,7 +208,7 @@ export interface Watcher {
   issue_id: string;
   watcher_id: string;
   issue_title: string;
-  watch_type: WatcherType | string;  // string fallback for new types
+  watch_type: WatcherType | string; // string fallback for new types
   triggered_at: string | null;
   trigger_count: number;
   state: string;

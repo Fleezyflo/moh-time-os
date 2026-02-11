@@ -115,12 +115,17 @@ export function RecentlyActiveDrilldown() {
   }
 
   // Calculate trends
-  const issuedTrend = client.issued_prev_12m > 0
-    ? ((client.issued_last_12m - client.issued_prev_12m) / client.issued_prev_12m * 100).toFixed(0)
-    : null;
-  const paidTrend = client.paid_prev_12m > 0
-    ? ((client.paid_last_12m - client.paid_prev_12m) / client.paid_prev_12m * 100).toFixed(0)
-    : null;
+  const issuedTrend =
+    client.issued_prev_12m > 0
+      ? (
+          ((client.issued_last_12m - client.issued_prev_12m) / client.issued_prev_12m) *
+          100
+        ).toFixed(0)
+      : null;
+  const paidTrend =
+    client.paid_prev_12m > 0
+      ? (((client.paid_last_12m - client.paid_prev_12m) / client.paid_prev_12m) * 100).toFixed(0)
+      : null;
 
   return (
     <div className="space-y-6">
@@ -134,7 +139,9 @@ export function RecentlyActiveDrilldown() {
           <div>
             <h1 className="text-2xl font-bold text-white">{client.name}</h1>
             <div className="flex items-center gap-2 mt-1">
-              <span className={`px-2 py-0.5 rounded text-xs font-medium ${TIER_COLORS[client.tier]}`}>
+              <span
+                className={`px-2 py-0.5 rounded text-xs font-medium ${TIER_COLORS[client.tier]}`}
+              >
                 {client.tier}
               </span>
               <span className="px-2 py-0.5 rounded text-xs font-medium bg-yellow-600 text-black">
@@ -167,8 +174,11 @@ export function RecentlyActiveDrilldown() {
                 <span>{formatCurrency(client.issued_prev_12m)}</span>
               </div>
               {issuedTrend !== null && (
-                <div className={`text-sm ${Number(issuedTrend) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {Number(issuedTrend) >= 0 ? '↑' : '↓'} {Math.abs(Number(issuedTrend))}% vs prior period
+                <div
+                  className={`text-sm ${Number(issuedTrend) >= 0 ? 'text-green-400' : 'text-red-400'}`}
+                >
+                  {Number(issuedTrend) >= 0 ? '↑' : '↓'} {Math.abs(Number(issuedTrend))}% vs prior
+                  period
                 </div>
               )}
               <div className="border-t border-slate-700 pt-2 mt-2">
@@ -193,8 +203,11 @@ export function RecentlyActiveDrilldown() {
                 <span>{formatCurrency(client.paid_prev_12m)}</span>
               </div>
               {paidTrend !== null && (
-                <div className={`text-sm ${Number(paidTrend) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                  {Number(paidTrend) >= 0 ? '↑' : '↓'} {Math.abs(Number(paidTrend))}% vs prior period
+                <div
+                  className={`text-sm ${Number(paidTrend) >= 0 ? 'text-green-400' : 'text-red-400'}`}
+                >
+                  {Number(paidTrend) >= 0 ? '↑' : '↓'} {Math.abs(Number(paidTrend))}% vs prior
+                  period
                 </div>
               )}
               <div className="border-t border-slate-700 pt-2 mt-2">
@@ -214,27 +227,33 @@ export function RecentlyActiveDrilldown() {
 
         {client.brands?.length > 0 ? (
           <div className="space-y-4">
-            {client.brands.map(brand => (
+            {client.brands.map((brand) => (
               <div key={brand.id}>
                 <h3 className="font-medium text-white mb-2">{brand.name}</h3>
                 <div className="space-y-2">
-                  {brand.engagements.map(eng => (
+                  {brand.engagements.map((eng) => (
                     <div key={eng.id} className="bg-slate-900 rounded p-3">
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-medium">{eng.name}</span>
-                        <span className={`px-2 py-0.5 rounded text-xs ${
-                          eng.type === 'retainer' ? 'bg-blue-600' : 'bg-green-600'
-                        }`}>
+                        <span
+                          className={`px-2 py-0.5 rounded text-xs ${
+                            eng.type === 'retainer' ? 'bg-blue-600' : 'bg-green-600'
+                          }`}
+                        >
                           {eng.type}
                         </span>
                       </div>
                       <div className="text-sm text-slate-400">
                         {eng.started_at && <span>Started: {formatDate(eng.started_at)}</span>}
-                        {eng.completed_at && <span className="ml-4">Completed: {formatDate(eng.completed_at)}</span>}
+                        {eng.completed_at && (
+                          <span className="ml-4">Completed: {formatDate(eng.completed_at)}</span>
+                        )}
                       </div>
                       <div className="text-sm mt-1">
-                        <span className="text-slate-400">Invoiced:</span> {formatCurrency(eng.total_invoiced)}
-                        <span className="text-slate-400 ml-4">Paid:</span> {formatCurrency(eng.total_paid)}
+                        <span className="text-slate-400">Invoiced:</span>{' '}
+                        {formatCurrency(eng.total_invoiced)}
+                        <span className="text-slate-400 ml-4">Paid:</span>{' '}
+                        {formatCurrency(eng.total_paid)}
                       </div>
                     </div>
                   ))}
@@ -264,16 +283,21 @@ export function RecentlyActiveDrilldown() {
                 </tr>
               </thead>
               <tbody>
-                {client.invoices.map(inv => (
+                {client.invoices.map((inv) => (
                   <tr key={inv.id} className="border-t border-slate-700">
                     <td className="p-3">{inv.number}</td>
                     <td className="p-3">{formatDate(inv.issue_date)}</td>
                     <td className="p-3 text-right">{formatCurrency(inv.amount)}</td>
                     <td className="p-3">
-                      <span className={`px-2 py-0.5 rounded text-xs ${
-                        inv.status === 'paid' ? 'bg-green-600' :
-                        inv.status === 'overdue' ? 'bg-red-600' : 'bg-slate-600'
-                      }`}>
+                      <span
+                        className={`px-2 py-0.5 rounded text-xs ${
+                          inv.status === 'paid'
+                            ? 'bg-green-600'
+                            : inv.status === 'overdue'
+                              ? 'bg-red-600'
+                              : 'bg-slate-600'
+                        }`}
+                      >
                         {inv.status.toUpperCase()}
                       </span>
                     </td>

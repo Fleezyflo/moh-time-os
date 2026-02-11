@@ -46,9 +46,16 @@ describe('Issue field helpers', () => {
         { input: undefined, expected: '' },
       ];
 
+      // Strip leading emoji and whitespace
+      const stripEmojiPrefix = (str: string): string => {
+        // Match emoji (including variation selectors and zero-width joiners) at start
+        // Emoji can be: base emoji + optional variation selector (FE0E/FE0F) + optional ZWJ sequences
+        return str.replace(/^(?:\p{Emoji_Presentation}|\p{Emoji}\uFE0F?)+\s*/u, '').trim();
+      };
+
       for (const { input, expected } of testCases) {
         const raw = input || '';
-        const clean = raw.replace(/^[⚠️⏰🚫💔💰⚙️📉📈🔄]+\s*/, '');
+        const clean = stripEmojiPrefix(raw);
         expect(clean).toBe(expected);
       }
     });

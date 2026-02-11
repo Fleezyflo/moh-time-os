@@ -1,6 +1,12 @@
 // Format utilities tests
 import { describe, it, expect } from 'vitest';
-import { formatNumber, formatScore, formatPercent, formatCompact, formatConfidence } from '../lib/format';
+import {
+  formatNumber,
+  formatScore,
+  formatPercent,
+  formatCompact,
+  formatConfidence,
+} from '../lib/format';
 import { parseISO, formatDate, daysAgo } from '../lib/datetime';
 
 describe('Number formatting', () => {

@@ -13,7 +13,7 @@ export interface PriorityThresholds {
 export const PRIORITY_THRESHOLDS: PriorityThresholds = {
   critical: 80,
   high: 60,
-  medium: 40
+  medium: 40,
 };
 
 // Get human-readable label from numeric priority
@@ -41,7 +41,9 @@ export function comparePriority(a: number, b: number): number {
 export function matchesPriorityFilter(priority: number, filter: number | 'all'): boolean {
   if (filter === 'all') return true;
   if (filter >= PRIORITY_THRESHOLDS.critical) return priority >= PRIORITY_THRESHOLDS.critical;
-  if (filter >= PRIORITY_THRESHOLDS.high) return priority >= PRIORITY_THRESHOLDS.high && priority < PRIORITY_THRESHOLDS.critical;
-  if (filter >= PRIORITY_THRESHOLDS.medium) return priority >= PRIORITY_THRESHOLDS.medium && priority < PRIORITY_THRESHOLDS.high;
+  if (filter >= PRIORITY_THRESHOLDS.high)
+    return priority >= PRIORITY_THRESHOLDS.high && priority < PRIORITY_THRESHOLDS.critical;
+  if (filter >= PRIORITY_THRESHOLDS.medium)
+    return priority >= PRIORITY_THRESHOLDS.medium && priority < PRIORITY_THRESHOLDS.high;
   return priority < PRIORITY_THRESHOLDS.medium;
 }

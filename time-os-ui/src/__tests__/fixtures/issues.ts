@@ -16,7 +16,7 @@ export const mockIssues: Issue[] = [
     issue_id: 'issue-critical-1',
     headline: 'Critical issue requiring immediate attention - System outage',
     priority: 95,
-    last_activity_at: '2025-02-06T14:00:00Z'
+    last_activity_at: '2025-02-06T14:00:00Z',
   },
   {
     id: 'issue-high-1',
@@ -31,7 +31,7 @@ export const mockIssues: Issue[] = [
     issue_id: 'issue-high-1',
     headline: 'High priority issue - Performance degradation',
     priority: 75,
-    last_activity_at: '2025-02-06T12:00:00Z'
+    last_activity_at: '2025-02-06T12:00:00Z',
   },
   {
     id: 'issue-medium-1',
@@ -46,7 +46,7 @@ export const mockIssues: Issue[] = [
     issue_id: 'issue-medium-1',
     headline: 'Medium priority issue - Minor UI bug',
     priority: 50,
-    last_activity_at: '2025-02-05T16:00:00Z'
+    last_activity_at: '2025-02-05T16:00:00Z',
   },
   {
     id: 'issue-low-1',
@@ -61,7 +61,7 @@ export const mockIssues: Issue[] = [
     issue_id: 'issue-low-1',
     headline: 'Low priority enhancement - Nice to have feature',
     priority: 25,
-    last_activity_at: '2025-02-02T15:00:00Z'
+    last_activity_at: '2025-02-02T15:00:00Z',
   },
   {
     id: 'issue-critical-2',
@@ -76,8 +76,8 @@ export const mockIssues: Issue[] = [
     issue_id: 'issue-critical-2',
     headline: 'Another critical issue - Security vulnerability',
     priority: 90,
-    last_activity_at: '2025-02-06T10:00:00Z'
-  }
+    last_activity_at: '2025-02-06T10:00:00Z',
+  },
 ];
 
 // Helper to get issues sorted by priority (highest first)

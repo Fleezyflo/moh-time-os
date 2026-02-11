@@ -25,7 +25,9 @@ export function FixDataSummary({ fixData, onClick }: FixDataSummaryProps) {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-amber-400">⚠️</span>
-          <span className="text-amber-300 font-medium">{total} data quality issue{total !== 1 ? 's' : ''}</span>
+          <span className="text-amber-300 font-medium">
+            {total} data quality issue{total !== 1 ? 's' : ''}
+          </span>
         </div>
         <span className="text-slate-400 text-sm">Fix →</span>
       </div>
@@ -78,9 +80,7 @@ export function FixDataCard({ type, item, onResolve, isResolving }: FixDataCardP
           <h3 className="font-medium text-slate-100 mt-1">
             {item.display_name || item.entity_id || item.id}
           </h3>
-          {item.source && (
-            <div className="text-sm text-slate-500 mt-1">Source: {item.source}</div>
-          )}
+          {item.source && <div className="text-sm text-slate-500 mt-1">Source: {item.source}</div>}
           {item.confidence_score !== undefined && (
             <div className="text-sm text-slate-500 mt-1">
               Confidence: {(item.confidence_score * 100).toFixed(0)}%

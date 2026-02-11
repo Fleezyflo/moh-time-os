@@ -27,34 +27,37 @@ export const useDrawerStore = create<DrawerState>()(
       // Proposal drawer
       selectedProposal: null,
       proposalDrawerOpen: false,
-      openProposalDrawer: (proposal) => set({
-        selectedProposal: proposal,
-        proposalDrawerOpen: true,
-        // Close other drawers
-        selectedIssue: null,
-        issueDrawerOpen: false
-      }),
+      openProposalDrawer: (proposal) =>
+        set({
+          selectedProposal: proposal,
+          proposalDrawerOpen: true,
+          // Close other drawers
+          selectedIssue: null,
+          issueDrawerOpen: false,
+        }),
       closeProposalDrawer: () => set({ selectedProposal: null, proposalDrawerOpen: false }),
 
       // Issue drawer
       selectedIssue: null,
       issueDrawerOpen: false,
-      openIssueDrawer: (issue) => set({
-        selectedIssue: issue,
-        issueDrawerOpen: true,
-        // Close other drawers
-        selectedProposal: null,
-        proposalDrawerOpen: false
-      }),
+      openIssueDrawer: (issue) =>
+        set({
+          selectedIssue: issue,
+          issueDrawerOpen: true,
+          // Close other drawers
+          selectedProposal: null,
+          proposalDrawerOpen: false,
+        }),
       closeIssueDrawer: () => set({ selectedIssue: null, issueDrawerOpen: false }),
 
       // Close all
-      closeAllDrawers: () => set({
-        selectedProposal: null,
-        proposalDrawerOpen: false,
-        selectedIssue: null,
-        issueDrawerOpen: false
-      }),
+      closeAllDrawers: () =>
+        set({
+          selectedProposal: null,
+          proposalDrawerOpen: false,
+          selectedIssue: null,
+          issueDrawerOpen: false,
+        }),
     }),
     { name: 'drawer-store' }
   )
@@ -121,43 +124,49 @@ export const useMutationStore = create<MutationState>()(
       optimisticProposals: new Map(),
       optimisticIssues: new Map(),
 
-      startMutation: (id) => set((state) => {
-        const next = new Set(state.pendingMutations);
-        next.add(id);
-        return { pendingMutations: next };
-      }),
+      startMutation: (id) =>
+        set((state) => {
+          const next = new Set(state.pendingMutations);
+          next.add(id);
+          return { pendingMutations: next };
+        }),
 
-      endMutation: (id) => set((state) => {
-        const next = new Set(state.pendingMutations);
-        next.delete(id);
-        return { pendingMutations: next };
-      }),
+      endMutation: (id) =>
+        set((state) => {
+          const next = new Set(state.pendingMutations);
+          next.delete(id);
+          return { pendingMutations: next };
+        }),
 
       isPending: (id) => get().pendingMutations.has(id),
 
-      setOptimisticProposal: (id, data) => set((state) => {
-        const next = new Map(state.optimisticProposals);
-        next.set(id, data);
-        return { optimisticProposals: next };
-      }),
+      setOptimisticProposal: (id, data) =>
+        set((state) => {
+          const next = new Map(state.optimisticProposals);
+          next.set(id, data);
+          return { optimisticProposals: next };
+        }),
 
-      clearOptimisticProposal: (id) => set((state) => {
-        const next = new Map(state.optimisticProposals);
-        next.delete(id);
-        return { optimisticProposals: next };
-      }),
+      clearOptimisticProposal: (id) =>
+        set((state) => {
+          const next = new Map(state.optimisticProposals);
+          next.delete(id);
+          return { optimisticProposals: next };
+        }),
 
-      setOptimisticIssue: (id, data) => set((state) => {
-        const next = new Map(state.optimisticIssues);
-        next.set(id, data);
-        return { optimisticIssues: next };
-      }),
+      setOptimisticIssue: (id, data) =>
+        set((state) => {
+          const next = new Map(state.optimisticIssues);
+          next.set(id, data);
+          return { optimisticIssues: next };
+        }),
 
-      clearOptimisticIssue: (id) => set((state) => {
-        const next = new Map(state.optimisticIssues);
-        next.delete(id);
-        return { optimisticIssues: next };
-      }),
+      clearOptimisticIssue: (id) =>
+        set((state) => {
+          const next = new Map(state.optimisticIssues);
+          next.delete(id);
+          return { optimisticIssues: next };
+        }),
     }),
     { name: 'mutation-store' }
   )

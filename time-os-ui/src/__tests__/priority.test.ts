@@ -5,7 +5,7 @@ import {
   priorityBadgeClass,
   comparePriority,
   matchesPriorityFilter,
-  PRIORITY_THRESHOLDS
+  PRIORITY_THRESHOLDS,
 } from '../lib/priority';
 import { mockIssues, getIssuesSortedByPriority } from './fixtures/issues';
 
@@ -98,11 +98,15 @@ describe('Priority utilities', () => {
 
 describe('Issue fixtures', () => {
   it('contains issues with all priority levels', () => {
-    const priorities = mockIssues.map(i => i.priority ?? 0);
-    expect(priorities.some(p => p >= PRIORITY_THRESHOLDS.critical)).toBe(true);
-    expect(priorities.some(p => p >= PRIORITY_THRESHOLDS.high && p < PRIORITY_THRESHOLDS.critical)).toBe(true);
-    expect(priorities.some(p => p >= PRIORITY_THRESHOLDS.medium && p < PRIORITY_THRESHOLDS.high)).toBe(true);
-    expect(priorities.some(p => p < PRIORITY_THRESHOLDS.medium)).toBe(true);
+    const priorities = mockIssues.map((i) => i.priority ?? 0);
+    expect(priorities.some((p) => p >= PRIORITY_THRESHOLDS.critical)).toBe(true);
+    expect(
+      priorities.some((p) => p >= PRIORITY_THRESHOLDS.high && p < PRIORITY_THRESHOLDS.critical)
+    ).toBe(true);
+    expect(
+      priorities.some((p) => p >= PRIORITY_THRESHOLDS.medium && p < PRIORITY_THRESHOLDS.high)
+    ).toBe(true);
+    expect(priorities.some((p) => p < PRIORITY_THRESHOLDS.medium)).toBe(true);
   });
 
   it('sorts issues by priority descending', () => {
@@ -112,7 +116,7 @@ describe('Issue fixtures', () => {
 
     // Verify strictly descending order
     for (let i = 1; i < sorted.length; i++) {
-      expect((sorted[i - 1].priority ?? 0)).toBeGreaterThanOrEqual(sorted[i].priority ?? 0);
+      expect(sorted[i - 1].priority ?? 0).toBeGreaterThanOrEqual(sorted[i].priority ?? 0);
     }
   });
 });

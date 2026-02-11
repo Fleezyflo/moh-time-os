@@ -178,11 +178,9 @@ jobs:
 
       - name: ESLint
         run: pnpm run lint
-        continue-on-error: true  # ESLint newly added, allow initial violations
 
       - name: Prettier Check
         run: pnpm run format:check
-        continue-on-error: true  # Prettier newly added
 
       - name: Run Tests
         run: pnpm test

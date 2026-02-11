@@ -227,7 +227,10 @@ export function ClientDetailSpec() {
           signals_bad: signals.bad || 0,
           // Flatten engagements
           brands: engagements.brands || [],
-          active_engagements: (engagements.brands || []).reduce((sum: number, b: Brand) => sum + (b.engagements?.length || 0), 0),
+          active_engagements: (engagements.brands || []).reduce(
+            (sum: number, b: Brand) => sum + (b.engagements?.length || 0),
+            0
+          ),
           // Defaults for other fields
           open_tasks: 0,
           tasks_overdue: 0,
@@ -306,7 +309,8 @@ export function ClientDetailSpec() {
           <div className="flex items-center justify-between text-sm mb-1">
             <span className="text-slate-400">Health</span>
             <span className={`font-medium ${getHealthColor(healthScore)}`}>
-              {healthScore} <span className="text-slate-500">({client.health_label || 'provisional'})</span>
+              {healthScore}{' '}
+              <span className="text-slate-500">({client.health_label || 'provisional'})</span>
             </span>
           </div>
           <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
@@ -340,22 +344,19 @@ export function ClientDetailSpec() {
         {activeTab === 'overview' && (
           <OverviewTab client={client} onIssueAction={executeIssueAction} />
         )}
-        {activeTab === 'engagements' && (
-          <EngagementsTab brands={client.brands || []} />
-        )}
-        {activeTab === 'financials' && (
-          <FinancialsTab client={client} />
-        )}
+        {activeTab === 'engagements' && <EngagementsTab brands={client.brands || []} />}
+        {activeTab === 'financials' && <FinancialsTab client={client} />}
         {activeTab === 'signals' && (
-          <SignalsTab signals={client.signals || []} summary={{
-            good: client.signals_good || 0,
-            neutral: client.signals_neutral || 0,
-            bad: client.signals_bad || 0,
-          }} />
+          <SignalsTab
+            signals={client.signals || []}
+            summary={{
+              good: client.signals_good || 0,
+              neutral: client.signals_neutral || 0,
+              bad: client.signals_bad || 0,
+            }}
+          />
         )}
-        {activeTab === 'team' && (
-          <TeamTab members={client.team_members || []} />
-        )}
+        {activeTab === 'team' && <TeamTab members={client.team_members || []} />}
       </div>
     </div>
   );
@@ -410,10 +411,8 @@ function OverviewTab({ client, onIssueAction }: OverviewTabProps) {
             <div>
               <div className="text-slate-400 text-xs">Signals (30d)</div>
               <div className="text-sm">
-                <span className="text-green-400">{client.signals_good || 0}↑</span>
-                {' '}
-                <span className="text-slate-400">{client.signals_neutral || 0}→</span>
-                {' '}
+                <span className="text-green-400">{client.signals_good || 0}↑</span>{' '}
+                <span className="text-slate-400">{client.signals_neutral || 0}→</span>{' '}
                 <span className="text-red-400">{client.signals_bad || 0}↓</span>
               </div>
             </div>
@@ -455,7 +454,13 @@ function OverviewTab({ client, onIssueAction }: OverviewTabProps) {
 }
 
 // Issue Card for Overview
-function IssueCard({ issue, onAction }: { issue: ClientIssue; onAction: (id: string, action: string) => void }) {
+function IssueCard({
+  issue,
+  onAction,
+}: {
+  issue: ClientIssue;
+  onAction: (id: string, action: string) => void;
+}) {
   return (
     <div className="bg-slate-900 rounded p-3">
       <div className="flex items-start gap-2">
@@ -465,7 +470,9 @@ function IssueCard({ issue, onAction }: { issue: ClientIssue; onAction: (id: str
             <span className="text-xs uppercase text-slate-400">{issue.type}</span>
             <span>—</span>
             <span className="text-white">{issue.title}</span>
-            <span className={`px-1.5 py-0.5 rounded text-xs ${SEVERITY_COLORS[issue.severity || 'medium']}`}>
+            <span
+              className={`px-1.5 py-0.5 rounded text-xs ${SEVERITY_COLORS[issue.severity || 'medium']}`}
+            >
               {issue.severity || 'medium'}
             </span>
           </div>
@@ -477,7 +484,14 @@ function IssueCard({ issue, onAction }: { issue: ClientIssue; onAction: (id: str
             <div className="text-sm text-slate-300 mb-2">
               Evidence: {issue.evidence.display_text}
               {issue.evidence.url && (
-                <a href={issue.evidence.url} target="_blank" rel="noopener" className="ml-1 text-blue-400">↗</a>
+                <a
+                  href={issue.evidence.url}
+                  target="_blank"
+                  rel="noopener"
+                  className="ml-1 text-blue-400"
+                >
+                  ↗
+                </a>
               )}
             </div>
           )}
@@ -515,17 +529,18 @@ function EngagementsTab({ brands }: { brands: Brand[] }) {
               <div key={eng.id} className="bg-slate-900 rounded p-3">
                 <div className="flex items-center justify-between mb-2">
                   <span className="font-medium text-white">{eng.name}</span>
-                  <span className={`px-2 py-0.5 rounded text-xs ${
-                    eng.type === 'retainer' ? 'bg-blue-600' : 'bg-green-600'
-                  }`}>
+                  <span
+                    className={`px-2 py-0.5 rounded text-xs ${
+                      eng.type === 'retainer' ? 'bg-blue-600' : 'bg-green-600'
+                    }`}
+                  >
                     {eng.type.toUpperCase()}
                   </span>
                 </div>
-                <div className="text-sm text-slate-400 mb-2">
-                  State: {eng.state}
-                </div>
+                <div className="text-sm text-slate-400 mb-2">State: {eng.state}</div>
                 <div className="text-sm text-slate-300 mb-2">
-                  Tasks: {eng.open_tasks} open · {eng.overdue_tasks} overdue · {eng.completed_tasks} completed
+                  Tasks: {eng.open_tasks} open · {eng.overdue_tasks} overdue · {eng.completed_tasks}{' '}
+                  completed
                 </div>
                 {eng.health_score !== null && (
                   <div className="flex items-center gap-2">
@@ -536,11 +551,18 @@ function EngagementsTab({ brands }: { brands: Brand[] }) {
                         style={{ width: `${eng.health_score}%` }}
                       />
                     </div>
-                    <span className={`text-sm ${getHealthColor(eng.health_score)}`}>{eng.health_score}</span>
+                    <span className={`text-sm ${getHealthColor(eng.health_score)}`}>
+                      {eng.health_score}
+                    </span>
                   </div>
                 )}
                 {eng.asana_url && (
-                  <a href={eng.asana_url} target="_blank" rel="noopener" className="text-sm text-blue-400 mt-2 inline-block">
+                  <a
+                    href={eng.asana_url}
+                    target="_blank"
+                    rel="noopener"
+                    className="text-sm text-blue-400 mt-2 inline-block"
+                  >
                     View in Asana ↗
                   </a>
                 )}
@@ -590,10 +612,7 @@ function FinancialsTab({ client }: { client: ClientDetail }) {
                 <div className="w-32 text-slate-400">{bucket.bucket}:</div>
                 <div className="w-24">{formatCurrency(bucket.amount)}</div>
                 <div className="flex-1 h-3 bg-slate-700 rounded overflow-hidden">
-                  <div
-                    className="h-full bg-blue-500"
-                    style={{ width: `${bucket.pct}%` }}
-                  />
+                  <div className="h-full bg-blue-500" style={{ width: `${bucket.pct}%` }} />
                 </div>
                 <div className="w-12 text-right">{bucket.pct}%</div>
               </div>
@@ -623,10 +642,15 @@ function FinancialsTab({ client }: { client: ClientDetail }) {
                   <td className="p-3">{inv.issue_date}</td>
                   <td className="p-3 text-right">{formatCurrency(inv.amount)}</td>
                   <td className="p-3">
-                    <span className={`px-2 py-0.5 rounded text-xs ${
-                      inv.status === 'paid' ? 'bg-green-600' :
-                      inv.status === 'overdue' ? 'bg-red-600' : 'bg-slate-600'
-                    }`}>
+                    <span
+                      className={`px-2 py-0.5 rounded text-xs ${
+                        inv.status === 'paid'
+                          ? 'bg-green-600'
+                          : inv.status === 'overdue'
+                            ? 'bg-red-600'
+                            : 'bg-slate-600'
+                      }`}
+                    >
                       {inv.status.toUpperCase()}
                     </span>
                   </td>
@@ -645,10 +669,16 @@ function FinancialsTab({ client }: { client: ClientDetail }) {
 
 // ==== Tab: Signals (§3.5) ====
 
-function SignalsTab({ signals, summary }: { signals: Signal[]; summary: { good: number; neutral: number; bad: number } }) {
+function SignalsTab({
+  signals,
+  summary,
+}: {
+  signals: Signal[];
+  summary: { good: number; neutral: number; bad: number };
+}) {
   const [filter, setFilter] = useState<string>('all');
 
-  const filtered = filter === 'all' ? signals : signals.filter(s => s.sentiment === filter);
+  const filtered = filter === 'all' ? signals : signals.filter((s) => s.sentiment === filter);
 
   return (
     <div className="space-y-4">
@@ -695,7 +725,12 @@ function SignalsTab({ signals, summary }: { signals: Signal[]; summary: { good: 
                   </div>
                   <div className="text-white">{signal.summary}</div>
                   {signal.evidence?.url && (
-                    <a href={signal.evidence.url} target="_blank" rel="noopener" className="text-sm text-blue-400 mt-1 inline-block">
+                    <a
+                      href={signal.evidence.url}
+                      target="_blank"
+                      rel="noopener"
+                      className="text-sm text-blue-400 mt-1 inline-block"
+                    >
                       View ↗
                     </a>
                   )}

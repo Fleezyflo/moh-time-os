@@ -1,14 +1,20 @@
 // Client Detail page
-import { useState } from 'react'
-import { Link, useParams } from '@tanstack/react-router'
-import { RoomDrawer, IssueDrawer, PostureStrip, EvidenceViewer, SkeletonCardList } from '../components'
-import { priorityLabel, priorityBadgeClass } from '../lib/priority'
-import { formatDate, formatRelative } from '../lib/datetime'
-import { formatNumber } from '../lib/format'
-import type { Proposal, Issue } from '../types/api'
-import type { IssueState } from '../lib/api'
-import { useClients, useProposals, useIssues, useEvidence } from '../lib/hooks'
-import * as api from '../lib/api'
+import { useState } from 'react';
+import { Link, useParams } from '@tanstack/react-router';
+import {
+  RoomDrawer,
+  IssueDrawer,
+  PostureStrip,
+  EvidenceViewer,
+  SkeletonCardList,
+} from '../components';
+import { priorityLabel, priorityBadgeClass } from '../lib/priority';
+import { formatDate, formatRelative } from '../lib/datetime';
+import { formatNumber } from '../lib/format';
+import type { Proposal, Issue } from '../types/api';
+import type { IssueState } from '../lib/api';
+import { useClients, useProposals, useIssues, useEvidence } from '../lib/hooks';
+import * as api from '../lib/api';
 
 const trendIcons: Record<string, { icon: string; color: string; label: string }> = {
   improving: { icon: '📈', color: 'text-green-400', label: 'Improving' },
@@ -25,32 +31,55 @@ export function ClientDetail() {
   const [evidenceOpen, setEvidenceOpen] = useState(false);
 
   const { data: apiClients, loading: clientsLoading } = useClients();
-  const { data: apiProposals, refetch: refetchProposals } = useProposals(20, 'open', 7, clientId, undefined);
+  const { data: apiProposals, refetch: refetchProposals } = useProposals(
+    20,
+    'open',
+    7,
+    clientId,
+    undefined
+  );
   const { data: apiIssues, refetch: refetchIssues } = useIssues(20, 7, clientId, undefined);
   const { data: apiEvidence } = useEvidence('client', clientId);
 
-  const client = apiClients?.items?.find(c => c.id === clientId);
+  const client = apiClients?.items?.find((c) => c.id === clientId);
 
   if (clientsLoading) return <SkeletonCardList count={3} />;
   if (!client) return <div className="text-slate-400">Client not found</div>;
 
-  const clientProposals = (apiProposals?.items || []).filter(p => p.status === 'open').sort((a, b) => b.score - a.score);
-  const clientIssues = (apiIssues?.items || []).filter(i => ['open','monitoring','awaiting','blocked'].includes(i.state));
+  const clientProposals = (apiProposals?.items || [])
+    .filter((p) => p.status === 'open')
+    .sort((a, b) => b.score - a.score);
+  const clientIssues = (apiIssues?.items || []).filter((i) =>
+    ['open', 'monitoring', 'awaiting', 'blocked'].includes(i.state)
+  );
   const evidenceItems = apiEvidence?.items || [];
 
   const handleTag = async (proposal: Proposal) => {
     const result = await api.tagProposal(proposal.proposal_id ?? '');
-    if (result.success) { refetchProposals(); refetchIssues(); setProposalDrawerOpen(false); setSelectedProposal(null); }
+    if (result.success) {
+      refetchProposals();
+      refetchIssues();
+      setProposalDrawerOpen(false);
+      setSelectedProposal(null);
+    }
   };
 
   const handleSnooze = async (proposal: Proposal) => {
     const result = await api.snoozeProposal(proposal.proposal_id ?? '', 7);
-    if (result.success) { refetchProposals(); setProposalDrawerOpen(false); setSelectedProposal(null); }
+    if (result.success) {
+      refetchProposals();
+      setProposalDrawerOpen(false);
+      setSelectedProposal(null);
+    }
   };
 
   const handleDismiss = async (proposal: Proposal) => {
     const result = await api.dismissProposal(proposal.proposal_id ?? '');
-    if (result.success) { refetchProposals(); setProposalDrawerOpen(false); setSelectedProposal(null); }
+    if (result.success) {
+      refetchProposals();
+      setProposalDrawerOpen(false);
+      setSelectedProposal(null);
+    }
   };
 
   const handleResolveIssue = async (issue: Issue) => {
@@ -79,14 +108,18 @@ export function ClientDetail() {
     <div>
       <div className="mb-6">
         <div className="flex items-center gap-4 mb-2">
-          <Link to="/clients" className="text-slate-400 hover:text-slate-200">← Clients</Link>
+          <Link to="/clients" className="text-slate-400 hover:text-slate-200">
+            ← Clients
+          </Link>
         </div>
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-2xl font-semibold">{client.name}</h1>
             <div className="flex items-center gap-3 mt-1">
               <PostureStrip health={client.relationship_health || 'good'} />
-              <span className={`text-sm ${trend.color}`}>{trend.icon} {trend.label}</span>
+              <span className={`text-sm ${trend.color}`}>
+                {trend.icon} {trend.label}
+              </span>
             </div>
           </div>
           <div className="text-right">
@@ -95,11 +128,15 @@ export function ClientDetail() {
                 Tier {client.tier}
               </span>
             )}
-            <span className={`px-3 py-1 rounded text-sm ${
-              (client.health_score || 0) >= 80 ? 'bg-green-900/30 text-green-400' :
-              (client.health_score || 0) >= 60 ? 'bg-amber-900/30 text-amber-400' :
-              'bg-red-900/30 text-red-400'
-            }`}>
+            <span
+              className={`px-3 py-1 rounded text-sm ${
+                (client.health_score || 0) >= 80
+                  ? 'bg-green-900/30 text-green-400'
+                  : (client.health_score || 0) >= 60
+                    ? 'bg-amber-900/30 text-amber-400'
+                    : 'bg-red-900/30 text-red-400'
+              }`}
+            >
               Health: {client.health_score || 0}%
             </span>
           </div>
@@ -118,7 +155,9 @@ export function ClientDetail() {
           </div>
           {client.financial_ar_aging_bucket && (
             <div className="text-xs text-slate-500 mt-1">
-              {client.financial_ar_aging_bucket === 'current' ? 'Current' : `${client.financial_ar_aging_bucket} days overdue`}
+              {client.financial_ar_aging_bucket === 'current'
+                ? 'Current'
+                : `${client.financial_ar_aging_bucket} days overdue`}
             </div>
           )}
         </div>
@@ -159,8 +198,15 @@ export function ClientDetail() {
             <p className="text-slate-500">No open proposals</p>
           ) : (
             <div className="space-y-3">
-              {clientProposals.slice(0, 5).map(p => (
-                <div key={p.proposal_id} onClick={() => { setSelectedProposal(p); setProposalDrawerOpen(true); }} className="p-3 bg-slate-800 rounded-lg border border-slate-700 cursor-pointer hover:border-slate-600">
+              {clientProposals.slice(0, 5).map((p) => (
+                <div
+                  key={p.proposal_id}
+                  onClick={() => {
+                    setSelectedProposal(p);
+                    setProposalDrawerOpen(true);
+                  }}
+                  className="p-3 bg-slate-800 rounded-lg border border-slate-700 cursor-pointer hover:border-slate-600"
+                >
                   <div className="flex items-center justify-between">
                     <span className="text-slate-200">{p.headline}</span>
                     <span className="text-xs text-slate-500">Score: {p.score}</span>
@@ -178,13 +224,26 @@ export function ClientDetail() {
             <p className="text-slate-500">No active issues</p>
           ) : (
             <div className="space-y-3">
-              {clientIssues.slice(0, 5).map(issue => (
-                <div key={issue.issue_id} onClick={() => { setSelectedIssue(issue); setIssueDrawerOpen(true); }} className="p-3 bg-slate-800 rounded-lg border border-slate-700 cursor-pointer hover:border-slate-600">
+              {clientIssues.slice(0, 5).map((issue) => (
+                <div
+                  key={issue.issue_id}
+                  onClick={() => {
+                    setSelectedIssue(issue);
+                    setIssueDrawerOpen(true);
+                  }}
+                  className="p-3 bg-slate-800 rounded-lg border border-slate-700 cursor-pointer hover:border-slate-600"
+                >
                   <div className="flex items-center gap-2">
-                    <span className={issue.state === 'open' ? 'text-blue-400' : 'text-amber-400'}>●</span>
+                    <span className={issue.state === 'open' ? 'text-blue-400' : 'text-amber-400'}>
+                      ●
+                    </span>
                     <span className="text-slate-200 flex-1 truncate">{issue.headline}</span>
-                    <span className={`text-xs px-2 py-0.5 rounded ${priorityBadgeClass(issue.priority ?? 0)}`}>
-                      {priorityLabel(issue.priority ?? 0).charAt(0).toUpperCase() + priorityLabel(issue.priority ?? 0).slice(1)}
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded ${priorityBadgeClass(issue.priority ?? 0)}`}
+                    >
+                      {priorityLabel(issue.priority ?? 0)
+                        .charAt(0)
+                        .toUpperCase() + priorityLabel(issue.priority ?? 0).slice(1)}
                     </span>
                   </div>
                 </div>
@@ -199,22 +258,42 @@ export function ClientDetail() {
         <section className="mt-6 bg-slate-800/50 rounded-lg border border-slate-700 p-4">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-medium">Evidence ({evidenceItems.length})</h2>
-            <button onClick={() => setEvidenceOpen(true)} className="text-sm text-blue-400 hover:text-blue-300">View All</button>
+            <button
+              onClick={() => setEvidenceOpen(true)}
+              className="text-sm text-blue-400 hover:text-blue-300"
+            >
+              View All
+            </button>
           </div>
         </section>
       )}
 
       {selectedProposal && (
-        <RoomDrawer open={proposalDrawerOpen} onClose={() => { setProposalDrawerOpen(false); setSelectedProposal(null); }} proposal={selectedProposal} onTag={() => handleTag(selectedProposal)} onSnooze={() => handleSnooze(selectedProposal)} onDismiss={() => handleDismiss(selectedProposal)} />
+        <RoomDrawer
+          open={proposalDrawerOpen}
+          onClose={() => {
+            setProposalDrawerOpen(false);
+            setSelectedProposal(null);
+          }}
+          proposal={selectedProposal}
+          onTag={() => handleTag(selectedProposal)}
+          onSnooze={() => handleSnooze(selectedProposal)}
+          onDismiss={() => handleDismiss(selectedProposal)}
+        />
       )}
 
       <IssueDrawer
         issue={selectedIssue}
         open={issueDrawerOpen}
-        onClose={() => { setIssueDrawerOpen(false); setSelectedIssue(null); }}
+        onClose={() => {
+          setIssueDrawerOpen(false);
+          setSelectedIssue(null);
+        }}
         onResolve={selectedIssue ? () => handleResolveIssue(selectedIssue) : undefined}
         onAddNote={selectedIssue ? (text) => handleAddIssueNote(selectedIssue, text) : undefined}
-        onChangeState={selectedIssue ? (newState) => handleChangeIssueState(selectedIssue, newState) : undefined}
+        onChangeState={
+          selectedIssue ? (newState) => handleChangeIssueState(selectedIssue, newState) : undefined
+        }
       />
 
       {evidenceOpen && (

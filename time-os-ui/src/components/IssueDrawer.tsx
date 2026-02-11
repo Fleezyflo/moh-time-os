@@ -19,10 +19,25 @@ const stateStyles: Record<string, { icon: string; color: string; bg: string; lab
   detected: { icon: '◎', color: 'text-blue-300', bg: 'bg-blue-900/20', label: 'Detected' },
   surfaced: { icon: '○', color: 'text-blue-400', bg: 'bg-blue-900/30', label: 'Surfaced' },
   snoozed: { icon: '◷', color: 'text-amber-400', bg: 'bg-amber-900/30', label: 'Snoozed' },
-  acknowledged: { icon: '◉', color: 'text-purple-400', bg: 'bg-purple-900/30', label: 'Acknowledged' },
+  acknowledged: {
+    icon: '◉',
+    color: 'text-purple-400',
+    bg: 'bg-purple-900/30',
+    label: 'Acknowledged',
+  },
   addressing: { icon: '⊕', color: 'text-cyan-400', bg: 'bg-cyan-900/30', label: 'Addressing' },
-  awaiting_resolution: { icon: '◷', color: 'text-amber-400', bg: 'bg-amber-900/30', label: 'Awaiting Resolution' },
-  regression_watch: { icon: '◎', color: 'text-yellow-400', bg: 'bg-yellow-900/30', label: 'Regression Watch' },
+  awaiting_resolution: {
+    icon: '◷',
+    color: 'text-amber-400',
+    bg: 'bg-amber-900/30',
+    label: 'Awaiting Resolution',
+  },
+  regression_watch: {
+    icon: '◎',
+    color: 'text-yellow-400',
+    bg: 'bg-yellow-900/30',
+    label: 'Regression Watch',
+  },
   regressed: { icon: '⊘', color: 'text-red-400', bg: 'bg-red-900/30', label: 'Regressed' },
   closed: { icon: '✓', color: 'text-green-400', bg: 'bg-green-900/30', label: 'Closed' },
   // Legacy states
@@ -44,12 +59,18 @@ const priorityColors: Record<string, string> = {
 // Convert v29 severity to priority number
 const severityToPriority = (severity: string | undefined): number => {
   switch (severity) {
-    case 'critical': return 90;
-    case 'high': return 70;
-    case 'medium': return 50;
-    case 'low': return 30;
-    case 'info': return 10;
-    default: return 50;
+    case 'critical':
+      return 90;
+    case 'high':
+      return 70;
+    case 'medium':
+      return 50;
+    case 'low':
+      return 30;
+    case 'info':
+      return 10;
+    default:
+      return 50;
   }
 };
 
@@ -72,11 +93,18 @@ function getPriorityInfo(priority: number): { label: string; color: string } {
   const label = priorityLabel(priority);
   return {
     label: label.charAt(0).toUpperCase() + label.slice(1),
-    color: priorityColors[label] || priorityColors.medium
+    color: priorityColors[label] || priorityColors.medium,
   };
 }
 
-export function IssueDrawer({ issue, open, onClose, onResolve, onAddNote, onChangeState }: IssueDrawerProps) {
+export function IssueDrawer({
+  issue,
+  open,
+  onClose,
+  onResolve,
+  onAddNote,
+  onChangeState,
+}: IssueDrawerProps) {
   const toast = useToast();
   const [isResolving, setIsResolving] = useState(false);
   const [isChangingState, setIsChangingState] = useState(false);
@@ -99,7 +127,9 @@ export function IssueDrawer({ issue, open, onClose, onResolve, onAddNote, onChan
   useEffect(() => {
     if (open) {
       document.body.style.overflow = 'hidden';
-      return () => { document.body.style.overflow = ''; };
+      return () => {
+        document.body.style.overflow = '';
+      };
     }
   }, [open]);
 
@@ -221,7 +251,9 @@ export function IssueDrawer({ issue, open, onClose, onResolve, onAddNote, onChan
               ✕
             </button>
           </div>
-          <h2 id="issue-drawer-title" className="text-lg font-semibold text-slate-100">{getTitle(issue)}</h2>
+          <h2 id="issue-drawer-title" className="text-lg font-semibold text-slate-100">
+            {getTitle(issue)}
+          </h2>
         </div>
 
         {/* Details */}
@@ -238,13 +270,17 @@ export function IssueDrawer({ issue, open, onClose, onResolve, onAddNote, onChan
             {getCreatedAt(issue) && (
               <div>
                 <div className="text-xs text-slate-400 uppercase tracking-wide">Created</div>
-                <div className="text-slate-200">{new Date(getCreatedAt(issue)).toLocaleString()}</div>
+                <div className="text-slate-200">
+                  {new Date(getCreatedAt(issue)).toLocaleString()}
+                </div>
               </div>
             )}
             {getLastActivity(issue) && (
               <div>
                 <div className="text-xs text-slate-400 uppercase tracking-wide">Last Activity</div>
-                <div className="text-slate-200">{new Date(getLastActivity(issue)).toLocaleString()}</div>
+                <div className="text-slate-200">
+                  {new Date(getLastActivity(issue)).toLocaleString()}
+                </div>
               </div>
             )}
           </div>
@@ -260,9 +296,7 @@ export function IssueDrawer({ issue, open, onClose, onResolve, onAddNote, onChan
         {/* Actions */}
         <div className="p-4 border-t border-slate-700 space-y-3">
           {error && (
-            <div className="text-sm text-red-400 bg-red-900/20 px-3 py-2 rounded">
-              {error}
-            </div>
+            <div className="text-sm text-red-400 bg-red-900/20 px-3 py-2 rounded">{error}</div>
           )}
 
           {showNoteInput && (
@@ -283,7 +317,10 @@ export function IssueDrawer({ issue, open, onClose, onResolve, onAddNote, onChan
                   {isAddingNote ? 'Saving...' : 'Save Note'}
                 </button>
                 <button
-                  onClick={() => { setShowNoteInput(false); setNoteText(''); }}
+                  onClick={() => {
+                    setShowNoteInput(false);
+                    setNoteText('');
+                  }}
                   className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm rounded"
                 >
                   Cancel
@@ -296,7 +333,13 @@ export function IssueDrawer({ issue, open, onClose, onResolve, onAddNote, onChan
             <button
               onClick={handleResolve}
               disabled={isResolving || issue.state === 'resolved'}
-              aria-label={isResolving ? 'Resolving issue...' : issue.state === 'resolved' ? 'Issue already resolved' : 'Resolve this issue'}
+              aria-label={
+                isResolving
+                  ? 'Resolving issue...'
+                  : issue.state === 'resolved'
+                    ? 'Issue already resolved'
+                    : 'Resolve this issue'
+              }
               className="px-4 py-2 bg-green-600 hover:bg-green-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm font-medium rounded focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 focus:ring-offset-slate-900"
             >
               {isResolving ? 'Resolving...' : issue.state === 'resolved' ? 'Resolved' : 'Resolve'}
@@ -313,7 +356,11 @@ export function IssueDrawer({ issue, open, onClose, onResolve, onAddNote, onChan
 
           {/* State Transition Buttons */}
           {onChangeState && issue.state !== 'resolved' && issue.state !== 'closed' && (
-            <div className="flex flex-wrap items-center gap-2 mt-3" role="group" aria-label="State transitions">
+            <div
+              className="flex flex-wrap items-center gap-2 mt-3"
+              role="group"
+              aria-label="State transitions"
+            >
               {issue.state !== 'monitoring' && (
                 <button
                   onClick={() => handleChangeState('monitoring')}

@@ -14,7 +14,7 @@ export interface LoadThresholds {
 // Low: <10 tasks = has bandwidth
 export const LOAD_THRESHOLDS: LoadThresholds = {
   high: 20,
-  medium: 10
+  medium: 10,
 };
 
 // Calculate load level from open task count
@@ -27,18 +27,24 @@ export function loadLevel(openTasks: number): LoadLevel {
 // Get load bar width class
 export function loadBarWidth(level: LoadLevel): string {
   switch (level) {
-    case 'high': return 'w-4/5';
-    case 'medium': return 'w-1/2';
-    case 'low': return 'w-1/4';
+    case 'high':
+      return 'w-4/5';
+    case 'medium':
+      return 'w-1/2';
+    case 'low':
+      return 'w-1/4';
   }
 }
 
 // Get load bar color class
 export function loadBarColor(level: LoadLevel): string {
   switch (level) {
-    case 'high': return 'bg-red-500';
-    case 'medium': return 'bg-amber-500';
-    case 'low': return 'bg-green-500';
+    case 'high':
+      return 'bg-red-500';
+    case 'medium':
+      return 'bg-amber-500';
+    case 'low':
+      return 'bg-green-500';
   }
 }
 
@@ -48,6 +54,6 @@ export function getLoadDisplay(openTasks: number) {
   return {
     level,
     width: loadBarWidth(level),
-    color: loadBarColor(level)
+    color: loadBarColor(level),
   };
 }

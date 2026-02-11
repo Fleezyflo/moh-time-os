@@ -1,15 +1,35 @@
 // Team page - Rich workload visualization
-import { useState } from 'react'
-import { Link } from '@tanstack/react-router'
-import { SkeletonCardGrid } from '../components'
-import { useTeam } from '../lib/hooks'
-import type { TeamMember } from '../types/api'
+import { useState } from 'react';
+import { Link } from '@tanstack/react-router';
+import { SkeletonCardGrid } from '../components';
+import { useTeam } from '../lib/hooks';
+import type { TeamMember } from '../types/api';
 
 const loadLevels = {
-  overloaded: { label: 'Overloaded', bg: 'bg-red-900/50', text: 'text-red-300', border: 'border-red-900/50' },
-  high: { label: 'High Load', bg: 'bg-orange-900/50', text: 'text-orange-300', border: 'border-orange-900/50' },
-  normal: { label: 'Normal', bg: 'bg-green-900/50', text: 'text-green-300', border: 'border-slate-700' },
-  light: { label: 'Light', bg: 'bg-blue-900/50', text: 'text-blue-300', border: 'border-slate-700' },
+  overloaded: {
+    label: 'Overloaded',
+    bg: 'bg-red-900/50',
+    text: 'text-red-300',
+    border: 'border-red-900/50',
+  },
+  high: {
+    label: 'High Load',
+    bg: 'bg-orange-900/50',
+    text: 'text-orange-300',
+    border: 'border-orange-900/50',
+  },
+  normal: {
+    label: 'Normal',
+    bg: 'bg-green-900/50',
+    text: 'text-green-300',
+    border: 'border-slate-700',
+  },
+  light: {
+    label: 'Light',
+    bg: 'bg-blue-900/50',
+    text: 'text-blue-300',
+    border: 'border-slate-700',
+  },
   idle: { label: 'Idle', bg: 'bg-slate-700', text: 'text-slate-400', border: 'border-slate-700' },
 };
 
@@ -33,7 +53,8 @@ export function Team() {
   const team = apiTeam?.items || [];
 
   const filtered = team.filter((m: TeamMember) => {
-    const matchesSearch = m.name.toLowerCase().includes(search.toLowerCase()) ||
+    const matchesSearch =
+      m.name.toLowerCase().includes(search.toLowerCase()) ||
       (m.role || '').toLowerCase().includes(search.toLowerCase());
     const matchesType = filterType === 'all' || m.type === filterType;
     return matchesSearch && matchesType;
@@ -41,10 +62,14 @@ export function Team() {
 
   const sorted = [...filtered].sort((a: TeamMember, b: TeamMember) => {
     switch (sortBy) {
-      case 'name': return a.name.localeCompare(b.name);
-      case 'load': return (b.open_tasks || 0) - (a.open_tasks || 0);
-      case 'overdue': return (b.overdue_tasks || 0) - (a.overdue_tasks || 0);
-      default: return 0;
+      case 'name':
+        return a.name.localeCompare(b.name);
+      case 'load':
+        return (b.open_tasks || 0) - (a.open_tasks || 0);
+      case 'overdue':
+        return (b.overdue_tasks || 0) - (a.overdue_tasks || 0);
+      default:
+        return 0;
     }
   });
 
@@ -126,7 +151,9 @@ export function Team() {
                 to="/team/$id"
                 params={{ id: member.id }}
                 className={`block bg-slate-800 rounded-lg border transition-colors p-4 ${
-                  hasOverdue ? 'border-red-900/50 hover:border-red-700' : 'border-slate-700 hover:border-slate-600'
+                  hasOverdue
+                    ? 'border-red-900/50 hover:border-red-700'
+                    : 'border-slate-700 hover:border-slate-600'
                 }`}
               >
                 {/* Header */}
@@ -145,17 +172,25 @@ export function Team() {
                 {/* Workload Stats */}
                 <div className="grid grid-cols-3 gap-2 mt-3">
                   <div className="text-center p-2 bg-slate-700/50 rounded">
-                    <div className="text-lg font-semibold text-slate-200">{member.open_tasks || 0}</div>
+                    <div className="text-lg font-semibold text-slate-200">
+                      {member.open_tasks || 0}
+                    </div>
                     <div className="text-xs text-slate-500">Open</div>
                   </div>
-                  <div className={`text-center p-2 rounded ${hasOverdue ? 'bg-red-900/30' : 'bg-slate-700/50'}`}>
-                    <div className={`text-lg font-semibold ${hasOverdue ? 'text-red-400' : 'text-slate-200'}`}>
+                  <div
+                    className={`text-center p-2 rounded ${hasOverdue ? 'bg-red-900/30' : 'bg-slate-700/50'}`}
+                  >
+                    <div
+                      className={`text-lg font-semibold ${hasOverdue ? 'text-red-400' : 'text-slate-200'}`}
+                    >
                       {member.overdue_tasks || 0}
                     </div>
                     <div className="text-xs text-slate-500">Overdue</div>
                   </div>
                   <div className="text-center p-2 bg-slate-700/50 rounded">
-                    <div className="text-lg font-semibold text-green-400">{member.completed_this_week || 0}</div>
+                    <div className="text-lg font-semibold text-green-400">
+                      {member.completed_this_week || 0}
+                    </div>
                     <div className="text-xs text-slate-500">Done/wk</div>
                   </div>
                 </div>
@@ -169,9 +204,7 @@ export function Team() {
 
                 {/* Client association */}
                 {member.client_name && (
-                  <div className="mt-2 text-xs text-slate-500">
-                    📎 {member.client_name}
-                  </div>
+                  <div className="mt-2 text-xs text-slate-500">📎 {member.client_name}</div>
                 )}
               </Link>
             );

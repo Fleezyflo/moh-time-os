@@ -39,6 +39,8 @@ const initialState: DegradedModeState = {
   retryCount: 0,
 };
 
+// Note: This is intentionally mutable state for the degraded mode tracking
+// eslint-disable-next-line prefer-const
 let degradedState = { ...initialState };
 
 // ============================================================================
@@ -110,6 +112,7 @@ export function restoreQueryCache(_queryClient: QueryClient): void {
       const parsed = JSON.parse(cached);
       // Note: Full restoration would require hydration logic
       // This is a simplified version
+      // eslint-disable-next-line no-console
       console.log(`[Offline] Restored ${parsed.length} cached queries`);
     }
   } catch {

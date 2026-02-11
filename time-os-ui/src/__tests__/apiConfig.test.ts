@@ -39,7 +39,7 @@ describe('Vite Proxy Configuration', () => {
         target: 'http://localhost:8420',
         changeOrigin: true,
         secure: false,
-      }
+      },
     };
 
     // Proxy only affects dev server, not production

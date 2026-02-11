@@ -10,21 +10,15 @@ interface EvidenceViewerProps {
 
 export function EvidenceViewer({ evidence, loading, error, onClose }: EvidenceViewerProps) {
   if (loading) {
-    return (
-      <div className="text-slate-400 p-4 text-center">Loading evidence...</div>
-    );
+    return <div className="text-slate-400 p-4 text-center">Loading evidence...</div>;
   }
 
   if (error) {
-    return (
-      <div className="text-red-400 p-4 text-center">Error: {error.message}</div>
-    );
+    return <div className="text-red-400 p-4 text-center">Error: {error.message}</div>;
   }
 
   if (!evidence || evidence.length === 0) {
-    return (
-      <div className="text-slate-500 p-4 text-center">No evidence found</div>
-    );
+    return <div className="text-slate-500 p-4 text-center">No evidence found</div>;
   }
 
   return (

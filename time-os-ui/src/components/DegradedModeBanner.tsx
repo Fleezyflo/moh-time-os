@@ -62,10 +62,7 @@ export function DegradedModeBanner() {
           >
             Retry
           </button>
-          <button
-            onClick={handleDismiss}
-            className="text-yellow-600 hover:text-yellow-800 text-sm"
-          >
+          <button onClick={handleDismiss} className="text-yellow-600 hover:text-yellow-800 text-sm">
             Dismiss
           </button>
         </div>
@@ -78,9 +75,7 @@ export function DegradedModeBanner() {
             {state.failedRequests.map((req, i) => (
               <li key={i} className="text-yellow-700 font-mono text-xs">
                 [{req.errorCode}] {req.url}
-                <span className="text-yellow-500 ml-2">
-                  request_id: {req.requestId}
-                </span>
+                <span className="text-yellow-500 ml-2">request_id: {req.requestId}</span>
               </li>
             ))}
           </ul>

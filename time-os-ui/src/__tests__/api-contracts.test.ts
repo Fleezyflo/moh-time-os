@@ -13,8 +13,10 @@ import { describe, it, expect } from 'vitest';
 import type { paths } from '../types/generated';
 
 // Type helpers for extracting response types
-type HealthResponse = paths['/api/health']['get']['responses']['200']['content']['application/json'];
-type ClientsResponse = paths['/api/clients']['get']['responses']['200']['content']['application/json'];
+type HealthResponse =
+  paths['/api/health']['get']['responses']['200']['content']['application/json'];
+type ClientsResponse =
+  paths['/api/clients']['get']['responses']['200']['content']['application/json'];
 
 // Concrete interfaces for runtime checks (mirrors expected shapes)
 interface ExpectedHealthResponse {

@@ -77,9 +77,11 @@ export function daysAgo(days: number): string {
  */
 export function getTimezoneAbbr(): string {
   try {
-    return new Intl.DateTimeFormat('en', { timeZoneName: 'short' })
-      .formatToParts(new Date())
-      .find(part => part.type === 'timeZoneName')?.value || '';
+    return (
+      new Intl.DateTimeFormat('en', { timeZoneName: 'short' })
+        .formatToParts(new Date())
+        .find((part) => part.type === 'timeZoneName')?.value || ''
+    );
   } catch {
     return '';
   }

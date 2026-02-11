@@ -111,7 +111,11 @@ const signalTypeColors: Record<string, string> = {
 function getSignalLabel(signalType: string): string {
   if (!signalType) return 'OTHER';
   const lower = signalType.toLowerCase().replace(/\s+/g, '_');
-  return signalTypeLabels[lower] || signalTypeLabels[signalType] || signalType.replace(/_/g, ' ').toUpperCase();
+  return (
+    signalTypeLabels[lower] ||
+    signalTypeLabels[signalType] ||
+    signalType.replace(/_/g, ' ').toUpperCase()
+  );
 }
 
 function getSignalColor(signalType: string): string {
@@ -132,7 +136,7 @@ function formatSignalDetail(sig: SignalDetail): { primary: string; secondary?: s
     const owner = v.owner || sig.assignee || 'Unassigned';
     return {
       primary: `${task}: ${days}d overdue`,
-      secondary: owner !== 'Unassigned' ? owner : undefined
+      secondary: owner !== 'Unassigned' ? owner : undefined,
     };
   }
 
@@ -143,7 +147,7 @@ function formatSignalDetail(sig: SignalDetail): { primary: string; secondary?: s
     const owner = v.owner || sig.assignee || 'Unassigned';
     return {
       primary: `${task}: due in ${days}d`,
-      secondary: owner !== 'Unassigned' ? owner : undefined
+      secondary: owner !== 'Unassigned' ? owner : undefined,
     };
   }
 
@@ -153,7 +157,7 @@ function formatSignalDetail(sig: SignalDetail): { primary: string; secondary?: s
     const days = v.days_outstanding || 0;
     return {
       primary: `$${(amount / 1000).toFixed(0)}k overdue${days ? ` (${days}d)` : ''}`,
-      secondary: v.client_name
+      secondary: v.client_name,
     };
   }
 
@@ -162,7 +166,7 @@ function formatSignalDetail(sig: SignalDetail): { primary: string; secondary?: s
     const days = v.days_since_contact || 0;
     return {
       primary: `No contact: ${days} days`,
-      secondary: v.client_name
+      secondary: v.client_name,
     };
   }
 
@@ -172,7 +176,7 @@ function formatSignalDetail(sig: SignalDetail): { primary: string; secondary?: s
     const trend = v.trend || 'declining';
     return {
       primary: `Health: ${status}, Trend: ${trend}`,
-      secondary: v.client_name
+      secondary: v.client_name,
     };
   }
 
@@ -180,24 +184,32 @@ function formatSignalDetail(sig: SignalDetail): { primary: string; secondary?: s
   if (type.includes('data_quality')) {
     return {
       primary: v.message || 'Data issue',
-      secondary: v.tier ? `Tier ${v.tier}` : undefined
+      secondary: v.tier ? `Tier ${v.tier}` : undefined,
     };
   }
 
   // Fallback - use description or value message
   return {
-    primary: v.message || sig.description || sig.task_title || (type || '').replace(/_/g, ' ') || 'Signal',
-    secondary: sig.assignee || undefined
+    primary:
+      v.message || sig.description || sig.task_title || (type || '').replace(/_/g, ' ') || 'Signal',
+    secondary: sig.assignee || undefined,
   };
 }
 
 const tierColors: Record<string, string> = {
-  'A': 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
-  'B': 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  'C': 'bg-slate-500/20 text-slate-400 border-slate-500/30',
+  A: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+  B: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
+  C: 'bg-slate-500/20 text-slate-400 border-slate-500/30',
 };
 
-export function RoomDrawer({ proposal, open, onClose, onTag, onSnooze, onDismiss }: RoomDrawerProps) {
+export function RoomDrawer({
+  proposal,
+  open,
+  onClose,
+  onTag,
+  onSnooze,
+  onDismiss,
+}: RoomDrawerProps) {
   const [detail, setDetail] = useState<ProposalDetail | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -212,9 +224,8 @@ export function RoomDrawer({ proposal, open, onClose, onTag, onSnooze, onDismiss
     setDetail(null); // Clear previous detail
 
     fetchProposalDetailLegacy(proposal.proposal_id)
-      .then(data => {
+      .then((data) => {
         const detail = data as ProposalDetail;
-        console.log('Proposal detail loaded:', detail.proposal_id, 'signals:', detail.signals?.length);
         setDetail(detail);
         setLoading(false);
       })
@@ -224,6 +235,7 @@ export function RoomDrawer({ proposal, open, onClose, onTag, onSnooze, onDismiss
         setDetail({ ...proposal, signals: [], total_signals: 0 } as ProposalDetail);
         setLoading(false);
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Only refetch when proposal ID changes, not entire proposal object
   }, [open, proposal?.proposal_id]);
 
   // ESC key to close
@@ -240,7 +252,9 @@ export function RoomDrawer({ proposal, open, onClose, onTag, onSnooze, onDismiss
   useEffect(() => {
     if (open) {
       document.body.style.overflow = 'hidden';
-      return () => { document.body.style.overflow = ''; };
+      return () => {
+        document.body.style.overflow = '';
+      };
     }
   }, [open]);
 
@@ -299,7 +313,12 @@ export function RoomDrawer({ proposal, open, onClose, onTag, onSnooze, onDismiss
               className="text-slate-400 hover:text-slate-200 p-1 rounded hover:bg-slate-700/50"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             </button>
           </div>
@@ -316,7 +335,9 @@ export function RoomDrawer({ proposal, open, onClose, onTag, onSnooze, onDismiss
             </div>
             <div className="flex items-center gap-2">
               {p.client_tier && (
-                <span className={`px-2 py-1 text-xs font-medium rounded border ${tierColors[p.client_tier]}`}>
+                <span
+                  className={`px-2 py-1 text-xs font-medium rounded border ${tierColors[p.client_tier]}`}
+                >
                   Tier {p.client_tier}
                 </span>
               )}
@@ -340,12 +361,20 @@ export function RoomDrawer({ proposal, open, onClose, onTag, onSnooze, onDismiss
             </div>
             <div className="text-right">
               <div className="text-xs text-slate-500 uppercase tracking-wide">Trend</div>
-              <div className={`text-sm font-medium mt-1 px-2 py-1 rounded ${
-                p.trend === 'worsening' ? 'bg-red-500/20 text-red-400' :
-                p.trend === 'improving' ? 'bg-green-500/20 text-green-400' :
-                'bg-slate-700 text-slate-400'
-              }`}>
-                {p.trend === 'worsening' ? 'WORSENING' : p.trend === 'improving' ? 'IMPROVING' : 'STABLE'}
+              <div
+                className={`text-sm font-medium mt-1 px-2 py-1 rounded ${
+                  p.trend === 'worsening'
+                    ? 'bg-red-500/20 text-red-400'
+                    : p.trend === 'improving'
+                      ? 'bg-green-500/20 text-green-400'
+                      : 'bg-slate-700 text-slate-400'
+                }`}
+              >
+                {p.trend === 'worsening'
+                  ? 'WORSENING'
+                  : p.trend === 'improving'
+                    ? 'IMPROVING'
+                    : 'STABLE'}
               </div>
             </div>
           </div>
@@ -356,27 +385,44 @@ export function RoomDrawer({ proposal, open, onClose, onTag, onSnooze, onDismiss
               <div className="flex items-center gap-2">
                 <span className="text-xs text-slate-500 w-16">Urgency</span>
                 <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
-                  <div className="h-full bg-red-500/70 rounded-full" style={{ width: `${(p.score_breakdown.urgency / 60) * 100}%` }} />
+                  <div
+                    className="h-full bg-red-500/70 rounded-full"
+                    style={{ width: `${(p.score_breakdown.urgency / 60) * 100}%` }}
+                  />
                 </div>
-                <span className="text-xs text-slate-400 w-8 text-right">{p.score_breakdown.urgency}</span>
+                <span className="text-xs text-slate-400 w-8 text-right">
+                  {p.score_breakdown.urgency}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-slate-500 w-16">Breadth</span>
                 <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
-                  <div className="h-full bg-amber-500/70 rounded-full" style={{ width: `${(p.score_breakdown.breadth / 40) * 100}%` }} />
+                  <div
+                    className="h-full bg-amber-500/70 rounded-full"
+                    style={{ width: `${(p.score_breakdown.breadth / 40) * 100}%` }}
+                  />
                 </div>
-                <span className="text-xs text-slate-400 w-8 text-right">{p.score_breakdown.breadth}</span>
+                <span className="text-xs text-slate-400 w-8 text-right">
+                  {p.score_breakdown.breadth}
+                </span>
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-xs text-slate-500 w-16">Diversity</span>
                 <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden">
-                  <div className="h-full bg-blue-500/70 rounded-full" style={{ width: `${(p.score_breakdown.diversity / 30) * 100}%` }} />
+                  <div
+                    className="h-full bg-blue-500/70 rounded-full"
+                    style={{ width: `${(p.score_breakdown.diversity / 30) * 100}%` }}
+                  />
                 </div>
-                <span className="text-xs text-slate-400 w-8 text-right">{p.score_breakdown.diversity}</span>
+                <span className="text-xs text-slate-400 w-8 text-right">
+                  {p.score_breakdown.diversity}
+                </span>
               </div>
               <div className="flex items-center gap-2 pt-1 border-t border-slate-700/50">
                 <span className="text-xs text-slate-500 w-16">Multiplier</span>
-                <span className="text-xs text-slate-300">×{p.score_breakdown.impact_multiplier?.toFixed(2)}</span>
+                <span className="text-xs text-slate-300">
+                  ×{p.score_breakdown.impact_multiplier?.toFixed(2)}
+                </span>
               </div>
             </div>
           )}
@@ -385,12 +431,17 @@ export function RoomDrawer({ proposal, open, onClose, onTag, onSnooze, onDismiss
         {/* Signal Summary */}
         {p.signal_summary?.by_category && (
           <div className="p-5 border-b border-slate-700">
-            <div className="text-xs text-slate-500 uppercase tracking-wide mb-3">Issue Categories</div>
+            <div className="text-xs text-slate-500 uppercase tracking-wide mb-3">
+              Issue Categories
+            </div>
             <div className="flex flex-wrap gap-2">
               {Object.entries(p.signal_summary.by_category)
                 .filter(([_, count]) => count > 0)
                 .map(([cat, count]) => (
-                  <span key={cat} className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-medium ${getSignalColor(cat)}`}>
+                  <span
+                    key={cat}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-medium ${getSignalColor(cat)}`}
+                  >
                     <span>{getSignalLabel(cat)}</span>
                     <span className="opacity-70">{count}</span>
                   </span>
@@ -405,9 +456,7 @@ export function RoomDrawer({ proposal, open, onClose, onTag, onSnooze, onDismiss
             <div className="text-xs text-slate-500 uppercase tracking-wide">
               Top Issues {signals.length > 0 && `(${signals.length} of ${totalSignals})`}
             </div>
-            {loading && (
-              <span className="text-xs text-slate-500">Loading...</span>
-            )}
+            {loading && <span className="text-xs text-slate-500">Loading...</span>}
           </div>
 
           {signals.length > 0 ? (
@@ -415,9 +464,14 @@ export function RoomDrawer({ proposal, open, onClose, onTag, onSnooze, onDismiss
               {signals.map((sig) => {
                 const detail = formatSignalDetail(sig);
                 return (
-                  <div key={sig.signal_id} className="p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
+                  <div
+                    key={sig.signal_id}
+                    className="p-3 bg-slate-800/50 rounded-lg border border-slate-700/50"
+                  >
                     <div className="flex items-start gap-3">
-                      <span className={`px-2 py-0.5 rounded text-xs font-medium shrink-0 ${getSignalColor(sig.signal_type)}`}>
+                      <span
+                        className={`px-2 py-0.5 rounded text-xs font-medium shrink-0 ${getSignalColor(sig.signal_type)}`}
+                      >
                         {getSignalLabel(sig.signal_type)}
                       </span>
                       <div className="flex-1 min-w-0">

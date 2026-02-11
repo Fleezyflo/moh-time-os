@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components -- Hook and Provider are co-located by design */
 // Toast notification component
 import { useState, createContext, useContext, useCallback, type ReactNode } from 'react';
 
@@ -29,11 +30,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const addToast = useCallback((type: Toast['type'], message: string) => {
     const id = Math.random().toString(36).slice(2);
-    setToasts(prev => [...prev, { id, type, message }]);
+    setToasts((prev) => [...prev, { id, type, message }]);
 
     // Auto-dismiss after 4 seconds
     setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
+      setToasts((prev) => prev.filter((t) => t.id !== id));
     }, 4000);
   }, []);
 
@@ -42,7 +43,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const info = useCallback((message: string) => addToast('info', message), [addToast]);
 
   const removeToast = (id: string) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
+    setToasts((prev) => prev.filter((t) => t.id !== id));
   };
 
   return (
@@ -51,23 +52,29 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
       {/* Toast container */}
       <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2">
-        {toasts.map(toast => (
+        {toasts.map((toast) => (
           <div
             key={toast.id}
             className={`flex items-center gap-3 px-4 py-3 rounded-lg shadow-lg min-w-[280px] animate-slide-in ${
-              toast.type === 'success' ? 'bg-green-900/90 border border-green-700' :
-              toast.type === 'error' ? 'bg-red-900/90 border border-red-700' :
-              'bg-slate-800/90 border border-slate-700'
+              toast.type === 'success'
+                ? 'bg-green-900/90 border border-green-700'
+                : toast.type === 'error'
+                  ? 'bg-red-900/90 border border-red-700'
+                  : 'bg-slate-800/90 border border-slate-700'
             }`}
           >
             <span className="text-lg">
               {toast.type === 'success' ? '✓' : toast.type === 'error' ? '✕' : 'ℹ'}
             </span>
-            <span className={`text-sm flex-1 ${
-              toast.type === 'success' ? 'text-green-200' :
-              toast.type === 'error' ? 'text-red-200' :
-              'text-slate-200'
-            }`}>
+            <span
+              className={`text-sm flex-1 ${
+                toast.type === 'success'
+                  ? 'text-green-200'
+                  : toast.type === 'error'
+                    ? 'text-red-200'
+                    : 'text-slate-200'
+              }`}
+            >
               {toast.message}
             </span>
             <button

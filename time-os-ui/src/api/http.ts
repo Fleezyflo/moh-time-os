@@ -1,9 +1,9 @@
 /**
  * HTTP Client - Single entrypoint for all API requests.
- * 
+ *
  * ALL API calls MUST go through this module.
  * Direct fetch/axios usage outside this file is BANNED (enforced by ESLint).
- * 
+ *
  * Features:
  * - Runtime response validation via zod
  * - Automatic request-id generation and propagation
@@ -62,11 +62,21 @@ export class ApiError extends Error {
     this.isNetworkError = options?.isNetworkError || false;
   }
 
-  get isUnauthorized() { return this.status === 401; }
-  get isForbidden() { return this.status === 403; }
-  get isNotFound() { return this.status === 404; }
-  get isServerError() { return this.status >= 500; }
-  get isClientError() { return this.status >= 400 && this.status < 500; }
+  get isUnauthorized() {
+    return this.status === 401;
+  }
+  get isForbidden() {
+    return this.status === 403;
+  }
+  get isNotFound() {
+    return this.status === 404;
+  }
+  get isServerError() {
+    return this.status >= 500;
+  }
+  get isClientError() {
+    return this.status >= 400 && this.status < 500;
+  }
 
   toJSON() {
     return {
@@ -102,10 +112,12 @@ async function request<T>(
   options: RequestOptions = {}
 ): Promise<{ data: T; requestId: string }> {
   const requestId = generateRequestId();
-  const fullUrl = url.startsWith('http') ? url : `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
+  const fullUrl = url.startsWith('http')
+    ? url
+    : `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`;
 
   const headers: Record<string, string> = {
-    'Accept': 'application/json',
+    Accept: 'application/json',
     'X-Request-ID': requestId,
     ...options.headers,
   };
@@ -115,6 +127,7 @@ async function request<T>(
   }
 
   if (IS_DEV) {
+    // eslint-disable-next-line no-console
     console.log(`[API] ${options.method || 'GET'} ${fullUrl} [${requestId}]`);
   }
 
@@ -147,7 +160,8 @@ async function request<T>(
       errorBody = await response.json();
       const parsed = apiErrorSchema.safeParse(errorBody);
       if (parsed.success) {
-        errorMessage = parsed.data.detail || parsed.data.error || parsed.data.message || errorMessage;
+        errorMessage =
+          parsed.data.detail || parsed.data.error || parsed.data.message || errorMessage;
       }
     } catch {
       // Response not JSON
@@ -176,6 +190,7 @@ async function request<T>(
   }
 
   if (IS_DEV) {
+    // eslint-disable-next-line no-console
     console.log(`[API] ✓ ${fullUrl} [${serverRequestId}]`);
   }
 
