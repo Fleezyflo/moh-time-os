@@ -296,18 +296,24 @@ jobs:
       - name: Install dependencies
         run: uv sync --frozen --group dev
 
-      - name: Run Semgrep Security Rules (gating)
+      - name: Run Semgrep Full Scan (advisory)
         run: |
           uv run semgrep --version
-          uv run semgrep --config .semgrep/security-rules.yaml lib/ api/ --error
-
-      - name: Run Semgrep Full Rules (advisory)
-        run: uv run semgrep --config .semgrep/rules.yaml lib/ api/ --severity ERROR
+          make semgrep-full
         continue-on-error: true
 
-      - name: Run Semgrep Auto Rules (advisory)
-        run: uv run semgrep --config auto lib/ api/ --error
+      - name: Generate SARIF Report
+        run: |
+          uv run semgrep --config .semgrep/ --config auto lib/ api/ time-os-ui/src/ \
+            --sarif --output semgrep-results.sarif || true
         continue-on-error: true
+
+      - name: Upload SARIF Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-sarif
+          path: semgrep-results.sarif
+          retention-days: 30
 
   # ==========================================
   # EVIDENCE BUNDLE

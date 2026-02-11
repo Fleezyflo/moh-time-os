@@ -1,0 +1,146 @@
+rules:
+  # ============================================================================
+  # TIER 1: PR-BLOCKING POLICY RULES
+  # ============================================================================
+  # High-signal, repo-specific wiring discipline. All findings are blocking.
+  # Target: <30s scan time, 0 findings in clean codebase.
+  #
+  # BASELINE: Some legacy files are excluded. New code must comply.
+  # Legacy files are tracked in comments for future migration.
+
+  # --------------------------------------------------------------------------
+  # (1) UI API DISCIPLINE
+  # --------------------------------------------------------------------------
+  # All HTTP calls in the UI must go through src/api/.
+  # Direct fetch/axios outside API layer is banned.
+  #
+  # LEGACY EXCLUSIONS (TODO: migrate to API client):
+  #   - src/lib/api.ts (legacy wrapper, 330 lines)
+  #   - src/pages/ClientDetailSpec.tsx
+  #   - src/pages/ClientIndex.tsx
+  #   - src/pages/ColdClients.tsx
+  #   - src/pages/Inbox.tsx
+  #   - src/pages/RecentlyActiveDrilldown.tsx
+  #   - src/pages/FixData.tsx
+
+  - id: ui-no-direct-fetch
+    patterns:
+      - pattern-either:
+          - pattern: fetch($URL, ...)
+          - pattern: fetch($URL)
+    message: |
+      POLICY: Direct fetch() is banned outside the API client layer.
+      Use the HTTP client from 'src/api/http.ts' instead.
+    languages: [typescript, javascript]
+    severity: ERROR
+    paths:
+      include:
+        - "**/time-os-ui/src/**"
+      exclude:
+        - "**/time-os-ui/src/api/**"
+        - "**/time-os-ui/src/lib/api.ts"
+        # Legacy pages (baselined, migration pending):
+        - "**/time-os-ui/src/pages/ClientDetailSpec.tsx"
+        - "**/time-os-ui/src/pages/ClientIndex.tsx"
+        - "**/time-os-ui/src/pages/ColdClients.tsx"
+        - "**/time-os-ui/src/pages/Inbox.tsx"
+        - "**/time-os-ui/src/pages/RecentlyActiveDrilldown.tsx"
+        - "**/time-os-ui/src/pages/FixData.tsx"
+        # Tests allowed:
+        - "**/__tests__/**"
+        - "**/*.test.ts"
+        - "**/*.test.tsx"
+
+  - id: ui-no-axios
+    pattern-either:
+      - pattern: axios.$METHOD(...)
+      - pattern: axios(...)
+    message: |
+      POLICY: axios is banned. Use the HTTP client from 'src/api/http.ts'.
+    languages: [typescript, javascript]
+    severity: ERROR
+    paths:
+      include:
+        - "**/time-os-ui/src/**"
+      exclude:
+        - "**/time-os-ui/src/api/**"
+
+  # --------------------------------------------------------------------------
+  # (2) SUBPROCESS POLICY (Python)
+  # --------------------------------------------------------------------------
+  # shell=True is banned (command injection risk).
+  # Safe pattern: shutil.which() + list args + shell=False (default).
+  #
+  # LEGACY EXCLUSIONS (TODO: refactor to list args):
+  #   - lib/collectors/base.py (runs gog CLI with shell)
+  #   - lib/executor/handlers.py (runs arbitrary shell commands)
+
+  - id: subprocess-no-shell-true
+    patterns:
+      - pattern-either:
+          - pattern: subprocess.run(..., shell=True, ...)
+          - pattern: subprocess.call(..., shell=True, ...)
+          - pattern: subprocess.Popen(..., shell=True, ...)
+          - pattern: subprocess.check_output(..., shell=True, ...)
+          - pattern: subprocess.check_call(..., shell=True, ...)
+    message: |
+      POLICY: shell=True is banned. Use list args: subprocess.run(["cmd", "arg"])
+      If you need shell features, refactor to avoid them.
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - "**/lib/**"
+        - "**/api/**"
+        - "**/scripts/**"
+      exclude:
+        # Legacy (baselined, refactor pending):
+        - "**/lib/collectors/base.py"
+        - "**/lib/executor/handlers.py"
+
+  # --------------------------------------------------------------------------
+  # (3) DYNAMIC SQL - USER INPUT INTERPOLATION
+  # --------------------------------------------------------------------------
+  # Ban f-strings that interpolate request/user variables directly into SQL.
+  # Safe: DDL (ALTER, CREATE, PRAGMA), dynamic WHERE builders with params.
+  # Dangerous: f"...WHERE col = {user_input}..." without parameterization.
+
+  - id: sql-injection-user-input
+    patterns:
+      - pattern: |
+          $CURSOR.execute(f"...$VAR...")
+      - metavariable-regex:
+          metavariable: $VAR
+          regex: .*(request|body|params|user_input|query\[|args\[|form\[).*
+    message: |
+      POLICY: User input interpolated into SQL is banned.
+      Use parameterized queries: cursor.execute("...?...", (value,))
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - "**/lib/**"
+        - "**/api/**"
+      exclude:
+        - "**/migrations/**"
+
+  # --------------------------------------------------------------------------
+  # (4) API ROUTE LINEAGE - V2 ROUTES ON SPEC ROUTER
+  # --------------------------------------------------------------------------
+  # New /api/v2/* routes should be on spec_router (has tags).
+  # Advisory for now - existing legacy routes in server.py are grandfathered.
+
+  - id: route-v2-use-spec-router
+    patterns:
+      - pattern: |
+          @app.$METHOD("/api/v2/...")
+          def $FUNC(...):
+              ...
+    message: |
+      POLICY: V2 API routes should be on spec_router (api/spec_router.py).
+      The spec_router has proper tags=["Spec v2.9"] for lineage.
+    languages: [python]
+    severity: WARNING
+    paths:
+      include:
+        - "**/api/server.py"

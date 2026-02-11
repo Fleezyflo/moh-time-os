@@ -423,16 +423,24 @@ evidence:
 	@uv run python scripts/evidence_bundle.py
 
 # ==========================================
-# SEMGREP
+# SEMGREP (Policy + Security)
 # ==========================================
 semgrep:
-	@echo "🔍 Running Semgrep security rules (fast, errors only)..."
-	@uv run semgrep --config .semgrep/security-rules.yaml lib/ api/ --error --quiet && \
-		echo "✅ Semgrep security scan passed"
+	@echo "🔍 Semgrep Policy + Security Scan (PR-blocking)"
+	@uv run semgrep --version
+	@echo "--- Policy Rules (lib/ api/ time-os-ui/src/) ---"
+	@uv run semgrep --config .semgrep/policy-rules.yaml lib/ api/ time-os-ui/src/ --error
+	@echo "--- Security Rules (lib/ api/) ---"
+	@uv run semgrep --config .semgrep/security-rules.yaml lib/ api/ --error
+	@echo "✅ Semgrep scan passed (0 findings)"
 
 semgrep-full:
-	@echo "🔍 Running full Semgrep scan (all rules, advisory)..."
-	@uv run semgrep --config .semgrep/rules.yaml lib/ api/ --severity ERROR 2>/dev/null || true
+	@echo "🔍 Semgrep Full Scan (advisory, nightly)"
+	@uv run semgrep --version
+	@echo "--- All Rules (advisory) ---"
+	@uv run semgrep --config .semgrep/rules.yaml lib/ api/ time-os-ui/src/ --severity WARNING || true
+	@echo "--- Auto Rules (advisory) ---"
+	@uv run semgrep --config auto lib/ api/ --severity ERROR || true
 	@echo "✅ Semgrep full scan complete (advisory)"
 
 # ==========================================
