@@ -1,0 +1,3 @@
+# Generated files - format controlled by generator, not Prettier
+# Drift checked via: ./scripts/generate_ui_types.sh --check
+src/types/generated.ts

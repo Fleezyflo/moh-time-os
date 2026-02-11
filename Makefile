@@ -222,8 +222,12 @@ changelog-save:
 # ==========================================
 # UI QUALITY
 # ==========================================
-ui-check: ui-lint ui-typecheck ui-test ui-build
+ui-check: ui-types-drift ui-lint ui-typecheck ui-test ui-build
 	@echo "✅ UI checks passed"
+
+ui-types-drift:
+	@echo "🔍 Checking generated types drift..."
+	@./scripts/generate_ui_types.sh --check
 
 ui-lint:
 	@echo "🔍 Running ESLint + Prettier..."
