@@ -234,7 +234,7 @@ jobs:
       - name: ADR Requirement Check
         run: |
           chmod +x ./scripts/check_adr_required.sh
-          ./scripts/check_adr_required.sh origin/${{ github.base_ref }} || true
+          ./scripts/check_adr_required.sh origin/${{ github.base_ref }}
 
       - name: Change Size Check
         run: |
