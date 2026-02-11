@@ -173,6 +173,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Generated Types Drift Check
+        working-directory: .
+        run: ./scripts/generate_ui_types.sh --check
+
       - name: TypeScript Check
         run: pnpm run typecheck
 
