@@ -44,7 +44,8 @@ def test_db():
             currency TEXT DEFAULT 'AED',
             issue_date TEXT,
             due_date TEXT,
-            paid_date TEXT,
+            payment_date TEXT,
+            updated_at TEXT,
             status TEXT,
             client_id TEXT,
             client_name TEXT,
@@ -283,7 +284,7 @@ class TestValidInvalidAR:
         """Valid AR (has due_date AND client_id) is included in totals."""
         conn = sqlite3.connect(test_db)
         conn.execute("""
-            INSERT INTO invoices (id, amount, due_date, client_id, status, paid_date)
+            INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
             VALUES ('inv1', 1000, '2025-01-01', 'c1', 'sent', NULL)
         """)
         conn.execute(
@@ -301,12 +302,12 @@ class TestValidInvalidAR:
         conn = sqlite3.connect(test_db)
         # Missing due_date
         conn.execute("""
-            INSERT INTO invoices (id, amount, due_date, client_id, status, paid_date)
+            INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
             VALUES ('inv1', 1000, NULL, 'c1', 'sent', NULL)
         """)
         # Missing client_id
         conn.execute("""
-            INSERT INTO invoices (id, amount, due_date, client_id, status, paid_date)
+            INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
             VALUES ('inv2', 2000, '2025-01-01', NULL, 'sent', NULL)
         """)
         conn.execute(
@@ -335,7 +336,7 @@ class TestPortfolioOrdering:
             "INSERT INTO clients (id, name, tier) VALUES ('c1', 'Low Risk', 'A')"
         )
         conn.execute(f"""
-            INSERT INTO invoices (id, amount, due_date, client_id, status, paid_date)
+            INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
             VALUES ('inv1', 10000, '{(today + timedelta(days=30)).isoformat()}', 'c1', 'sent', NULL)
         """)
 
@@ -344,7 +345,7 @@ class TestPortfolioOrdering:
             "INSERT INTO clients (id, name, tier) VALUES ('c2', 'High Risk', 'B')"
         )
         conn.execute(f"""
-            INSERT INTO invoices (id, amount, due_date, client_id, status, paid_date)
+            INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
             VALUES ('inv2', 10000, '{(today - timedelta(days=100)).isoformat()}', 'c2', 'overdue', NULL)
         """)
 
@@ -353,7 +354,7 @@ class TestPortfolioOrdering:
             "INSERT INTO clients (id, name, tier) VALUES ('c3', 'Med Risk', 'B')"
         )
         conn.execute(f"""
-            INSERT INTO invoices (id, amount, due_date, client_id, status, paid_date)
+            INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
             VALUES ('inv3', 5000, '{(today - timedelta(days=45)).isoformat()}', 'c3', 'overdue', NULL)
         """)
 
@@ -399,7 +400,7 @@ class TestInvoiceOrdering:
         for inv_id, amount, due, bucket in invoices:
             status = "sent" if bucket == "current" else "overdue"
             conn.execute(f"""
-                INSERT INTO invoices (id, amount, due_date, client_id, status, paid_date, aging_bucket)
+                INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date, aging_bucket)
                 VALUES ('{inv_id}', {amount}, '{due.isoformat()}', 'c1', '{status}', NULL, '{bucket}')
             """)
 
@@ -433,7 +434,7 @@ class TestCaps:
         # Insert 30 invoices
         for i in range(30):
             conn.execute(f"""
-                INSERT INTO invoices (id, amount, due_date, client_id, status, paid_date)
+                INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
                 VALUES ('inv{i}', 1000, '{(today - timedelta(days=i)).isoformat()}', 'c1', 'sent', NULL)
             """)
 
@@ -456,7 +457,7 @@ class TestCaps:
                 f"INSERT INTO clients (id, name, tier) VALUES ('c{i}', 'Client {i}', 'B')"
             )
             conn.execute(f"""
-                INSERT INTO invoices (id, amount, due_date, client_id, status, paid_date)
+                INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
                 VALUES ('inv{i}', 1000, '{(today - timedelta(days=i)).isoformat()}', 'c{i}', 'sent', NULL)
             """)
 
@@ -480,7 +481,7 @@ class TestCaps:
                 f"INSERT INTO clients (id, name, tier) VALUES ('c{i}', 'Client {i}', 'B')"
             )
             conn.execute(f"""
-                INSERT INTO invoices (id, amount, due_date, client_id, status, paid_date)
+                INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
                 VALUES ('inv{i}', 1000, '{(today - timedelta(days=i)).isoformat()}', 'c{i}', 'sent', NULL)
             """)
 
@@ -505,7 +506,7 @@ class TestCaps:
         # Insert 20 overdue invoices (should generate many actions)
         for i in range(20):
             conn.execute(f"""
-                INSERT INTO invoices (id, amount, due_date, client_id, status, paid_date)
+                INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
                 VALUES ('inv{i}', 1000, '{(today - timedelta(days=60 + i)).isoformat()}', 'c1', 'overdue', NULL)
             """)
 
@@ -529,7 +530,7 @@ class TestInvalidARActions:
             "INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'A')"
         )
         conn.execute("""
-            INSERT INTO invoices (id, amount, due_date, client_id, status, paid_date)
+            INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
             VALUES ('inv1', 5000, NULL, 'c1', 'sent', NULL)
         """)
         conn.commit()
@@ -563,7 +564,7 @@ class TestActionIdempotency:
             "INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'A')"
         )
         conn.execute(f"""
-            INSERT INTO invoices (id, amount, due_date, client_id, status, paid_date)
+            INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
             VALUES ('inv1', 5000, '{(today - timedelta(days=30)).isoformat()}', 'c1', 'overdue', NULL)
         """)
         conn.commit()
@@ -588,7 +589,7 @@ class TestActionIdempotency:
         # Create multiple invoices
         for i in range(5):
             conn.execute(f"""
-                INSERT INTO invoices (id, amount, due_date, client_id, status, paid_date)
+                INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
                 VALUES ('inv{i}', 1000, '{(today - timedelta(days=30 + i * 30)).isoformat()}', 'c1', 'overdue', NULL)
             """)
 

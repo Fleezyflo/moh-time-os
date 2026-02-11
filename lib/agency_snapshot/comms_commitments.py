@@ -594,8 +594,8 @@ class CommsCommitmentsEngine:
                 Commitment(
                     commitment_id=row.get("commitment_id", ""),
                     type=row.get("type", "request"),
-                    text=row.get("commitment_text", ""),
-                    deadline=row.get("due_at"),
+                    text=row.get("text", ""),
+                    deadline=row.get("deadline"),
                     status=row.get("status", "open"),
                     confidence=row.get("confidence") or 0.5,
                     thread_id=thread_id,
@@ -658,7 +658,7 @@ class CommsCommitmentsEngine:
         # 2. Min commitment deadline
         if thread.commitments:
             deadlines = [
-                c.due_at for c in thread.commitments if c.due_at and c.status == "open"
+                c.deadline for c in thread.commitments if c.deadline and c.status == "open"
             ]
             if deadlines:
                 return min(deadlines)
@@ -888,7 +888,7 @@ class CommsCommitmentsEngine:
             return "VIP requires attention"
 
         # Commitment at risk
-        at_risk = [c for c in thread.commitments if c.status == "open" and c.due_at]
+        at_risk = [c for c in thread.commitments if c.status == "open" and c.deadline]
         if at_risk:
             return f"{len(at_risk)} commitment(s) at risk"
 
@@ -1037,9 +1037,9 @@ class CommsCommitmentsEngine:
                 return True
             # Commitment deadline within 12h
             for c in thread.commitments:
-                if c.status == "open" and c.due_at:
+                if c.status == "open" and c.deadline:
                     try:
-                        dl = datetime.fromisoformat(c.due_at.replace("Z", "+00:00"))
+                        dl = datetime.fromisoformat(c.deadline.replace("Z", "+00:00"))
                         if (
                             dl.replace(tzinfo=None) - self.now
                         ).total_seconds() / 3600 <= 12:
@@ -1060,9 +1060,9 @@ class CommsCommitmentsEngine:
             # Commitment deadline before EOD
             eod = datetime.combine(self.today, datetime.max.time())
             for c in thread.commitments:
-                if c.status == "open" and c.due_at:
+                if c.status == "open" and c.deadline:
                     try:
-                        dl = datetime.fromisoformat(c.due_at.replace("Z", "+00:00"))
+                        dl = datetime.fromisoformat(c.deadline.replace("Z", "+00:00"))
                         if dl.replace(tzinfo=None) <= eod:
                             return True
                     except (ValueError, TypeError, AttributeError) as e:
@@ -1084,9 +1084,9 @@ class CommsCommitmentsEngine:
                 logger.debug(f"Could not parse expected_response_by: {e}")
         # Commitment deadline within 7 days
         for c in thread.commitments:
-            if c.status == "open" and c.due_at:
+            if c.status == "open" and c.deadline:
                 try:
-                    dl = datetime.fromisoformat(c.due_at.replace("Z", "+00:00"))
+                    dl = datetime.fromisoformat(c.deadline.replace("Z", "+00:00"))
                     if (
                         dl.replace(tzinfo=None) - self.now
                     ).total_seconds() / 3600 <= 7 * 24:
@@ -1167,9 +1167,9 @@ class CommsCommitmentsEngine:
         for c in commitments:
             if c.status != "open":
                 continue
-            if c.due_at:
+            if c.deadline:
                 try:
-                    dl = datetime.fromisoformat(c.due_at.replace("Z", "+00:00"))
+                    dl = datetime.fromisoformat(c.deadline.replace("Z", "+00:00"))
                     # At risk if within horizon or past
                     hours_to_dl = (
                         dl.replace(tzinfo=None) - self.now
@@ -1568,7 +1568,7 @@ class CommsCommitmentsEngine:
                     "commitment_id": c.commitment_id,
                     "type": c.type,
                     "commitment_text": c.text,
-                    "due_at": c.due_at,
+                    "due_at": c.deadline,
                     "status": c.status,
                     "confidence": c.confidence,
                 }

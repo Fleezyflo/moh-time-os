@@ -5,9 +5,19 @@ Asana Full Sync — Proper hierarchy-aware sync.
 Pulls: Workspace → Teams → Projects → Tasks
 Links: Tasks → Projects → Clients (via mapping)
 
+DEPRECATED: This module is deprecated and should not be imported.
+Use collectors/scheduled_collect.py instead.
+
 Usage:
     python3 -m lib.collectors.asana_sync sync        # Full sync
     python3 -m lib.collectors.asana_sync projects    # Sync projects only
+"""
+
+raise RuntimeError(
+    "collectors._legacy.asana_sync is deprecated. "
+    "Use collectors/scheduled_collect.py instead. "
+    "See COLLECTOR_AUDIT.md for migration details."
+)
     python3 -m lib.collectors.asana_sync tasks       # Sync tasks only
     python3 -m lib.collectors.asana_sync map         # Show unmapped projects
 """

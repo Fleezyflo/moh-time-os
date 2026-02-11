@@ -871,7 +871,7 @@ class CashAREngine:
         changes = []
 
         # Query for recently modified invoices for this client
-        rows = self.query(
+        rows = self._query_all(
             """
             SELECT id, amount, status, due_date, updated_at
             FROM invoices
@@ -880,7 +880,7 @@ class CashAREngine:
             ORDER BY updated_at DESC
             LIMIT 5
         """,
-            [client_id],
+            (client_id,),
         )
 
         for row in rows:

@@ -1,7 +1,16 @@
 """
 Team Calendar Collector - Pulls calendars from ALL team members.
 Uses domain-wide delegation via gog CLI.
+
+DEPRECATED: This module is deprecated and should not be imported.
+Use collectors/scheduled_collect.py instead.
 """
+
+raise RuntimeError(
+    "collectors._legacy.team_calendar is deprecated. "
+    "Use collectors/scheduled_collect.py instead. "
+    "See COLLECTOR_AUDIT.md for migration details."
+)
 
 import json
 import logging

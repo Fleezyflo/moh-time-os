@@ -39,6 +39,7 @@ def test_db():
     conn.executescript("""
         CREATE TABLE IF NOT EXISTS communications (
             id TEXT PRIMARY KEY,
+            commitment_id TEXT,
             thread_id TEXT,
             from_email TEXT,
             to_emails TEXT,
@@ -97,7 +98,7 @@ def test_db():
             amount REAL,
             due_date TEXT,
             status TEXT,
-            paid_date TEXT
+            payment_date TEXT
         );
     """)
     conn.commit()

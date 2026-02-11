@@ -23,10 +23,11 @@ GOLDEN_EXPECTATIONS = {
     # Source: SELECT COUNT(*) FROM projects WHERE status NOT IN ('completed', 'cancelled', 'archived')
     "active_project_count": 354,
     # Source: SELECT COUNT(*) FROM invoices WHERE status IN ('sent', 'overdue') AND payment_date IS NULL
-    "unpaid_invoice_count": 34,
+    # Updated 2026-02-11: Data changed - 1 invoice paid (34 → 33)
+    "unpaid_invoice_count": 33,
     # Source: SELECT SUM(amount) FROM invoices WHERE status IN ('sent', 'overdue') AND payment_date IS NULL
-    # Updated 2026-02-09: Data changed during Xero sync
-    "total_valid_ar_aed": 1027172.25,
+    # Updated 2026-02-11: Data changed - 1 invoice paid (~2151 AED reduction)
+    "total_valid_ar_aed": 1025020.48,
     # Source: SELECT COUNT(*) FROM commitments WHERE status NOT IN ('fulfilled', 'closed')
     "open_commitment_count": 37,
     # Source: SELECT COUNT(*) FROM clients
