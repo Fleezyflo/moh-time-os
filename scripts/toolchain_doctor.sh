@@ -139,6 +139,25 @@ done
 echo ""
 
 # ==========================================
+# Portable Timeout Wrapper
+# ==========================================
+echo "=== Portability ==="
+
+# Check timeout wrapper exists and works
+if [ -f "scripts/timeout.py" ]; then
+    # Quick self-test (should complete in <2s)
+    if python3 scripts/timeout.py 2 -- python3 -c "print('ok')" >/dev/null 2>&1; then
+        pass "scripts/timeout.py works (portable timeout)"
+    else
+        fail "scripts/timeout.py failed self-test"
+    fi
+else
+    fail "scripts/timeout.py missing (portable timeout wrapper)"
+fi
+
+echo ""
+
+# ==========================================
 # Summary
 # ==========================================
 echo "==================="

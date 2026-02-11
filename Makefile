@@ -14,7 +14,8 @@
         ui-setup ui-lint ui-typecheck ui-test ui-build ui-types ui-types-check ui-check ui-deps \
         security-audit governance adr-check change-size-check hygiene dead-code \
         smoke pins toolchain-doctor bench coverage db-lifecycle-test \
-        dev api ui run-api migrate schema-check ripgrep-check changelog
+        dev api ui run-api migrate schema-check ripgrep-check changelog \
+        timeout-test
 
 # ==========================================
 # HELP
@@ -331,6 +332,10 @@ pins: toolchain-doctor
 
 toolchain-doctor:
 	@./scripts/toolchain_doctor.sh
+
+timeout-test:
+	@echo "🕐 Testing portable timeout wrapper..."
+	@python3 scripts/timeout.py --self-test
 
 ripgrep-check:
 	@echo "🔎 Checking for forbidden patterns..."
