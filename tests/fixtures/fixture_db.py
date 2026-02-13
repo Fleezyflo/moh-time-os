@@ -79,15 +79,178 @@ CREATE TABLE IF NOT EXISTS projects (
 CREATE TABLE IF NOT EXISTS invoices (
     id TEXT PRIMARY KEY,
     source TEXT NOT NULL DEFAULT 'fixture',
+    external_id TEXT,
     client_id TEXT,
     client_name TEXT,
     amount REAL,
     currency TEXT DEFAULT 'AED',
+    issue_date TEXT,
     due_date TEXT,
     status TEXT,
+    aging_bucket TEXT,
     payment_date TEXT,
+    source_id TEXT,
+    total REAL,
+    issued_at TEXT,
+    due_at TEXT,
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
+);
+
+-- Issues (legacy)
+CREATE TABLE IF NOT EXISTS issues (
+    issue_id TEXT PRIMARY KEY,
+    source_proposal_id TEXT NOT NULL,
+    issue_type TEXT NOT NULL,
+    state TEXT NOT NULL DEFAULT 'open',
+    primary_ref_type TEXT NOT NULL,
+    primary_ref_id TEXT NOT NULL,
+    scope_refs TEXT NOT NULL,
+    headline TEXT NOT NULL,
+    priority INTEGER NOT NULL,
+    resolution_criteria TEXT NOT NULL,
+    opened_at TEXT NOT NULL DEFAULT (datetime('now')),
+    last_activity_at TEXT NOT NULL DEFAULT (datetime('now')),
+    closed_at TEXT,
+    closed_reason TEXT,
+    visibility TEXT NOT NULL DEFAULT 'tagged_only'
+);
+CREATE INDEX IF NOT EXISTS idx_issues_state ON issues(state);
+CREATE INDEX IF NOT EXISTS idx_issues_priority ON issues(priority);
+
+-- Issues v29 (current)
+CREATE TABLE IF NOT EXISTS issues_v29 (
+    id TEXT PRIMARY KEY,
+    type TEXT NOT NULL,
+    state TEXT NOT NULL DEFAULT 'detected',
+    severity TEXT NOT NULL,
+    client_id TEXT NOT NULL,
+    brand_id TEXT,
+    engagement_id TEXT,
+    title TEXT NOT NULL,
+    evidence TEXT,
+    evidence_version TEXT DEFAULT 'v1',
+    aggregation_key TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    snoozed_until TEXT,
+    snoozed_by TEXT,
+    snoozed_at TEXT,
+    snooze_reason TEXT,
+    tagged_by_user_id TEXT,
+    tagged_at TEXT,
+    assigned_to TEXT,
+    assigned_at TEXT,
+    assigned_by TEXT,
+    suppressed INTEGER NOT NULL DEFAULT 0,
+    suppressed_at TEXT,
+    suppressed_by TEXT,
+    escalated INTEGER NOT NULL DEFAULT 0,
+    escalated_at TEXT,
+    escalated_by TEXT,
+    regression_watch_until TEXT,
+    closed_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_issues_v29_state ON issues_v29(state);
+CREATE INDEX IF NOT EXISTS idx_issues_v29_client ON issues_v29(client_id);
+
+-- Safety tables (required for triggers, but we skip triggers in test fixture)
+CREATE TABLE IF NOT EXISTS write_context_v1 (
+    id INTEGER PRIMARY KEY,
+    request_id TEXT,
+    actor TEXT,
+    source TEXT,
+    git_sha TEXT
+);
+
+CREATE TABLE IF NOT EXISTS maintenance_mode_v1 (
+    id INTEGER PRIMARY KEY,
+    flag INTEGER DEFAULT 0
+);
+
+-- Initialize maintenance mode for fixture (allows writes without context)
+INSERT OR IGNORE INTO maintenance_mode_v1 (id, flag) VALUES (1, 1);
+
+-- Inbox Items v29
+CREATE TABLE IF NOT EXISTS inbox_items_v29 (
+    id TEXT PRIMARY KEY,
+    type TEXT NOT NULL,
+    state TEXT NOT NULL DEFAULT 'proposed',
+    severity TEXT NOT NULL,
+    proposed_at TEXT NOT NULL,
+    last_refreshed_at TEXT NOT NULL,
+    read_at TEXT,
+    resurfaced_at TEXT,
+    resolved_at TEXT,
+    snooze_until TEXT,
+    snoozed_by TEXT,
+    snoozed_at TEXT,
+    snooze_reason TEXT,
+    dismissed_by TEXT,
+    dismissed_at TEXT,
+    dismiss_reason TEXT,
+    suppression_key TEXT,
+    underlying_issue_id TEXT,
+    underlying_signal_id TEXT,
+    resolved_issue_id TEXT,
+    title TEXT NOT NULL,
+    client_id TEXT,
+    brand_id TEXT,
+    engagement_id TEXT,
+    evidence TEXT,
+    evidence_version TEXT DEFAULT 'v1',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_inbox_items_v29_state ON inbox_items_v29(state);
+CREATE INDEX IF NOT EXISTS idx_inbox_items_v29_type ON inbox_items_v29(type);
+
+-- Inbox Suppression Rules v29
+CREATE TABLE IF NOT EXISTS inbox_suppression_rules_v29 (
+    id TEXT PRIMARY KEY,
+    suppression_key TEXT NOT NULL UNIQUE,
+    item_type TEXT NOT NULL,
+    scope_client_id TEXT,
+    scope_engagement_id TEXT,
+    scope_source TEXT,
+    scope_rule TEXT,
+    reason TEXT,
+    created_by TEXT,
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL
+);
+
+-- Signals v29 (as table, not view, for fixture)
+CREATE TABLE IF NOT EXISTS signals_v29 (
+    id TEXT PRIMARY KEY,
+    source TEXT,
+    source_id TEXT,
+    client_id TEXT,
+    engagement_id TEXT,
+    sentiment TEXT,
+    signal_type TEXT,
+    summary TEXT,
+    observed_at TEXT,
+    ingested_at TEXT,
+    evidence TEXT,
+    dismissed_at TEXT,
+    dismissed_by TEXT,
+    analysis_provider TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+-- Signals (legacy, for view compatibility)
+CREATE TABLE IF NOT EXISTS signals (
+    signal_id TEXT PRIMARY KEY,
+    detector_id TEXT,
+    signal_type TEXT NOT NULL,
+    entity_ref_type TEXT,
+    entity_ref_id TEXT,
+    value TEXT,
+    detected_at TEXT,
+    resolved_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 -- Commitments
@@ -118,12 +281,30 @@ CREATE TABLE IF NOT EXISTS people (
 CREATE TABLE IF NOT EXISTS tasks (
     id TEXT PRIMARY KEY,
     source TEXT NOT NULL DEFAULT 'fixture',
+    source_id TEXT,
     title TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending',
-    assignee TEXT,
-    assignee_id TEXT,
-    project_id TEXT,
+    priority INTEGER DEFAULT 50,
     due_date TEXT,
+    due_time TEXT,
+    assignee TEXT,
+    assignee_raw TEXT,
+    assignee_id TEXT,
+    project TEXT,
+    project_id TEXT,
+    client_id TEXT,
+    brand_id TEXT,
+    tags TEXT,
+    dependencies TEXT,
+    blockers TEXT,
+    context TEXT,
+    notes TEXT,
+    description TEXT DEFAULT '',
+    priority_reasons TEXT,
+    project_link_status TEXT DEFAULT 'unlinked',
+    client_link_status TEXT DEFAULT 'unlinked',
+    completed_at TEXT,
+    synced_at TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -215,8 +396,8 @@ def _seed_tables(conn: sqlite3.Connection, seed: dict[str, Any]) -> None:
     for invoice in seed.get("invoices", []):
         conn.execute(
             """
-            INSERT INTO invoices (id, client_id, amount, currency, status, payment_date, due_date)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO invoices (id, client_id, amount, currency, status, payment_date, due_date, issue_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 invoice["id"],
@@ -225,7 +406,8 @@ def _seed_tables(conn: sqlite3.Connection, seed: dict[str, Any]) -> None:
                 invoice.get("currency", "AED"),
                 invoice["status"],
                 invoice.get("payment_date"),
-                invoice.get("due_date")
+                invoice.get("due_date"),
+                invoice.get("issue_date")
             )
         )
 
@@ -268,8 +450,8 @@ def _seed_tables(conn: sqlite3.Connection, seed: dict[str, Any]) -> None:
     for task in seed.get("tasks", []):
         conn.execute(
             """
-            INSERT INTO tasks (id, title, status, assignee, assignee_id, project_id, due_date)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO tasks (id, title, status, assignee, assignee_id, project_id, client_id, due_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 task["id"],
@@ -278,6 +460,7 @@ def _seed_tables(conn: sqlite3.Connection, seed: dict[str, Any]) -> None:
                 task.get("assignee_id"),  # assignee column stores the ID
                 task.get("assignee_id"),
                 task.get("project_id"),
+                task.get("client_id"),
                 task.get("due_date")
             )
         )

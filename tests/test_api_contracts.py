@@ -1,18 +1,47 @@
 """
 Lightweight contract tests for /api/v2/* endpoints.
 Verifies endpoints return 200 and include required top-level keys.
+
+Uses fixture DB to avoid live DB access (determinism guard).
 """
 
 import pytest
 from fastapi.testclient import TestClient
+from pathlib import Path
+
+import lib.paths
+from tests.fixtures.fixture_db import create_fixture_db, get_fixture_db_path
 
 
 @pytest.fixture(scope="module")
-def client():
-    """Create test client for the FastAPI app."""
+def fixture_db_path(tmp_path_factory):
+    """Create a fixture DB for the module."""
+    tmp_path = tmp_path_factory.mktemp("api_contracts")
+    db_path = tmp_path / "fixture.db"
+    conn = create_fixture_db(db_path)
+    conn.close()
+    return db_path
+
+
+@pytest.fixture(scope="module")
+def client(fixture_db_path, monkeypatch_module):
+    """Create test client with fixture DB injected."""
+    # Redirect lib.paths.db_path to fixture DB BEFORE importing app
+    monkeypatch_module.setattr(lib.paths, "db_path", lambda: fixture_db_path)
+
+    # Now import and create the app (it will use the patched path)
     from api.server import app
 
     return TestClient(app)
+
+
+@pytest.fixture(scope="module")
+def monkeypatch_module():
+    """Module-scoped monkeypatch for fixtures that need it."""
+    from _pytest.monkeypatch import MonkeyPatch
+    mp = MonkeyPatch()
+    yield mp
+    mp.undo()
 
 
 class TestInboxEndpoints:
