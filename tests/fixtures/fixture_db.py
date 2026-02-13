@@ -318,6 +318,152 @@ CREATE TABLE IF NOT EXISTS communications (
     received_at TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
+
+-- Artifacts (for communication links)
+CREATE TABLE IF NOT EXISTS artifacts (
+    artifact_id TEXT PRIMARY KEY,
+    type TEXT NOT NULL,
+    source TEXT,
+    occurred_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Entity Links (for cross-entity relationships)
+CREATE TABLE IF NOT EXISTS entity_links (
+    id INTEGER PRIMARY KEY,
+    from_artifact_id TEXT,
+    to_entity_type TEXT NOT NULL,
+    to_entity_id TEXT NOT NULL,
+    confidence REAL DEFAULT 1.0,
+    method TEXT DEFAULT 'fixture',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Add financial columns to clients if missing
+-- (SQLite doesn't support ALTER COLUMN, so we include them in the base schema above)
+
+-- =============================================================================
+-- CROSS-ENTITY VIEWS (for Intelligence Layer)
+-- =============================================================================
+
+-- v_task_with_client: Tasks with client context via project
+CREATE VIEW IF NOT EXISTS v_task_with_client AS
+SELECT
+    t.id as task_id,
+    t.title as task_title,
+    t.status as task_status,
+    t.priority as task_priority,
+    t.due_date,
+    t.assignee,
+    t.project_id,
+    p.name as project_name,
+    COALESCE(t.client_id, p.client_id) as client_id,
+    c.name as client_name,
+    t.created_at
+FROM tasks t
+LEFT JOIN projects p ON t.project_id = p.id
+LEFT JOIN clients c ON COALESCE(t.client_id, p.client_id) = c.id;
+
+-- v_client_operational_profile: Client with aggregated metrics
+CREATE VIEW IF NOT EXISTS v_client_operational_profile AS
+SELECT
+    c.id as client_id,
+    c.name as client_name,
+    c.tier as client_tier,
+    c.relationship_health,
+    (SELECT COUNT(*) FROM projects p WHERE p.client_id = c.id) as project_count,
+    (SELECT COUNT(*) FROM tasks t JOIN projects p ON t.project_id = p.id
+     WHERE p.client_id = c.id) as total_tasks,
+    (SELECT COUNT(*) FROM tasks t JOIN projects p ON t.project_id = p.id
+     WHERE p.client_id = c.id AND t.status NOT IN ('done', 'complete', 'completed')) as active_tasks,
+    (SELECT COUNT(*) FROM invoices i WHERE i.client_id = c.id) as invoice_count,
+    (SELECT COALESCE(SUM(i.amount), 0) FROM invoices i WHERE i.client_id = c.id) as total_invoiced,
+    (SELECT COALESCE(SUM(i.amount), 0) FROM invoices i WHERE i.client_id = c.id AND i.status = 'paid') as total_paid,
+    (SELECT COALESCE(SUM(i.amount), 0) FROM invoices i WHERE i.client_id = c.id AND i.status != 'paid') as total_outstanding,
+    0 as financial_ar_total,
+    0 as financial_ar_overdue,
+    0 as ytd_revenue,
+    (SELECT COUNT(*) FROM entity_links el WHERE el.to_entity_type = 'client' AND el.to_entity_id = c.id) as entity_links_count
+FROM clients c;
+
+-- v_project_operational_state: Project with task metrics
+CREATE VIEW IF NOT EXISTS v_project_operational_state AS
+SELECT
+    p.id as project_id,
+    p.name as project_name,
+    p.status as project_status,
+    p.client_id,
+    c.name as client_name,
+    (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id) as total_tasks,
+    (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id
+     AND t.status NOT IN ('done', 'complete', 'completed')) as open_tasks,
+    (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id
+     AND t.status IN ('done', 'complete', 'completed')) as completed_tasks,
+    (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id
+     AND t.due_date IS NOT NULL AND t.due_date < date('now')
+     AND t.status NOT IN ('done', 'complete', 'completed')) as overdue_tasks,
+    (SELECT COUNT(DISTINCT t.assignee) FROM tasks t
+     WHERE t.project_id = p.id AND t.assignee IS NOT NULL) as assigned_people_count,
+    CASE
+        WHEN (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id) = 0 THEN 0
+        ELSE ROUND(100.0 * (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id
+             AND t.status IN ('done', 'complete', 'completed')) /
+             (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id), 1)
+    END as completion_rate_pct
+FROM projects p
+LEFT JOIN clients c ON p.client_id = c.id;
+
+-- v_person_load_profile: Person with workload metrics
+CREATE VIEW IF NOT EXISTS v_person_load_profile AS
+SELECT
+    ppl.id as person_id,
+    ppl.name as person_name,
+    ppl.email as person_email,
+    ppl.type as role,
+    (SELECT COUNT(*) FROM tasks t WHERE LOWER(t.assignee) = LOWER(ppl.name)) as assigned_tasks,
+    (SELECT COUNT(*) FROM tasks t WHERE LOWER(t.assignee) = LOWER(ppl.name)
+     AND t.status NOT IN ('done', 'complete', 'completed')) as active_tasks,
+    (SELECT COUNT(DISTINCT t.project_id) FROM tasks t
+     WHERE LOWER(t.assignee) = LOWER(ppl.name)) as project_count,
+    (SELECT COUNT(*) FROM entity_links el
+     WHERE el.to_entity_type = 'person' AND el.to_entity_id = ppl.id) as communication_links
+FROM people ppl;
+
+-- v_communication_client_link: Artifacts linked to clients
+CREATE VIEW IF NOT EXISTS v_communication_client_link AS
+SELECT
+    a.artifact_id,
+    a.type as artifact_type,
+    a.source as source_system,
+    a.occurred_at,
+    el.to_entity_id as client_id,
+    c.name as client_name,
+    el.confidence,
+    el.method as link_method
+FROM artifacts a
+JOIN entity_links el ON el.from_artifact_id = a.artifact_id
+JOIN clients c ON el.to_entity_id = c.id
+WHERE el.to_entity_type = 'client';
+
+-- v_invoice_client_project: Invoices with client context
+CREATE VIEW IF NOT EXISTS v_invoice_client_project AS
+SELECT
+    i.id as invoice_id,
+    i.external_id,
+    i.client_id,
+    c.name as client_name,
+    i.amount,
+    i.currency,
+    i.status as invoice_status,
+    i.issue_date,
+    i.due_date,
+    i.aging_bucket,
+    (SELECT COUNT(*) FROM projects p WHERE p.client_id = i.client_id) as client_project_count,
+    (SELECT COUNT(*) FROM tasks t JOIN projects p ON t.project_id = p.id
+     WHERE p.client_id = i.client_id
+     AND t.status NOT IN ('done', 'complete', 'completed')) as client_active_tasks
+FROM invoices i
+LEFT JOIN clients c ON i.client_id = c.id;
 """
 
 

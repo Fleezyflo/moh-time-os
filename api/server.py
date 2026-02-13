@@ -82,8 +82,12 @@ UI_DIR = paths.app_home() / "time-os-ui" / "dist"
 from api.spec_router import (
     spec_router,  # noqa: E402 - intentionally imported here, right before use
 )
+from api.intelligence_router import (
+    intelligence_router,  # noqa: E402 - intelligence layer endpoints
+)
 
 app.include_router(spec_router, prefix="/api/v2")
+app.include_router(intelligence_router, prefix="/api/v2/intelligence")
 
 
 # ==== DB Startup & Migrations ====
