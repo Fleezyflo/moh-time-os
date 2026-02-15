@@ -98,3 +98,4 @@ lib/collectors/debug_*.py
 
 # Working notes
 /task*.md
+lib/collectors/test_*.py
