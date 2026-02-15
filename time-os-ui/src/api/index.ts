@@ -1,8 +1,8 @@
 /**
- * API Module - Single Entrypoint
+ * API Module - TanStack Query + Zod Pattern
  *
- * ALL API access MUST go through this module.
- * Direct fetch/axios usage outside this module is BANNED.
+ * Used by core endpoints (health, clients, proposals, issues, team).
+ * Other modules (intelligence, pages) use typed fetch wrappers directly.
  */
 
 // HTTP Client

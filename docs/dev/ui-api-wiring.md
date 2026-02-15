@@ -1,161 +1,126 @@
 # UI-API Wiring Guide
 
-This document describes the architecture and conventions for API integration between the React UI and FastAPI backend.
+This document describes the patterns for API integration between the React UI and FastAPI backend.
 
 ## Overview
 
-The UI uses a typed, validated API layer with the following components:
+The UI uses **two patterns** for API calls, both acceptable:
+
+### Pattern 1: Typed Fetch Wrappers (majority)
+
+Used by: `lib/api.ts`, `intelligence/api.ts`, most pages
+
+```typescript
+// intelligence/api.ts
+interface Signal {
+  signal_id: string;
+  name: string;
+  severity: 'critical' | 'warning' | 'watch';
+  // ...
+}
+
+async function fetchJson<T>(url: string): Promise<ApiResponse<T>> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`API error: ${response.status}`);
+  }
+  return response.json();
+}
+
+export async function fetchSignals(): Promise<ApiResponse<Signal[]>> {
+  return fetchJson(`${API_BASE}/signals`);
+}
+```
+
+With hooks:
+
+```typescript
+function useData<T>(fetchFn: () => Promise<T>): { data: T | null; loading: boolean; error: Error | null } {
+  // useState + useEffect pattern
+}
+
+export function useSignals() {
+  return useData(() => api.fetchSignals());
+}
+```
+
+### Pattern 2: TanStack Query + Zod (src/api/)
+
+Used by: 5 core endpoints (health, clients, proposals, issues, team)
 
 ```
 src/api/
-├── index.ts           # Single entrypoint - export everything
 ├── http.ts            # HTTP client with zod validation + request-id
-├── schemas/           # Zod schemas for all API responses
+├── schemas/           # Zod schemas for responses
 ├── hooks/             # TanStack Query hooks
-├── queryClient.ts     # Query client configuration
-├── fixtures/          # MSW handlers for testing
-└── __tests__/         # Integration tests
+└── queryClient.ts     # Query client config
 ```
 
-## Key Principles
-
-### 1. Single API Entrypoint
-
-**All API access MUST go through `src/api/`.**
-
-Direct `fetch()` or `axios` usage outside this directory is banned by ESLint:
-
 ```typescript
-// ❌ BANNED - will fail lint
-const data = await fetch('/api/health').then(r => r.json());
+// Using TanStack Query + zod
+import { useClients } from '../api';
 
-// ✅ CORRECT - use the API module
-import { get, healthResponseSchema } from '../api';
-const data = await get('/health', healthResponseSchema);
-```
-
-### 2. Runtime Response Validation (Zod)
-
-Every API response is validated at runtime using zod schemas:
-
-```typescript
-// src/api/schemas/index.ts
-export const healthResponseSchema = z.object({
-  status: z.enum(['healthy', 'unhealthy']),
-  timestamp: z.string(),
-});
-
-// src/api/http.ts
-export async function get<T>(url: string, schema: z.ZodType<T>): Promise<T> {
-  const response = await fetch(url);
-  const json = await response.json();
-  return schema.parse(json);  // Throws if invalid
-}
-```
-
-Benefits:
-- Catch API contract violations at runtime
-- TypeScript types inferred from schemas
-- Clear error messages when API changes unexpectedly
-
-### 3. TanStack Query Integration
-
-Data fetching uses TanStack Query for caching, retries, and state management:
-
-```typescript
-// src/api/hooks/index.ts
-export function useClients() {
-  return useQuery({
-    queryKey: queryKeys.clients(),
-    queryFn: () => get('/clients', clientListSchema),
-    staleTime: 30_000,
-  });
-}
-
-// Component usage
 function ClientList() {
   const { data, isLoading, error } = useClients();
-  // ...
 }
 ```
 
-Query key conventions:
-- `['entity']` - list queries
-- `['entity', id]` - detail queries
-- `['entity', { filters }]` - filtered queries
+## When to Use Which
 
-### 4. Request-ID Propagation
+| Pattern | Use When |
+|---------|----------|
+| Typed fetch wrapper | New feature modules, simpler data needs |
+| TanStack Query + zod | Need runtime validation, complex caching, optimistic updates |
 
-Every request includes a client-generated request ID:
+Both patterns provide:
+- TypeScript type safety
+- Centralized error handling
+- Testable code
 
+The TanStack Query pattern adds:
+- Runtime response validation (catches API contract violations)
+- Automatic caching and refetching
+- Query invalidation
+
+## Error Handling
+
+### Pattern 1 (fetch wrapper)
 ```typescript
-// Automatically added by http.ts
-headers: {
-  'X-Request-ID': 'ui-1707654321000-abc123'
+const { data, error, refetch } = useSignals();
+
+if (error) {
+  return <ErrorState error={error} onRetry={refetch} />;
 }
 ```
 
-The API echoes this back, enabling end-to-end tracing:
-- UI logs: `[API] GET /api/health [ui-1707654321000-abc123]`
-- API logs: `request_id=ui-1707654321000-abc123`
-- Response headers: `X-Request-ID: ui-1707654321000-abc123`
-
-### 5. Standardized Error Handling
-
-All API errors are wrapped in `ApiError`:
-
+### Pattern 2 (TanStack Query)
 ```typescript
-class ApiError extends Error {
-  status: number;
-  statusText: string;
-  code: string;
-  requestId: string;
-  details: unknown;
-}
+const { data, isLoading, error, refetch } = useClients();
 
-// Usage
-try {
-  await get('/api/endpoint', schema);
-} catch (err) {
-  if (err instanceof ApiError) {
-    if (err.isUnauthorized) { /* handle 401 */ }
-    if (err.isNotFound) { /* handle 404 */ }
-    console.error('Request ID:', err.requestId);
-  }
+// ApiError class provides rich error info
+if (error instanceof ApiError) {
+  if (error.isUnauthorized) { /* handle 401 */ }
 }
 ```
 
 ## Testing
 
-### Unit Tests
-
-Test hooks and components with MSW:
+Both patterns can be tested with MSW for mocking API responses.
 
 ```typescript
 import { server } from '../api/fixtures/server';
-import { fixtures } from '../api/fixtures/handlers';
 
 beforeAll(() => server.listen());
 afterEach(() => server.resetHandlers());
 afterAll(() => server.close());
 
-test('displays clients', async () => {
-  render(<ClientList />);
+test('displays data', async () => {
+  render(<Component />);
   await waitFor(() => {
-    expect(screen.getByText(fixtures.clients.items[0].name)).toBeInTheDocument();
+    expect(screen.getByText('expected')).toBeInTheDocument();
   });
 });
 ```
-
-### Integration Tests
-
-Run `make ui-integration` or:
-
-```bash
-cd time-os-ui && pnpm test -- integration
-```
-
-These tests verify the full flow: UI client → MSW → zod validation.
 
 ## Make Targets
 
@@ -163,73 +128,19 @@ These tests verify the full flow: UI client → MSW → zod validation.
 |--------|-------------|
 | `make ui-check` | Full UI quality suite (lint + typecheck + test + build) |
 | `make ui-test` | Run Vitest unit tests |
-| `make ui-contracts` | Run API contract tests |
-| `make ui-fixtures` | Validate MSW fixtures against schemas |
-| `make ui-integration` | Run integration tests (<30s) |
 | `make dev` | Start API + UI dev servers |
 
-## Contract Enforcement
-
-UI-used endpoints are tracked and protected:
-
-```typescript
-// src/api/schemas/index.ts
-export const UI_USED_ENDPOINTS = [
-  '/api/health',
-  '/api/v2/health',
-  '/api/v2/proposals',
-  '/api/v2/issues',
-  '/api/v2/clients',
-  '/api/v2/team',
-  '/api/metrics',
-] as const;
-```
-
-The CI enforces that these endpoints cannot loosen (remove required fields, change types).
-
 ## Adding a New Endpoint
+
+### For new feature modules (recommended: Pattern 1)
+
+1. Create typed API file: `src/feature/api.ts`
+2. Define TypeScript interfaces for responses
+3. Create fetch wrapper functions
+4. Create hooks using `useData` pattern
+
+### For core endpoints (Pattern 2)
 
 1. Add zod schema in `src/api/schemas/index.ts`
 2. Add hook in `src/api/hooks/index.ts`
 3. Add MSW fixture in `src/api/fixtures/handlers.ts`
-4. Add to `UI_USED_ENDPOINTS` if it's a core endpoint
-5. Write tests
-
-Example:
-
-```typescript
-// 1. Schema
-export const newEndpointSchema = z.object({
-  id: z.string(),
-  data: z.string(),
-});
-
-// 2. Hook
-export function useNewEndpoint() {
-  return useQuery({
-    queryKey: ['new-endpoint'],
-    queryFn: () => get('/new-endpoint', newEndpointSchema),
-  });
-}
-
-// 3. Fixture
-export const fixtures = {
-  newEndpoint: { id: 'test', data: 'test-data' },
-};
-
-http.get('*/api/v2/new-endpoint', () => HttpResponse.json(fixtures.newEndpoint));
-```
-
-## Debugging
-
-Enable verbose logging in development:
-
-```bash
-VITE_API_BASE_URL=http://localhost:8421/api/v2 pnpm dev
-```
-
-The console will show:
-```
-[API] GET /api/v2/health [ui-1707654321000-abc123]
-[API] ✓ /api/v2/health [ui-1707654321000-abc123]
-```

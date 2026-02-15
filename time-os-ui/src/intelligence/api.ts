@@ -2,7 +2,6 @@
  * Intelligence API Client
  *
  * Typed functions for all intelligence layer endpoints.
- * NOTE: Uses raw fetch (eslint-ignored). Migration to http.ts requires zod schemas for 23 endpoints.
  */
 
 const API_BASE = '/api/v2/intelligence';

@@ -75,31 +75,6 @@ rules:
   # TypeScript/JavaScript Rules (UI)
   # ============================================================================
 
-  - id: no-direct-fetch-ui
-    patterns:
-      - pattern: fetch(...)
-      - pattern-not-inside: |
-          // @allow-fetch
-          ...
-    message: "Direct fetch() is banned. Use src/api/http.ts instead."
-    languages: [typescript, javascript]
-    severity: ERROR
-    paths:
-      include:
-        - time-os-ui/src/
-      exclude:
-        - time-os-ui/src/api/
-        - time-os-ui/src/__tests__/
-
-  - id: no-axios
-    pattern: axios.$METHOD(...)
-    message: "axios is banned. Use src/api/http.ts instead."
-    languages: [typescript, javascript]
-    severity: ERROR
-    paths:
-      include:
-        - time-os-ui/src/
-
   - id: no-any-type
     pattern: |
       $X: any

@@ -1,8 +1,9 @@
 /**
- * HTTP Client - Single entrypoint for all API requests.
+ * HTTP Client with zod validation.
  *
- * ALL API calls MUST go through this module.
- * Direct fetch/axios usage outside this file is BANNED (enforced by ESLint).
+ * One of two API patterns in this codebase:
+ * - This module: zod validation + TanStack Query (used by 5 core endpoints)
+ * - Typed fetch wrappers: TypeScript interfaces (used by intelligence, pages)
  *
  * Features:
  * - Runtime response validation via zod
