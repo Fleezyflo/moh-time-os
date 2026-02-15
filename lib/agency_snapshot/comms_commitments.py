@@ -713,9 +713,11 @@ class CommsCommitmentsEngine:
         if self.horizon == Horizon.NOW:
             threshold = 12
         elif self.horizon == Horizon.TODAY:
-            # End of day
+            # End of day, but with minimum 16h threshold per scoring.py
+            # This ensures late-night runs still include early-tomorrow deadlines
             eod = datetime.combine(self.today, datetime.max.time())
-            threshold = (eod - self.now).total_seconds() / 3600
+            hours_to_eod = (eod - self.now).total_seconds() / 3600
+            threshold = max(16, hours_to_eod)
         else:  # THIS_WEEK
             threshold = 7 * 24
 

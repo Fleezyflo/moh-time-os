@@ -9,9 +9,13 @@ import ClientDetailSpec from './pages/ClientDetailSpec';
 import RecentlyActiveDrilldown from './pages/RecentlyActiveDrilldown';
 import ColdClients from './pages/ColdClients';
 
+// Intelligence pages
+import { CommandCenter, Briefing, Signals, Patterns, Proposals, ClientIntel, PersonIntel, ProjectIntel } from './intelligence/pages';
+
 // Navigation items — Inbox is primary per spec §1
 const NAV_ITEMS = [
   { to: '/', label: 'Inbox' }, // Control Room Inbox (spec §1)
+  { to: '/intel', label: 'Intel' }, // Intelligence Command Center
   { to: '/clients', label: 'Clients' }, // Client Index (spec §2)
   { to: '/issues', label: 'Issues' },
   { to: '/team', label: 'Team' },
@@ -128,6 +132,55 @@ const fixDataRoute = createRoute({
   component: FixData,
 });
 
+// Intelligence routes
+const intelRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/intel',
+  component: CommandCenter,
+});
+
+const intelBriefingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/intel/briefing',
+  component: Briefing,
+});
+
+const intelSignalsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/intel/signals',
+  component: Signals,
+});
+
+const intelPatternsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/intel/patterns',
+  component: Patterns,
+});
+
+const intelProposalsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/intel/proposals',
+  component: Proposals,
+});
+
+const intelClientRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/intel/client/$clientId',
+  component: ClientIntel,
+});
+
+const intelPersonRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/intel/person/$personId',
+  component: PersonIntel,
+});
+
+const intelProjectRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/intel/project/$projectId',
+  component: ProjectIntel,
+});
+
 // Route tree
 const routeTree = rootRoute.addChildren([
   indexRoute, // Inbox (/)
@@ -140,6 +193,15 @@ const routeTree = rootRoute.addChildren([
   teamRoute,
   teamDetailRoute,
   fixDataRoute,
+  // Intelligence routes
+  intelRoute,
+  intelBriefingRoute,
+  intelSignalsRoute,
+  intelPatternsRoute,
+  intelProposalsRoute,
+  intelClientRoute,
+  intelPersonRoute,
+  intelProjectRoute,
 ]);
 
 // Router instance

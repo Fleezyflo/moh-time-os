@@ -464,6 +464,31 @@ SELECT
      AND t.status NOT IN ('done', 'complete', 'completed')) as client_active_tasks
 FROM invoices i
 LEFT JOIN clients c ON i.client_id = c.id;
+
+-- Signal State (Intelligence Layer)
+CREATE TABLE IF NOT EXISTS signal_state (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    signal_id TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    original_severity TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    evidence_json TEXT,
+    first_detected_at TEXT NOT NULL,
+    last_evaluated_at TEXT NOT NULL,
+    escalated_at TEXT,
+    cleared_at TEXT,
+    acknowledged_at TEXT,
+    evaluation_count INTEGER DEFAULT 1,
+    UNIQUE(signal_id, entity_type, entity_id, status)
+);
+CREATE INDEX IF NOT EXISTS idx_signal_state_active
+    ON signal_state(status, severity) WHERE status = 'active';
+CREATE INDEX IF NOT EXISTS idx_signal_state_entity
+    ON signal_state(entity_type, entity_id);
+CREATE INDEX IF NOT EXISTS idx_signal_state_signal
+    ON signal_state(signal_id);
 """
 
 

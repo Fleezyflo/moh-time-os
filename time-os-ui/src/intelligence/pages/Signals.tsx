@@ -1,0 +1,154 @@
+/**
+ * Signals — Active Signals List
+ * 
+ * Shows all detected signals with filtering by severity and entity type.
+ */
+
+import { useSignals } from '../hooks';
+import { useSignalFilters } from '../lib';
+import type { Signal } from '../api';
+
+function SeverityBadge({ severity }: { severity: string }) {
+  const colors: Record<string, string> = {
+    critical: 'bg-red-500/20 text-red-400',
+    warning: 'bg-amber-500/20 text-amber-400',
+    watch: 'bg-slate-500/20 text-slate-400',
+  };
+  
+  return (
+    <span className={`px-2 py-0.5 rounded text-xs font-medium ${colors[severity] || colors.watch}`}>
+      {severity}
+    </span>
+  );
+}
+
+function SignalCard({ signal }: { signal: Signal }) {
+  return (
+    <div className={`rounded-lg p-4 border ${
+      signal.severity === 'critical' ? 'bg-red-500/5 border-red-500/30' :
+      signal.severity === 'warning' ? 'bg-amber-500/5 border-amber-500/30' :
+      'bg-slate-800 border-slate-700'
+    }`}>
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <SeverityBadge severity={signal.severity} />
+            <span className="text-sm text-slate-500">{signal.entity_type}</span>
+          </div>
+          <div className="font-medium mt-2">{signal.name}</div>
+          <div className="text-sm text-slate-400 mt-1">
+            {signal.entity_name || signal.entity_id}
+          </div>
+        </div>
+      </div>
+      <div className="text-sm text-slate-500 mt-3">{signal.evidence}</div>
+      <div className="text-sm text-slate-400 mt-2 pt-2 border-t border-slate-700">
+        → {signal.implied_action}
+      </div>
+    </div>
+  );
+}
+
+export default function Signals() {
+  const { severity, entityType, setSeverity, setEntityType, resetFilters } = useSignalFilters();
+  
+  const { data, loading, error } = useSignals(true);
+  
+  if (loading) {
+    return (
+      <div className="animate-pulse space-y-4">
+        <div className="h-12 bg-slate-800 rounded w-full" />
+        <div className="h-32 bg-slate-800 rounded" />
+        <div className="h-32 bg-slate-800 rounded" />
+      </div>
+    );
+  }
+  
+  if (error) {
+    return (
+      <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-6 text-center">
+        <div className="text-red-400">Failed to load signals</div>
+        <div className="text-sm text-slate-500 mt-2">{error.message}</div>
+      </div>
+    );
+  }
+  
+  const signals = data?.signals ?? [];
+  
+  // Apply filters
+  const filtered = signals.filter(s => {
+    if (severity !== 'all' && s.severity !== severity) return false;
+    if (entityType !== 'all' && s.entity_type !== entityType) return false;
+    return true;
+  });
+  
+  // Get unique values for filters
+  const severities = ['all', ...new Set(signals.map(s => s.severity))];
+  const entityTypes = ['all', ...new Set(signals.map(s => s.entity_type))];
+  
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold">Active Signals</h1>
+        <div className="text-sm text-slate-500">
+          {data?.total_signals ?? 0} total
+        </div>
+      </div>
+      
+      {/* Filters */}
+      <div className="flex flex-wrap gap-4 bg-slate-800 rounded-lg p-4">
+        <div>
+          <label className="text-sm text-slate-400 block mb-1">Severity</label>
+          <select
+            value={severity}
+            onChange={e => setSeverity(e.target.value)}
+            className="bg-slate-700 border border-slate-600 rounded px-3 py-1.5 text-sm"
+          >
+            {severities.map(s => (
+              <option key={s} value={s}>{s === 'all' ? 'All' : s}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="text-sm text-slate-400 block mb-1">Entity Type</label>
+          <select
+            value={entityType}
+            onChange={e => setEntityType(e.target.value)}
+            className="bg-slate-700 border border-slate-600 rounded px-3 py-1.5 text-sm"
+          >
+            {entityTypes.map(t => (
+              <option key={t} value={t}>{t === 'all' ? 'All' : t}</option>
+            ))}
+          </select>
+        </div>
+        <div className="flex items-end gap-2">
+          <span className="text-sm text-slate-500">
+            Showing {filtered.length} of {signals.length}
+          </span>
+          {(severity !== 'all' || entityType !== 'all') && (
+            <button
+              onClick={resetFilters}
+              className="text-xs text-slate-400 hover:text-white"
+            >
+              Reset
+            </button>
+          )}
+        </div>
+      </div>
+      
+      {/* Signal List */}
+      <div className="space-y-4">
+        {filtered.length === 0 ? (
+          <div className="bg-slate-800 rounded-lg p-8 text-center text-slate-400">
+            No signals match the current filters
+          </div>
+        ) : (
+          filtered.map((signal, i) => (
+            <SignalCard key={signal.signal_id || i} signal={signal} />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
