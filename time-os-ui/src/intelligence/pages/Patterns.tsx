@@ -5,7 +5,7 @@
  */
 
 import { usePatterns } from '../hooks';
-import { ErrorState } from '../../components/ErrorState';
+import { ErrorState, NoPatternsDetected } from '../../components';
 import { SkeletonPatternsPage } from '../components';
 import type { Pattern } from '../api';
 
@@ -121,10 +121,7 @@ export default function Patterns() {
       </div>
 
       {patterns.length === 0 ? (
-        <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-8 text-center">
-          <div className="text-green-400">✓ No patterns detected</div>
-          <div className="text-slate-400 mt-2">Portfolio structure looks healthy</div>
-        </div>
+        <NoPatternsDetected />
       ) : (
         <>
           {/* Structural */}

@@ -5,7 +5,7 @@
  */
 
 import { useBriefing } from '../hooks';
-import { ErrorState } from '../../components/ErrorState';
+import { ErrorState, NoBriefing } from '../../components';
 import { SkeletonBriefingPage } from '../components';
 
 export default function Briefing() {
@@ -24,7 +24,14 @@ export default function Briefing() {
     return <SkeletonBriefingPage />;
   }
 
-  if (!briefing) return null;
+  if (!briefing) {
+    return (
+      <div className="p-6 max-w-3xl">
+        <h1 className="text-2xl font-semibold mb-6">Daily Briefing</h1>
+        <NoBriefing />
+      </div>
+    );
+  }
 
   const { summary, critical_items, attention_items, watching, portfolio_health, top_proposal } =
     briefing;

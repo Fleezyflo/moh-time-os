@@ -7,7 +7,7 @@
 import { useState } from 'react';
 import { useProposals } from '../hooks';
 import { useProposalFilters } from '../lib';
-import { ErrorState } from '../../components/ErrorState';
+import { ErrorState, NoProposals, NoResults } from '../../components';
 import { SkeletonProposalsPage } from '../components';
 import type { Proposal } from '../api';
 
@@ -166,9 +166,11 @@ export default function Proposals() {
       {/* Proposal List */}
       <div className="space-y-4">
         {proposalList.length === 0 ? (
-          <div className="bg-slate-800 rounded-lg p-8 text-center text-slate-400">
-            No proposals match the current filters
-          </div>
+          urgency ? (
+            <NoResults query={`urgency: ${urgency}`} />
+          ) : (
+            <NoProposals />
+          )
         ) : (
           proposalList.map((proposal, i) => (
             <ProposalCard

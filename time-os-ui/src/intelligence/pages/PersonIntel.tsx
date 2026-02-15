@@ -14,6 +14,7 @@ import { ProfileShell } from '../components/ProfileShell';
 import { PersonLoadDistribution } from '../views/sections';
 import { SignalCard } from '../components';
 import { ProfileSection } from '../components/ProfileSection';
+import { NoActiveSignals } from '../../components';
 import type { PersonIntelligence, PersonProfile } from '../api';
 
 /**
@@ -86,9 +87,7 @@ function PersonSignalsSection({ signals }: { signals: PersonIntelligence['active
   if (!signals || signals.length === 0) {
     return (
       <ProfileSection title="Active Signals" description="Current alerts for this person.">
-        <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4 text-center">
-          <div className="text-green-400 text-sm">✓ No active signals</div>
-        </div>
+        <NoActiveSignals />
       </ProfileSection>
     );
   }

@@ -6,7 +6,7 @@
 
 import { useSignals } from '../hooks';
 import { useSignalFilters } from '../lib';
-import { ErrorState } from '../../components/ErrorState';
+import { ErrorState, NoSignals, NoResults } from '../../components';
 import { SkeletonSignalsPage } from '../components';
 import type { Signal } from '../api';
 
@@ -142,9 +142,11 @@ export default function Signals() {
       {/* Signal List */}
       <div className="space-y-4">
         {filtered.length === 0 ? (
-          <div className="bg-slate-800 rounded-lg p-8 text-center text-slate-400">
-            No signals match the current filters
-          </div>
+          severity !== 'all' || entityType !== 'all' ? (
+            <NoResults query={`severity: ${severity}, type: ${entityType}`} />
+          ) : (
+            <NoSignals />
+          )
         ) : (
           filtered.map((signal, i) => <SignalCard key={signal.signal_id || i} signal={signal} />)
         )}

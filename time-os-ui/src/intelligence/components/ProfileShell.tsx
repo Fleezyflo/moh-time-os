@@ -10,7 +10,7 @@
 import type { ReactNode } from 'react';
 import { ProfileHeader } from './ProfileHeader';
 import { ConnectedEntities } from './ConnectedEntities';
-import { ErrorState } from '../../components/ErrorState';
+import { ErrorState, NoIntelData } from '../../components';
 import { SkeletonCard } from '../../components/Skeleton';
 
 type EntityType = 'client' | 'person' | 'project';
@@ -127,7 +127,7 @@ export function ProfileShell<T>({
   if (!data) {
     return (
       <div className="max-w-5xl p-6">
-        <div className="text-center text-slate-400 py-12">No data available</div>
+        <NoIntelData entityType={entityType} />
       </div>
     );
   }

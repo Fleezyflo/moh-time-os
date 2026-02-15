@@ -24,7 +24,7 @@ import {
   PatternCard,
   SkeletonCommandCenter,
 } from '../components';
-import { ErrorState } from '../../components/ErrorState';
+import { ErrorState, AllClear } from '../../components';
 
 export default function CommandCenter() {
   const {
@@ -208,14 +208,7 @@ export default function CommandCenter() {
       {/* All Clear State */}
       {criticalItems.length === 0 &&
         structuralPatterns.length === 0 &&
-        attentionProposals.length === 0 && (
-          <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-8 text-center">
-            <div className="text-green-400 text-lg">✓ All Clear</div>
-            <div className="text-slate-400 mt-2">
-              No critical items, structural patterns, or attention items
-            </div>
-          </div>
-        )}
+        attentionProposals.length === 0 && <AllClear />}
     </div>
   );
 }
