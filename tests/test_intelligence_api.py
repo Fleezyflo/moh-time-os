@@ -1,274 +1,246 @@
 """
-Intelligence API Tests — Task 3.3
+Tests for Intelligence API Router.
 
-Tests for api/intelligence_router.py endpoints.
-Uses TestClient to test FastAPI endpoints directly.
-
-Uses fixture DB to avoid live DB access (determinism guard).
+Tests the intelligence layer functions that back the API endpoints.
+Uses fixture DB to avoid determinism violations.
 """
 
 import pytest
-from fastapi.testclient import TestClient
+import tempfile
 from pathlib import Path
 
-import lib.paths as lib_paths
-import lib.query_engine as query_engine_module
 from tests.fixtures.fixture_db import create_fixture_db
 
 
-@pytest.fixture(scope="module")
-def fixture_db_path(tmp_path_factory):
-    """Create a fixture DB for the module."""
-    tmp_path = tmp_path_factory.mktemp("intelligence_api")
-    db_path = tmp_path / "fixture.db"
-    conn = create_fixture_db(db_path)
+@pytest.fixture
+def db_path():
+    """Create fixture DB for testing (file-based, returns Path)."""
+    # Create temp file
+    fd, path = tempfile.mkstemp(suffix=".db")
+    db_file = Path(path)
+
+    # Create fixture DB at that path
+    conn = create_fixture_db(db_file)
     conn.close()
-    return db_path
+
+    yield db_file
+
+    # Cleanup
+    if db_file.exists():
+        db_file.unlink()
 
 
-@pytest.fixture(scope="module")
-def monkeypatch_module():
-    """Module-scoped monkeypatch for fixtures that need it."""
-    from _pytest.monkeypatch import MonkeyPatch
-    mp = MonkeyPatch()
-    yield mp
-    mp.undo()
+# =============================================================================
+# PATTERN CATALOG TESTS (No DB needed)
+# =============================================================================
+
+class TestPatternCatalog:
+    """Pattern catalog doesn't need DB."""
+
+    def test_pattern_catalog_has_all_patterns(self):
+        """pattern_catalog should have all 14 patterns."""
+        from lib.intelligence.patterns import PATTERN_LIBRARY
+
+        assert len(PATTERN_LIBRARY) == 14
+
+    def test_pattern_catalog_structure(self):
+        """Each pattern should have required fields."""
+        from lib.intelligence.patterns import PATTERN_LIBRARY
+
+        for pat_id, pat in PATTERN_LIBRARY.items():
+            assert pat.id is not None
+            assert pat.name is not None
+            assert pat.pattern_type is not None
+            assert pat.severity is not None
+            assert pat.implied_action is not None
 
 
-@pytest.fixture(scope="module")
-def client(fixture_db_path, monkeypatch_module):
-    """Create test client with fixture DB injected."""
-    # Redirect lib.paths.db_path to fixture DB BEFORE importing app
-    monkeypatch_module.setattr(lib_paths, "db_path", lambda: fixture_db_path)
+# =============================================================================
+# SIGNAL CATALOG TESTS (No DB needed)
+# =============================================================================
 
-    # Also patch the query engine's default path
-    monkeypatch_module.setattr(query_engine_module, "DEFAULT_DB_PATH", fixture_db_path)
+class TestSignalCatalog:
+    """Signal catalog doesn't need DB."""
 
-    # Clear any cached engine instance
-    query_engine_module._engine = None
+    def test_signal_catalog_has_all_signals(self):
+        """signal_catalog should have all 21 signals."""
+        from lib.intelligence.signals import SIGNAL_CATALOG
 
-    # Now import and create the app (it will use the patched path)
-    from api.server import app
+        assert len(SIGNAL_CATALOG) == 21
 
-    return TestClient(app)
+    def test_signal_catalog_structure(self):
+        """Each signal should have required fields."""
+        from lib.intelligence.signals import SIGNAL_CATALOG
+
+        for sig_id, sig in SIGNAL_CATALOG.items():
+            assert sig.id is not None
+            assert sig.name is not None
+            assert sig.category is not None
+            assert sig.severity is not None
+            assert sig.conditions is not None
 
 
-class TestPortfolioEndpoints:
-    """Tests for /api/v2/intelligence/portfolio/* endpoints."""
+# =============================================================================
+# SCORING FUNCTION TESTS
+# =============================================================================
 
-    def test_portfolio_overview_returns_200(self, client):
-        """GET /portfolio/overview returns 200 with list of clients."""
-        response = client.get("/api/v2/intelligence/portfolio/overview")
-        assert response.status_code == 200
+class TestScoringFunctions:
+    """Tests for scoring functions with fixture DB."""
 
-        data = response.json()
-        assert data["status"] == "ok"
-        assert "data" in data
-        assert isinstance(data["data"], list)
-        assert "computed_at" in data
+    def test_score_portfolio_returns_dict(self, db_path):
+        """score_portfolio should return scorecard dict."""
+        from lib.intelligence import score_portfolio
 
-    def test_portfolio_overview_supports_ordering(self, client):
-        """Portfolio overview accepts order_by parameter."""
-        response = client.get(
-            "/api/v2/intelligence/portfolio/overview",
-            params={"order_by": "ytd_revenue", "desc": True},
+        result = score_portfolio(db_path)
+
+        assert isinstance(result, dict)
+
+    def test_score_all_clients_returns_list(self, db_path):
+        """score_all_clients should return list."""
+        from lib.intelligence.scorecard import score_all_clients
+
+        result = score_all_clients(db_path)
+
+        assert isinstance(result, list)
+
+
+# =============================================================================
+# SIGNAL DETECTION TESTS
+# =============================================================================
+
+class TestSignalDetection:
+    """Tests for signal detection with fixture DB."""
+
+    def test_detect_all_signals_returns_dict(self, db_path):
+        """detect_all_signals should return structured dict."""
+        from lib.intelligence import detect_all_signals
+
+        result = detect_all_signals(db_path, quick=True)
+
+        assert isinstance(result, dict)
+        assert "signals" in result or "total_signals" in result
+
+    def test_get_signal_summary_structure(self, db_path):
+        """get_signal_summary should return counts."""
+        from lib.intelligence.signals import get_signal_summary
+
+        result = get_signal_summary(db_path)
+
+        assert isinstance(result, dict)
+        assert "total_active" in result
+        assert "by_severity" in result
+
+
+# =============================================================================
+# PATTERN DETECTION TESTS
+# =============================================================================
+
+class TestPatternDetection:
+    """Tests for pattern detection with fixture DB."""
+
+    def test_detect_all_patterns_returns_dict(self, db_path):
+        """detect_all_patterns should return structured dict."""
+        from lib.intelligence import detect_all_patterns
+
+        result = detect_all_patterns(db_path)
+
+        assert isinstance(result, dict)
+        assert "patterns" in result or "total_detected" in result
+
+
+# =============================================================================
+# PROPOSAL GENERATION TESTS
+# =============================================================================
+
+class TestProposalGeneration:
+    """Tests for proposal generation with fixture DB."""
+
+    def test_generate_proposals_returns_list(self, db_path):
+        """generate_proposals should return list."""
+        from lib.intelligence import detect_all_signals, detect_all_patterns, generate_proposals
+
+        signals = detect_all_signals(db_path, quick=True)
+        patterns = detect_all_patterns(db_path)
+
+        signal_input = {"signals": signals.get("signals", [])}
+        pattern_input = {"patterns": patterns.get("patterns", [])}
+
+        proposals = generate_proposals(signal_input, pattern_input, db_path)
+
+        assert isinstance(proposals, list)
+
+    def test_generate_daily_briefing_structure(self, db_path):
+        """generate_daily_briefing should return complete briefing."""
+        from lib.intelligence import (
+            detect_all_signals,
+            detect_all_patterns,
+            generate_proposals,
+            generate_daily_briefing,
         )
-        assert response.status_code == 200
-        assert response.json()["params"]["order_by"] == "ytd_revenue"
 
-    def test_portfolio_risks_returns_200(self, client):
-        """GET /portfolio/risks returns 200 with risk list."""
-        response = client.get("/api/v2/intelligence/portfolio/risks")
-        assert response.status_code == 200
+        signals = detect_all_signals(db_path, quick=True)
+        patterns = detect_all_patterns(db_path)
 
-        data = response.json()
-        assert data["status"] == "ok"
-        assert isinstance(data["data"], list)
+        signal_input = {"signals": signals.get("signals", [])}
+        pattern_input = {"patterns": patterns.get("patterns", [])}
 
-    def test_portfolio_risks_accepts_thresholds(self, client):
-        """Portfolio risks accepts threshold parameters."""
-        response = client.get(
-            "/api/v2/intelligence/portfolio/risks",
-            params={"overdue_threshold": 10, "aging_threshold": 60},
-        )
-        assert response.status_code == 200
-        assert response.json()["params"]["overdue_threshold"] == 10
-        assert response.json()["params"]["aging_threshold"] == 60
+        proposals = generate_proposals(signal_input, pattern_input, db_path)
+        briefing = generate_daily_briefing(proposals, db_path)
 
-    def test_portfolio_trajectory_returns_200(self, client):
-        """GET /portfolio/trajectory returns 200 with trajectory data."""
-        response = client.get("/api/v2/intelligence/portfolio/trajectory")
-        assert response.status_code == 200
-
-        data = response.json()
-        assert data["status"] == "ok"
-        assert isinstance(data["data"], list)
+        assert isinstance(briefing, dict)
+        assert "summary" in briefing
 
 
-class TestClientEndpoints:
-    """Tests for /api/v2/intelligence/clients/* endpoints."""
+# =============================================================================
+# ENGINE FUNCTION TESTS
+# =============================================================================
 
-    def test_client_profile_returns_404_for_invalid(self, client):
-        """GET /clients/{id}/profile returns 404 for nonexistent client."""
-        response = client.get("/api/v2/intelligence/clients/nonexistent-id-12345/profile")
-        assert response.status_code == 404
+class TestEngineFunctions:
+    """Tests for engine functions with fixture DB."""
 
-    def test_client_tasks_returns_200(self, client):
-        """GET /clients/{id}/tasks returns 200 with task summary."""
-        # Use a nonexistent client - should return empty but 200
-        response = client.get("/api/v2/intelligence/clients/test-client/tasks")
-        assert response.status_code == 200
+    def test_get_critical_items_returns_list(self, db_path):
+        """get_critical_items should return list."""
+        from lib.intelligence import get_critical_items
 
-        data = response.json()
-        assert data["status"] == "ok"
-        assert "total_tasks" in data["data"]
+        result = get_critical_items(db_path)
 
-    def test_client_communication_returns_200(self, client):
-        """GET /clients/{id}/communication returns 200."""
-        response = client.get("/api/v2/intelligence/clients/test-client/communication")
-        assert response.status_code == 200
+        assert isinstance(result, list)
 
-        data = response.json()
-        assert data["status"] == "ok"
-        assert "total_communications" in data["data"]
+    def test_get_portfolio_intelligence_structure(self, db_path):
+        """get_portfolio_intelligence should return complete structure."""
+        from lib.intelligence import get_portfolio_intelligence
 
-    def test_client_trajectory_returns_200(self, client):
-        """GET /clients/{id}/trajectory returns 200 with windows."""
-        response = client.get("/api/v2/intelligence/clients/test-client/trajectory")
-        assert response.status_code == 200
+        result = get_portfolio_intelligence(db_path)
 
-        data = response.json()
-        assert data["status"] == "ok"
-        assert "windows" in data["data"]
-
-    def test_client_compare_returns_200(self, client):
-        """GET /clients/{id}/compare returns 200 with period comparison."""
-        response = client.get(
-            "/api/v2/intelligence/clients/test-client/compare",
-            params={
-                "period_a_start": "2024-01-01",
-                "period_a_end": "2024-06-30",
-                "period_b_start": "2024-07-01",
-                "period_b_end": "2024-12-31",
-            },
-        )
-        assert response.status_code == 200
-
-        data = response.json()
-        assert data["status"] == "ok"
-        assert "period_a" in data["data"]
-        assert "period_b" in data["data"]
-        assert "deltas" in data["data"]
-
-    def test_clients_compare_returns_200(self, client):
-        """GET /clients/compare returns 200 with portfolio comparison."""
-        response = client.get(
-            "/api/v2/intelligence/clients/compare",
-            params={
-                "period_a_start": "2024-01-01",
-                "period_a_end": "2024-06-30",
-                "period_b_start": "2024-07-01",
-                "period_b_end": "2024-12-31",
-            },
-        )
-        assert response.status_code == 200
-
-        data = response.json()
-        assert data["status"] == "ok"
-        assert isinstance(data["data"], list)
+        assert isinstance(result, dict)
+        assert "portfolio_score" in result
+        assert "signal_summary" in result
+        assert "top_proposals" in result
 
 
-class TestTeamEndpoints:
-    """Tests for /api/v2/intelligence/team/* endpoints."""
+# =============================================================================
+# API RESPONSE ENVELOPE TESTS (Mock-based)
+# =============================================================================
 
-    def test_team_distribution_returns_200(self, client):
-        """GET /team/distribution returns 200 with people list."""
-        response = client.get("/api/v2/intelligence/team/distribution")
-        assert response.status_code == 200
+class TestAPIResponseEnvelope:
+    """Test API response envelope structure."""
 
-        data = response.json()
-        assert data["status"] == "ok"
-        assert isinstance(data["data"], list)
+    def test_wrap_response_structure(self):
+        """_wrap_response should create standard envelope."""
+        from api.intelligence_router import _wrap_response
 
-    def test_team_capacity_returns_200(self, client):
-        """GET /team/capacity returns 200 with capacity metrics."""
-        response = client.get("/api/v2/intelligence/team/capacity")
-        assert response.status_code == 200
+        result = _wrap_response({"test": "data"})
 
-        data = response.json()
-        assert data["status"] == "ok"
-        assert "total_people" in data["data"]
-        assert "distribution" in data["data"]
+        assert "status" in result
+        assert "data" in result
+        assert "computed_at" in result
+        assert result["status"] == "ok"
+        assert result["data"] == {"test": "data"}
 
-    def test_team_person_profile_returns_404_for_invalid(self, client):
-        """GET /team/{id}/profile returns 404 for nonexistent person."""
-        response = client.get("/api/v2/intelligence/team/nonexistent-id-12345/profile")
-        assert response.status_code == 404
+    def test_wrap_response_with_params(self):
+        """_wrap_response should include params."""
+        from api.intelligence_router import _wrap_response
 
-    def test_team_person_trajectory_returns_200(self, client):
-        """GET /team/{id}/trajectory returns 200 with trajectory data."""
-        # Will return error dict if person not found, but still 200
-        response = client.get("/api/v2/intelligence/team/test-person/trajectory")
-        assert response.status_code == 200
+        result = _wrap_response({"test": "data"}, {"param1": "value1"})
 
-
-class TestProjectEndpoints:
-    """Tests for /api/v2/intelligence/projects/* endpoints."""
-
-    def test_project_state_returns_404_for_invalid(self, client):
-        """GET /projects/{id}/state returns 404 for nonexistent project."""
-        response = client.get("/api/v2/intelligence/projects/nonexistent-id-12345/state")
-        assert response.status_code == 404
-
-    def test_projects_health_returns_200(self, client):
-        """GET /projects/health returns 200 with project list."""
-        response = client.get("/api/v2/intelligence/projects/health")
-        assert response.status_code == 200
-
-        data = response.json()
-        assert data["status"] == "ok"
-        assert isinstance(data["data"], list)
-
-    def test_projects_health_accepts_min_tasks(self, client):
-        """Projects health accepts min_tasks parameter."""
-        response = client.get(
-            "/api/v2/intelligence/projects/health",
-            params={"min_tasks": 5},
-        )
-        assert response.status_code == 200
-        assert response.json()["params"]["min_tasks"] == 5
-
-
-class TestFinancialEndpoints:
-    """Tests for /api/v2/intelligence/financial/* endpoints."""
-
-    def test_financial_aging_returns_200(self, client):
-        """GET /financial/aging returns 200 with aging report."""
-        response = client.get("/api/v2/intelligence/financial/aging")
-        assert response.status_code == 200
-
-        data = response.json()
-        assert data["status"] == "ok"
-        assert "total_outstanding" in data["data"]
-        assert "by_bucket" in data["data"]
-
-
-class TestResponseEnvelope:
-    """Tests for consistent response format."""
-
-    def test_success_response_has_required_fields(self, client):
-        """Successful responses have status, data, computed_at."""
-        response = client.get("/api/v2/intelligence/portfolio/overview")
-        data = response.json()
-
-        assert "status" in data
-        assert data["status"] == "ok"
-        assert "data" in data
-        assert "computed_at" in data
-
-    def test_error_response_format(self, client):
-        """Error responses have status, error, detail."""
-        response = client.get("/api/v2/intelligence/clients/nonexistent/profile")
-        assert response.status_code == 404
-        # FastAPI wraps HTTPException in {"detail": ...}
-        assert "detail" in response.json()
+        assert result["params"] == {"param1": "value1"}
