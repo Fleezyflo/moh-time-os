@@ -106,8 +106,11 @@ def _ensure_snapshot_dir():
     SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
 
 
+SNAPSHOT_RETENTION = 5  # Keep last N snapshots
+
+
 def save_snapshot(snapshot: IntelligenceSnapshot) -> Path:
-    """Save a snapshot to disk."""
+    """Save a snapshot to disk and cleanup old ones."""
     _ensure_snapshot_dir()
     
     filename = f"snapshot_{snapshot.timestamp.replace(':', '-').replace('.', '-')}.json"
@@ -116,7 +119,22 @@ def save_snapshot(snapshot: IntelligenceSnapshot) -> Path:
     with open(path, 'w') as f:
         json.dump(asdict(snapshot), f, indent=2)
     
+    # Cleanup: keep only last N snapshots
+    _cleanup_old_snapshots()
+    
     return path
+
+
+def _cleanup_old_snapshots():
+    """Remove old snapshots, keeping only the most recent N."""
+    snapshots = sorted(SNAPSHOT_DIR.glob("snapshot_*.json"), reverse=True)
+    
+    for old in snapshots[SNAPSHOT_RETENTION:]:
+        try:
+            old.unlink()
+            logger.debug(f"Cleaned up old snapshot: {old.name}")
+        except Exception as e:
+            logger.warning(f"Failed to delete old snapshot {old.name}: {e}")
 
 
 def load_latest_snapshot() -> Optional[IntelligenceSnapshot]:
