@@ -92,3 +92,9 @@ dashboard/
 .hypothesis/
 evidence/
 coverage.json
+
+# Debug scripts
+lib/collectors/debug_*.py
+
+# Working notes
+/task*.md
