@@ -5,3 +5,4 @@ xero_contacts.json
 
 # Cache files
 *.cache
+.blob_key
