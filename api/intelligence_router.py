@@ -597,6 +597,43 @@ def signal_history(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@intelligence_router.get("/signals/export")
+def export_signals():
+    """
+    Export all current signal detections as CSV for threshold tuning review.
+
+    Returns CSV data with signal_id, severity, entity, metric,
+    current_value, threshold_value, etc.
+    """
+    try:
+        from lib.intelligence.signals import export_signals_for_review
+        from fastapi.responses import PlainTextResponse
+
+        csv_data = export_signals_for_review()
+        return PlainTextResponse(
+            content=csv_data,
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=signals_export.csv"}
+        )
+    except Exception as e:
+        logger.exception("export_signals failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@intelligence_router.get("/signals/thresholds")
+def get_thresholds():
+    """
+    Get current threshold configuration for all signals.
+    """
+    try:
+        from lib.intelligence.signals import load_thresholds
+        data = load_thresholds()
+        return _wrap_response(data)
+    except Exception as e:
+        logger.exception("get_thresholds failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # =============================================================================
 # PATTERNS ENDPOINTS
 # =============================================================================

@@ -633,6 +633,133 @@ if _validation_errors:
 
 
 # =============================================================================
+# THRESHOLD CONFIGURATION - Load from thresholds.yaml
+# =============================================================================
+
+import yaml
+from pathlib import Path as _ThresholdPath
+
+THRESHOLDS_PATH = _ThresholdPath(__file__).parent / "thresholds.yaml"
+
+
+def load_thresholds() -> dict:
+    """Load threshold configuration from YAML file."""
+    if not THRESHOLDS_PATH.exists():
+        return {}
+    
+    try:
+        with open(THRESHOLDS_PATH) as f:
+            config = yaml.safe_load(f)
+        return config.get("signals", {})
+    except Exception as e:
+        import warnings
+        warnings.warn(f"Failed to load thresholds.yaml: {e}")
+        return {}
+
+
+def apply_thresholds(thresholds: dict = None):
+    """
+    Apply threshold config to signal definitions.
+    
+    This patches the conditions dict in each SignalDefinition
+    with values from the config file.
+    """
+    if thresholds is None:
+        thresholds = load_thresholds()
+    
+    if not thresholds:
+        return
+    
+    for sig_id, config in thresholds.items():
+        if sig_id not in SIGNAL_CATALOG:
+            continue
+        
+        signal_def = SIGNAL_CATALOG[sig_id]
+        conditions = signal_def.conditions
+        
+        # Apply threshold values
+        if "value" in config:
+            conditions["value"] = config["value"]
+        if "threshold_ratio" in config:
+            conditions["threshold_ratio"] = config["threshold_ratio"]
+        if "operator" in config:
+            conditions["operator"] = config["operator"]
+        if "n" in config:
+            conditions["n"] = config["n"]
+
+
+def get_threshold(signal_id: str, key: str = "value"):
+    """Get a specific threshold value for a signal."""
+    thresholds = load_thresholds()
+    if signal_id in thresholds:
+        return thresholds[signal_id].get(key)
+    return None
+
+
+def export_signals_for_review(output_path: str = None, quick: bool = True) -> str:
+    """
+    Export current signal detections for threshold tuning review.
+    
+    Returns CSV data with signal detections and their evidence,
+    useful for reviewing which signals are noise vs real issues.
+    
+    Args:
+        output_path: Optional file path to write CSV
+        quick: If True, use fast signal detection (default)
+    """
+    import csv
+    import io
+    from datetime import datetime
+    
+    # Detect signals
+    result = detect_all_signals(quick=quick)
+    
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # Header
+    writer.writerow([
+        'signal_id', 'signal_name', 'severity', 'entity_type', 
+        'entity_id', 'entity_name', 'metric', 'current_value',
+        'threshold_value', 'detected_at', 'notes'
+    ])
+    
+    # Data rows
+    for sig in result['signals']:
+        evidence = sig.get('evidence', {})
+        writer.writerow([
+            sig.get('signal_id'),
+            sig.get('signal_name'),
+            sig.get('severity'),
+            sig.get('entity_type'),
+            sig.get('entity_id'),
+            sig.get('entity_name'),
+            evidence.get('metric'),
+            evidence.get('current_value'),
+            evidence.get('threshold_value'),
+            sig.get('detected_at'),
+            ''  # Notes column for manual review
+        ])
+    
+    csv_data = output.getvalue()
+    
+    if output_path:
+        with open(output_path, 'w') as f:
+            f.write(csv_data)
+    
+    return csv_data
+
+
+def reload_thresholds():
+    """Reload thresholds from config file (call after editing thresholds.yaml)."""
+    apply_thresholds()
+
+
+# Apply thresholds from config on module load
+apply_thresholds()
+
+
+# =============================================================================
 # SIGNAL DETECTION - Condition Evaluators
 # =============================================================================
 
