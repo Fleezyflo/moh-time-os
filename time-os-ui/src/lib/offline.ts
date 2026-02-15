@@ -1,17 +1,10 @@
 /**
- * Offline-first + Degraded Mode Support
+ * Degraded Mode Support
  *
  * Features:
- * - TanStack Query persistence with versioned cache key
  * - Degraded mode detection and UI patterns
- * - Retry controls with request_id tracking
+ * - Network status tracking
  */
-
-import { QueryClient } from '@tanstack/react-query';
-
-// Cache version - increment to invalidate all cached data
-const CACHE_VERSION = 1;
-const CACHE_KEY = `moh-time-os-query-cache-v${CACHE_VERSION}`;
 
 // ============================================================================
 // Degraded Mode State
@@ -86,43 +79,6 @@ export function initOfflineListeners(): () => void {
     window.removeEventListener('online', handleOnline);
     window.removeEventListener('offline', handleOffline);
   };
-}
-
-// ============================================================================
-// Cache Persistence
-// ============================================================================
-
-export function persistQueryCache(queryClient: QueryClient): void {
-  try {
-    const state = queryClient.getQueryCache().getAll();
-    const serializable = state.map((query) => ({
-      queryKey: query.queryKey,
-      state: query.state,
-    }));
-    localStorage.setItem(CACHE_KEY, JSON.stringify(serializable));
-  } catch {
-    // Storage quota exceeded or other error
-  }
-}
-
-export function restoreQueryCache(_queryClient: QueryClient): void {
-  try {
-    const cached = localStorage.getItem(CACHE_KEY);
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      // Note: Full restoration would require hydration logic
-      // This is a simplified version
-      // eslint-disable-next-line no-console
-      console.log(`[Offline] Restored ${parsed.length} cached queries`);
-    }
-  } catch {
-    // Invalid cache or parse error
-    localStorage.removeItem(CACHE_KEY);
-  }
-}
-
-export function clearQueryCache(): void {
-  localStorage.removeItem(CACHE_KEY);
 }
 
 // ============================================================================
