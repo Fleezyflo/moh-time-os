@@ -545,3 +545,265 @@ def get_score_distribution(entity_type: EntityType, db_path: Optional[Path] = No
     }
 
 
+# =============================================================================
+# SCORE HISTORY (Persistence for Trend Analysis)
+# =============================================================================
+
+import json
+import sqlite3
+from lib import paths
+
+
+def record_score(scorecard: dict, db_path: Optional[Path] = None) -> bool:
+    """
+    Record a scorecard to history for trend analysis.
+    
+    Uses REPLACE to ensure one record per entity per day.
+    Call this after computing scores to build historical data.
+    
+    Args:
+        scorecard: A scorecard dict from score_* functions
+        db_path: Optional path to database
+        
+    Returns:
+        True if recorded successfully, False otherwise
+    """
+    if not scorecard or scorecard.get("composite_score") is None:
+        return False
+    
+    db = db_path or paths.db_path()
+    now = datetime.now()
+    
+    try:
+        conn = sqlite3.connect(str(db))
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            INSERT OR REPLACE INTO score_history 
+            (entity_type, entity_id, composite_score, dimensions_json, 
+             data_completeness, recorded_at, recorded_date)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            scorecard.get("entity_type"),
+            scorecard.get("entity_id"),
+            scorecard.get("composite_score"),
+            json.dumps(scorecard.get("dimensions", [])),
+            scorecard.get("data_completeness", 0),
+            now.isoformat(),
+            now.strftime("%Y-%m-%d"),
+        ))
+        
+        conn.commit()
+        conn.close()
+        return True
+        
+    except Exception as e:
+        logger.warning(f"Failed to record score: {e}")
+        return False
+
+
+def record_all_scores(db_path: Optional[Path] = None) -> dict:
+    """
+    Record scores for all entities.
+    
+    This should be called once per day (e.g., via cron) to build
+    historical trend data.
+    
+    Returns:
+        dict with counts of recorded scores by entity type
+    """
+    results = {
+        "clients": 0,
+        "projects": 0,
+        "persons": 0,
+        "portfolio": 0,
+        "errors": [],
+    }
+    
+    try:
+        # Score and record all clients
+        for scorecard in score_all_clients(db_path):
+            if record_score(scorecard, db_path):
+                results["clients"] += 1
+        
+        # Score and record all projects
+        for scorecard in score_all_projects(db_path):
+            if record_score(scorecard, db_path):
+                results["projects"] += 1
+        
+        # Score and record all persons
+        for scorecard in score_all_persons(db_path):
+            if record_score(scorecard, db_path):
+                results["persons"] += 1
+        
+        # Score and record portfolio
+        portfolio_scorecard = score_portfolio(db_path)
+        if record_score(portfolio_scorecard, db_path):
+            results["portfolio"] = 1
+            
+    except Exception as e:
+        logger.error(f"Error in record_all_scores: {e}")
+        results["errors"].append(str(e))
+    
+    logger.info(f"Recorded scores: {results}")
+    return results
+
+
+def get_score_trend(
+    entity_type: str,
+    entity_id: str,
+    days: int = 30,
+    db_path: Optional[Path] = None,
+) -> dict:
+    """
+    Get score trend for an entity over time.
+    
+    Args:
+        entity_type: 'client', 'project', 'person', or 'portfolio'
+        entity_id: The entity's ID
+        days: Number of days of history to retrieve
+        db_path: Optional path to database
+        
+    Returns:
+        dict with:
+        - entity_type, entity_id
+        - history: list of {date, score, classification} ordered by date
+        - trend: 'improving', 'declining', 'stable', or 'insufficient_data'
+        - change_pct: percentage change from first to last score
+        - current_score: most recent score
+        - period_high: highest score in period
+        - period_low: lowest score in period
+    """
+    db = db_path or paths.db_path()
+    cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+    
+    try:
+        conn = sqlite3.connect(str(db))
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT recorded_date, composite_score, dimensions_json, data_completeness
+            FROM score_history
+            WHERE entity_type = ? AND entity_id = ? AND recorded_date >= ?
+            ORDER BY recorded_date ASC
+        """, (entity_type, entity_id, cutoff))
+        
+        rows = cursor.fetchall()
+        conn.close()
+        
+        if not rows:
+            return {
+                "entity_type": entity_type,
+                "entity_id": entity_id,
+                "days": days,
+                "history": [],
+                "trend": "insufficient_data",
+                "change_pct": None,
+                "current_score": None,
+                "period_high": None,
+                "period_low": None,
+            }
+        
+        history = []
+        scores = []
+        
+        for row in rows:
+            score = row["composite_score"]
+            scores.append(score)
+            history.append({
+                "date": row["recorded_date"],
+                "score": round(score, 1),
+                "classification": classify_score(score),
+            })
+        
+        # Compute trend
+        first_score = scores[0]
+        last_score = scores[-1]
+        
+        if len(scores) < 3:
+            trend = "insufficient_data"
+        elif last_score > first_score + 5:
+            trend = "improving"
+        elif last_score < first_score - 5:
+            trend = "declining"
+        else:
+            trend = "stable"
+        
+        change_pct = ((last_score - first_score) / first_score * 100) if first_score > 0 else 0
+        
+        return {
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+            "days": days,
+            "history": history,
+            "trend": trend,
+            "change_pct": round(change_pct, 1),
+            "current_score": round(last_score, 1),
+            "period_high": round(max(scores), 1),
+            "period_low": round(min(scores), 1),
+            "data_points": len(scores),
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting score trend: {e}")
+        return {
+            "entity_type": entity_type,
+            "entity_id": entity_id,
+            "days": days,
+            "history": [],
+            "trend": "error",
+            "error": str(e),
+        }
+
+
+def get_score_history_summary(db_path: Optional[Path] = None) -> dict:
+    """
+    Get summary of score history data.
+    
+    Useful for monitoring data collection health.
+    """
+    db = db_path or paths.db_path()
+    
+    try:
+        conn = sqlite3.connect(str(db))
+        cursor = conn.cursor()
+        
+        # Total records
+        cursor.execute("SELECT COUNT(*) FROM score_history")
+        total_records = cursor.fetchone()[0]
+        
+        # Records by entity type
+        cursor.execute("""
+            SELECT entity_type, COUNT(*) as count, 
+                   MIN(recorded_date) as first_date,
+                   MAX(recorded_date) as last_date
+            FROM score_history
+            GROUP BY entity_type
+        """)
+        by_type = {
+            row[0]: {"count": row[1], "first_date": row[2], "last_date": row[3]}
+            for row in cursor.fetchall()
+        }
+        
+        # Recent activity
+        cursor.execute("""
+            SELECT recorded_date, COUNT(*) as count
+            FROM score_history
+            WHERE recorded_date >= date('now', '-7 days')
+            GROUP BY recorded_date
+            ORDER BY recorded_date DESC
+        """)
+        recent_days = [{"date": row[0], "count": row[1]} for row in cursor.fetchall()]
+        
+        conn.close()
+        
+        return {
+            "total_records": total_records,
+            "by_entity_type": by_type,
+            "recent_days": recent_days,
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting score history summary: {e}")
+        return {"error": str(e)}

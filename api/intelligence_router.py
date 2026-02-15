@@ -793,3 +793,173 @@ def portfolio_score():
     except Exception as e:
         logger.exception("portfolio_score failed")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# SCORE HISTORY ENDPOINTS (Trend Analysis)
+# =============================================================================
+
+
+@intelligence_router.get("/scores/{entity_type}/{entity_id}/history")
+def score_history(
+    entity_type: str,
+    entity_id: str,
+    days: int = Query(30, description="Number of days of history"),
+):
+    """
+    Get score history for an entity.
+
+    Returns historical scores with trend analysis:
+    - history: list of {date, score, classification}
+    - trend: 'improving', 'declining', 'stable', or 'insufficient_data'
+    - change_pct: percentage change over the period
+    - current_score, period_high, period_low
+    """
+    valid_types = {"client", "project", "person", "portfolio"}
+    if entity_type not in valid_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid entity_type. Must be one of: {valid_types}"
+        )
+
+    try:
+        from lib.intelligence.scorecard import get_score_trend
+        data = get_score_trend(entity_type, entity_id, days=days)
+        return _wrap_response(data, {"entity_type": entity_type, "entity_id": entity_id, "days": days})
+    except Exception as e:
+        logger.exception("score_history failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@intelligence_router.get("/scores/history/summary")
+def score_history_summary():
+    """
+    Get summary of score history data collection.
+
+    Shows total records, breakdown by entity type, and recent recording activity.
+    Useful for monitoring data health.
+    """
+    try:
+        from lib.intelligence.scorecard import get_score_history_summary
+        data = get_score_history_summary()
+        return _wrap_response(data)
+    except Exception as e:
+        logger.exception("score_history_summary failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@intelligence_router.post("/scores/record")
+def record_scores():
+    """
+    Record current scores for all entities.
+
+    This endpoint triggers score recording for trend tracking.
+    Should be called once per day (e.g., via cron).
+
+    Returns counts of recorded scores by entity type.
+    """
+    try:
+        from lib.intelligence.scorecard import record_all_scores
+        data = record_all_scores()
+        return _wrap_response(data)
+    except Exception as e:
+        logger.exception("record_scores failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# ENTITY INTELLIGENCE ENDPOINTS (Deep Dive)
+# =============================================================================
+
+
+@intelligence_router.get("/entity/client/{client_id}")
+def client_intelligence(client_id: str):
+    """
+    Get complete intelligence for a client.
+
+    Returns everything the system knows:
+    - Scorecard
+    - Active signals
+    - Signal history
+    - Trajectory
+    - Related proposals
+    """
+    try:
+        from lib.intelligence import get_client_intelligence
+        data = get_client_intelligence(client_id)
+        return _wrap_response(data, {"client_id": client_id})
+    except Exception as e:
+        logger.exception("client_intelligence failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@intelligence_router.get("/entity/person/{person_id}")
+def person_intelligence(person_id: str):
+    """
+    Get complete intelligence for a person.
+
+    Returns everything the system knows:
+    - Scorecard
+    - Active signals
+    - Signal history
+    - Operational profile
+    """
+    try:
+        from lib.intelligence import get_person_intelligence
+        data = get_person_intelligence(person_id)
+        return _wrap_response(data, {"person_id": person_id})
+    except Exception as e:
+        logger.exception("person_intelligence failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@intelligence_router.get("/entity/portfolio")
+def portfolio_intelligence():
+    """
+    Get portfolio-level intelligence.
+
+    Lighter than full snapshot:
+    - Portfolio score
+    - Signal summary
+    - Structural patterns
+    - Top proposals
+    """
+    try:
+        from lib.intelligence import get_portfolio_intelligence
+        data = get_portfolio_intelligence()
+        return _wrap_response(data)
+    except Exception as e:
+        logger.exception("portfolio_intelligence failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# CHANGE DETECTION ENDPOINTS
+# =============================================================================
+
+
+@intelligence_router.get("/changes")
+def detect_changes():
+    """
+    Run change detection and return delta report.
+
+    Compares current state to last saved snapshot.
+    Returns new/cleared signals, new proposals, score changes.
+    """
+    try:
+        from lib.intelligence import generate_intelligence_snapshot, run_change_detection
+
+        # Get current state
+        snapshot = generate_intelligence_snapshot()
+
+        # Run change detection
+        changes = run_change_detection(snapshot)
+
+        return _wrap_response({
+            "changes": changes.to_dict(),
+            "summary": changes.summary,
+            "has_changes": changes.has_changes,
+        })
+    except Exception as e:
+        logger.exception("detect_changes failed")
+        raise HTTPException(status_code=500, detail=str(e))
