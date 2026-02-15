@@ -50,6 +50,7 @@ class SignalDefinition:
     cooldown_hours: int = 24          # Don't re-fire within this window
     escalation_after_days: int = 0    # Escalate severity after N days (0 = no escalation)
     escalation_to: Optional[SignalSeverity] = None  # Target severity for escalation
+    fast_eval: bool = True            # Can be evaluated quickly (no per-entity queries)
 
 
 @dataclass
@@ -96,6 +97,7 @@ SIG_CLIENT_COMM_DROP = SignalDefinition(
     implied_action="Schedule a check-in call to understand if something has changed.",
     evidence_template="Communication volume in the last 30 days ({current}) is {pct_of_baseline}% of the 90-day average ({baseline}).",
     cooldown_hours=72,
+    fast_eval=False,  # Requires 2 period queries per client
 )
 
 SIG_CLIENT_OVERDUE_TASKS = SignalDefinition(
@@ -156,6 +158,7 @@ SIG_CLIENT_SCORE_CRITICAL = SignalDefinition(
     implied_action="Account review meeting. Understand root causes across all dimensions.",
     evidence_template="Client composite score is {score} (critical threshold: 30).",
     cooldown_hours=24,
+    fast_eval=False,  # Requires running full scoring per client
 )
 
 SIG_PROJECT_STALLED = SignalDefinition(
@@ -647,18 +650,122 @@ def _get_engine(db_path: Optional[Path] = None):
     return QueryEngine(db_path) if db_path else QueryEngine()
 
 
+# =============================================================================
+# DETECTION CACHE - Avoid repeated queries during a single detection run
+# =============================================================================
+
+class DetectionCache:
+    """
+    Cache for pre-loaded data during signal detection.
+    
+    Avoids O(n²) behavior by loading data once and indexing for O(1) lookup.
+    Create one instance per detect_all_signals() call.
+    """
+    def __init__(self, db_path: Optional[Path] = None):
+        self.engine = _get_engine(db_path)
+        self.db_path = db_path
+        self._clients = None
+        self._clients_by_id = None
+        self._projects = None
+        self._projects_by_id = None
+        self._persons = None
+        self._persons_by_id = None
+        self._task_summaries = {}
+        self._metrics_cache = {}
+        self._overdue_counts = None  # Batch-loaded overdue task counts
+    
+    @property
+    def clients(self) -> list:
+        if self._clients is None:
+            self._clients = self.engine.client_portfolio_overview()
+            self._clients_by_id = {c.get("client_id"): c for c in self._clients}
+        return self._clients
+    
+    def get_client(self, client_id: str) -> dict | None:
+        _ = self.clients  # Ensure loaded
+        return self._clients_by_id.get(client_id)
+    
+    @property
+    def projects(self) -> list:
+        if self._projects is None:
+            self._projects = self.engine.projects_by_health(min_tasks=1)
+            self._projects_by_id = {p.get("project_id"): p for p in self._projects}
+        return self._projects
+    
+    def get_project(self, project_id: str) -> dict | None:
+        _ = self.projects  # Ensure loaded
+        return self._projects_by_id.get(project_id)
+    
+    @property
+    def persons(self) -> list:
+        if self._persons is None:
+            self._persons = self.engine.resource_load_distribution()
+            self._persons_by_id = {p.get("person_id"): p for p in self._persons}
+        return self._persons
+    
+    def get_person(self, person_id: str) -> dict | None:
+        _ = self.persons  # Ensure loaded
+        return self._persons_by_id.get(person_id)
+    
+    def get_task_summary(self, client_id: str) -> dict:
+        if client_id not in self._task_summaries:
+            self._task_summaries[client_id] = self.engine.client_task_summary(client_id)
+        return self._task_summaries[client_id]
+    
+    def get_overdue_count(self, client_id: str) -> int:
+        """Get overdue task count for a client (batch loaded on first access)."""
+        if self._overdue_counts is None:
+            self._load_overdue_counts()
+        return self._overdue_counts.get(client_id, 0)
+    
+    def _load_overdue_counts(self):
+        """Batch load overdue task counts for all clients in one query."""
+        import sqlite3
+        from lib import paths
+        
+        db = self.db_path or paths.db_path()
+        conn = sqlite3.connect(str(db))
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT client_id, COUNT(*) as overdue_count
+            FROM v_task_with_client
+            WHERE due_date < date('now') 
+              AND task_status NOT IN ('done', 'complete', 'completed')
+              AND client_id IS NOT NULL
+            GROUP BY client_id
+        """)
+        
+        self._overdue_counts = {row["client_id"]: row["overdue_count"] for row in cursor.fetchall()}
+        conn.close()
+    
+    def get_client_metrics(self, client_id: str, since: str, until: str) -> dict:
+        key = f"{client_id}:{since}:{until}"
+        if key not in self._metrics_cache:
+            self._metrics_cache[key] = self.engine.client_metrics_in_period(client_id, since, until)
+        return self._metrics_cache[key]
+
+
 def _evaluate_threshold(
     condition: dict, 
     entity_type: str,
     entity_id: str, 
-    db_path: Optional[Path] = None
+    db_path: Optional[Path] = None,
+    cache: DetectionCache = None
 ) -> Optional[dict]:
     """
     Evaluate a threshold condition.
     
     Returns evidence dict if triggered, None if not.
+    
+    If cache is provided, uses cached data for O(1) lookups.
+    Otherwise falls back to direct queries (slower).
     """
-    engine = _get_engine(db_path)
+    # Use cache if available, otherwise create engine for fallback
+    if cache is None:
+        cache = DetectionCache(db_path)
+    
     metric = condition.get("metric")
     operator = condition.get("operator", "gt")
     threshold = condition.get("value")
@@ -670,9 +777,8 @@ def _evaluate_threshold(
     
     try:
         if entity_type == "client":
-            # Get client data
-            portfolio = engine.client_portfolio_overview()
-            client = next((c for c in portfolio if c.get("client_id") == entity_id), None)
+            # Get client data from cache (O(1) lookup)
+            client = cache.get_client(entity_id)
             
             if not client:
                 return None
@@ -683,27 +789,30 @@ def _evaluate_threshold(
                 since_90 = (datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d")
                 until = datetime.now().strftime("%Y-%m-%d")
                 
-                recent = engine.client_metrics_in_period(entity_id, since_30, until)
-                baseline_period = engine.client_metrics_in_period(entity_id, since_90, since_30)
+                recent = cache.get_client_metrics(entity_id, since_30, until)
+                baseline_period = cache.get_client_metrics(entity_id, since_90, since_30)
                 
                 current_value = recent.get("communications_count", 0)
                 # Normalize baseline to 30-day equivalent
                 baseline_value = baseline_period.get("communications_count", 0) / 2
                 
             elif metric == "overdue_tasks":
-                task_summary = engine.client_task_summary(entity_id)
-                current_value = task_summary.get("overdue_tasks", 0)
+                # Use batch-loaded overdue counts (single query for all clients)
+                current_value = cache.get_overdue_count(entity_id)
                 
             elif metric == "composite_score":
                 from lib.intelligence.scorecard import score_client
-                scorecard = score_client(entity_id, db_path)
+                scorecard = score_client(entity_id, cache.db_path)
                 current_value = scorecard.get("composite_score")
                 
             elif metric in client:
                 current_value = client.get(metric, 0)
                 
         elif entity_type == "project":
-            project = engine.project_operational_state(entity_id)
+            project = cache.get_project(entity_id)
+            if not project:
+                # Fallback for projects not in health list
+                project = cache.engine.project_operational_state(entity_id)
             if not project:
                 return None
             
@@ -715,14 +824,16 @@ def _evaluate_threshold(
                 current_value = project.get(metric, 0)
                 
         elif entity_type == "person":
-            person = engine.person_operational_profile(entity_id)
+            person = cache.get_person(entity_id)
+            if not person:
+                person = cache.engine.person_operational_profile(entity_id)
             if not person:
                 return None
             current_value = person.get(metric, 0)
             
         elif entity_type == "portfolio":
             if metric == "top_n_client_share":
-                portfolio = engine.client_portfolio_overview()
+                portfolio = cache.clients  # Use cached clients
                 total = sum(c.get("total_invoiced", 0) for c in portfolio)
                 if total > 0:
                     sorted_clients = sorted(portfolio, key=lambda x: x.get("total_invoiced", 0), reverse=True)
@@ -733,7 +844,7 @@ def _evaluate_threshold(
                     current_value = 0
                     
             elif metric == "avg_load_score":
-                capacity = engine.team_capacity_overview()
+                capacity = cache.engine.team_capacity_overview()
                 # Compute average load from distribution
                 dist = capacity.get("distribution", [])
                 if dist:
@@ -1009,12 +1120,16 @@ def evaluate_signal(
     entity_type: str,
     entity_id: str,
     db_path: Optional[Path] = None,
-    _evaluated: Optional[dict] = None
+    _evaluated: Optional[dict] = None,
+    cache: DetectionCache = None
 ) -> Optional[dict]:
     """
     Evaluate a single signal definition for a specific entity.
     
     Returns None if not triggered, or a detected signal dict.
+    
+    Args:
+        cache: Optional DetectionCache for fast lookups (avoids O(n²) behavior)
     """
     # Check entity type matches
     if signal_def.entity_type != entity_type:
@@ -1035,7 +1150,7 @@ def evaluate_signal(
     
     try:
         if signal_def.category == SignalCategory.THRESHOLD:
-            evidence = _evaluate_threshold(condition, entity_type, entity_id, db_path)
+            evidence = _evaluate_threshold(condition, entity_type, entity_id, db_path, cache)
         elif signal_def.category == SignalCategory.TREND:
             evidence = _evaluate_trend(condition, entity_type, entity_id, db_path)
         elif signal_def.category == SignalCategory.ANOMALY:
@@ -1097,7 +1212,9 @@ def detect_signals_for_entity(
     entity_type: str,
     entity_id: str,
     db_path: Optional[Path] = None,
-    categories: Optional[list[SignalCategory]] = None
+    categories: Optional[list[SignalCategory]] = None,
+    cache: DetectionCache = None,
+    fast_only: bool = False
 ) -> list[dict]:
     """
     Run signals applicable to this entity type.
@@ -1108,6 +1225,8 @@ def detect_signals_for_entity(
         db_path: Optional database path
         categories: Optional list of categories to evaluate (default: all)
                    For fast scanning, use [SignalCategory.THRESHOLD]
+        cache: Optional DetectionCache for fast lookups
+        fast_only: If True, skip signals that require per-entity queries
     
     Returns list of triggered signals, sorted by severity (CRITICAL first).
     """
@@ -1117,11 +1236,15 @@ def detect_signals_for_entity(
     if categories is not None:
         signals = [s for s in signals if s.category in categories]
     
+    # Filter by fast_eval if fast_only is True
+    if fast_only:
+        signals = [s for s in signals if s.fast_eval]
+    
     detected = []
     _evaluated = {}
     
     for signal_def in signals:
-        result = evaluate_signal(signal_def, entity_type, entity_id, db_path, _evaluated)
+        result = evaluate_signal(signal_def, entity_type, entity_id, db_path, _evaluated, cache)
         if result:
             detected.append(result)
     
@@ -1137,14 +1260,14 @@ def detect_all_client_signals(
     categories: Optional[list[SignalCategory]] = None
 ) -> list[dict]:
     """Run client signals against all clients."""
-    engine = _get_engine(db_path)
-    clients = engine.client_portfolio_overview()
+    # Use cache for efficient batch processing
+    cache = DetectionCache(db_path)
     
     all_detected = []
-    for client in clients:
+    for client in cache.clients:
         client_id = client.get("client_id")
         if client_id:
-            detected = detect_signals_for_entity("client", client_id, db_path, categories)
+            detected = detect_signals_for_entity("client", client_id, db_path, categories, cache)
             for d in detected:
                 d["entity_name"] = client.get("client_name", "Unknown")
             all_detected.extend(detected)
@@ -1166,8 +1289,12 @@ def detect_all_signals(
         categories: Optional list of categories to evaluate
     
     Returns comprehensive detection results.
+    
+    Performance: Uses DetectionCache to avoid O(n²) behavior.
+    Data is loaded once and indexed for O(1) lookups.
     """
-    engine = _get_engine(db_path)
+    # Create cache for this detection run - loads data once
+    cache = DetectionCache(db_path)
     all_detected = []
     
     # Determine which categories to evaluate
@@ -1178,32 +1305,32 @@ def detect_all_signals(
     else:
         cats = None  # All categories
     
-    # Clients
-    clients = engine.client_portfolio_overview()
-    for client in clients:
+    # In quick mode, skip slow signals (fast_only=True)
+    fast_only = quick
+    
+    # Clients - use cached data
+    for client in cache.clients:
         client_id = client.get("client_id")
         if client_id:
-            detected = detect_signals_for_entity("client", client_id, db_path, cats)
+            detected = detect_signals_for_entity("client", client_id, db_path, cats, cache, fast_only)
             for d in detected:
                 d["entity_name"] = client.get("client_name", "Unknown")
             all_detected.extend(detected)
     
-    # Projects
-    projects = engine.projects_by_health(min_tasks=1)
-    for project in projects:
+    # Projects - use cached data
+    for project in cache.projects:
         project_id = project.get("project_id")
         if project_id:
-            detected = detect_signals_for_entity("project", project_id, db_path, cats)
+            detected = detect_signals_for_entity("project", project_id, db_path, cats, cache, fast_only)
             for d in detected:
                 d["entity_name"] = project.get("project_name", "Unknown")
             all_detected.extend(detected)
     
-    # Persons
-    people = engine.resource_load_distribution()
-    for person in people:
+    # Persons - use cached data
+    for person in cache.persons:
         person_id = person.get("person_id")
         if person_id:
-            detected = detect_signals_for_entity("person", person_id, db_path, cats)
+            detected = detect_signals_for_entity("person", person_id, db_path, cats, cache, fast_only)
             for d in detected:
                 d["entity_name"] = person.get("person_name", "Unknown")
             all_detected.extend(detected)
@@ -1212,9 +1339,11 @@ def detect_all_signals(
     portfolio_signals = get_signals_by_entity_type("portfolio")
     if cats is not None:
         portfolio_signals = [s for s in portfolio_signals if s.category in cats]
+    if fast_only:
+        portfolio_signals = [s for s in portfolio_signals if s.fast_eval]
     _evaluated = {}
     for signal_def in portfolio_signals:
-        result = evaluate_signal(signal_def, "portfolio", "portfolio", db_path, _evaluated)
+        result = evaluate_signal(signal_def, "portfolio", "portfolio", db_path, _evaluated, cache)
         if result:
             result["entity_name"] = "Portfolio"
             all_detected.append(result)
