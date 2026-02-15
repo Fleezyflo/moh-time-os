@@ -442,3 +442,354 @@ def financial_aging():
     except Exception as e:
         logger.exception("financial_aging failed")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# INTELLIGENCE LAYER ENDPOINTS (Scoring, Signals, Patterns, Proposals)
+# =============================================================================
+
+
+@intelligence_router.get("/snapshot")
+def intelligence_snapshot():
+    """
+    Get complete intelligence snapshot.
+
+    Runs the full intelligence pipeline:
+    - Scores all entities
+    - Detects all signals
+    - Detects all patterns
+    - Generates and ranks proposals
+    - Produces daily briefing
+
+    This is a heavy endpoint (~45s). Use targeted endpoints for faster responses.
+    """
+    try:
+        from lib.intelligence import generate_intelligence_snapshot
+        data = generate_intelligence_snapshot()
+        return _wrap_response(data)
+    except Exception as e:
+        logger.exception("intelligence_snapshot failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@intelligence_router.get("/critical")
+def critical_items():
+    """
+    Get critical items only (IMMEDIATE urgency proposals).
+
+    The "30-second scan" view — what needs attention right now.
+    Faster than full snapshot.
+    """
+    try:
+        from lib.intelligence import get_critical_items
+        data = get_critical_items()
+        return _wrap_response(data)
+    except Exception as e:
+        logger.exception("critical_items failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@intelligence_router.get("/briefing")
+def daily_briefing():
+    """
+    Get daily briefing summary.
+
+    Returns structured briefing with:
+    - Summary counts (immediate, this_week, monitor)
+    - Critical items list
+    - Attention items list
+    - Watching items list
+    - Portfolio health
+    - Top proposal headline
+    """
+    try:
+        from lib.intelligence import (
+            detect_all_signals,
+            detect_all_patterns,
+            generate_proposals,
+            generate_daily_briefing,
+        )
+
+        signals = detect_all_signals(quick=True)
+        patterns = detect_all_patterns()
+
+        signal_input = {"signals": signals.get("signals", [])}
+        pattern_input = {"patterns": patterns.get("patterns", [])}
+
+        proposals = generate_proposals(signal_input, pattern_input)
+        briefing = generate_daily_briefing(proposals)
+
+        return _wrap_response(briefing)
+    except Exception as e:
+        logger.exception("daily_briefing failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# SIGNALS ENDPOINTS
+# =============================================================================
+
+
+@intelligence_router.get("/signals")
+def list_signals(
+    quick: bool = Query(True, description="Use quick mode (sample portfolio)"),
+):
+    """
+    Detect all active signals.
+
+    Returns signals with severity, entity, evidence, and implied action.
+    """
+    try:
+        from lib.intelligence import detect_all_signals
+        data = detect_all_signals(quick=quick)
+        return _wrap_response(data, {"quick": quick})
+    except Exception as e:
+        logger.exception("list_signals failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@intelligence_router.get("/signals/summary")
+def signals_summary():
+    """
+    Get signal summary (counts by severity and state).
+    """
+    try:
+        from lib.intelligence.signals import get_signal_summary
+        data = get_signal_summary()
+        return _wrap_response(data)
+    except Exception as e:
+        logger.exception("signals_summary failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@intelligence_router.get("/signals/active")
+def active_signals(
+    entity_type: Optional[str] = Query(None, description="Filter by entity type"),
+    entity_id: Optional[str] = Query(None, description="Filter by entity ID"),
+):
+    """
+    Get currently active signals from state tracking.
+    """
+    try:
+        from lib.intelligence.signals import get_active_signals
+        data = get_active_signals(entity_type=entity_type, entity_id=entity_id)
+        return _wrap_response(data, {"entity_type": entity_type, "entity_id": entity_id})
+    except Exception as e:
+        logger.exception("active_signals failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@intelligence_router.get("/signals/history")
+def signal_history(
+    entity_type: str = Query(..., description="Entity type (client, project, person)"),
+    entity_id: str = Query(..., description="Entity ID"),
+    limit: int = Query(50, description="Max records to return"),
+):
+    """
+    Get signal history for an entity.
+    """
+    try:
+        from lib.intelligence.signals import get_signal_history
+        data = get_signal_history(entity_type=entity_type, entity_id=entity_id, limit=limit)
+        return _wrap_response(data, {"entity_type": entity_type, "entity_id": entity_id, "limit": limit})
+    except Exception as e:
+        logger.exception("signal_history failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# PATTERNS ENDPOINTS
+# =============================================================================
+
+
+@intelligence_router.get("/patterns")
+def list_patterns():
+    """
+    Detect all active patterns.
+
+    Returns structural patterns across entities:
+    - Concentration (revenue, resource, communication)
+    - Cascade (blast radius, dependency chains)
+    - Degradation (quality, engagement erosion)
+    - Drift (workload, ownership)
+    - Correlation (load-quality, comm-payment)
+    """
+    try:
+        from lib.intelligence import detect_all_patterns
+        data = detect_all_patterns()
+        return _wrap_response(data)
+    except Exception as e:
+        logger.exception("list_patterns failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@intelligence_router.get("/patterns/catalog")
+def pattern_catalog():
+    """
+    Get pattern library (all defined patterns with detection logic).
+    """
+    try:
+        from lib.intelligence.patterns import PATTERN_LIBRARY
+
+        catalog = []
+        for pat_id, pat in PATTERN_LIBRARY.items():
+            catalog.append({
+                "id": pat.id,
+                "name": pat.name,
+                "description": pat.description,
+                "type": pat.pattern_type.value,
+                "severity": pat.severity.value,
+                "entities_involved": pat.entities_involved,
+                "implied_action": pat.implied_action,
+            })
+
+        return _wrap_response(catalog)
+    except Exception as e:
+        logger.exception("pattern_catalog failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# PROPOSALS ENDPOINTS
+# =============================================================================
+
+
+@intelligence_router.get("/proposals")
+def list_proposals(
+    limit: int = Query(20, description="Max proposals to return"),
+    urgency: Optional[str] = Query(None, description="Filter by urgency (immediate, this_week, monitor)"),
+):
+    """
+    Get ranked proposals.
+
+    Returns proposals sorted by priority score with:
+    - Headline, summary, entity
+    - Evidence list
+    - Implied action
+    - Urgency and confidence
+    """
+    try:
+        from lib.intelligence import (
+            detect_all_signals,
+            detect_all_patterns,
+            generate_proposals,
+            rank_proposals,
+            get_top_proposals,
+            ProposalUrgency,
+        )
+
+        signals = detect_all_signals(quick=True)
+        patterns = detect_all_patterns()
+
+        signal_input = {"signals": signals.get("signals", [])}
+        pattern_input = {"patterns": patterns.get("patterns", [])}
+
+        proposals = generate_proposals(signal_input, pattern_input)
+
+        # Filter by urgency if specified
+        if urgency:
+            try:
+                target_urgency = ProposalUrgency(urgency)
+                proposals = [p for p in proposals if p.urgency == target_urgency]
+            except ValueError:
+                raise HTTPException(status_code=400, detail=f"Invalid urgency: {urgency}")
+
+        # Rank and limit
+        top = get_top_proposals(proposals, n=limit)
+
+        result = [
+            {**p.to_dict(), "priority_score": s.to_dict()}
+            for p, s in top
+        ]
+
+        return _wrap_response(result, {"limit": limit, "urgency": urgency})
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.exception("list_proposals failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# =============================================================================
+# SCORING ENDPOINTS
+# =============================================================================
+
+
+@intelligence_router.get("/scores/client/{client_id}")
+def client_score(client_id: str):
+    """
+    Get scorecard for a client.
+
+    Returns composite score and dimension scores:
+    - Operational health
+    - Financial health
+    - Communication health
+    - Engagement trajectory
+    """
+    try:
+        from lib.intelligence import score_client
+        data = score_client(client_id)
+        return _wrap_response(data, {"client_id": client_id})
+    except Exception as e:
+        logger.exception("client_score failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@intelligence_router.get("/scores/project/{project_id}")
+def project_score(project_id: str):
+    """
+    Get scorecard for a project.
+
+    Returns composite score and dimension scores:
+    - Velocity
+    - Risk exposure
+    - Team coverage
+    - Scope control
+    """
+    try:
+        from lib.intelligence import score_project
+        data = score_project(project_id)
+        return _wrap_response(data, {"project_id": project_id})
+    except Exception as e:
+        logger.exception("project_score failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@intelligence_router.get("/scores/person/{person_id}")
+def person_score(person_id: str):
+    """
+    Get scorecard for a person.
+
+    Returns composite score and dimension scores:
+    - Load balance
+    - Output consistency
+    - Spread
+    - Availability risk
+    """
+    try:
+        from lib.intelligence import score_person
+        data = score_person(person_id)
+        return _wrap_response(data, {"person_id": person_id})
+    except Exception as e:
+        logger.exception("person_score failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@intelligence_router.get("/scores/portfolio")
+def portfolio_score():
+    """
+    Get portfolio scorecard.
+
+    Returns composite score and dimension scores:
+    - Revenue concentration
+    - Resource concentration
+    - Client health distribution
+    - Capacity utilization
+    """
+    try:
+        from lib.intelligence import score_portfolio
+        data = score_portfolio()
+        return _wrap_response(data)
+    except Exception as e:
+        logger.exception("portfolio_score failed")
+        raise HTTPException(status_code=500, detail=str(e))
