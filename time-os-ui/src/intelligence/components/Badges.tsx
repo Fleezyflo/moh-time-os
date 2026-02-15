@@ -9,11 +9,7 @@ interface BadgeProps {
 
 // Base badge
 function Badge({ children, className = '' }: BadgeProps) {
-  return (
-    <span className={`px-2 py-0.5 rounded text-xs font-medium ${className}`}>
-      {children}
-    </span>
-  );
+  return <span className={`px-2 py-0.5 rounded text-xs font-medium ${className}`}>{children}</span>;
 }
 
 // Severity badge (critical/warning/watch)
@@ -23,12 +19,8 @@ export function SeverityBadge({ severity }: { severity: string }) {
     warning: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
     watch: 'bg-slate-500/20 text-slate-400 border border-slate-500/30',
   };
-  
-  return (
-    <Badge className={colors[severity] || colors.watch}>
-      {severity}
-    </Badge>
-  );
+
+  return <Badge className={colors[severity] || colors.watch}>{severity}</Badge>;
 }
 
 // Urgency badge (immediate/this_week/monitor)
@@ -38,18 +30,14 @@ export function UrgencyBadge({ urgency }: { urgency: string }) {
     this_week: 'bg-amber-500/20 text-amber-400 border border-amber-500/30',
     monitor: 'bg-slate-500/20 text-slate-400 border border-slate-500/30',
   };
-  
+
   const labels: Record<string, string> = {
     immediate: 'Immediate',
     this_week: 'This Week',
     monitor: 'Monitor',
   };
-  
-  return (
-    <Badge className={colors[urgency] || colors.monitor}>
-      {labels[urgency] || urgency}
-    </Badge>
-  );
+
+  return <Badge className={colors[urgency] || colors.monitor}>{labels[urgency] || urgency}</Badge>;
 }
 
 // Pattern type badge
@@ -61,12 +49,8 @@ export function PatternTypeBadge({ type }: { type: string }) {
     drift: 'bg-blue-500/20 text-blue-400',
     correlation: 'bg-cyan-500/20 text-cyan-400',
   };
-  
-  return (
-    <Badge className={colors[type] || 'bg-slate-500/20 text-slate-400'}>
-      {type}
-    </Badge>
-  );
+
+  return <Badge className={colors[type] || 'bg-slate-500/20 text-slate-400'}>{type}</Badge>;
 }
 
 // Pattern severity badge
@@ -76,12 +60,8 @@ export function PatternSeverityBadge({ severity }: { severity: string }) {
     operational: 'bg-amber-500/20 text-amber-400',
     informational: 'bg-slate-500/20 text-slate-400',
   };
-  
-  return (
-    <Badge className={colors[severity] || colors.informational}>
-      {severity}
-    </Badge>
-  );
+
+  return <Badge className={colors[severity] || colors.informational}>{severity}</Badge>;
 }
 
 // Signal category badge
@@ -92,12 +72,8 @@ export function CategoryBadge({ category }: { category: string }) {
     anomaly: 'bg-orange-500/20 text-orange-400',
     compound: 'bg-pink-500/20 text-pink-400',
   };
-  
-  return (
-    <Badge className={colors[category] || 'bg-slate-500/20 text-slate-400'}>
-      {category}
-    </Badge>
-  );
+
+  return <Badge className={colors[category] || 'bg-slate-500/20 text-slate-400'}>{category}</Badge>;
 }
 
 // Count badge (for summary displays)
@@ -107,7 +83,7 @@ export function CountBadge({ count, severity }: { count: number; severity: strin
     warning: 'bg-amber-500/20 text-amber-400 border-amber-500/50',
     watch: 'bg-slate-500/20 text-slate-400 border-slate-500/50',
   };
-  
+
   return (
     <span className={`px-3 py-1 rounded-full text-sm border ${colors[severity] || colors.watch}`}>
       {count} {severity}

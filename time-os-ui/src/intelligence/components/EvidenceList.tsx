@@ -18,15 +18,11 @@ interface EvidenceListProps {
 export function EvidenceList({ evidence, maxItems, compact = false }: EvidenceListProps) {
   const items = maxItems ? evidence.slice(0, maxItems) : evidence;
   const hasMore = maxItems && evidence.length > maxItems;
-  
+
   if (evidence.length === 0) {
-    return (
-      <div className="text-sm text-slate-500 italic">
-        No evidence available
-      </div>
-    );
+    return <div className="text-sm text-slate-500 italic">No evidence available</div>;
   }
-  
+
   if (compact) {
     return (
       <div className="space-y-1">
@@ -36,14 +32,12 @@ export function EvidenceList({ evidence, maxItems, compact = false }: EvidenceLi
           </div>
         ))}
         {hasMore && (
-          <div className="text-xs text-slate-500">
-            +{evidence.length - maxItems!} more
-          </div>
+          <div className="text-xs text-slate-500">+{evidence.length - maxItems!} more</div>
         )}
       </div>
     );
   }
-  
+
   return (
     <div className="space-y-2">
       <div className="text-xs text-slate-500 uppercase tracking-wide">
@@ -54,19 +48,19 @@ export function EvidenceList({ evidence, maxItems, compact = false }: EvidenceLi
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1">
               <div className="text-sm text-slate-300">{e.description}</div>
-              <div className="text-xs text-slate-500 mt-1">
-                Source: {e.source}
-              </div>
+              <div className="text-xs text-slate-500 mt-1">Source: {e.source}</div>
             </div>
           </div>
           {e.data && Object.keys(e.data).length > 0 && (
             <div className="mt-2 pt-2 border-t border-slate-700">
               <div className="flex flex-wrap gap-2">
-                {Object.entries(e.data).slice(0, 4).map(([key, value]) => (
-                  <span key={key} className="text-xs bg-slate-700 px-2 py-0.5 rounded">
-                    {key}: {String(value)}
-                  </span>
-                ))}
+                {Object.entries(e.data)
+                  .slice(0, 4)
+                  .map(([key, value]) => (
+                    <span key={key} className="text-xs bg-slate-700 px-2 py-0.5 rounded">
+                      {key}: {String(value)}
+                    </span>
+                  ))}
               </div>
             </div>
           )}

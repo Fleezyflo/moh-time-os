@@ -1,10 +1,12 @@
 /**
  * Patterns — Detected Patterns List
- * 
+ *
  * Shows structural patterns across entities.
  */
 
 import { usePatterns } from '../hooks';
+import { ErrorState } from '../../components/ErrorState';
+import { SkeletonPatternsPage } from '../components';
 import type { Pattern } from '../api';
 
 function SeverityBadge({ severity }: { severity: string }) {
@@ -13,9 +15,11 @@ function SeverityBadge({ severity }: { severity: string }) {
     operational: 'bg-amber-500/20 text-amber-400',
     informational: 'bg-slate-500/20 text-slate-400',
   };
-  
+
   return (
-    <span className={`px-2 py-0.5 rounded text-xs font-medium ${colors[severity] || colors.informational}`}>
+    <span
+      className={`px-2 py-0.5 rounded text-xs font-medium ${colors[severity] || colors.informational}`}
+    >
       {severity}
     </span>
   );
@@ -29,9 +33,11 @@ function TypeBadge({ type }: { type: string }) {
     drift: 'bg-blue-500/20 text-blue-400',
     correlation: 'bg-cyan-500/20 text-cyan-400',
   };
-  
+
   return (
-    <span className={`px-2 py-0.5 rounded text-xs font-medium ${colors[type] || 'bg-slate-500/20 text-slate-400'}`}>
+    <span
+      className={`px-2 py-0.5 rounded text-xs font-medium ${colors[type] || 'bg-slate-500/20 text-slate-400'}`}
+    >
       {type}
     </span>
   );
@@ -39,18 +45,22 @@ function TypeBadge({ type }: { type: string }) {
 
 function PatternCard({ pattern }: { pattern: Pattern }) {
   return (
-    <div className={`rounded-lg p-4 border ${
-      pattern.severity === 'structural' ? 'bg-red-500/5 border-red-500/30' :
-      pattern.severity === 'operational' ? 'bg-amber-500/5 border-amber-500/30' :
-      'bg-slate-800 border-slate-700'
-    }`}>
+    <div
+      className={`rounded-lg p-4 border ${
+        pattern.severity === 'structural'
+          ? 'bg-red-500/5 border-red-500/30'
+          : pattern.severity === 'operational'
+            ? 'bg-amber-500/5 border-amber-500/30'
+            : 'bg-slate-800 border-slate-700'
+      }`}
+    >
       <div className="flex items-start gap-2 mb-2">
         <SeverityBadge severity={pattern.severity} />
         <TypeBadge type={pattern.type} />
       </div>
       <div className="font-medium">{pattern.name}</div>
       <div className="text-sm text-slate-400 mt-2">{pattern.description}</div>
-      
+
       {pattern.affected_entities && pattern.affected_entities.length > 0 && (
         <div className="mt-3 pt-3 border-t border-slate-700">
           <div className="text-xs text-slate-500 mb-1">Affected Entities</div>
@@ -68,7 +78,7 @@ function PatternCard({ pattern }: { pattern: Pattern }) {
           </div>
         </div>
       )}
-      
+
       <div className="text-sm text-slate-400 mt-3 pt-2 border-t border-slate-700">
         → {pattern.implied_action}
       </div>
@@ -77,44 +87,39 @@ function PatternCard({ pattern }: { pattern: Pattern }) {
 }
 
 export default function Patterns() {
-  const { data, loading, error } = usePatterns();
-  
-  if (loading) {
+  const { data, loading, error, refetch } = usePatterns();
+
+  // Show error state if we have an error and no data
+  if (error && !data) {
     return (
-      <div className="animate-pulse space-y-4">
-        <div className="h-8 bg-slate-800 rounded w-1/3" />
-        <div className="h-32 bg-slate-800 rounded" />
-        <div className="h-32 bg-slate-800 rounded" />
+      <div className="p-6">
+        <ErrorState error={error} onRetry={refetch} />
       </div>
     );
   }
-  
-  if (error) {
-    return (
-      <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-6 text-center">
-        <div className="text-red-400">Failed to load patterns</div>
-        <div className="text-sm text-slate-500 mt-2">{error.message}</div>
-      </div>
-    );
+
+  if (loading && !data) {
+    return <SkeletonPatternsPage />;
   }
-  
+
   const patterns = data?.patterns ?? [];
-  
+
   // Group by severity
-  const structural = patterns.filter(p => p.severity === 'structural');
-  const operational = patterns.filter(p => p.severity === 'operational');
-  const informational = patterns.filter(p => p.severity === 'informational');
-  
+  const structural = patterns.filter((p) => p.severity === 'structural');
+  const operational = patterns.filter((p) => p.severity === 'operational');
+  const informational = patterns.filter((p) => p.severity === 'informational');
+
   return (
     <div className="space-y-6">
+      {/* Error banner when we have stale data */}
+      {error && data && <ErrorState error={error} onRetry={refetch} hasData />}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Detected Patterns</h1>
-        <div className="text-sm text-slate-500">
-          {data?.total_detected ?? 0} detected
-        </div>
+        <div className="text-sm text-slate-500">{data?.total_detected ?? 0} detected</div>
       </div>
-      
+
       {patterns.length === 0 ? (
         <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-8 text-center">
           <div className="text-green-400">✓ No patterns detected</div>
@@ -135,7 +140,7 @@ export default function Patterns() {
               </div>
             </div>
           )}
-          
+
           {/* Operational */}
           {operational.length > 0 && (
             <div>
@@ -149,7 +154,7 @@ export default function Patterns() {
               </div>
             </div>
           )}
-          
+
           {/* Informational */}
           {informational.length > 0 && (
             <div>

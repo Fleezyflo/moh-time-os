@@ -1,6 +1,6 @@
 /**
  * Formatters — intelligence-specific formatting utilities
- * 
+ *
  * For general formatting, use:
  * - lib/format.ts: formatCurrency, formatNumber, formatPercent, formatCompact
  * - lib/datetime.ts: formatDate, formatRelative, formatDateTime

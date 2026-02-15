@@ -1,6 +1,6 @@
 /**
  * Intelligence Layer UI Module
- * 
+ *
  * Exports API client, hooks, and components for intelligence views.
  */
 

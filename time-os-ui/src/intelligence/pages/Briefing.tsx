@@ -1,39 +1,39 @@
 /**
  * Briefing — Daily Briefing View
- * 
+ *
  * Narrative format showing the day's intelligence summary.
  */
 
 import { useBriefing } from '../hooks';
+import { ErrorState } from '../../components/ErrorState';
+import { SkeletonBriefingPage } from '../components';
 
 export default function Briefing() {
-  const { data: briefing, loading, error } = useBriefing();
-  
-  if (loading) {
+  const { data: briefing, loading, error, refetch } = useBriefing();
+
+  // Show error state if we have an error and no data
+  if (error && !briefing) {
     return (
-      <div className="animate-pulse space-y-4">
-        <div className="h-8 bg-slate-800 rounded w-1/3" />
-        <div className="h-32 bg-slate-800 rounded" />
-        <div className="h-64 bg-slate-800 rounded" />
+      <div className="p-6 max-w-3xl">
+        <ErrorState error={error} onRetry={refetch} />
       </div>
     );
   }
-  
-  if (error) {
-    return (
-      <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-6 text-center">
-        <div className="text-red-400">Failed to load briefing</div>
-        <div className="text-sm text-slate-500 mt-2">{error.message}</div>
-      </div>
-    );
+
+  if (loading && !briefing) {
+    return <SkeletonBriefingPage />;
   }
-  
+
   if (!briefing) return null;
-  
-  const { summary, critical_items, attention_items, watching, portfolio_health, top_proposal } = briefing;
-  
+
+  const { summary, critical_items, attention_items, watching, portfolio_health, top_proposal } =
+    briefing;
+
   return (
     <div className="space-y-6 max-w-3xl">
+      {/* Error banner when we have stale data */}
+      {error && briefing && <ErrorState error={error} onRetry={refetch} hasData />}
+
       {/* Header */}
       <div>
         <h1 className="text-2xl font-semibold">Daily Briefing</h1>
@@ -41,7 +41,7 @@ export default function Briefing() {
           Generated at {new Date(briefing.generated_at).toLocaleString()}
         </p>
       </div>
-      
+
       {/* Summary */}
       <div className="bg-slate-800 rounded-lg p-6">
         <div className="text-lg">
@@ -56,15 +56,14 @@ export default function Briefing() {
           {summary.this_week_count > 0 && (
             <span className="text-amber-400">{summary.this_week_count} attention</span>
           )}
-          {(summary.immediate_count > 0 || summary.this_week_count > 0) && summary.monitor_count > 0 && (
-            <span className="text-slate-400">, </span>
-          )}
+          {(summary.immediate_count > 0 || summary.this_week_count > 0) &&
+            summary.monitor_count > 0 && <span className="text-slate-400">, </span>}
           {summary.monitor_count > 0 && (
             <span className="text-slate-500">{summary.monitor_count} watching</span>
           )}
         </div>
       </div>
-      
+
       {/* Top Priority */}
       {top_proposal && (
         <div className="bg-slate-800 border-l-4 border-red-500 rounded-lg p-6">
@@ -72,7 +71,7 @@ export default function Briefing() {
           <div className="text-lg text-white">{top_proposal}</div>
         </div>
       )}
-      
+
       {/* Critical Items */}
       {critical_items && critical_items.length > 0 && (
         <div>
@@ -89,7 +88,7 @@ export default function Briefing() {
           </div>
         </div>
       )}
-      
+
       {/* Attention Items */}
       {attention_items && attention_items.length > 0 && (
         <div>
@@ -106,7 +105,7 @@ export default function Briefing() {
           </div>
         </div>
       )}
-      
+
       {/* Watching */}
       {watching && watching.length > 0 && (
         <details className="group">
@@ -123,16 +122,23 @@ export default function Briefing() {
           </div>
         </details>
       )}
-      
+
       {/* Portfolio Health */}
       {portfolio_health && (
         <div className="bg-slate-800 rounded-lg p-6">
-          <div className="text-sm text-slate-500 uppercase tracking-wide mb-2">Portfolio Health</div>
+          <div className="text-sm text-slate-500 uppercase tracking-wide mb-2">
+            Portfolio Health
+          </div>
           <div className="flex items-center gap-4">
-            <div className={`text-3xl font-bold ${
-              portfolio_health.overall_score >= 60 ? 'text-green-400' :
-              portfolio_health.overall_score >= 30 ? 'text-amber-400' : 'text-red-400'
-            }`}>
+            <div
+              className={`text-3xl font-bold ${
+                portfolio_health.overall_score >= 60
+                  ? 'text-green-400'
+                  : portfolio_health.overall_score >= 30
+                    ? 'text-amber-400'
+                    : 'text-red-400'
+              }`}
+            >
               {portfolio_health.overall_score}
             </div>
             <div className="text-slate-400">

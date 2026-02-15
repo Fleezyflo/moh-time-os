@@ -8,9 +8,19 @@ import ClientIndex from './pages/ClientIndex';
 import ClientDetailSpec from './pages/ClientDetailSpec';
 import RecentlyActiveDrilldown from './pages/RecentlyActiveDrilldown';
 import ColdClients from './pages/ColdClients';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Intelligence pages
-import { CommandCenter, Briefing, Signals, Patterns, Proposals, ClientIntel, PersonIntel, ProjectIntel } from './intelligence/pages';
+import {
+  CommandCenter,
+  Briefing,
+  Signals,
+  Patterns,
+  Proposals,
+  ClientIntel,
+  PersonIntel,
+  ProjectIntel,
+} from './intelligence/pages';
 
 // Navigation items — Inbox is primary per spec §1
 const NAV_ITEMS = [
@@ -56,7 +66,9 @@ const rootRoute = createRootRoute({
         </div>
       </nav>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
-        <Outlet />
+        <ErrorBoundary>
+          <Outlet />
+        </ErrorBoundary>
       </main>
     </div>
   ),

@@ -24,7 +24,11 @@ function formatWeekLabel(dateStr: string): string {
   }
 }
 
-export function ActivityHeatmap({ data = [], weeks = 12, label = 'Activity' }: ActivityHeatmapProps) {
+export function ActivityHeatmap({
+  data = [],
+  weeks = 12,
+  label = 'Activity',
+}: ActivityHeatmapProps) {
   const [hoverWeek, setHoverWeek] = useState<number | null>(null);
 
   const maxActivity = Math.max(1, ...data.map((d) => d.activity_level));
@@ -59,7 +63,8 @@ export function ActivityHeatmap({ data = [], weeks = 12, label = 'Activity' }: A
       </div>
       {hoverWeek != null && displayData[hoverWeek] && (
         <div className="text-xs text-slate-400 py-1">
-          Week of {formatWeekLabel(displayData[hoverWeek].week_start)}: {displayData[hoverWeek].activity_level} activities
+          Week of {formatWeekLabel(displayData[hoverWeek].week_start)}:{' '}
+          {displayData[hoverWeek].activity_level} activities
         </div>
       )}
       <div className="flex items-center gap-[3px] mt-1">

@@ -40,3 +40,20 @@ export { BreakdownChart } from './BreakdownChart';
 export { ActivityHeatmap } from './ActivityHeatmap';
 export { DistributionChart } from './DistributionChart';
 export { CommunicationChart } from './CommunicationChart';
+
+// Skeleton components
+export {
+  SkeletonCommandCenter,
+  SkeletonSignalsPage,
+  SkeletonPatternsPage,
+  SkeletonProposalsPage,
+  SkeletonBriefingPage,
+  SkeletonSignalCard,
+  SkeletonPatternCard,
+  SkeletonProposalCard,
+  SkeletonAlertCard,
+  SkeletonHealthScore,
+  SkeletonCountBadges,
+  SkeletonFilterBar,
+  SkeletonSectionHeader,
+} from './Skeletons';

@@ -4,6 +4,9 @@
 
 import { useMemo, useState } from 'react';
 
+// Constant padding — defined outside component to avoid recreation
+const PADDING = { top: 4, right: 4, bottom: 4, left: 4 } as const;
+
 type Polarity = 'positive' | 'negative' | 'neutral';
 
 interface DataPoint {
@@ -32,13 +35,18 @@ export function Sparkline({
 }: SparklineProps) {
   const [hoverIndex, setHoverIndex] = useState<number | null>(null);
 
-  const padding = { top: 4, right: 4, bottom: 4, left: 4 };
-  const chartWidth = width - padding.left - padding.right;
-  const chartHeight = height - padding.top - padding.bottom;
+  const chartWidth = width - PADDING.left - PADDING.right;
+  const chartHeight = height - PADDING.top - PADDING.bottom;
 
   const { points, linePath, areaPath, lineColor, thresholdY } = useMemo(() => {
     if (!data || data.length < 2) {
-      return { points: [], linePath: '', areaPath: '', lineColor: 'rgb(148 163 184)', thresholdY: null };
+      return {
+        points: [],
+        linePath: '',
+        areaPath: '',
+        lineColor: 'rgb(148 163 184)',
+        thresholdY: null,
+      };
     }
 
     const values = data.map((d) => d.value);
@@ -50,14 +58,18 @@ export function Sparkline({
     const paddedRange = paddedMax - paddedMin;
 
     const pts = data.map((d, i) => ({
-      x: padding.left + (i / (data.length - 1)) * chartWidth,
-      y: padding.top + chartHeight - ((d.value - paddedMin) / paddedRange) * chartHeight,
+      x: PADDING.left + (i / (data.length - 1)) * chartWidth,
+      y: PADDING.top + chartHeight - ((d.value - paddedMin) / paddedRange) * chartHeight,
       date: d.date,
       value: d.value,
     }));
 
-    const pathStr = pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
-    const areaStr = pathStr + ` L ${pts[pts.length - 1].x.toFixed(1)},${padding.top + chartHeight} L ${pts[0].x.toFixed(1)},${padding.top + chartHeight} Z`;
+    const pathStr = pts
+      .map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)},${p.y.toFixed(1)}`)
+      .join(' ');
+    const areaStr =
+      pathStr +
+      ` L ${pts[pts.length - 1].x.toFixed(1)},${PADDING.top + chartHeight} L ${pts[0].x.toFixed(1)},${PADDING.top + chartHeight} Z`;
 
     const firstVal = values[0];
     const lastVal = values[values.length - 1];
@@ -75,16 +87,28 @@ export function Sparkline({
 
     let threshY: number | null = null;
     if (threshold != null) {
-      threshY = padding.top + chartHeight - ((threshold - paddedMin) / paddedRange) * chartHeight;
+      threshY = PADDING.top + chartHeight - ((threshold - paddedMin) / paddedRange) * chartHeight;
     }
 
-    return { points: pts, linePath: pathStr, areaPath: areaStr, lineColor: color, thresholdY: threshY };
+    return {
+      points: pts,
+      linePath: pathStr,
+      areaPath: areaStr,
+      lineColor: color,
+      thresholdY: threshY,
+    };
   }, [data, chartWidth, chartHeight, polarity, threshold]);
 
   if (!data || data.length < 2) {
     return (
       <svg width={width} height={height} className="opacity-50">
-        <text x={width / 2} y={height / 2} textAnchor="middle" dominantBaseline="middle" className="text-[10px] fill-slate-500">
+        <text
+          x={width / 2}
+          y={height / 2}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          className="text-[10px] fill-slate-500"
+        >
           No data
         </text>
       </svg>
@@ -92,14 +116,19 @@ export function Sparkline({
   }
 
   return (
-    <svg width={width} height={height} className="overflow-visible" onMouseLeave={() => setHoverIndex(null)}>
+    <svg
+      width={width}
+      height={height}
+      className="overflow-visible"
+      onMouseLeave={() => setHoverIndex(null)}
+    >
       {showArea && <path d={areaPath} fill={lineColor} opacity="0.1" />}
 
       {thresholdY != null && (
         <line
-          x1={padding.left}
+          x1={PADDING.left}
           y1={thresholdY}
-          x2={width - padding.right}
+          x2={width - PADDING.right}
           y2={thresholdY}
           stroke="rgb(100 116 139)"
           strokeWidth="1"
@@ -107,7 +136,14 @@ export function Sparkline({
         />
       )}
 
-      <path d={linePath} fill="none" stroke={lineColor} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path
+        d={linePath}
+        fill="none"
+        stroke={lineColor}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
 
       {showDots &&
         points.map((p, i) => (
@@ -123,7 +159,14 @@ export function Sparkline({
         ))}
 
       {points.map((p, i) => (
-        <circle key={`hover-${i}`} cx={p.x} cy={p.y} r={12} fill="transparent" onMouseEnter={() => setHoverIndex(i)} />
+        <circle
+          key={`hover-${i}`}
+          cx={p.x}
+          cy={p.y}
+          r={12}
+          fill="transparent"
+          onMouseEnter={() => setHoverIndex(i)}
+        />
       ))}
 
       {hoverIndex != null && points[hoverIndex] && (

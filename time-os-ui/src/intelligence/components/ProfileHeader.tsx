@@ -1,6 +1,6 @@
 /**
  * ProfileHeader — Consistent header for all entity profile views
- * 
+ *
  * Visual structure:
  * ┌──────────────────────────────────────────────────────────────────────┐
  * │ [Entity Type Pill]  Entity Name                          [Actions]  │
@@ -90,18 +90,14 @@ export function ProfileHeader({
           >
             {entityType}
           </span>
-          <h1 className="text-xl font-bold text-white truncate">
-            {name || '—'}
-          </h1>
+          <h1 className="text-xl font-bold text-white truncate">{name || '—'}</h1>
         </div>
         {actions && <div className="flex gap-2 flex-shrink-0">{actions}</div>}
       </div>
 
       {/* Row 2: score + classification + trend */}
       <div className="flex items-center gap-3 mb-4">
-        {score != null && (
-          <HealthScore score={score} size="md" />
-        )}
+        {score != null && <HealthScore score={score} size="md" />}
         {classification && (
           <span
             className={`text-sm font-semibold px-2 py-0.5 rounded ${CLASSIFICATION_STYLES[classKey] || 'bg-slate-700 text-slate-300'}`}

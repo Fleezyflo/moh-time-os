@@ -20,9 +20,7 @@ interface MetricDisplayProps {
 function MetricDisplay({ label, value, warning }: MetricDisplayProps) {
   return (
     <div className="p-3 bg-slate-800 rounded-lg text-center">
-      <div className={`text-2xl font-bold ${warning ? 'text-red-400' : 'text-white'}`}>
-        {value}
-      </div>
+      <div className={`text-2xl font-bold ${warning ? 'text-red-400' : 'text-white'}`}>{value}</div>
       <div className="text-xs text-slate-500 mt-1">{label}</div>
     </div>
   );
@@ -35,7 +33,7 @@ export function ProjectOperationalState({ project }: ProjectOperationalStateProp
   const overdueTasks = project.overdue_tasks || 0;
   const completionRate = project.completion_rate_pct || 0;
   const assignedPeople = project.assigned_people || 0;
-  
+
   const hasOverdue = overdueTasks > 0;
 
   // Task distribution segments
@@ -43,7 +41,7 @@ export function ProjectOperationalState({ project }: ProjectOperationalStateProp
     { label: 'Completed', value: completedTasks, color: 'rgb(34 197 94)' },
     { label: 'Open', value: openTasks - overdueTasks, color: 'rgb(59 130 246)' },
     { label: 'Overdue', value: overdueTasks, color: 'rgb(239 68 68)' },
-  ].filter(s => s.value > 0);
+  ].filter((s) => s.value > 0);
 
   return (
     <ProfileSection

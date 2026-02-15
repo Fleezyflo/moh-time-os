@@ -1,8 +1,8 @@
 /**
  * ProfileShell — Full page wrapper for entity profile views
- * 
+ *
  * Composes: ProfileHeader > custom sections > ConnectedEntities
- * 
+ *
  * Entity views use ProfileShell by passing mapper functions and
  * a renderSections callback that returns entity-specific content.
  */
@@ -127,9 +127,7 @@ export function ProfileShell<T>({
   if (!data) {
     return (
       <div className="max-w-5xl p-6">
-        <div className="text-center text-slate-400 py-12">
-          No data available
-        </div>
+        <div className="text-center text-slate-400 py-12">No data available</div>
       </div>
     );
   }
@@ -147,9 +145,7 @@ export function ProfileShell<T>({
           </div>
         )}
 
-        {error && data && (
-          <ErrorState error={error} onRetry={onRefresh} hasData />
-        )}
+        {error && data && <ErrorState error={error} onRetry={onRefresh} hasData />}
 
         <ProfileHeader
           entityType={entityType}
@@ -168,9 +164,7 @@ export function ProfileShell<T>({
           }
         />
 
-        <div className="mt-6">
-          {renderSections(data)}
-        </div>
+        <div className="mt-6">{renderSections(data)}</div>
 
         <ConnectedEntities {...connectedProps} />
       </div>

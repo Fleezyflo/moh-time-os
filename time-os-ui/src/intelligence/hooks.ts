@@ -1,10 +1,10 @@
 /**
  * Intelligence Data Hooks
- * 
+ *
  * React hooks for fetching intelligence data with loading/error states.
  */
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import * as api from './api';
 import type {
   CriticalItem,
@@ -57,6 +57,11 @@ function useData<T>(
   const [loading, setLoading] = useState(enabled);
   const [error, setError] = useState<Error | null>(null);
 
+  // Memoize fetchFn with its deps to create a stable reference
+  // This avoids the spread dependency array pattern that ESLint can't verify
+  const depsKey = JSON.stringify(deps);
+  const stableFetchFn = useMemo(() => fetchFn, [depsKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const fetchData = useCallback(async () => {
     if (!enabled) {
       setData(null);
@@ -67,14 +72,14 @@ function useData<T>(
     setLoading(true);
     setError(null);
     try {
-      const result = await fetchFn();
+      const result = await stableFetchFn();
       setData(result.data);
     } catch (e) {
       setError(e instanceof Error ? e : new Error(String(e)));
     } finally {
       setLoading(false);
     }
-  }, [fetchFn, enabled, ...deps]);
+  }, [stableFetchFn, enabled]);
 
   useEffect(() => {
     fetchData();
@@ -105,7 +110,9 @@ export function useBriefing(): UseDataResult<Briefing> {
 // SIGNAL HOOKS
 // =============================================================================
 
-export function useSignals(quick = true): UseDataResult<{ signals: Signal[]; total_signals: number }> {
+export function useSignals(
+  quick = true
+): UseDataResult<{ signals: Signal[]; total_signals: number }> {
   return useData(() => api.fetchSignals(quick), [quick]);
 }
 
@@ -114,10 +121,7 @@ export function useSignalSummary(): UseDataResult<SignalSummary> {
 }
 
 export function useActiveSignals(entityType?: string, entityId?: string): UseDataResult<Signal[]> {
-  return useData(
-    () => api.fetchActiveSignals(entityType, entityId),
-    [entityType, entityId]
-  );
+  return useData(() => api.fetchActiveSignals(entityType, entityId), [entityType, entityId]);
 }
 
 export function useSignalHistory(
@@ -139,14 +143,16 @@ export function usePatterns(): UseDataResult<{ patterns: Pattern[]; total_detect
   return useData(() => api.fetchPatterns(), []);
 }
 
-export function usePatternCatalog(): UseDataResult<Array<{
-  id: string;
-  name: string;
-  type: string;
-  severity: string;
-  description: string;
-  implied_action: string;
-}>> {
+export function usePatternCatalog(): UseDataResult<
+  Array<{
+    id: string;
+    name: string;
+    type: string;
+    severity: string;
+    description: string;
+    implied_action: string;
+  }>
+> {
   return useData(() => api.fetchPatternCatalog(), []);
 }
 
@@ -155,10 +161,7 @@ export function usePatternCatalog(): UseDataResult<Array<{
 // =============================================================================
 
 export function useProposals(limit = 20, urgency?: string): UseDataResult<Proposal[]> {
-  return useData(
-    () => api.fetchProposals(limit, urgency),
-    [limit, urgency]
-  );
+  return useData(() => api.fetchProposals(limit, urgency), [limit, urgency]);
 }
 
 // =============================================================================
@@ -166,24 +169,15 @@ export function useProposals(limit = 20, urgency?: string): UseDataResult<Propos
 // =============================================================================
 
 export function useClientScore(clientId: string): UseDataResult<Scorecard> {
-  return useData(
-    () => api.fetchClientScore(clientId),
-    [clientId]
-  );
+  return useData(() => api.fetchClientScore(clientId), [clientId]);
 }
 
 export function useProjectScore(projectId: string): UseDataResult<Scorecard> {
-  return useData(
-    () => api.fetchProjectScore(projectId),
-    [projectId]
-  );
+  return useData(() => api.fetchProjectScore(projectId), [projectId]);
 }
 
 export function usePersonScore(personId: string): UseDataResult<Scorecard> {
-  return useData(
-    () => api.fetchPersonScore(personId),
-    [personId]
-  );
+  return useData(() => api.fetchPersonScore(personId), [personId]);
 }
 
 export function usePortfolioScore(): UseDataResult<Scorecard> {
@@ -195,17 +189,11 @@ export function usePortfolioScore(): UseDataResult<Scorecard> {
 // =============================================================================
 
 export function useClientIntelligence(clientId: string): UseDataResult<ClientIntelligence> {
-  return useData(
-    () => api.fetchClientIntelligence(clientId),
-    [clientId]
-  );
+  return useData(() => api.fetchClientIntelligence(clientId), [clientId]);
 }
 
 export function usePersonIntelligence(personId: string): UseDataResult<PersonIntelligence> {
-  return useData(
-    () => api.fetchPersonIntelligence(personId),
-    [personId]
-  );
+  return useData(() => api.fetchPersonIntelligence(personId), [personId]);
 }
 
 export function usePortfolioIntelligence(): UseDataResult<PortfolioIntelligence> {
@@ -220,63 +208,53 @@ export function usePortfolioIntelligence(): UseDataResult<PortfolioIntelligence>
  * Fetch full intelligence for a client (scorecard + signals + trajectory).
  * Hook does NOT fetch if clientId is null/undefined/empty.
  */
-export function useClientDetail(clientId: string | number | null | undefined): UseDataResult<ClientIntelligence> {
+export function useClientDetail(
+  clientId: string | number | null | undefined
+): UseDataResult<ClientIntelligence> {
   const enabled = clientId != null && clientId !== '';
-  return useData(
-    () => api.fetchClientDetail(clientId!),
-    [clientId],
-    { enabled }
-  );
+  return useData(() => api.fetchClientDetail(clientId!), [clientId], { enabled });
 }
 
 /**
  * Fetch full intelligence for a person (scorecard + signals + profile).
  * Hook does NOT fetch if personId is null/undefined/empty.
  */
-export function usePersonDetail(personId: string | number | null | undefined): UseDataResult<PersonIntelligence> {
+export function usePersonDetail(
+  personId: string | number | null | undefined
+): UseDataResult<PersonIntelligence> {
   const enabled = personId != null && personId !== '';
-  return useData(
-    () => api.fetchPersonDetail(personId!),
-    [personId],
-    { enabled }
-  );
+  return useData(() => api.fetchPersonDetail(personId!), [personId], { enabled });
 }
 
 /**
  * Fetch operational state for a project.
  * Hook does NOT fetch if projectId is null/undefined/empty.
  */
-export function useProjectDetail(projectId: string | number | null | undefined): UseDataResult<ProjectOperationalState> {
+export function useProjectDetail(
+  projectId: string | number | null | undefined
+): UseDataResult<ProjectOperationalState> {
   const enabled = projectId != null && projectId !== '';
-  return useData(
-    () => api.fetchProjectDetail(projectId!),
-    [projectId],
-    { enabled }
-  );
+  return useData(() => api.fetchProjectDetail(projectId!), [projectId], { enabled });
 }
 
 /**
  * Fetch operational profile for a client (lighter than full intelligence).
  */
-export function useClientProfile(clientId: string | number | null | undefined): UseDataResult<ClientProfile> {
+export function useClientProfile(
+  clientId: string | number | null | undefined
+): UseDataResult<ClientProfile> {
   const enabled = clientId != null && clientId !== '';
-  return useData(
-    () => api.fetchClientProfile(clientId!),
-    [clientId],
-    { enabled }
-  );
+  return useData(() => api.fetchClientProfile(clientId!), [clientId], { enabled });
 }
 
 /**
  * Fetch operational profile for a person (lighter than full intelligence).
  */
-export function usePersonProfile(personId: string | number | null | undefined): UseDataResult<PersonProfile> {
+export function usePersonProfile(
+  personId: string | number | null | undefined
+): UseDataResult<PersonProfile> {
   const enabled = personId != null && personId !== '';
-  return useData(
-    () => api.fetchPersonProfile(personId!),
-    [personId],
-    { enabled }
-  );
+  return useData(() => api.fetchPersonProfile(personId!), [personId], { enabled });
 }
 
 /**

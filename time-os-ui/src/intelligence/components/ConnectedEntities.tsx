@@ -1,6 +1,6 @@
 /**
  * ConnectedEntities — Grid of cross-linked entities at bottom of any profile
- * 
+ *
  * Renders non-empty entity categories as titled subsections.
  * Empty categories are hidden automatically.
  */
@@ -73,9 +73,7 @@ export function ConnectedEntities({
       {/* Persons */}
       {hasPersons && (
         <div className="mb-6">
-          <h4 className="text-sm font-semibold text-slate-400 mb-3">
-            People ({persons!.length})
-          </h4>
+          <h4 className="text-sm font-semibold text-slate-400 mb-3">People ({persons!.length})</h4>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {persons!.map((p) => (
               <Link
@@ -93,9 +91,7 @@ export function ConnectedEntities({
                 <div className="flex gap-2 flex-wrap text-xs text-slate-500">
                   {p.role && <span className="italic">{p.role}</span>}
                   {p.task_count != null && <span>{p.task_count} tasks</span>}
-                  {p.communication_volume != null && (
-                    <span>{p.communication_volume} msgs</span>
-                  )}
+                  {p.communication_volume != null && <span>{p.communication_volume} msgs</span>}
                 </div>
               </Link>
             ))}
@@ -120,9 +116,7 @@ export function ConnectedEntities({
                     <span>📁</span>
                     {p.name}
                   </span>
-                  {p.health_score != null && (
-                    <HealthScore score={p.health_score} size="sm" />
-                  )}
+                  {p.health_score != null && <HealthScore score={p.health_score} size="sm" />}
                 </div>
                 <div className="flex gap-2 flex-wrap text-xs text-slate-500">
                   {p.status && <span>{p.status}</span>}
@@ -137,9 +131,7 @@ export function ConnectedEntities({
       {/* Clients */}
       {hasClients && (
         <div className="mb-6">
-          <h4 className="text-sm font-semibold text-slate-400 mb-3">
-            Clients ({clients!.length})
-          </h4>
+          <h4 className="text-sm font-semibold text-slate-400 mb-3">Clients ({clients!.length})</h4>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {clients!.map((c) => (
               <Link
@@ -156,9 +148,7 @@ export function ConnectedEntities({
                 </div>
                 <div className="flex gap-2 flex-wrap text-xs text-slate-500">
                   {c.task_count != null && <span>{c.task_count} tasks</span>}
-                  {c.communication_volume != null && (
-                    <span>{c.communication_volume} msgs</span>
-                  )}
+                  {c.communication_volume != null && <span>{c.communication_volume} msgs</span>}
                 </div>
               </Link>
             ))}
@@ -179,9 +169,7 @@ export function ConnectedEntities({
                 className="grid grid-cols-4 gap-3 items-center py-2 px-3 text-sm border-b border-slate-700/50 last:border-0"
               >
                 <span className="text-slate-500">#{inv.invoice_id}</span>
-                <span className="text-white font-medium">
-                  ${inv.amount.toLocaleString()}
-                </span>
+                <span className="text-white font-medium">${inv.amount.toLocaleString()}</span>
                 <span className={STATUS_STYLES[inv.status.toLowerCase()] || 'text-slate-400'}>
                   {inv.status}
                 </span>

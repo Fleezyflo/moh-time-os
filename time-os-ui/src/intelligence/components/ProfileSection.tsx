@@ -1,6 +1,6 @@
 /**
  * ProfileSection — Titled content section within an entity profile
- * 
+ *
  * Provides consistent section layout with:
  * - Title with optional badge and actions
  * - Optional description
@@ -37,9 +37,7 @@ function MetricSkeleton() {
 }
 
 function ChartSkeleton() {
-  return (
-    <div className="animate-pulse h-40 bg-slate-700/50 rounded" />
-  );
+  return <div className="animate-pulse h-40 bg-slate-700/50 rounded" />;
 }
 
 export function ProfileSection({
@@ -114,11 +112,7 @@ export function ProfileSection({
       )}
 
       {/* Content */}
-      {!collapsed && (
-        <div className="min-h-[60px]">
-          {loading ? renderSkeleton() : children}
-        </div>
-      )}
+      {!collapsed && <div className="min-h-[60px]">{loading ? renderSkeleton() : children}</div>}
     </div>
   );
 }

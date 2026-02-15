@@ -1,6 +1,6 @@
 /**
  * Smart Defaults for Intelligence Views
- * 
+ *
  * Manages default values, filter persistence, and smart initial states.
  */
 
@@ -60,7 +60,7 @@ export const DEFAULT_PREFERENCES: IntelPreferences = {
 
 function getStoredValue<T>(key: string, defaultValue: T): T {
   if (typeof window === 'undefined') return defaultValue;
-  
+
   try {
     const stored = localStorage.getItem(key);
     if (stored) {
@@ -74,7 +74,7 @@ function getStoredValue<T>(key: string, defaultValue: T): T {
 
 function setStoredValue<T>(key: string, value: T): void {
   if (typeof window === 'undefined') return;
-  
+
   try {
     localStorage.setItem(key, JSON.stringify(value));
   } catch {
@@ -135,7 +135,11 @@ export function setLastView(path: string): void {
  * Suggest initial urgency filter based on proposal counts.
  * If there are critical items, default to showing them.
  */
-export function suggestUrgencyFilter(counts: { immediate: number; this_week: number; monitor: number }): string {
+export function suggestUrgencyFilter(counts: {
+  immediate: number;
+  this_week: number;
+  monitor: number;
+}): string {
   if (counts.immediate > 0) return 'immediate';
   if (counts.this_week > 0) return 'this_week';
   return '';
@@ -144,7 +148,11 @@ export function suggestUrgencyFilter(counts: { immediate: number; this_week: num
 /**
  * Suggest initial severity filter based on signal counts.
  */
-export function suggestSeverityFilter(counts: { critical: number; warning: number; watch: number }): string {
+export function suggestSeverityFilter(counts: {
+  critical: number;
+  warning: number;
+  watch: number;
+}): string {
   if (counts.critical > 0) return 'critical';
   if (counts.warning > 0) return 'warning';
   return 'all';

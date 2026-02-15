@@ -1,6 +1,6 @@
 /**
  * Command Center — Main Intelligence Dashboard
- * 
+ *
  * The "30-second scan" view showing:
  * - Portfolio health score
  * - Critical items (IMMEDIATE)
@@ -10,51 +10,113 @@
  */
 
 import { Link } from '@tanstack/react-router';
-import { useCriticalItems, usePortfolioScore, useSignalSummary, usePatterns, useProposals } from '../hooks';
-import { HealthScore, CountBadge, ProposalCard, PatternCard } from '../components';
+import {
+  useCriticalItems,
+  usePortfolioScore,
+  useSignalSummary,
+  usePatterns,
+  useProposals,
+} from '../hooks';
+import {
+  HealthScore,
+  CountBadge,
+  ProposalCard,
+  PatternCard,
+  SkeletonCommandCenter,
+} from '../components';
+import { ErrorState } from '../../components/ErrorState';
 
 export default function CommandCenter() {
-  const { data: critical, loading: criticalLoading } = useCriticalItems();
-  const { data: portfolio, loading: portfolioLoading } = usePortfolioScore();
-  const { data: signalSummary, loading: signalLoading } = useSignalSummary();
-  const { data: patterns, loading: patternsLoading } = usePatterns();
-  const { data: proposals, loading: proposalsLoading } = useProposals(5, 'this_week');
-  
-  const loading = criticalLoading || portfolioLoading || signalLoading || patternsLoading;
-  
-  if (loading) {
+  const {
+    data: critical,
+    loading: criticalLoading,
+    error: criticalError,
+    refetch: refetchCritical,
+  } = useCriticalItems();
+  const {
+    data: portfolio,
+    loading: portfolioLoading,
+    error: portfolioError,
+    refetch: refetchPortfolio,
+  } = usePortfolioScore();
+  const {
+    data: signalSummary,
+    loading: signalLoading,
+    error: signalError,
+    refetch: refetchSignals,
+  } = useSignalSummary();
+  const {
+    data: patterns,
+    loading: patternsLoading,
+    error: patternsError,
+    refetch: refetchPatterns,
+  } = usePatterns();
+  const {
+    data: proposals,
+    loading: proposalsLoading,
+    error: proposalsError,
+    refetch: refetchProposals,
+  } = useProposals(5, 'this_week');
+
+  const loading =
+    criticalLoading || portfolioLoading || signalLoading || patternsLoading || proposalsLoading;
+  const error = criticalError || portfolioError || signalError || patternsError || proposalsError;
+  const hasAnyData = critical || portfolio || signalSummary || patterns || proposals;
+
+  const refetchAll = () => {
+    refetchCritical();
+    refetchPortfolio();
+    refetchSignals();
+    refetchPatterns();
+    refetchProposals();
+  };
+
+  // Show error state if we have an error and no data yet
+  if (error && !hasAnyData) {
     return (
-      <div className="animate-pulse space-y-6">
-        <div className="h-32 bg-slate-800 rounded-lg" />
-        <div className="h-64 bg-slate-800 rounded-lg" />
+      <div className="p-6">
+        <ErrorState error={error} onRetry={refetchAll} />
       </div>
     );
   }
-  
+
+  if (loading && !hasAnyData) {
+    return <SkeletonCommandCenter />;
+  }
+
   const portfolioScore = portfolio?.composite_score ?? 0;
   const criticalItems = critical ?? [];
-  const structuralPatterns = patterns?.patterns?.filter(p => p.severity === 'structural') ?? [];
+  const structuralPatterns = patterns?.patterns?.filter((p) => p.severity === 'structural') ?? [];
   const attentionProposals = proposals ?? [];
-  
+
   return (
     <div className="space-y-6">
+      {/* Error banner when we have stale data */}
+      {error && hasAnyData && <ErrorState error={error} onRetry={refetchAll} hasData />}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Command Center</h1>
         <div className="flex gap-2">
-          <Link to="/intel/briefing" className="text-sm text-slate-400 hover:text-white px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 transition-colors">
+          <Link
+            to="/intel/briefing"
+            className="text-sm text-slate-400 hover:text-white px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 transition-colors"
+          >
             📋 Briefing
           </Link>
-          <Link to="/intel/proposals" className="text-sm text-slate-400 hover:text-white px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 transition-colors">
+          <Link
+            to="/intel/proposals"
+            className="text-sm text-slate-400 hover:text-white px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 transition-colors"
+          >
             📊 All Proposals
           </Link>
         </div>
       </div>
-      
+
       {/* Portfolio Health + Signal Summary */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <HealthScore score={portfolioScore} label="Portfolio Health" />
-        
+
         <div className="md:col-span-3 bg-slate-800 rounded-lg p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="text-sm text-slate-400">Signal Summary</div>
@@ -68,11 +130,12 @@ export default function CommandCenter() {
             <CountBadge severity="watch" count={signalSummary?.by_severity?.watch ?? 0} />
           </div>
           <div className="text-sm text-slate-500 mt-3">
-            {signalSummary?.total_active ?? 0} active signals • {signalSummary?.new_since_last_check ?? 0} new
+            {signalSummary?.total_active ?? 0} active signals •{' '}
+            {signalSummary?.new_since_last_check ?? 0} new
           </div>
         </div>
       </div>
-      
+
       {/* Critical Items */}
       {criticalItems.length > 0 && (
         <div>
@@ -80,7 +143,11 @@ export default function CommandCenter() {
             <h2 className="text-lg font-medium text-red-400">
               🚨 Critical ({criticalItems.length})
             </h2>
-            <Link to="/intel/proposals?urgency=immediate" className="text-xs text-slate-500 hover:text-white">
+            <Link
+              to="/intel/proposals"
+              search={{ urgency: 'immediate' }}
+              className="text-xs text-slate-500 hover:text-white"
+            >
               View all →
             </Link>
           </div>
@@ -95,7 +162,7 @@ export default function CommandCenter() {
           </div>
         </div>
       )}
-      
+
       {/* Attention Items (This Week) */}
       {attentionProposals.length > 0 && (
         <div>
@@ -103,7 +170,11 @@ export default function CommandCenter() {
             <h2 className="text-lg font-medium text-amber-400">
               ⚠️ Needs Attention ({attentionProposals.length})
             </h2>
-            <Link to="/intel/proposals?urgency=this_week" className="text-xs text-slate-500 hover:text-white">
+            <Link
+              to="/intel/proposals"
+              search={{ urgency: 'this_week' }}
+              className="text-xs text-slate-500 hover:text-white"
+            >
               View all →
             </Link>
           </div>
@@ -114,7 +185,7 @@ export default function CommandCenter() {
           </div>
         </div>
       )}
-      
+
       {/* Structural Patterns */}
       {structuralPatterns.length > 0 && (
         <div>
@@ -133,14 +204,18 @@ export default function CommandCenter() {
           </div>
         </div>
       )}
-      
+
       {/* All Clear State */}
-      {criticalItems.length === 0 && structuralPatterns.length === 0 && attentionProposals.length === 0 && (
-        <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-8 text-center">
-          <div className="text-green-400 text-lg">✓ All Clear</div>
-          <div className="text-slate-400 mt-2">No critical items, structural patterns, or attention items</div>
-        </div>
-      )}
+      {criticalItems.length === 0 &&
+        structuralPatterns.length === 0 &&
+        attentionProposals.length === 0 && (
+          <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-8 text-center">
+            <div className="text-green-400 text-lg">✓ All Clear</div>
+            <div className="text-slate-400 mt-2">
+              No critical items, structural patterns, or attention items
+            </div>
+          </div>
+        )}
     </div>
   );
 }

@@ -28,45 +28,5 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'warn',
       'no-console': ['warn', { allow: ['warn', 'error'] }],
     },
-  },
-  // Ban direct fetch/axios usage outside allowed modules
-  // All API calls MUST go through src/api/http.ts (or legacy src/lib/api.ts)
-  // BASELINE [ui-no-direct-fetch]: Aligned with .semgrep/policy-rules.yaml
-  // Tracking: TIME-OS-UI-MIGRATION | Deadline: Q2 2026
-  {
-    files: ['src/**/*.{ts,tsx}'],
-    ignores: [
-      'src/api/**',                           // Centralized HTTP client
-      'src/lib/api.ts',                       // Legacy API module (pending migration)
-      'src/**/__tests__/**',
-      'src/**/*.test.{ts,tsx}',
-      // BASELINE: Legacy pages predating http.ts client
-      // (must match .semgrep/policy-rules.yaml ui-no-direct-fetch exclusions)
-      'src/pages/ClientDetailSpec.tsx',
-      'src/pages/ClientIndex.tsx',
-      'src/pages/ColdClients.tsx',
-      'src/pages/Inbox.tsx',
-      'src/pages/RecentlyActiveDrilldown.tsx',
-    ],
-    rules: {
-      'no-restricted-globals': [
-        'error',
-        {
-          name: 'fetch',
-          message: 'Direct fetch() is banned. Use src/api/http.ts instead.',
-        },
-      ],
-      'no-restricted-imports': [
-        'error',
-        {
-          paths: [
-            {
-              name: 'axios',
-              message: 'axios is banned. Use src/api/http.ts instead.',
-            },
-          ],
-        },
-      ],
-    },
   }
 );

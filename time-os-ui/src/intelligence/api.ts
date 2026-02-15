@@ -1,7 +1,8 @@
 /**
  * Intelligence API Client
- * 
+ *
  * Typed functions for all intelligence layer endpoints.
+ * NOTE: Uses raw fetch (eslint-ignored). Migration to http.ts requires zod schemas for 23 endpoints.
  */
 
 const API_BASE = '/api/v2/intelligence';
@@ -66,7 +67,12 @@ export interface Proposal {
   headline: string;
   summary: string;
   entity: { type: string; id: string; name: string };
-  evidence: Array<{ source: string; source_id: string; description: string; data: Record<string, unknown> }>;
+  evidence: Array<{
+    source: string;
+    source_id: string;
+    description: string;
+    data: Record<string, unknown>;
+  }>;
   implied_action: string;
   trend?: string;
   confidence?: string;
@@ -103,12 +109,15 @@ export interface Scorecard {
   entity_id?: string;
   entity_name?: string;
   composite_score: number;
-  dimensions: Record<string, {
-    name: string;
-    score: number;
-    weight: number;
-    status: string;
-  }>;
+  dimensions: Record<
+    string,
+    {
+      name: string;
+      score: number;
+      weight: number;
+      status: string;
+    }
+  >;
   computed_at: string;
 }
 
@@ -246,16 +255,22 @@ export interface TrajectoryData {
     end: string;
     metrics: Record<string, number>;
   }>;
-  trends: Record<string, {
-    direction: 'increasing' | 'stable' | 'declining';
-    change_pct: number;
-  }>;
+  trends: Record<
+    string,
+    {
+      direction: 'increasing' | 'stable' | 'declining';
+      change_pct: number;
+    }
+  >;
 }
 
 // =============================================================================
 // API FUNCTIONS
 // =============================================================================
 
+/**
+ * Typed fetch wrapper with basic error handling.
+ */
 async function fetchJson<T>(url: string): Promise<ApiResponse<T>> {
   const response = await fetch(url);
   if (!response.ok) {
@@ -276,7 +291,9 @@ export async function fetchBriefing(): Promise<ApiResponse<Briefing>> {
 
 // Signals
 
-export async function fetchSignals(quick = true): Promise<ApiResponse<{ signals: Signal[]; total_signals: number }>> {
+export async function fetchSignals(
+  quick = true
+): Promise<ApiResponse<{ signals: Signal[]; total_signals: number }>> {
   return fetchJson(`${API_BASE}/signals?quick=${quick}`);
 }
 
@@ -284,7 +301,10 @@ export async function fetchSignalSummary(): Promise<ApiResponse<SignalSummary>> 
   return fetchJson(`${API_BASE}/signals/summary`);
 }
 
-export async function fetchActiveSignals(entityType?: string, entityId?: string): Promise<ApiResponse<Signal[]>> {
+export async function fetchActiveSignals(
+  entityType?: string,
+  entityId?: string
+): Promise<ApiResponse<Signal[]>> {
   const params = new URLSearchParams();
   if (entityType) params.append('entity_type', entityType);
   if (entityId) params.append('entity_id', entityId);
@@ -292,30 +312,45 @@ export async function fetchActiveSignals(entityType?: string, entityId?: string)
   return fetchJson(`${API_BASE}/signals/active${query}`);
 }
 
-export async function fetchSignalHistory(entityType: string, entityId: string, limit = 50): Promise<ApiResponse<Signal[]>> {
-  return fetchJson(`${API_BASE}/signals/history?entity_type=${entityType}&entity_id=${entityId}&limit=${limit}`);
+export async function fetchSignalHistory(
+  entityType: string,
+  entityId: string,
+  limit = 50
+): Promise<ApiResponse<Signal[]>> {
+  return fetchJson(
+    `${API_BASE}/signals/history?entity_type=${entityType}&entity_id=${entityId}&limit=${limit}`
+  );
 }
 
 // Patterns
 
-export async function fetchPatterns(): Promise<ApiResponse<{ patterns: Pattern[]; total_detected: number }>> {
+export async function fetchPatterns(): Promise<
+  ApiResponse<{ patterns: Pattern[]; total_detected: number }>
+> {
   return fetchJson(`${API_BASE}/patterns`);
 }
 
-export async function fetchPatternCatalog(): Promise<ApiResponse<Array<{
-  id: string;
-  name: string;
-  type: string;
-  severity: string;
-  description: string;
-  implied_action: string;
-}>>> {
+export async function fetchPatternCatalog(): Promise<
+  ApiResponse<
+    Array<{
+      id: string;
+      name: string;
+      type: string;
+      severity: string;
+      description: string;
+      implied_action: string;
+    }>
+  >
+> {
   return fetchJson(`${API_BASE}/patterns/catalog`);
 }
 
 // Proposals
 
-export async function fetchProposals(limit = 20, urgency?: string): Promise<ApiResponse<Proposal[]>> {
+export async function fetchProposals(
+  limit = 20,
+  urgency?: string
+): Promise<ApiResponse<Proposal[]>> {
   const params = new URLSearchParams();
   params.append('limit', String(limit));
   if (urgency) params.append('urgency', urgency);
@@ -342,11 +377,15 @@ export async function fetchPortfolioScore(): Promise<ApiResponse<Scorecard>> {
 
 // Entity Intelligence (Deep Dive)
 
-export async function fetchClientIntelligence(clientId: string): Promise<ApiResponse<ClientIntelligence>> {
+export async function fetchClientIntelligence(
+  clientId: string
+): Promise<ApiResponse<ClientIntelligence>> {
   return fetchJson(`${API_BASE}/entity/client/${clientId}`);
 }
 
-export async function fetchPersonIntelligence(personId: string): Promise<ApiResponse<PersonIntelligence>> {
+export async function fetchPersonIntelligence(
+  personId: string
+): Promise<ApiResponse<PersonIntelligence>> {
   return fetchJson(`${API_BASE}/entity/person/${personId}`);
 }
 
@@ -357,34 +396,56 @@ export async function fetchPortfolioIntelligence(): Promise<ApiResponse<Portfoli
 // Entity Detail (Full Profile)
 // Uses entity intelligence endpoints for full scorecard + signals + trajectory
 
-export async function fetchClientDetail(clientId: string | number): Promise<ApiResponse<ClientIntelligence>> {
+export async function fetchClientDetail(
+  clientId: string | number
+): Promise<ApiResponse<ClientIntelligence>> {
   return fetchJson(`${API_BASE}/entity/client/${clientId}`);
 }
 
-export async function fetchPersonDetail(personId: string | number): Promise<ApiResponse<PersonIntelligence>> {
+export async function fetchPersonDetail(
+  personId: string | number
+): Promise<ApiResponse<PersonIntelligence>> {
   return fetchJson(`${API_BASE}/entity/person/${personId}`);
 }
 
-export async function fetchProjectDetail(projectId: string | number): Promise<ApiResponse<ProjectOperationalState>> {
+export async function fetchProjectDetail(
+  projectId: string | number
+): Promise<ApiResponse<ProjectOperationalState>> {
   return fetchJson(`${API_BASE}/projects/${projectId}/state`);
 }
 
 // Client operational profile (lighter than full intelligence)
-export async function fetchClientProfile(clientId: string | number): Promise<ApiResponse<ClientProfile>> {
+export async function fetchClientProfile(
+  clientId: string | number
+): Promise<ApiResponse<ClientProfile>> {
   return fetchJson(`${API_BASE}/clients/${clientId}/profile`);
 }
 
 // Person operational profile (lighter than full intelligence)
-export async function fetchPersonProfile(personId: string | number): Promise<ApiResponse<PersonProfile>> {
+export async function fetchPersonProfile(
+  personId: string | number
+): Promise<ApiResponse<PersonProfile>> {
   return fetchJson(`${API_BASE}/team/${personId}/profile`);
 }
 
 // Client trajectory
-export async function fetchClientTrajectory(clientId: string | number, windowDays = 30, numWindows = 6): Promise<ApiResponse<TrajectoryData>> {
-  return fetchJson(`${API_BASE}/clients/${clientId}/trajectory?window_days=${windowDays}&num_windows=${numWindows}`);
+export async function fetchClientTrajectory(
+  clientId: string | number,
+  windowDays = 30,
+  numWindows = 6
+): Promise<ApiResponse<TrajectoryData>> {
+  return fetchJson(
+    `${API_BASE}/clients/${clientId}/trajectory?window_days=${windowDays}&num_windows=${numWindows}`
+  );
 }
 
 // Person trajectory
-export async function fetchPersonTrajectory(personId: string | number, windowDays = 30, numWindows = 6): Promise<ApiResponse<TrajectoryData>> {
-  return fetchJson(`${API_BASE}/team/${personId}/trajectory?window_days=${windowDays}&num_windows=${numWindows}`);
+export async function fetchPersonTrajectory(
+  personId: string | number,
+  windowDays = 30,
+  numWindows = 6
+): Promise<ApiResponse<TrajectoryData>> {
+  return fetchJson(
+    `${API_BASE}/team/${personId}/trajectory?window_days=${windowDays}&num_windows=${numWindows}`
+  );
 }

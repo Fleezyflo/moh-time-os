@@ -15,12 +15,14 @@ interface PatternCardProps {
 
 export function PatternCard({ pattern, compact = false, onClick }: PatternCardProps) {
   const [expanded, setExpanded] = useState(false);
-  
-  const bgColor = 
-    pattern.severity === 'structural' ? 'bg-red-500/5 border-red-500/30' :
-    pattern.severity === 'operational' ? 'bg-amber-500/5 border-amber-500/30' :
-    'bg-slate-800 border-slate-700';
-  
+
+  const bgColor =
+    pattern.severity === 'structural'
+      ? 'bg-red-500/5 border-red-500/30'
+      : pattern.severity === 'operational'
+        ? 'bg-amber-500/5 border-amber-500/30'
+        : 'bg-slate-800 border-slate-700';
+
   const handleClick = () => {
     if (onClick) {
       onClick();
@@ -28,10 +30,10 @@ export function PatternCard({ pattern, compact = false, onClick }: PatternCardPr
       setExpanded(!expanded);
     }
   };
-  
+
   if (compact) {
     return (
-      <div 
+      <div
         className={`rounded-lg p-3 border ${bgColor} cursor-pointer hover:border-slate-600 transition-colors`}
         onClick={handleClick}
       >
@@ -43,13 +45,10 @@ export function PatternCard({ pattern, compact = false, onClick }: PatternCardPr
       </div>
     );
   }
-  
+
   return (
     <div className={`rounded-lg border ${bgColor}`}>
-      <div 
-        className="p-4 cursor-pointer"
-        onClick={handleClick}
-      >
+      <div className="p-4 cursor-pointer" onClick={handleClick}>
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
@@ -57,16 +56,12 @@ export function PatternCard({ pattern, compact = false, onClick }: PatternCardPr
               <PatternTypeBadge type={pattern.type} />
             </div>
             <div className="font-medium">{pattern.name}</div>
-            <div className="text-sm text-slate-400 mt-1">
-              {pattern.description}
-            </div>
+            <div className="text-sm text-slate-400 mt-1">{pattern.description}</div>
           </div>
-          <div className="text-xs text-slate-500">
-            {expanded ? '▲' : '▼'}
-          </div>
+          <div className="text-xs text-slate-500">{expanded ? '▲' : '▼'}</div>
         </div>
       </div>
-      
+
       {expanded && (
         <div className="px-4 pb-4 border-t border-slate-700 pt-4">
           {/* Affected entities */}
@@ -78,13 +73,11 @@ export function PatternCard({ pattern, compact = false, onClick }: PatternCardPr
               <EntityList entities={pattern.affected_entities} maxItems={8} />
             </div>
           )}
-          
+
           {/* Metrics */}
           {pattern.metrics && Object.keys(pattern.metrics).length > 0 && (
             <div className="mb-4">
-              <div className="text-xs text-slate-500 uppercase tracking-wide mb-2">
-                Metrics
-              </div>
+              <div className="text-xs text-slate-500 uppercase tracking-wide mb-2">Metrics</div>
               <div className="grid grid-cols-2 gap-2">
                 {Object.entries(pattern.metrics).map(([key, value]) => (
                   <div key={key} className="bg-slate-700/50 rounded p-2">
@@ -97,7 +90,7 @@ export function PatternCard({ pattern, compact = false, onClick }: PatternCardPr
               </div>
             </div>
           )}
-          
+
           {/* Implied action */}
           <div className="bg-slate-700/50 rounded p-3">
             <div className="text-xs text-slate-500 uppercase tracking-wide mb-1">

@@ -20,7 +20,11 @@ export function ProjectHealthSignals({ project, signals = [] }: ProjectHealthSig
     <ProfileSection
       title="Health Signals"
       description="Active signals affecting this project's health score."
-      badge={signalCount > 0 ? <span className="text-xs text-amber-400">{signalCount} active</span> : undefined}
+      badge={
+        signalCount > 0 ? (
+          <span className="text-xs text-amber-400">{signalCount} active</span>
+        ) : undefined
+      }
     >
       <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-6 items-start">
         {/* Health score display */}

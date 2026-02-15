@@ -18,11 +18,11 @@ interface DistributionChartProps {
 }
 
 const DEFAULT_COLORS = [
-  'rgb(59 130 246)',  // blue-500
-  'rgb(16 185 129)',  // emerald-500
-  'rgb(168 85 247)',  // purple-500
-  'rgb(245 158 11)',  // amber-500
-  'rgb(236 72 153)',  // pink-500
+  'rgb(59 130 246)', // blue-500
+  'rgb(16 185 129)', // emerald-500
+  'rgb(168 85 247)', // purple-500
+  'rgb(245 158 11)', // amber-500
+  'rgb(236 72 153)', // pink-500
   'rgb(100 116 139)', // slate-500
 ];
 
@@ -74,7 +74,10 @@ export function DistributionChart({
               key={seg.label || i}
               className={`flex items-center gap-1 text-xs ${hoverIndex === i ? 'font-medium' : ''}`}
             >
-              <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: seg.color }} />
+              <span
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{ background: seg.color }}
+              />
               <span className="text-slate-400">{seg.label}</span>
               {showValues && <span className="text-slate-500">{Math.round(seg.pct)}%</span>}
             </div>
@@ -83,11 +86,14 @@ export function DistributionChart({
       )}
 
       {/* Tooltip for small segments */}
-      {hoverIndex != null && processedSegments[hoverIndex] && processedSegments[hoverIndex].pct < 10 && (
-        <div className="text-xs text-slate-400 py-1">
-          {processedSegments[hoverIndex].label}: {processedSegments[hoverIndex].value} ({Math.round(processedSegments[hoverIndex].pct)}%)
-        </div>
-      )}
+      {hoverIndex != null &&
+        processedSegments[hoverIndex] &&
+        processedSegments[hoverIndex].pct < 10 && (
+          <div className="text-xs text-slate-400 py-1">
+            {processedSegments[hoverIndex].label}: {processedSegments[hoverIndex].value} (
+            {Math.round(processedSegments[hoverIndex].pct)}%)
+          </div>
+        )}
     </div>
   );
 }

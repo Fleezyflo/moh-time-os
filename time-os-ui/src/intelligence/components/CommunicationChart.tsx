@@ -47,7 +47,9 @@ export function CommunicationChart({ data = {} }: CommunicationChartProps) {
       {/* Channel distribution */}
       {channelSegments.length > 0 && (
         <div>
-          <h5 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">By Channel</h5>
+          <h5 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">
+            By Channel
+          </h5>
           <DistributionChart segments={channelSegments} height={28} />
         </div>
       )}
@@ -57,20 +59,26 @@ export function CommunicationChart({ data = {} }: CommunicationChartProps) {
         <div>
           <h5 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">
             Direction Balance
-            {isImbalanced && <span className="text-amber-400 normal-case tracking-normal"> — Imbalanced</span>}
+            {isImbalanced && (
+              <span className="text-amber-400 normal-case tracking-normal"> — Imbalanced</span>
+            )}
           </h5>
           <div className="flex h-7 rounded overflow-hidden">
             <div
               className="bg-blue-500 flex items-center justify-center"
               style={{ width: `${Math.max(20, sentPct)}%` }}
             >
-              <span className="text-[10px] text-white font-medium whitespace-nowrap">Sent ({totalSent})</span>
+              <span className="text-[10px] text-white font-medium whitespace-nowrap">
+                Sent ({totalSent})
+              </span>
             </div>
             <div
               className="bg-purple-500 flex items-center justify-center"
               style={{ width: `${Math.max(20, 100 - sentPct)}%` }}
             >
-              <span className="text-[10px] text-white font-medium whitespace-nowrap">Received ({totalReceived})</span>
+              <span className="text-[10px] text-white font-medium whitespace-nowrap">
+                Received ({totalReceived})
+              </span>
             </div>
           </div>
         </div>
@@ -79,10 +87,15 @@ export function CommunicationChart({ data = {} }: CommunicationChartProps) {
       {/* Top participants */}
       {topParticipants.length > 0 && (
         <div>
-          <h5 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">Top Participants</h5>
+          <h5 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">
+            Top Participants
+          </h5>
           <div className="flex flex-col gap-2">
             {topParticipants.map((p) => (
-              <div key={p.person_id || p.name} className="grid grid-cols-[120px_1fr_40px] gap-2 items-center">
+              <div
+                key={p.person_id || p.name}
+                className="grid grid-cols-[120px_1fr_40px] gap-2 items-center"
+              >
                 <span className="text-sm text-slate-400 truncate">{p.name}</span>
                 <div className="h-1.5 bg-slate-700/50 rounded-full">
                   <div

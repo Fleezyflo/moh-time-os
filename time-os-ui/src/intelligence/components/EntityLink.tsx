@@ -32,7 +32,7 @@ const ENTITY_ROUTES: Record<string, string> = {
 export function EntityLink({ entity, showType = true }: EntityLinkProps) {
   const icon = ENTITY_ICONS[entity.type] || '📌';
   const baseRoute = ENTITY_ROUTES[entity.type] || '/';
-  
+
   // Build the route based on entity type
   let to = baseRoute;
   if (entity.type === 'client') {
@@ -42,7 +42,7 @@ export function EntityLink({ entity, showType = true }: EntityLinkProps) {
   } else if (entity.type === 'portfolio') {
     to = '/intel';
   }
-  
+
   return (
     <Link
       to={to}
@@ -50,9 +50,7 @@ export function EntityLink({ entity, showType = true }: EntityLinkProps) {
     >
       <span>{icon}</span>
       <span className="group-hover:underline">{entity.name}</span>
-      {showType && (
-        <span className="text-xs text-slate-500">({entity.type})</span>
-      )}
+      {showType && <span className="text-xs text-slate-500">({entity.type})</span>}
     </Link>
   );
 }
@@ -60,7 +58,7 @@ export function EntityLink({ entity, showType = true }: EntityLinkProps) {
 // Compact version for lists
 export function EntityBadge({ entity }: { entity: Entity }) {
   const icon = ENTITY_ICONS[entity.type] || '📌';
-  
+
   return (
     <span className="inline-flex items-center gap-1 text-xs bg-slate-700 px-2 py-0.5 rounded">
       <span>{icon}</span>
@@ -73,7 +71,7 @@ export function EntityBadge({ entity }: { entity: Entity }) {
 export function EntityList({ entities, maxItems = 5 }: { entities: Entity[]; maxItems?: number }) {
   const items = entities.slice(0, maxItems);
   const hasMore = entities.length > maxItems;
-  
+
   return (
     <div className="flex flex-wrap gap-1">
       {items.map((entity, i) => (

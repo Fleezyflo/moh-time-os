@@ -1,6 +1,6 @@
 /**
  * ProjectIntel — Project Intelligence Deep Dive using ProfileShell
- * 
+ *
  * Shows what the API actually returns:
  * - Header with health score, completion rate, quick stats
  * - Operational state (task metrics)
@@ -25,9 +25,18 @@ interface ProjectFullData extends ProjectState {
 export default function ProjectIntel() {
   const { projectId } = useParams({ strict: false });
   const id = projectId || '';
-  
-  const { data: project, loading: projectLoading, error: projectError, refetch: refetchProject } = useProjectDetail(id);
-  const { data: signals, loading: signalsLoading, refetch: refetchSignals } = useActiveSignals('project', id);
+
+  const {
+    data: project,
+    loading: projectLoading,
+    error: projectError,
+    refetch: refetchProject,
+  } = useProjectDetail(id);
+  const {
+    data: signals,
+    loading: signalsLoading,
+    refetch: refetchSignals,
+  } = useActiveSignals('project', id);
 
   if (!id) {
     return (
@@ -39,7 +48,9 @@ export default function ProjectIntel() {
     );
   }
 
-  const combinedData: ProjectFullData | null = project ? { ...project, signals: signals || [] } : null;
+  const combinedData: ProjectFullData | null = project
+    ? { ...project, signals: signals || [] }
+    : null;
   const loading = projectLoading || signalsLoading;
   const error = projectError;
   const refetch = () => {
@@ -73,18 +84,19 @@ function mapProjectToHeader(data: ProjectFullData) {
   const healthScore = data.health_score;
   const completionRate = data.completion_rate_pct || 0;
   const overdueTasks = data.overdue_tasks || 0;
-  
-  const primarySignal = data.signals && data.signals.length > 0
-    ? {
-        severity: data.signals[0].severity as 'critical' | 'warning' | 'watch',
-        headline: data.signals[0].name || data.signals[0].evidence || 'Active signal detected',
-      }
-    : overdueTasks > 0
-    ? {
-        severity: 'warning' as const,
-        headline: `${overdueTasks} overdue task${overdueTasks > 1 ? 's' : ''}`,
-      }
-    : null;
+
+  const primarySignal =
+    data.signals && data.signals.length > 0
+      ? {
+          severity: data.signals[0].severity as 'critical' | 'warning' | 'watch',
+          headline: data.signals[0].name || data.signals[0].evidence || 'Active signal detected',
+        }
+      : overdueTasks > 0
+        ? {
+            severity: 'warning' as const,
+            headline: `${overdueTasks} overdue task${overdueTasks > 1 ? 's' : ''}`,
+          }
+        : null;
 
   return {
     name: data.project_name || data.project_id,
@@ -92,11 +104,11 @@ function mapProjectToHeader(data: ProjectFullData) {
     classification: classifyScore(healthScore),
     primarySignal,
     quickStats: {
-      'Health': healthScore != null ? `${Math.round(healthScore)}` : '—',
-      'Tasks': data.total_tasks ?? '—',
-      'Complete': `${Math.round(completionRate)}%`,
-      'Overdue': overdueTasks,
-      'Team': data.assigned_people ?? '—',
+      Health: healthScore != null ? `${Math.round(healthScore)}` : '—',
+      Tasks: data.total_tasks ?? '—',
+      Complete: `${Math.round(completionRate)}%`,
+      Overdue: overdueTasks,
+      Team: data.assigned_people ?? '—',
     },
     trend: null,
   };
@@ -109,10 +121,14 @@ function mapProjectToConnected(data: ProjectFullData) {
   return {
     persons: null,
     projects: null,
-    clients: data.client_id ? [{
-      client_id: data.client_id,
-      name: data.client_name || 'Unknown Client',
-    }] : null,
+    clients: data.client_id
+      ? [
+          {
+            client_id: data.client_id,
+            name: data.client_name || 'Unknown Client',
+          },
+        ]
+      : null,
     invoices: null,
   };
 }

@@ -1,11 +1,14 @@
 /**
  * Proposals — Ranked Proposals List
- * 
+ *
  * Shows all proposals sorted by priority with filtering.
  */
 
+import { useState } from 'react';
 import { useProposals } from '../hooks';
 import { useProposalFilters } from '../lib';
+import { ErrorState } from '../../components/ErrorState';
+import { SkeletonProposalsPage } from '../components';
 import type { Proposal } from '../api';
 
 function UrgencyBadge({ urgency }: { urgency: string }) {
@@ -14,9 +17,11 @@ function UrgencyBadge({ urgency }: { urgency: string }) {
     this_week: 'bg-amber-500/20 text-amber-400',
     monitor: 'bg-slate-500/20 text-slate-400',
   };
-  
+
   return (
-    <span className={`px-2 py-0.5 rounded text-xs font-medium ${colors[urgency] || colors.monitor}`}>
+    <span
+      className={`px-2 py-0.5 rounded text-xs font-medium ${colors[urgency] || colors.monitor}`}
+    >
       {urgency.replace('_', ' ')}
     </span>
   );
@@ -24,17 +29,18 @@ function UrgencyBadge({ urgency }: { urgency: string }) {
 
 function ProposalCard({ proposal, rank }: { proposal: Proposal; rank: number }) {
   const [expanded, setExpanded] = useState(false);
-  
+
   return (
-    <div className={`rounded-lg border ${
-      proposal.urgency === 'immediate' ? 'bg-red-500/5 border-red-500/30' :
-      proposal.urgency === 'this_week' ? 'bg-amber-500/5 border-amber-500/30' :
-      'bg-slate-800 border-slate-700'
-    }`}>
-      <div 
-        className="p-4 cursor-pointer"
-        onClick={() => setExpanded(!expanded)}
-      >
+    <div
+      className={`rounded-lg border ${
+        proposal.urgency === 'immediate'
+          ? 'bg-red-500/5 border-red-500/30'
+          : proposal.urgency === 'this_week'
+            ? 'bg-amber-500/5 border-amber-500/30'
+            : 'bg-slate-800 border-slate-700'
+      }`}
+    >
+      <div className="p-4 cursor-pointer" onClick={() => setExpanded(!expanded)}>
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
@@ -53,17 +59,15 @@ function ProposalCard({ proposal, rank }: { proposal: Proposal; rank: number }) 
                 {Math.round(proposal.priority_score.raw_score)}
               </div>
             )}
-            <div className="text-xs text-slate-500">
-              {expanded ? '▲' : '▼'}
-            </div>
+            <div className="text-xs text-slate-500">{expanded ? '▲' : '▼'}</div>
           </div>
         </div>
       </div>
-      
+
       {expanded && (
         <div className="px-4 pb-4 border-t border-slate-700 pt-4">
           <div className="text-sm text-slate-300 mb-4">{proposal.summary}</div>
-          
+
           {/* Evidence */}
           {proposal.evidence && proposal.evidence.length > 0 && (
             <div className="mb-4">
@@ -77,10 +81,12 @@ function ProposalCard({ proposal, rank }: { proposal: Proposal; rank: number }) 
               </div>
             </div>
           )}
-          
+
           {/* Implied Action */}
           <div className="bg-slate-700/50 rounded p-3">
-            <div className="text-xs text-slate-500 uppercase tracking-wide mb-1">Recommended Action</div>
+            <div className="text-xs text-slate-500 uppercase tracking-wide mb-1">
+              Recommended Action
+            </div>
             <div className="text-sm">{proposal.implied_action}</div>
           </div>
         </div>
@@ -91,48 +97,42 @@ function ProposalCard({ proposal, rank }: { proposal: Proposal; rank: number }) 
 
 export default function Proposals() {
   const { urgency, limit, setUrgency, setLimit, resetFilters } = useProposalFilters();
-  
-  const { data: proposals, loading, error } = useProposals(limit, urgency || undefined);
-  
-  if (loading) {
+
+  const { data: proposals, loading, error, refetch } = useProposals(limit, urgency || undefined);
+
+  // Show error state if we have an error and no data
+  if (error && !proposals) {
     return (
-      <div className="animate-pulse space-y-4">
-        <div className="h-12 bg-slate-800 rounded w-full" />
-        <div className="h-24 bg-slate-800 rounded" />
-        <div className="h-24 bg-slate-800 rounded" />
-        <div className="h-24 bg-slate-800 rounded" />
+      <div className="p-6">
+        <ErrorState error={error} onRetry={refetch} />
       </div>
     );
   }
-  
-  if (error) {
-    return (
-      <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-6 text-center">
-        <div className="text-red-400">Failed to load proposals</div>
-        <div className="text-sm text-slate-500 mt-2">{error.message}</div>
-      </div>
-    );
+
+  if (loading && !proposals) {
+    return <SkeletonProposalsPage />;
   }
-  
+
   const proposalList = proposals ?? [];
-  
+
   return (
     <div className="space-y-6">
+      {/* Error banner when we have stale data */}
+      {error && proposals && <ErrorState error={error} onRetry={refetch} hasData />}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Proposals</h1>
-        <div className="text-sm text-slate-500">
-          {proposalList.length} proposals
-        </div>
+        <div className="text-sm text-slate-500">{proposalList.length} proposals</div>
       </div>
-      
+
       {/* Filters */}
       <div className="flex flex-wrap gap-4 bg-slate-800 rounded-lg p-4">
         <div>
           <label className="text-sm text-slate-400 block mb-1">Urgency</label>
           <select
             value={urgency}
-            onChange={e => setUrgency(e.target.value)}
+            onChange={(e) => setUrgency(e.target.value)}
             className="bg-slate-700 border border-slate-600 rounded px-3 py-1.5 text-sm"
           >
             <option value="">All</option>
@@ -145,7 +145,7 @@ export default function Proposals() {
           <label className="text-sm text-slate-400 block mb-1">Limit</label>
           <select
             value={limit}
-            onChange={e => setLimit(Number(e.target.value))}
+            onChange={(e) => setLimit(Number(e.target.value))}
             className="bg-slate-700 border border-slate-600 rounded px-3 py-1.5 text-sm"
           >
             <option value={10}>10</option>
@@ -156,16 +156,13 @@ export default function Proposals() {
         </div>
         {urgency && (
           <div className="flex items-end">
-            <button
-              onClick={resetFilters}
-              className="text-xs text-slate-400 hover:text-white"
-            >
+            <button onClick={resetFilters} className="text-xs text-slate-400 hover:text-white">
               Reset
             </button>
           </div>
         )}
       </div>
-      
+
       {/* Proposal List */}
       <div className="space-y-4">
         {proposalList.length === 0 ? (
@@ -174,9 +171,9 @@ export default function Proposals() {
           </div>
         ) : (
           proposalList.map((proposal, i) => (
-            <ProposalCard 
-              key={proposal.id || i} 
-              proposal={proposal} 
+            <ProposalCard
+              key={proposal.id || i}
+              proposal={proposal}
               rank={proposal.priority_score?.rank || i + 1}
             />
           ))

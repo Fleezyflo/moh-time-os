@@ -1,6 +1,6 @@
 /**
  * PersonIntel — Person Intelligence Deep Dive using ProfileShell
- * 
+ *
  * Shows what the API actually returns:
  * - Header with load info, quick stats
  * - Load distribution across projects (from PersonProfile)
@@ -26,9 +26,19 @@ interface PersonFullData extends PersonIntelligence {
 export default function PersonIntel() {
   const { personId: paramId } = useParams({ strict: false });
   const personId = paramId || '';
-  
-  const { data: intel, loading: intelLoading, error: intelError, refetch: refetchIntel } = usePersonIntelligence(personId);
-  const { data: profile, loading: profileLoading, error: profileError, refetch: refetchProfile } = usePersonProfile(personId);
+
+  const {
+    data: intel,
+    loading: intelLoading,
+    error: intelError,
+    refetch: refetchIntel,
+  } = usePersonIntelligence(personId);
+  const {
+    data: profile,
+    loading: profileLoading,
+    error: profileError,
+    refetch: refetchProfile,
+  } = usePersonProfile(personId);
 
   if (!personId) {
     return (
@@ -40,7 +50,9 @@ export default function PersonIntel() {
     );
   }
 
-  const combinedData: PersonFullData | null = intel ? { ...intel, operationalProfile: profile } : null;
+  const combinedData: PersonFullData | null = intel
+    ? { ...intel, operationalProfile: profile }
+    : null;
   const loading = intelLoading || profileLoading;
   const error = intelError || profileError;
   const refetch = () => {
@@ -102,13 +114,15 @@ function PersonSignalsSection({ signals }: { signals: PersonIntelligence['active
 function mapPersonToHeader(data: PersonFullData) {
   const scorecard = data.scorecard;
   const profile = data.operationalProfile;
-  
-  const primarySignal = data.active_signals && data.active_signals.length > 0
-    ? {
-        severity: data.active_signals[0].severity as 'critical' | 'warning' | 'watch',
-        headline: data.active_signals[0].name || data.active_signals[0].evidence || 'Active signal',
-      }
-    : null;
+
+  const primarySignal =
+    data.active_signals && data.active_signals.length > 0
+      ? {
+          severity: data.active_signals[0].severity as 'critical' | 'warning' | 'watch',
+          headline:
+            data.active_signals[0].name || data.active_signals[0].evidence || 'Active signal',
+        }
+      : null;
 
   return {
     name: scorecard?.entity_name || profile?.person_name || data.person_id,
@@ -116,10 +130,10 @@ function mapPersonToHeader(data: PersonFullData) {
     classification: null,
     primarySignal,
     quickStats: {
-      'Tasks': profile?.active_tasks ?? '—',
-      'Projects': profile?.projects?.length ?? '—',
-      'Clients': profile?.clients?.length ?? '—',
-      'Signals': data.active_signals?.length ?? 0,
+      Tasks: profile?.active_tasks ?? '—',
+      Projects: profile?.projects?.length ?? '—',
+      Clients: profile?.clients?.length ?? '—',
+      Signals: data.active_signals?.length ?? 0,
     },
     trend: null,
   };
@@ -136,16 +150,18 @@ function mapPersonToConnected(data: PersonFullData) {
 
   return {
     persons: null,
-    projects: profile.projects?.map(p => ({
-      project_id: p.project_id,
-      name: p.project_name,
-      task_count: p.tasks_on_project,
-    })) || null,
-    clients: profile.clients?.map(c => ({
-      client_id: c.client_id,
-      name: c.client_name,
-      task_count: c.tasks_for_client,
-    })) || null,
+    projects:
+      profile.projects?.map((p) => ({
+        project_id: p.project_id,
+        name: p.project_name,
+        task_count: p.tasks_on_project,
+      })) || null,
+    clients:
+      profile.clients?.map((c) => ({
+        client_id: c.client_id,
+        name: c.client_name,
+        task_count: c.tasks_for_client,
+      })) || null,
     invoices: null,
   };
 }

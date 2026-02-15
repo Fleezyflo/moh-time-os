@@ -37,7 +37,11 @@ export function ClientHealthBreakdown({ client }: ClientHealthBreakdownProps) {
     <ProfileSection
       title="Health Breakdown"
       description="Score by operational dimension. Bars sorted worst-first."
-      badge={signalCount > 0 ? <span className="text-xs text-amber-400">{signalCount} active</span> : undefined}
+      badge={
+        signalCount > 0 ? (
+          <span className="text-xs text-amber-400">{signalCount} active</span>
+        ) : undefined
+      }
     >
       <div className="grid grid-cols-1 lg:grid-cols-[3fr_2fr] gap-6 items-start">
         {/* Dimension breakdown chart */}

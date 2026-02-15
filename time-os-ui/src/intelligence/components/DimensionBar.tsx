@@ -48,7 +48,10 @@ export function DimensionBar({
         {threshold != null && (
           <div
             className="absolute -top-0.5 w-0.5 h-3 bg-white rounded-sm"
-            style={{ left: `${Math.max(0, Math.min(100, threshold))}%`, transform: 'translateX(-50%)' }}
+            style={{
+              left: `${Math.max(0, Math.min(100, threshold))}%`,
+              transform: 'translateX(-50%)',
+            }}
             title={`Threshold: ${threshold}`}
           />
         )}

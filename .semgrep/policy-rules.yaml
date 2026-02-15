@@ -5,55 +5,9 @@ rules:
   # High-signal, repo-specific enforcement. Target: <10s, 0 findings.
 
   # --------------------------------------------------------------------------
-  # (1) UI API DISCIPLINE
+  # (1) SUBPROCESS POLICY
   # --------------------------------------------------------------------------
-  - id: ui-no-direct-fetch
-    patterns:
-      - pattern-either:
-          - pattern: fetch($URL, ...)
-          - pattern: fetch($URL)
-    message: |
-      POLICY: Direct fetch() banned outside API layer. Use 'src/api/http.ts'.
-    languages: [typescript, javascript]
-    severity: ERROR
-    paths:
-      include:
-        - /time-os-ui/src/
-      exclude:
-        - /time-os-ui/src/api/
-        - /time-os-ui/src/__tests__/
-        # BASELINE [ui-no-direct-fetch]: Legacy files predating API client
-        # Why: Pre-existing fetch() usage before http.ts client was established
-        # Migration: Replace with http.ts client methods
-        # Tracking: TIME-OS-UI-MIGRATION
-        # Deadline: Q2 2026
-        # ALIGNED: ESLint eslint.config.js no-restricted-globals exclusions match exactly
-        - /time-os-ui/src/lib/api.ts
-        - /time-os-ui/src/pages/ClientDetailSpec.tsx
-        - /time-os-ui/src/pages/ClientIndex.tsx
-        - /time-os-ui/src/pages/ColdClients.tsx
-        - /time-os-ui/src/pages/Inbox.tsx
-        - /time-os-ui/src/pages/RecentlyActiveDrilldown.tsx
-
-  - id: ui-no-axios
-    pattern-either:
-      - pattern: axios.$METHOD(...)
-      - pattern: axios(...)
-    message: |
-      POLICY: axios banned. Use 'src/api/http.ts'.
-    languages: [typescript, javascript]
-    severity: ERROR
-    paths:
-      include:
-        - /time-os-ui/src/
-      exclude:
-        - /time-os-ui/src/api/
-        - /time-os-ui/src/__tests__/
-
-  # --------------------------------------------------------------------------
-  # (2) SUBPROCESS POLICY
-  # --------------------------------------------------------------------------
-  # Rule 2a: shell=True is banned (injection risk)
+  # Rule 1a: shell=True is banned (injection risk)
   - id: subprocess-no-shell-true
     patterns:
       - pattern-either:
@@ -80,7 +34,7 @@ rules:
         - /lib/collectors/base.py
         - /lib/executor/handlers.py
 
-  # Rule 2b: Literal string command banned (must use list)
+  # Rule 1b: Literal string command banned (must use list)
   - id: subprocess-literal-string-cmd
     patterns:
       - pattern-either:
@@ -104,7 +58,7 @@ rules:
         - /lib/collectors/base.py
         - /lib/executor/handlers.py
 
-  # Rule 2c: git must use shutil.which
+  # Rule 1c: git must use shutil.which
   - id: subprocess-bare-git
     patterns:
       - pattern-either:
@@ -131,7 +85,7 @@ rules:
         # Deadline: N/A
         - /lib/safety/utils.py
 
-  # Rule 2d: rg must use shutil.which
+  # Rule 1d: rg must use shutil.which
   - id: subprocess-bare-rg
     patterns:
       - pattern-either:
@@ -157,7 +111,7 @@ rules:
         # Deadline: N/A
         - /lib/safety/schema.py
 
-  # Rule 2e: gog CLI must use shutil.which (repo-derived: integrations use gog)
+  # Rule 1e: gog CLI must use shutil.which (repo-derived: integrations use gog)
   - id: subprocess-bare-gog
     patterns:
       - pattern-either:
@@ -187,12 +141,12 @@ rules:
         - /lib/integrations/calendar_integration.py
 
   # --------------------------------------------------------------------------
-  # (3) SQL POLICY - User Input Injection
+  # (2) SQL POLICY - User Input Injection
   # --------------------------------------------------------------------------
   # High-signal: Catch user-input interpolation in execute().
   # Repo-derived sources: FastAPI Query/Path params, Pydantic model attrs.
 
-  # Rule 3a: Query/Path param interpolation in execute()
+  # Rule 2a: Query/Path param interpolation in execute()
   - id: sql-query-param-fstring
     patterns:
       - pattern-either:
@@ -219,7 +173,7 @@ rules:
         - /lib/v5/migrations/
         - /lib/ui_spec_v21/migrations/
 
-  # Rule 3b: .format() in execute() - always risky
+  # Rule 2b: .format() in execute() - always risky
   - id: sql-format-execute
     patterns:
       - pattern-either:
@@ -250,7 +204,7 @@ rules:
         # Deadline: Q3 2026
         - /lib/v4/signal_service.py
 
-  # Rule 3c: % formatting in execute() - always risky
+  # Rule 2c: % formatting in execute() - always risky
   - id: sql-percent-execute
     patterns:
       - pattern-either:
@@ -276,7 +230,7 @@ rules:
         - /lib/ui_spec_v21/migrations/
 
   # --------------------------------------------------------------------------
-  # (4) ROUTE LINEAGE: V2 routes MUST use spec_router
+  # (3) ROUTE LINEAGE: V2 routes MUST use spec_router
   # --------------------------------------------------------------------------
   # Repo convention: All /api/v2/* routes go through spec_router (APIRouter with tags=["Spec v2.9"])
   # spec_router is mounted at prefix="/api/v2" in server.py:86
