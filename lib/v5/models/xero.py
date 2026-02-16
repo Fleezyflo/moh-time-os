@@ -156,11 +156,7 @@ class XeroInvoice(BaseModel):
     @property
     def outstanding_amount(self) -> float:
         """Get outstanding amount."""
-        return (
-            self.amount_due
-            if self.amount_due is not None
-            else (self.total - self.amount_paid)
-        )
+        return self.amount_due if self.amount_due is not None else (self.total - self.amount_paid)
 
 
 # =============================================================================

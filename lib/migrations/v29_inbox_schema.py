@@ -38,9 +38,7 @@ def get_utc_now_iso() -> str:
 
 
 def table_exists(cursor, table: str) -> bool:
-    cursor.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,)
-    )
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,))
     return cursor.fetchone() is not None
 
 
@@ -51,9 +49,7 @@ def column_exists(cursor, table: str, column: str) -> bool:
 
 
 def index_exists(cursor, index_name: str) -> bool:
-    cursor.execute(
-        "SELECT name FROM sqlite_master WHERE type='index' AND name=?", (index_name,)
-    )
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='index' AND name=?", (index_name,))
     return cursor.fetchone() is not None
 
 
@@ -71,9 +67,7 @@ def create_inbox_items_table(cursor):
         for col_name, col_type in v29_columns:
             if not column_exists(cursor, "inbox_items", col_name):
                 logger.info(f"  Adding {col_name} column...")
-                cursor.execute(
-                    f"ALTER TABLE inbox_items ADD COLUMN {col_name} {col_type}"
-                )
+                cursor.execute(f"ALTER TABLE inbox_items ADD COLUMN {col_name} {col_type}")
             else:
                 logger.info(f"  ✓ {col_name} already exists")
         return
@@ -354,9 +348,7 @@ def verify_migration(cursor) -> bool:
     # Check inbox_items columns
     required_columns = ["resurfaced_at", "last_refreshed_at", "resolution_reason"]
     for col in required_columns:
-        if table_exists(cursor, "inbox_items") and not column_exists(
-            cursor, "inbox_items", col
-        ):
+        if table_exists(cursor, "inbox_items") and not column_exists(cursor, "inbox_items", col):
             errors.append(f"Missing column inbox_items.{col}")
 
     if errors:

@@ -49,7 +49,9 @@ def run_mypy(targets: list[str]) -> list[str]:
         return []
 
     cmd = [
-        sys.executable, "-m", "mypy",
+        sys.executable,
+        "-m",
+        "mypy",
         *targets,
         *MYPY_FLAGS,
     ]
@@ -117,7 +119,7 @@ def main() -> int:
     current_errors = run_mypy(expanded_targets)
     strict_errors, legacy_errors = categorize_errors(current_errors)
 
-    print(f"\n📊 Mypy Summary:")
+    print("\n📊 Mypy Summary:")
     print(f"   Strict island errors: {len(strict_errors)}")
     print(f"   Legacy module errors: {len(legacy_errors)}")
 
@@ -130,7 +132,7 @@ def main() -> int:
                 print(f"   {err}")
             if len(strict_errors) > 5:
                 print(f"   ... and {len(strict_errors) - 5} more")
-        return 0
+        return 1  # BLOCKING
 
     # Check strict islands (must be zero)
     if strict_errors:
@@ -162,7 +164,7 @@ def main() -> int:
         print(f"\n✅ Fixed {len(fixed_errors)} errors! Consider updating baseline.")
 
     print("\n✅ Mypy check passed (strict islands clean, baseline stable)")
-    return 0
+    return 1
 
 
 if __name__ == "__main__":

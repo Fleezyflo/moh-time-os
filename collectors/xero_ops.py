@@ -63,9 +63,7 @@ def get_all_client_revenue() -> list:
                     pass  # Can't parse date
 
         # Sort by lifetime revenue
-        result = sorted(
-            revenue_by_client.values(), key=lambda x: -x["lifetime_revenue"]
-        )
+        result = sorted(revenue_by_client.values(), key=lambda x: -x["lifetime_revenue"])
         return result
 
     except Exception as e:
@@ -172,9 +170,7 @@ def format_report(report: dict) -> str:
 
     lines.append(f"**Total AR:** {format_currency(total_ar)}")
     if overdue_amount > 0:
-        lines.append(
-            f"**⚠️ Overdue:** {format_currency(overdue_amount)} ({overdue_count} invoices)"
-        )
+        lines.append(f"**⚠️ Overdue:** {format_currency(overdue_amount)} ({overdue_count} invoices)")
     lines.append("")
 
     # Show overdue invoices

@@ -75,7 +75,7 @@ SELECT p.*, g.id as gmail_id, g.subject
 FROM people p
 JOIN gmail_messages g ON g.sender = p.email OR g.recipients LIKE '%' || p.email || '%';
 
--- Person → Calendar  
+-- Person → Calendar
 SELECT p.*, ce.id as event_id, ce.summary
 FROM people p
 JOIN calendar_events ce ON ce.attendees LIKE '%' || p.email || '%';

@@ -1,13 +1,13 @@
 """Knowledge base: ingest clients, team, projects from source systems."""
 
 import json
+import os
 import re
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 
 from engine.asana_client import list_projects, list_workspaces
 from engine.gogcli import run_gog
-
 from lib import paths
 
 KB_PATH = str(paths.config_dir() / "knowledge_base.json")
@@ -305,9 +305,7 @@ def build_knowledge_base(account: str = "molham@hrmny.co") -> KnowledgeBase:
 
     print("Ingesting team from Forecast sheet...")
     team = ingest_team_from_forecast(account)
-    print(
-        f"  Found {len(team)} team members ({sum(1 for t in team if t.active)} active)"
-    )
+    print(f"  Found {len(team)} team members ({sum(1 for t in team if t.active)} active)")
 
     print("Ingesting clients from Forecast sheet...")
     clients = ingest_clients_from_forecast(account)

@@ -52,22 +52,22 @@ CREATE TABLE IF NOT EXISTS clients (
     name TEXT NOT NULL,
     tier TEXT CHECK (tier IN ('A', 'B', 'C')),
     type TEXT,
-    
+
     financial_annual_value REAL,
     financial_ar_outstanding REAL,
     financial_ar_aging TEXT,
     financial_payment_pattern TEXT,
-    
-    relationship_health TEXT CHECK (relationship_health IN 
+
+    relationship_health TEXT CHECK (relationship_health IN
         ('excellent', 'good', 'fair', 'poor', 'critical')),
-    relationship_trend TEXT CHECK (relationship_trend IN 
+    relationship_trend TEXT CHECK (relationship_trend IN
         ('improving', 'stable', 'declining')),
     relationship_last_interaction TEXT,
     relationship_notes TEXT,
-    
+
     contacts_json TEXT,
     active_projects_json TEXT,
-    
+
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
@@ -78,22 +78,22 @@ CREATE TABLE IF NOT EXISTS people (
     name TEXT NOT NULL,
     email TEXT,
     phone TEXT,
-    
+
     type TEXT CHECK (type IN ('internal', 'external')),
     company TEXT,
     client_id TEXT REFERENCES clients(id),
     role TEXT,
     department TEXT,
-    
-    relationship_trust TEXT CHECK (relationship_trust IN 
+
+    relationship_trust TEXT CHECK (relationship_trust IN
         ('high', 'medium', 'low', 'unknown')),
     relationship_style TEXT,
     relationship_responsiveness TEXT,
     relationship_notes TEXT,
-    
+
     reliability_rate REAL,
     reliability_notes TEXT,
-    
+
     last_interaction TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
@@ -104,23 +104,23 @@ CREATE TABLE IF NOT EXISTS projects (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     client_id TEXT REFERENCES clients(id),
-    
-    status TEXT CHECK (status IN 
+
+    status TEXT CHECK (status IN
         ('discovery', 'active', 'delivery', 'on_hold', 'completed', 'cancelled')),
-    health TEXT CHECK (health IN 
+    health TEXT CHECK (health IN
         ('on_track', 'at_risk', 'blocked', 'late')),
-    
+
     start_date TEXT,
     target_end_date TEXT,
-    
+
     value REAL,
     stakes TEXT,
     description TEXT,
-    
+
     milestones_json TEXT,
     blockers_json TEXT,
     team_json TEXT,
-    
+
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
@@ -130,29 +130,29 @@ CREATE TABLE IF NOT EXISTS items (
     id TEXT PRIMARY KEY,
     what TEXT NOT NULL,
     status TEXT NOT NULL CHECK (status IN ('open', 'waiting', 'done', 'cancelled')),
-    
+
     owner TEXT NOT NULL,
     owner_id TEXT REFERENCES people(id),
     counterparty TEXT,
     counterparty_id TEXT REFERENCES people(id),
-    
+
     due TEXT,
     waiting_since TEXT,
-    
+
     client_id TEXT REFERENCES clients(id),
     project_id TEXT REFERENCES projects(id),
     context_snapshot_json TEXT,
     stakes TEXT,
     history_context TEXT,
-    
+
     source_type TEXT,
     source_ref TEXT,
     captured_at TEXT NOT NULL,
-    
+
     resolution_outcome TEXT,
     resolution_notes TEXT,
     resolved_at TEXT,
-    
+
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
@@ -230,30 +230,30 @@ class Client:
     name: str
     tier: str  # A, B, C
     type: str = "agency_client"
-    
+
     # Financial
     annual_value: float = 0
     ar_outstanding: float = 0
     ar_aging: str = "Current"
     payment_pattern: str = "Unknown"
-    
+
     # Relationship
     health: str = "good"
     trend: str = "stable"
     last_interaction: str = None
     relationship_notes: str = ""
-    
+
     # References
     contacts: List[Dict] = field(default_factory=list)
     active_projects: List[str] = field(default_factory=list)
-    
+
     created_at: str = None
     updated_at: str = None
-    
+
     def summary(self) -> str:
         """One-line summary for context snapshots."""
         return f"{self.name} (Tier {self.tier}, {self.health}, AR: {self.ar_aging})"
-    
+
     def full_context(self) -> str:
         """Full context for surfacing."""
         return (
@@ -269,7 +269,7 @@ def create_client(name: str, tier: str, **kwargs) -> str:
     """Create a new client. Returns client ID."""
     client_id = str(uuid.uuid4())
     now = now_iso()
-    
+
     with get_connection() as conn:
         conn.execute("""
             INSERT INTO clients (
@@ -291,7 +291,7 @@ def create_client(name: str, tier: str, **kwargs) -> str:
             json.dumps(kwargs.get('active_projects', [])),
             now, now
         ))
-    
+
     return client_id
 
 
@@ -301,10 +301,10 @@ def get_client(client_id: str) -> Optional[Client]:
         row = conn.execute(
             "SELECT * FROM clients WHERE id = ?", (client_id,)
         ).fetchone()
-        
+
         if not row:
             return None
-        
+
         return Client(
             id=row['id'],
             name=row['name'],
@@ -332,7 +332,7 @@ def find_client(name: str) -> Optional[Client]:
             "SELECT * FROM clients WHERE LOWER(name) LIKE LOWER(?) LIMIT 1",
             (f"%{name}%",)
         ).fetchone()
-        
+
         if row:
             return get_client(row['id'])
         return None
@@ -351,7 +351,7 @@ def update_client(client_id: str, **changes) -> bool:
         'last_interaction': 'relationship_last_interaction',
         'relationship_notes': 'relationship_notes',
     }
-    
+
     updates = {}
     for k, v in changes.items():
         col = field_map.get(k, k)
@@ -359,15 +359,15 @@ def update_client(client_id: str, **changes) -> bool:
             updates[col + '_json'] = json.dumps(v)
         else:
             updates[col] = v
-    
+
     if not updates:
         return False
-    
+
     updates['updated_at'] = now_iso()
-    
+
     set_clause = ', '.join(f"{k} = ?" for k in updates)
     values = list(updates.values()) + [client_id]
-    
+
     with get_connection() as conn:
         cursor = conn.execute(
             f"UPDATE clients SET {set_clause} WHERE id = ?", values
@@ -379,22 +379,22 @@ def list_clients(tier: str = None, health: str = None) -> List[Client]:
     """List clients with optional filters."""
     conditions = []
     params = []
-    
+
     if tier:
         conditions.append("tier = ?")
         params.append(tier)
     if health:
         conditions.append("relationship_health = ?")
         params.append(health)
-    
+
     where = " AND ".join(conditions) if conditions else "1=1"
-    
+
     with get_connection() as conn:
         rows = conn.execute(
             f"SELECT id FROM clients WHERE {where} ORDER BY tier, name",
             params
         ).fetchall()
-        
+
         return [get_client(row['id']) for row in rows]
 
 
@@ -406,25 +406,25 @@ class Person:
     name: str
     email: str = None
     phone: str = None
-    
+
     type: str = "external"  # internal | external
     company: str = None
     client_id: str = None
     role: str = None
     department: str = None
-    
+
     trust: str = "unknown"
     style: str = None
     responsiveness: str = None
     relationship_notes: str = ""
-    
+
     reliability_rate: float = None
     reliability_notes: str = None
-    
+
     last_interaction: str = None
     created_at: str = None
     updated_at: str = None
-    
+
     def summary(self) -> str:
         """One-line summary."""
         parts = [self.name]
@@ -433,7 +433,7 @@ class Person:
         if self.company:
             parts.append(f"@ {self.company}")
         return ", ".join(parts)
-    
+
     def full_context(self) -> str:
         """Full context for surfacing."""
         parts = [f"{self.name}"]
@@ -450,7 +450,7 @@ def create_person(name: str, **kwargs) -> str:
     """Create a new person. Returns person ID."""
     person_id = str(uuid.uuid4())
     now = now_iso()
-    
+
     with get_connection() as conn:
         conn.execute("""
             INSERT INTO people (
@@ -469,7 +469,7 @@ def create_person(name: str, **kwargs) -> str:
             kwargs.get('reliability_rate'), kwargs.get('reliability_notes'),
             kwargs.get('last_interaction'), now, now
         ))
-    
+
     return person_id
 
 
@@ -479,10 +479,10 @@ def get_person(person_id: str) -> Optional[Person]:
         row = conn.execute(
             "SELECT * FROM people WHERE id = ?", (person_id,)
         ).fetchone()
-        
+
         if not row:
             return None
-        
+
         return Person(
             id=row['id'],
             name=row['name'],
@@ -520,7 +520,7 @@ def find_person(name: str = None, email: str = None) -> Optional[Person]:
             ).fetchone()
         else:
             return None
-        
+
         if row:
             return get_person(row['id'])
         return None
@@ -528,33 +528,33 @@ def find_person(name: str = None, email: str = None) -> Optional[Person]:
 
 # ============ PROJECT ============
 
-@dataclass 
+@dataclass
 class Project:
     id: str
     name: str
     client_id: str
-    
+
     status: str = "active"
     health: str = "on_track"
-    
+
     start_date: str = None
     target_end_date: str = None
-    
+
     value: float = None
     stakes: str = ""
     description: str = ""
-    
+
     milestones: List[Dict] = field(default_factory=list)
     blockers: List[Dict] = field(default_factory=list)
     team: List[Dict] = field(default_factory=list)
-    
+
     created_at: str = None
     updated_at: str = None
-    
+
     def summary(self) -> str:
         """One-line summary."""
         return f"{self.name} ({self.status}, {self.health})"
-    
+
     def full_context(self) -> str:
         """Full context."""
         parts = [f"{self.name} — {self.status}, {self.health}"]
@@ -571,7 +571,7 @@ def create_project(name: str, client_id: str, **kwargs) -> str:
     """Create a new project. Returns project ID."""
     project_id = str(uuid.uuid4())
     now = now_iso()
-    
+
     with get_connection() as conn:
         conn.execute("""
             INSERT INTO projects (
@@ -594,7 +594,7 @@ def create_project(name: str, client_id: str, **kwargs) -> str:
             json.dumps(kwargs.get('team', [])),
             now, now
         ))
-    
+
     return project_id
 
 
@@ -604,10 +604,10 @@ def get_project(project_id: str) -> Optional[Project]:
         row = conn.execute(
             "SELECT * FROM projects WHERE id = ?", (project_id,)
         ).fetchone()
-        
+
         if not row:
             return None
-        
+
         return Project(
             id=row['id'],
             name=row['name'],
@@ -642,7 +642,7 @@ def find_project(name: str = None, client_id: str = None) -> Optional[Project]:
             ).fetchone()
         else:
             return None
-        
+
         if row:
             return get_project(row['id'])
         return None
@@ -673,7 +673,7 @@ class ContextSnapshot:
     person: Dict = None
     stakes: str = ""
     history: str = ""
-    
+
     def to_json(self) -> str:
         return json.dumps({
             'client': self.client,
@@ -682,14 +682,14 @@ class ContextSnapshot:
             'stakes': self.stakes,
             'history': self.history
         })
-    
+
     @classmethod
     def from_json(cls, data: str) -> 'ContextSnapshot':
         if not data:
             return cls()
         d = json.loads(data)
         return cls(**d)
-    
+
     def summary(self) -> str:
         """One-line context summary."""
         parts = []
@@ -707,47 +707,47 @@ class Item:
     id: str
     what: str
     status: str  # open, waiting, done, cancelled
-    
+
     owner: str
     owner_id: str = None
     counterparty: str = None
     counterparty_id: str = None
-    
+
     due: str = None
     waiting_since: str = None
-    
+
     client_id: str = None
     project_id: str = None
     context: ContextSnapshot = None
-    
+
     source_type: str = None
     source_ref: str = None
     captured_at: str = None
-    
+
     resolution_outcome: str = None
     resolution_notes: str = None
     resolved_at: str = None
-    
+
     created_at: str = None
     updated_at: str = None
-    
+
     history: List[Dict] = field(default_factory=list)
-    
+
     def is_overdue(self) -> bool:
         if not self.due or self.status != 'open':
             return False
         return self.due < date.today().isoformat()
-    
+
     def full_context_display(self) -> str:
         """Full context for surfacing."""
         parts = [f"**{self.what}**"]
-        
+
         if self.due:
             if self.is_overdue():
                 parts.append(f"⚠️ OVERDUE (was due {self.due})")
             else:
                 parts.append(f"Due: {self.due}")
-        
+
         if self.context:
             if self.context.person:
                 parts.append(f"Who: {self.context.person.get('full', '')}")
@@ -759,7 +759,7 @@ class Item:
                 parts.append(f"Stakes: {self.context.stakes}")
             if self.context.history:
                 parts.append(f"History: {self.context.history}")
-        
+
         return "\n".join(parts)
 
 
@@ -771,9 +771,9 @@ def build_context(
     history: str = ""
 ) -> ContextSnapshot:
     """Build context snapshot from entity IDs."""
-    
+
     context = ContextSnapshot(stakes=stakes, history=history)
-    
+
     if client_id:
         client = get_client(client_id)
         if client:
@@ -783,7 +783,7 @@ def build_context(
                 'summary': client.summary(),
                 'full': client.full_context()
             }
-    
+
     if project_id:
         project = get_project(project_id)
         if project:
@@ -793,7 +793,7 @@ def build_context(
                 'summary': project.summary(),
                 'full': project.full_context()
             }
-    
+
     if counterparty_id:
         person = get_person(counterparty_id)
         if person:
@@ -803,7 +803,7 @@ def build_context(
                 'summary': person.summary(),
                 'full': person.full_context()
             }
-    
+
     return context
 
 
@@ -822,15 +822,15 @@ def create_item(
     captured_by: str = "A"
 ) -> str:
     """Create item with full context. Returns item ID."""
-    
+
     if not what or not what.strip():
         raise ValueError("'what' is required")
     if not owner or not owner.strip():
         raise ValueError("'owner' is required")
-    
+
     item_id = str(uuid.uuid4())
     now = now_iso()
-    
+
     # Build context snapshot
     context = build_context(
         client_id=client_id,
@@ -839,7 +839,7 @@ def create_item(
         stakes=stakes,
         history=history
     )
-    
+
     with get_connection() as conn:
         conn.execute("""
             INSERT INTO items (
@@ -858,13 +858,13 @@ def create_item(
             source_type, source_ref, now,
             now, now
         ))
-        
+
         # Record in history
         conn.execute("""
             INSERT INTO item_history (id, item_id, timestamp, change, changed_by)
             VALUES (?, ?, ?, 'Created', ?)
         """, (str(uuid.uuid4()), item_id, now, captured_by))
-    
+
     return item_id
 
 
@@ -874,10 +874,10 @@ def get_item(item_id: str, include_history: bool = False) -> Optional[Item]:
         row = conn.execute(
             "SELECT * FROM items WHERE id = ?", (item_id,)
         ).fetchone()
-        
+
         if not row:
             return None
-        
+
         item = Item(
             id=row['id'],
             what=row['what'],
@@ -900,7 +900,7 @@ def get_item(item_id: str, include_history: bool = False) -> Optional[Item]:
             created_at=row['created_at'],
             updated_at=row['updated_at']
         )
-        
+
         if include_history:
             history = conn.execute("""
                 SELECT timestamp, change, changed_by
@@ -908,54 +908,54 @@ def get_item(item_id: str, include_history: bool = False) -> Optional[Item]:
                 ORDER BY timestamp ASC
             """, (item_id,)).fetchall()
             item.history = [dict(h) for h in history]
-        
+
         return item
 
 
 def update_item(item_id: str, changed_by: str = "A", **changes) -> bool:
     """Update item. Tracks history."""
-    
+
     valid_fields = {
         'what', 'status', 'owner', 'counterparty', 'due',
         'stakes', 'resolution_outcome', 'resolution_notes'
     }
-    
+
     updates = {k: v for k, v in changes.items() if k in valid_fields}
     if not updates:
         return False
-    
+
     # Handle status transitions
     if 'status' in updates:
         new_status = updates['status']
         if new_status not in ('open', 'waiting', 'done', 'cancelled'):
             raise ValueError(f"Invalid status: {new_status}")
-        
+
         if new_status == 'waiting':
             updates['waiting_since'] = now_iso()
         elif new_status in ('done', 'cancelled'):
             updates['resolved_at'] = now_iso()
-    
+
     now = now_iso()
     updates['updated_at'] = now
-    
+
     set_clause = ', '.join(f"{k} = ?" for k in updates)
     values = list(updates.values()) + [item_id]
-    
+
     with get_connection() as conn:
         cursor = conn.execute(
             f"UPDATE items SET {set_clause} WHERE id = ?", values
         )
-        
+
         if cursor.rowcount == 0:
             return False
-        
+
         # Record history
         change_desc = ", ".join(f"{k}→{v}" for k, v in changes.items() if k in valid_fields)
         conn.execute("""
             INSERT INTO item_history (id, item_id, timestamp, change, changed_by)
             VALUES (?, ?, ?, ?, ?)
         """, (str(uuid.uuid4()), item_id, now, change_desc, changed_by))
-    
+
     return True
 
 
@@ -1007,48 +1007,48 @@ def query_items(
     limit: int = 100
 ) -> List[Item]:
     """Query items with filters."""
-    
+
     conditions = []
     params = []
-    
+
     if status:
         conditions.append("status = ?")
         params.append(status)
-    
+
     if due_before:
         conditions.append("due IS NOT NULL AND due <= ?")
         params.append(due_before)
-    
+
     if due_after:
         conditions.append("due IS NOT NULL AND due >= ?")
         params.append(due_after)
-    
+
     if client_id:
         conditions.append("client_id = ?")
         params.append(client_id)
-    
+
     if project_id:
         conditions.append("project_id = ?")
         params.append(project_id)
-    
+
     if owner:
         conditions.append("owner = ?")
         params.append(owner)
-    
+
     where = " AND ".join(conditions) if conditions else "1=1"
     params.append(min(limit, 500))
-    
+
     with get_connection() as conn:
         rows = conn.execute(f"""
-            SELECT id FROM items 
+            SELECT id FROM items
             WHERE {where}
-            ORDER BY 
+            ORDER BY
                 CASE WHEN due IS NULL THEN 1 ELSE 0 END,
                 due ASC,
                 created_at DESC
             LIMIT ?
         """, params).fetchall()
-        
+
         return [get_item(row['id']) for row in rows]
 
 
@@ -1097,30 +1097,30 @@ def summary_stats() -> dict:
     """Get summary statistics."""
     with get_connection() as conn:
         stats = {}
-        
+
         stats['total'] = conn.execute(
             "SELECT COUNT(*) FROM items"
         ).fetchone()[0]
-        
+
         stats['open'] = conn.execute(
             "SELECT COUNT(*) FROM items WHERE status = 'open'"
         ).fetchone()[0]
-        
+
         stats['waiting'] = conn.execute(
             "SELECT COUNT(*) FROM items WHERE status = 'waiting'"
         ).fetchone()[0]
-        
+
         stats['overdue'] = conn.execute(
             "SELECT COUNT(*) FROM items WHERE status = 'open' AND due < date('now')"
         ).fetchone()[0]
-        
+
         stats['due_this_week'] = conn.execute("""
-            SELECT COUNT(*) FROM items 
-            WHERE status = 'open' 
-            AND due IS NOT NULL 
+            SELECT COUNT(*) FROM items
+            WHERE status = 'open'
+            AND due IS NOT NULL
             AND due <= date('now', '+7 days')
         """).fetchone()[0]
-        
+
         return stats
 ```
 

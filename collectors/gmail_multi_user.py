@@ -173,10 +173,7 @@ def collect_user_gmail(user: str) -> dict:
                     .execute()
                 )
 
-                headers = {
-                    h["name"]: h["value"]
-                    for h in msg.get("payload", {}).get("headers", [])
-                }
+                headers = {h["name"]: h["value"] for h in msg.get("payload", {}).get("headers", [])}
 
                 result["messages"].append(
                     {
@@ -224,9 +221,7 @@ def store_messages(conn: sqlite3.Connection, user: str, messages: list[dict]):
     conn.commit()
 
 
-def update_user_state(
-    conn: sqlite3.Connection, user: str, count: int, error: str | None
-):
+def update_user_state(conn: sqlite3.Connection, user: str, count: int, error: str | None):
     """Update user collection state."""
     now = datetime.now(UTC).isoformat()
 

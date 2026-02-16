@@ -58,7 +58,7 @@ export function ProposalCard({
 
   return (
     <div className={`rounded-lg border ${bgColor}`}>
-      <div className="p-4 cursor-pointer" onClick={handleClick}>
+      <div className="p-3 sm:p-4 cursor-pointer" onClick={handleClick}>
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
@@ -83,7 +83,7 @@ export function ProposalCard({
       </div>
 
       {expanded && (
-        <div className="px-4 pb-4 border-t border-slate-700 pt-4">
+        <div className="px-3 sm:px-4 pb-3 sm:pb-4 border-t border-slate-700 pt-3 sm:pt-4">
           {/* Summary */}
           <div className="text-sm text-slate-300 mb-4">{proposal.summary}</div>
 
@@ -142,7 +142,7 @@ export function ProposalCard({
               <div className="text-xs text-slate-500 uppercase tracking-wide mb-2">
                 Priority Score Components
               </div>
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {Object.entries(proposal.priority_score.components).map(([key, value]) => (
                   <div key={key} className="text-center">
                     <div className="text-lg font-medium">{Math.round(value as number)}</div>

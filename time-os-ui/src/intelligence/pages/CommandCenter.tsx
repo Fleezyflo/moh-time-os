@@ -95,18 +95,18 @@ export default function CommandCenter() {
       {error && hasAnyData && <ErrorState error={error} onRetry={refetchAll} hasData />}
 
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Command Center</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        <h1 className="text-xl sm:text-2xl font-semibold">Command Center</h1>
         <div className="flex gap-2">
           <Link
             to="/intel/briefing"
-            className="text-sm text-slate-400 hover:text-white px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 transition-colors"
+            className="text-sm text-slate-400 hover:text-white px-3 py-2 min-h-[44px] flex items-center rounded bg-slate-800 hover:bg-slate-700 transition-colors"
           >
             📋 Briefing
           </Link>
           <Link
             to="/intel/proposals"
-            className="text-sm text-slate-400 hover:text-white px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 transition-colors"
+            className="text-sm text-slate-400 hover:text-white px-3 py-2 min-h-[44px] flex items-center rounded bg-slate-800 hover:bg-slate-700 transition-colors"
           >
             📊 All Proposals
           </Link>
@@ -117,7 +117,7 @@ export default function CommandCenter() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <HealthScore score={portfolioScore} label="Portfolio Health" />
 
-        <div className="md:col-span-3 bg-slate-800 rounded-lg p-4">
+        <div className="md:col-span-3 bg-slate-800 rounded-lg p-3 sm:p-4">
           <div className="flex items-center justify-between mb-3">
             <div className="text-sm text-slate-400">Signal Summary</div>
             <Link to="/intel/signals" className="text-xs text-slate-500 hover:text-white">
@@ -153,7 +153,7 @@ export default function CommandCenter() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {criticalItems.slice(0, 4).map((item, i) => (
-              <div key={i} className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+              <div key={i} className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 sm:p-4">
                 <div className="font-medium text-red-400">{item.headline}</div>
                 <div className="text-sm text-slate-400 mt-1">{item.entity.name}</div>
                 <div className="text-sm text-slate-500 mt-2">→ {item.implied_action}</div>

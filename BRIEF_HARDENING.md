@@ -28,11 +28,11 @@ CREATE TABLE score_history (
     dimensions_json TEXT,           -- Full dimension breakdown
     recorded_at TEXT NOT NULL,      -- ISO timestamp
     recorded_date TEXT NOT NULL,    -- YYYY-MM-DD for daily grouping
-    
+
     UNIQUE(entity_type, entity_id, recorded_date)  -- One per entity per day
 );
 
-CREATE INDEX idx_score_history_lookup 
+CREATE INDEX idx_score_history_lookup
 ON score_history(entity_type, entity_id, recorded_date);
 ```
 
@@ -66,7 +66,7 @@ CREATE TABLE snapshot_store (
     critical_count INTEGER,
     pattern_count INTEGER,
     full_json TEXT,                 -- Complete snapshot for replay
-    
+
     UNIQUE(snapshot_id)
 );
 
@@ -116,7 +116,7 @@ def generate_intelligence_snapshot(use_cache=True, force_full=False):
         cached = get_cached_snapshot()
         if cached and cached.age_seconds < CACHE_TTL:
             return cached
-    
+
     # Run pipeline with incremental detection
     ...
 ```
@@ -253,7 +253,7 @@ function EmptyState({ type, hasFilters, onClearFilters }) {
       </div>
     );
   }
-  
+
   return (
     <div className="empty-state">
       <CheckIcon />
@@ -303,7 +303,7 @@ function EmptyState({ type, hasFilters, onClearFilters }) {
 # lib/intelligence/delivery.py
 def deliver_pending_notifications():
     pending = get_pending_notifications(limit=20)
-    
+
     for notif in pending:
         try:
             if notif.priority == 'high':
@@ -339,9 +339,9 @@ def deliver_pending_notifications():
 ```python
 def cleanup_old_snapshots(retention_days=30):
     cutoff = datetime.now() - timedelta(days=retention_days)
-    
+
     conn.execute("""
-        DELETE FROM snapshot_store 
+        DELETE FROM snapshot_store
         WHERE created_at < ?
     """, (cutoff.isoformat(),))
 ```
@@ -374,7 +374,7 @@ describe('SignalCard', () => {
     render(<SignalCard signal={mockCriticalSignal} />);
     expect(screen.getByText('critical')).toHaveClass('text-red-400');
   });
-  
+
   it('expands on click', async () => {
     render(<SignalCard signal={mockSignal} />);
     await userEvent.click(screen.getByRole('button'));
@@ -405,10 +405,10 @@ describe('SignalCard', () => {
 def test_full_pipeline_produces_valid_api_response():
     # Run pipeline
     snapshot = generate_intelligence_snapshot()
-    
+
     # Call API
     response = client.get("/api/v2/intelligence/snapshot")
-    
+
     # Verify structure matches
     assert response.json()["status"] == "ok"
     assert "signals" in response.json()["data"]

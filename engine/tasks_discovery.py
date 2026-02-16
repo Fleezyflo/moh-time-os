@@ -24,11 +24,7 @@ def list_tasklists(account: str) -> tuple[list[dict], list[str]]:
         return [], [res.error or "unknown error"]
     data = res.data or {}
     lists = (
-        data.get("tasklists")
-        or data.get("lists")
-        or data.get("items")
-        or data.get("data")
-        or []
+        data.get("tasklists") or data.get("lists") or data.get("items") or data.get("data") or []
     )
     if not isinstance(lists, list):
         lists = []
@@ -92,9 +88,7 @@ def _compute_aging_distribution(ages_days: list[int]) -> dict[str, Any]:
     total = len(ages_days)
     distribution = {
         "buckets": buckets,
-        "percentages": {
-            k: round(v / total * 100, 1) if total else 0 for k, v in buckets.items()
-        },
+        "percentages": {k: round(v / total * 100, 1) if total else 0 for k, v in buckets.items()},
     }
 
     # Health indicator based on aging
@@ -112,9 +106,7 @@ def _compute_aging_distribution(ages_days: list[int]) -> dict[str, Any]:
     return distribution
 
 
-def _find_repeated_patterns(
-    token_counts: Counter, min_count: int = 3
-) -> list[dict[str, Any]]:
+def _find_repeated_patterns(token_counts: Counter, min_count: int = 3) -> list[dict[str, Any]]:
     """Identify repeated tokens that might indicate recurring task types or projects."""
     patterns = []
     # Common noise words to filter
@@ -151,9 +143,7 @@ def _find_repeated_patterns(
     return patterns[:30]
 
 
-def summarize_tasks(
-    now_utc: float, tasks_by_list: dict[str, list[dict]]
-) -> dict[str, Any]:
+def summarize_tasks(now_utc: float, tasks_by_list: dict[str, list[dict]]) -> dict[str, Any]:
     total = 0
     completed = 0
     overdue = 0
@@ -212,11 +202,7 @@ def summarize_tasks(
         "openTasks": open_tasks,
         "overdueOpenTasks": overdue,
         "overdueBreakdown": overdue_by_days,
-        "overdueHealth": "critical"
-        if overdue > 20
-        else "warning"
-        if overdue > 5
-        else "ok",
+        "overdueHealth": "critical" if overdue > 20 else "warning" if overdue > 5 else "ok",
         "dueDateCoverage": {
             "withDueDate": has_due_date,
             "withoutDueDate": no_due_date,
@@ -225,15 +211,11 @@ def summarize_tasks(
         "medianAgeDaysByUpdatedOrCreated": median_age,
         "agingDistribution": aging_distribution,
         "repeatedPatterns": repeated_patterns,
-        "topTitleTokens": [
-            {"token": t, "count": n} for t, n in token_counts.most_common(30)
-        ],
+        "topTitleTokens": [{"token": t, "count": n} for t, n in token_counts.most_common(30)],
     }
 
 
-def run_tasks_discovery(
-    con, *, account: str, include_completed: bool = False
-) -> dict[str, Any]:
+def run_tasks_discovery(con, *, account: str, include_completed: bool = False) -> dict[str, Any]:
     lists, list_errors = list_tasklists(account)
     insert_raw_event(
         con,
@@ -254,14 +236,10 @@ def run_tasks_discovery(
         tlid = tl.get("id") or tl.get("tasklistId")
         if not tlid:
             continue
-        tasks, errs = list_tasks_paged(
-            account, tlid, include_completed=include_completed
-        )
+        tasks, errs = list_tasks_paged(account, tlid, include_completed=include_completed)
         tasks_by_list[tlid] = tasks
         if errs:
-            errors.append(
-                {"tasklistId": tlid, "title": tl.get("title"), "errors": errs}
-            )
+            errors.append({"tasklistId": tlid, "title": tl.get("title"), "errors": errs})
         insert_raw_event(
             con,
             id=f"tasks:list:{account}:{tlid}",

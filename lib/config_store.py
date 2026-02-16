@@ -502,9 +502,7 @@ if __name__ == "__main__":
     elif cmd == "get" and len(sys.argv) >= 3:
         path = sys.argv[2]
         value = get(path)
-        logger.info(
-            json.dumps(value, indent=2) if isinstance(value, (dict, list)) else value
-        )
+        logger.info(json.dumps(value, indent=2) if isinstance(value, dict | list) else value)
     elif cmd == "set" and len(sys.argv) >= 4:
         path = sys.argv[2]
         raw_value = sys.argv[3]

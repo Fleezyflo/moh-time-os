@@ -12,9 +12,9 @@ import sqlite3
 from dataclasses import dataclass, field
 from datetime import date, datetime
 from enum import StrEnum
+from pathlib import Path
 from typing import Any
 
-from pathlib import Path
 from lib import paths
 
 logger = logging.getLogger(__name__)
@@ -321,9 +321,7 @@ class Client360Page10Engine:
             return Confidence.MED, why_low
         return Confidence.HIGH, []
 
-    def _get_overall_confidence(
-        self, breakdown: HealthBreakdown
-    ) -> tuple[Confidence, list[str]]:
+    def _get_overall_confidence(self, breakdown: HealthBreakdown) -> tuple[Confidence, list[str]]:
         """Get overall client confidence from domain confidences."""
         why_low = []
         low_count = 0
@@ -595,9 +593,7 @@ class Client360Page10Engine:
 
         # If commitment_ready=false, reduce confidence
         if not self.commitment_ready:
-            return DomainScore(
-                score, Confidence.LOW, why_low + ["Commitment data incomplete"]
-            )
+            return DomainScore(score, Confidence.LOW, why_low + ["Commitment data incomplete"])
 
         return DomainScore(score, conf, why_low)
 
@@ -689,9 +685,7 @@ class Client360Page10Engine:
         value = ar_normalized * 0.5 + tier_bonus + retainer_bonus
         return max(0.0, min(1.0, value))
 
-    def determine_posture(
-        self, health_score: float, value_score: float, tier: str
-    ) -> Posture:
+    def determine_posture(self, health_score: float, value_score: float, tier: str) -> Posture:
         """
         Posture quadrant per §5.1:
         - PROTECT: high health (≥80), high value (≥0.7)
@@ -884,9 +878,7 @@ class Client360Page10Engine:
         """Build status tiles per Zone B."""
         # At-risk clients
         at_risk = [
-            p
-            for p in portfolio
-            if p.posture == Posture.INTERVENE or p.posture == Posture.CONTAIN
+            p for p in portfolio if p.posture == Posture.INTERVENE or p.posture == Posture.CONTAIN
         ]
         at_risk_count = len(at_risk)
 
@@ -1026,9 +1018,7 @@ class Client360Page10Engine:
         ttc = None
         if p.next_break_at:
             try:
-                break_dt = datetime.fromisoformat(
-                    p.next_break_at.replace("Z", "+00:00")
-                )
+                break_dt = datetime.fromisoformat(p.next_break_at.replace("Z", "+00:00"))
                 ttc = (break_dt.replace(tzinfo=None) - self.now).total_seconds() / 3600
             except (ValueError, TypeError, AttributeError) as e:
                 # next_break_at is computed internally - malformed value indicates bug
@@ -1226,9 +1216,7 @@ class Client360Page10Engine:
             for t in threads
         ]
 
-    def _build_severe_ar_ladder(
-        self, portfolio: list[ClientPortfolioItem]
-    ) -> list[dict]:
+    def _build_severe_ar_ladder(self, portfolio: list[ClientPortfolioItem]) -> list[dict]:
         """Severe AR ladder per §3 Zone E (max 5)."""
         with_ar = [p for p in portfolio if p.severe_ar_total > 0]
         with_ar.sort(key=lambda x: x.severe_ar_total, reverse=True)
@@ -1265,9 +1253,7 @@ class Client360Page10Engine:
         next_break = self._get_next_break_at(client_id)
 
         return {
-            "summary": self._build_room_summary(
-                client, health, posture, top_driver, next_break
-            ),
+            "summary": self._build_room_summary(client, health, posture, top_driver, next_break),
             "health_breakdown": {
                 "delivery": {
                     "score": round(breakdown.delivery.score, 1),
@@ -1311,13 +1297,9 @@ class Client360Page10Engine:
         name = client.get("name", "Unknown")
         tier = client.get("tier", "C")
 
-        health_desc = (
-            "healthy" if health >= 80 else "at-risk" if health < 60 else "moderate"
-        )
+        health_desc = "healthy" if health >= 80 else "at-risk" if health < 60 else "moderate"
 
-        summary = (
-            f"{name} (Tier {tier}) is {health_desc} with health score {health:.0f}. "
-        )
+        summary = f"{name} (Tier {tier}) is {health_desc} with health score {health:.0f}. "
         summary += f"Primary posture: {posture.value}. "
 
         if top_driver != TopDriver.UNKNOWN:
@@ -1725,9 +1707,7 @@ class Client360Page10Engine:
 
         # Build summary sentence
         name = client.get("name", "Unknown")
-        health_desc = (
-            "healthy" if health >= 80 else "at-risk" if health < 60 else "moderate"
-        )
+        health_desc = "healthy" if health >= 80 else "at-risk" if health < 60 else "moderate"
         summary_sentence = f"{name} is {health_desc} with health score {health:.0f}. Primary driver: {top_driver.value}."
 
         # Build key drivers from top_driver and breakdown
@@ -1871,9 +1851,7 @@ class Client360Page10Engine:
                     logger.debug(f"Could not parse next_due for slip calc: {e}")
 
             # Calculate slip risk score
-            slip_risk = (
-                0.8 if p["status"] == "RED" else 0.4 if p["status"] == "YELLOW" else 0.1
-            )
+            slip_risk = 0.8 if p["status"] == "RED" else 0.4 if p["status"] == "YELLOW" else 0.1
 
             result.append(
                 {
@@ -2059,12 +2037,8 @@ class Client360Page10Engine:
 
         return {
             "open_count": int(counts.get("open_count") or 0) if counts else 0,
-            "overdue_open_count": int(counts.get("overdue_open_count") or 0)
-            if counts
-            else 0,
-            "broken_30d_count": int(counts.get("broken_30d_count") or 0)
-            if counts
-            else 0,
+            "overdue_open_count": int(counts.get("overdue_open_count") or 0) if counts else 0,
+            "broken_30d_count": int(counts.get("broken_30d_count") or 0) if counts else 0,
             "items": [
                 {
                     "text": i.get("text", "")[:60],
@@ -2108,9 +2082,7 @@ class Client360Page10Engine:
             "gap_hours": None,
         }
 
-    def _build_actions_section(
-        self, client_id: str, top_driver: TopDriver
-    ) -> list[dict]:
+    def _build_actions_section(self, client_id: str, top_driver: TopDriver) -> list[dict]:
         """Build actions for selected client."""
         actions = []
 
@@ -2181,17 +2153,11 @@ class Client360Page10Engine:
             (client_id, client_id),
         )
 
-        if (
-            health_delta
-            and health_delta.get("current")
-            and health_delta.get("previous")
-        ):
+        if health_delta and health_delta.get("current") and health_delta.get("previous"):
             delta = health_delta["current"] - health_delta["previous"]
             if delta != 0:
                 direction = "improved" if delta > 0 else "declined"
-                changes.append(
-                    {"text": f"Health score {direction} by {abs(delta)} points"}
-                )
+                changes.append({"text": f"Health score {direction} by {abs(delta)} points"})
 
         # 2. Tasks added in last 24h
         new_tasks = self._query_one(
@@ -2321,9 +2287,7 @@ class Client360Page10Engine:
 
         # Pre-select first portfolio item
         selected_client = (
-            drawer_clients.get(f"client:{portfolio[0].client_id}")
-            if portfolio
-            else None
+            drawer_clients.get(f"client:{portfolio[0].client_id}") if portfolio else None
         )
 
         return {

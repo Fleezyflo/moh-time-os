@@ -53,7 +53,7 @@ All endpoints return:
   "status": "ok",
   "data": { ... },
   "computed_at": "2026-02-13T19:30:00Z",
-  "params": { 
+  "params": {
     "since": null,
     "until": null
   }

@@ -212,33 +212,19 @@ class ResolutionStats:
 
     @property
     def threads_client_rate(self) -> float:
-        return (
-            self.threads_with_client / self.threads_total
-            if self.threads_total > 0
-            else 0.0
-        )
+        return self.threads_with_client / self.threads_total if self.threads_total > 0 else 0.0
 
     @property
     def invoices_valid_rate(self) -> float:
-        return (
-            self.invoices_valid / self.invoices_total
-            if self.invoices_total > 0
-            else 0.0
-        )
+        return self.invoices_valid / self.invoices_total if self.invoices_total > 0 else 0.0
 
     @property
     def people_hours_rate(self) -> float:
-        return (
-            self.people_with_hours / self.people_total if self.people_total > 0 else 0.0
-        )
+        return self.people_with_hours / self.people_total if self.people_total > 0 else 0.0
 
     @property
     def projects_client_rate(self) -> float:
-        return (
-            self.projects_with_client / self.projects_total
-            if self.projects_total > 0
-            else 0.0
-        )
+        return self.projects_with_client / self.projects_total if self.projects_total > 0 else 0.0
 
 
 # =============================================================================
@@ -246,9 +232,7 @@ class ResolutionStats:
 # =============================================================================
 
 
-def enforce_thresholds(
-    stats: ResolutionStats, environment: str = "standard_agency"
-) -> list[str]:
+def enforce_thresholds(stats: ResolutionStats, environment: str = "standard_agency") -> list[str]:
     """
     Enforce thresholds against resolution stats.
 
@@ -319,9 +303,7 @@ def enforce_thresholds(
     return violations
 
 
-def enforce_thresholds_strict(
-    stats: ResolutionStats, environment: str = "standard_agency"
-) -> None:
+def enforce_thresholds_strict(stats: ResolutionStats, environment: str = "standard_agency") -> None:
     """
     Strict enforcement — raises on first violation.
 

@@ -112,9 +112,7 @@ class Attendee:
         return cls(
             email=data.get("email", ""),
             name=data.get("name"),
-            response_status=AttendeeResponse(
-                data.get("response_status", "needsAction")
-            ),
+            response_status=AttendeeResponse(data.get("response_status", "needsAction")),
             is_organizer=data.get("is_organizer", False),
             is_optional=data.get("is_optional", False),
         )
@@ -200,9 +198,7 @@ class CalendarEvent(BaseModel):
     def accepted_count(self) -> int:
         """Get count of accepted attendees."""
         return sum(
-            1
-            for a in self.get_attendees()
-            if a.response_status == AttendeeResponse.ACCEPTED
+            1 for a in self.get_attendees() if a.response_status == AttendeeResponse.ACCEPTED
         )
 
     # =========================================================================

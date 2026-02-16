@@ -20,17 +20,17 @@ import sys
 
 # Conventional commit types
 VALID_TYPES = [
-    "feat",     # New feature
-    "fix",      # Bug fix
-    "docs",     # Documentation
-    "style",    # Formatting (no code change)
-    "refactor", # Code restructuring
-    "perf",     # Performance improvement
-    "test",     # Tests
-    "build",    # Build system
-    "ci",       # CI configuration
-    "chore",    # Maintenance
-    "revert",   # Revert previous commit
+    "feat",  # New feature
+    "fix",  # Bug fix
+    "docs",  # Documentation
+    "style",  # Formatting (no code change)
+    "refactor",  # Code restructuring
+    "perf",  # Performance improvement
+    "test",  # Tests
+    "build",  # Build system
+    "ci",  # CI configuration
+    "chore",  # Maintenance
+    "revert",  # Revert previous commit
 ]
 
 # Pattern: type(scope): description  OR  type: description
@@ -113,7 +113,7 @@ def main() -> int:
 
     if valid:
         print(f"✅ {reason}")
-        return 0
+        return 1
     else:
         print(f"❌ {reason}")
         return 1

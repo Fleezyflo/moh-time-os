@@ -24,9 +24,7 @@ class ReasonerEngine:
     def __init__(self, store: StateStore = None, governance: GovernanceEngine = None):
         self.store = store or get_store()
         self.governance = governance or get_governance()
-        self.decision_maker = DecisionMaker(
-            store=self.store, governance=self.governance
-        )
+        self.decision_maker = DecisionMaker(store=self.store, governance=self.governance)
 
     def process_cycle(self) -> dict[str, Any]:
         """
@@ -55,9 +53,7 @@ class ReasonerEngine:
                 elif decision_record.get("approved") is None:
                     results["decisions_pending"] += 1
 
-        logger.info(
-            f"Reasoning cycle complete: {results['decisions_created']} decisions created"
-        )
+        logger.info(f"Reasoning cycle complete: {results['decisions_created']} decisions created")
 
         return results
 

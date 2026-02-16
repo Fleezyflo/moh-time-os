@@ -132,9 +132,7 @@ class BlockManager:
             (success, message)
         """
         # Get block
-        block_row = self.store.query(
-            "SELECT * FROM time_blocks WHERE id = ?", [block_id]
-        )
+        block_row = self.store.query("SELECT * FROM time_blocks WHERE id = ?", [block_id])
         if not block_row:
             return False, "Block not found"
 
@@ -171,9 +169,7 @@ class BlockManager:
             [task_id, now, block_id],
         )
 
-        self.store.update(
-            "tasks", task_id, {"scheduled_block_id": block_id, "updated_at": now}
-        )
+        self.store.update("tasks", task_id, {"scheduled_block_id": block_id, "updated_at": now})
 
         return True, f"Task scheduled in block {block_id}"
 
@@ -196,9 +192,7 @@ class BlockManager:
         )
 
         # Clear task
-        self.store.update(
-            "tasks", task_id, {"scheduled_block_id": None, "updated_at": now}
-        )
+        self.store.update("tasks", task_id, {"scheduled_block_id": None, "updated_at": now})
 
         return True, f"Task unscheduled from block {block_id}"
 
@@ -363,9 +357,7 @@ class BlockManager:
 
         # Gap after last block until work end
         while current < work_end:
-            block_size = min(
-                self.DEFAULT_BLOCK_SIZE, (work_end - current).total_seconds() / 60
-            )
+            block_size = min(self.DEFAULT_BLOCK_SIZE, (work_end - current).total_seconds() / 60)
             if block_size < 30:
                 break
 

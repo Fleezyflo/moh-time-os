@@ -809,7 +809,7 @@ rootdir: /Users/molhamhomsi/clawd/moh_time_os
 configfile: pytest.ini (WARNING: ignoring pytest config in pyproject.toml!)
 testpaths: tests
 plugins: anyio-4.12.1, cov-7.0.0
-collected 199 items                                                                                       
+collected 199 items
 
 tests/contract/test_collector_paths.py ....                                                         [  2%]
 tests/contract/test_collector_registry.py ....FF.....                                               [  7%]
@@ -2016,7 +2016,7 @@ artifacts|CREATE TABLE artifacts (
     content_hash TEXT NOT NULL,  -- dedupe + integrity
     visibility_tags TEXT DEFAULT '[]',  -- JSON array for ACL/routing
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    
+
     UNIQUE(source, source_id)
 )
 asana_project_map|CREATE TABLE asana_project_map (

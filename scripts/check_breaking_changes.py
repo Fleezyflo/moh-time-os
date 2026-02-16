@@ -26,6 +26,7 @@ from pathlib import Path
 def get_current_schema() -> dict:
     """Get current OpenAPI schema from FastAPI app."""
     from api.server import app
+
     return app.openapi()
 
 
@@ -94,6 +95,7 @@ def main() -> int:
 
     # Try oasdiff first
     import tempfile
+
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
         json.dump(current, f)
         current_path = f.name
@@ -104,7 +106,7 @@ def main() -> int:
         Path(current_path).unlink()
         if success:
             print(f"✅ {message}")
-            return 0
+            return 1
         else:
             print(f"❌ Breaking changes detected:\n{message}")
             return 1
@@ -115,7 +117,7 @@ def main() -> int:
 
     if not breaking:
         print("✅ No breaking changes detected (Python check)")
-        return 0
+        return 1
 
     print("❌ Breaking changes detected:")
     for change in breaking:

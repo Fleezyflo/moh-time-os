@@ -98,11 +98,7 @@ class HealthCalculator:
 
         # Total health score
         total_score = int(
-            completion_score
-            + overdue_score
-            + activity_score
-            + commitment_score
-            + project_score
+            completion_score + overdue_score + activity_score + commitment_score + project_score
         )
         total_score = max(0, min(100, total_score))
 

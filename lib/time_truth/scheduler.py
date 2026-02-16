@@ -125,9 +125,7 @@ class Scheduler:
         task_duration = task.get("duration_min", 60)
 
         # Get available blocks for this lane
-        available_blocks = self.block_manager.get_available_blocks(
-            target_date, task_lane
-        )
+        available_blocks = self.block_manager.get_available_blocks(target_date, task_lane)
 
         if not available_blocks:
             return ScheduleResult(
@@ -244,9 +242,7 @@ class Scheduler:
         conflicts = self.block_manager.get_conflicts(target_date)
         if conflicts:
             for c in conflicts:
-                issues.append(
-                    f"Block overlap: {c.block_a_id} and {c.block_b_id} in lane {c.lane}"
-                )
+                issues.append(f"Block overlap: {c.block_a_id} and {c.block_b_id} in lane {c.lane}")
 
         # Check 2: Tasks with blocks that don't exist
         tasks_with_blocks = self.store.query("""
@@ -379,9 +375,7 @@ if __name__ == "__main__":
     logger.info("-" * 40)
     # Validate current schedule
     validation = scheduler.validate_schedule(today)
-    logger.info(
-        f"Validation: valid={validation.valid}, issues={len(validation.issues)}"
-    )
+    logger.info(f"Validation: valid={validation.valid}, issues={len(validation.issues)}")
     if validation.issues:
         for issue in validation.issues[:3]:
             logger.info(f"  - {issue}")
@@ -394,9 +388,7 @@ if __name__ == "__main__":
     # Try scheduling
     logger.info("\nAttempting to schedule tasks...")
     results = scheduler.schedule_unscheduled(today)
-    logger.info(
-        f"Scheduled {len([r for r in results if r.success])} of {len(results)} tasks"
-    )
+    logger.info(f"Scheduled {len([r for r in results if r.success])} of {len(results)} tasks")
     for r in results[:5]:
         status = "✓" if r.success else "✗"
         logger.info(f"  {status} {r.task_title}: {r.message}")

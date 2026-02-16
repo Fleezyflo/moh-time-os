@@ -23,9 +23,7 @@ from googleapiclient.discovery import build
 
 from lib import paths
 
-SA_FILE = (
-    Path.home() / "Library/Application Support/gogcli/sa-bW9saGFtQGhybW55LmNv.json"
-)
+SA_FILE = Path.home() / "Library/Application Support/gogcli/sa-bW9saGFtQGhybW55LmNv.json"
 SCOPES = [
     "https://www.googleapis.com/auth/contacts.readonly",
     "https://www.googleapis.com/auth/directory.readonly",
@@ -37,9 +35,7 @@ OUT_DIR = paths.out_dir()
 
 def get_people_service(user: str = DEFAULT_USER):
     """Get People API service using service account."""
-    creds = service_account.Credentials.from_service_account_file(
-        str(SA_FILE), scopes=SCOPES
-    )
+    creds = service_account.Credentials.from_service_account_file(str(SA_FILE), scopes=SCOPES)
     creds = creds.with_subject(user)
     return build("people", "v1", credentials=creds)
 

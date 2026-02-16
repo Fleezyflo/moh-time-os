@@ -147,9 +147,7 @@ class TestSchemaParity(TestCase):
         # This may fail for test DB - that's OK, we just need the safety indexes
         # Filter to only safety-required indexes
         safety_violations = [v for v in violations if "audit" in v.name.lower()]
-        self.assertEqual(
-            safety_violations, [], f"Missing safety indexes: {safety_violations}"
-        )
+        self.assertEqual(safety_violations, [], f"Missing safety indexes: {safety_violations}")
 
     def test_inbox_items_is_view_or_absent(self):
         """Assert legacy inbox_items is VIEW (not writable table)."""
@@ -312,9 +310,7 @@ class TestAuditLogging(TestCase):
         item_id = str(uuid.uuid4())
         request_id = generate_request_id()
 
-        with WriteContext(
-            self.conn, actor="test-user", source="test", request_id=request_id
-        ):
+        with WriteContext(self.conn, actor="test-user", source="test", request_id=request_id):
             self.conn.execute(
                 """
                 INSERT INTO inbox_items_v29 (id, type, state, proposed_at)
@@ -431,7 +427,7 @@ class TestWriteContext(TestCase):
         self.assertIsNone(ctx)
 
         # During context
-        with WriteContext(self.conn, actor="test", source="unit-test") as ctx_data:
+        with WriteContext(self.conn, actor="test", source="unit-test"):
             ctx = get_write_context(self.conn)
             self.assertIsNotNone(ctx)
             self.assertEqual(ctx.actor, "test")
@@ -443,16 +439,12 @@ class TestWriteContext(TestCase):
 
     def test_context_requires_actor(self):
         """WriteContext requires actor."""
-        with self.assertRaises(ValueError), WriteContext(
-            self.conn, actor="", source="test"
-        ):
+        with self.assertRaises(ValueError), WriteContext(self.conn, actor="", source="test"):
             pass
 
     def test_context_requires_source(self):
         """WriteContext requires source."""
-        with self.assertRaises(ValueError), WriteContext(
-            self.conn, actor="test", source=""
-        ):
+        with self.assertRaises(ValueError), WriteContext(self.conn, actor="test", source=""):
             pass
 
 
@@ -657,9 +649,7 @@ class TestSafeJsonParsing(TestCase):
         """Malformed JSON should return default with error."""
         from lib.safety import safe_json_loads
 
-        result = safe_json_loads(
-            "{malformed json}", default={}, item_id="test2", field_name="why"
-        )
+        result = safe_json_loads("{malformed json}", default={}, item_id="test2", field_name="why")
         self.assertFalse(result.success)
         self.assertEqual(result.value, {})
         self.assertIsNotNone(result.error)
@@ -698,9 +688,7 @@ class TestSafeJsonParsing(TestCase):
         trust = TrustMeta()
 
         # Parse entity_refs (malformed)
-        refs = parse_json_field(
-            item, "entity_refs", default=[], trust=trust, item_id_field="id"
-        )
+        refs = parse_json_field(item, "entity_refs", default=[], trust=trust, item_id_field="id")
         self.assertEqual(refs, [])
         self.assertFalse(trust.data_integrity)
         self.assertEqual(len(trust.errors), 1)
@@ -755,9 +743,7 @@ class TestSafeJsonParsing(TestCase):
 
         # Result is default, but trust failure MUST be recorded
         self.assertEqual(result, [])
-        self.assertFalse(
-            trust.data_integrity, "Parse failure must be recorded, not silent!"
-        )
+        self.assertFalse(trust.data_integrity, "Parse failure must be recorded, not silent!")
         self.assertGreater(len(trust.errors), 0, "Error must be recorded!")
 
 

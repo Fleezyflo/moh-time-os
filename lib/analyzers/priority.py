@@ -176,9 +176,7 @@ class PriorityAnalyzer:
             try:
                 tags = json.loads(tags)
             except (json.JSONDecodeError, TypeError) as e:
-                logger.debug(
-                    f"Could not parse tags JSON for task {task.get('id', 'unknown')}: {e}"
-                )
+                logger.debug(f"Could not parse tags JSON for task {task.get('id', 'unknown')}: {e}")
                 tags = []
 
         tags_lower = [t.lower() for t in tags] if tags else []
@@ -233,9 +231,7 @@ class PriorityAnalyzer:
                 blockers = []
 
         # Check if this task blocks others
-        blocking_count = self.store.count(
-            "tasks", f"dependencies LIKE '%{task['id']}%'"
-        )
+        blocking_count = self.store.count("tasks", f"dependencies LIKE '%{task['id']}%'")
         if blocking_count > 0:
             score += 10
             reasons.append(f"Blocking {blocking_count} other task(s)")
@@ -258,9 +254,7 @@ class PriorityAnalyzer:
         reasons = []
 
         # === SENDER/VIP FACTOR (0-25 points) ===
-        sender_tier = email.get("stakeholder_tier") or email.get(
-            "sender_tier", "significant"
-        )
+        sender_tier = email.get("stakeholder_tier") or email.get("sender_tier", "significant")
 
         if sender_tier == "always_urgent" or email.get("is_vip"):
             score += 25
@@ -273,12 +267,8 @@ class PriorityAnalyzer:
         age_hours = email.get("age_hours", 0)
         if not age_hours and email.get("created_at"):
             try:
-                created = datetime.fromisoformat(
-                    email["created_at"].replace("Z", "+00:00")
-                )
-                age_hours = (
-                    datetime.now(created.tzinfo) - created
-                ).total_seconds() / 3600
+                created = datetime.fromisoformat(email["created_at"].replace("Z", "+00:00"))
+                age_hours = (datetime.now(created.tzinfo) - created).total_seconds() / 3600
             except (ValueError, TypeError, AttributeError) as e:
                 logger.debug(
                     f"Could not parse created_at for email {email.get('id', 'unknown')}: {e}"

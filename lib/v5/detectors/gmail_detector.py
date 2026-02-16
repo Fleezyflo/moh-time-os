@@ -107,9 +107,7 @@ class GmailDetector(SignalDetector):
                     return datetime.strptime(date_str, fmt)
                 except ValueError:
                     continue
-            logger.debug(
-                f"Could not parse date string '{date_str}' with any known format"
-            )
+            logger.debug(f"Could not parse date string '{date_str}' with any known format")
             return datetime.now()
         except Exception as e:
             logger.debug(f"Unexpected error parsing date '{date_str}': {e}")
@@ -285,7 +283,5 @@ class GmailDetector(SignalDetector):
             signals.append(signal)
             self.log_signal(signal)
 
-        logger.info(
-            f"[{self.detector_id}] Detected {len(signals)} active client signals"
-        )
+        logger.info(f"[{self.detector_id}] Detected {len(signals)} active client signals")
         return signals

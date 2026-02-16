@@ -254,9 +254,7 @@ def handle_query(query: str) -> str:
                 # Health summary
                 lines.append(f"**Status:** {client.health} (Tier {client.tier})")
                 if client.ar_outstanding > 0:
-                    lines.append(
-                        f"**AR:** {client.ar_outstanding:,.0f} AED ({client.ar_aging})"
-                    )
+                    lines.append(f"**AR:** {client.ar_outstanding:,.0f} AED ({client.ar_aging})")
                     if client.payment_pattern != "Unknown":
                         lines.append(f"**Payment Pattern:** {client.payment_pattern}")
 

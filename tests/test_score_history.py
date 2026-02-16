@@ -17,12 +17,12 @@ from pathlib import Path
 import pytest
 
 from lib.intelligence.scorecard import (
-    record_score,
-    record_all_scores,
-    get_score_trend,
     get_score_history_summary,
-    score_client,
+    get_score_trend,
+    record_all_scores,
+    record_score,
     score_all_clients,
+    score_client,
 )
 from lib.migrations.v30_score_history import run_migration, verify_migration
 
@@ -93,7 +93,9 @@ class TestRecordScore:
         cursor = conn.cursor()
         cursor.execute("SELECT COUNT(*) FROM score_history WHERE entity_id = ?", ("test-client-1",))
         count = cursor.fetchone()[0]
-        cursor.execute("SELECT composite_score FROM score_history WHERE entity_id = ?", ("test-client-1",))
+        cursor.execute(
+            "SELECT composite_score FROM score_history WHERE entity_id = ?", ("test-client-1",)
+        )
         score = cursor.fetchone()[0]
         conn.close()
 
@@ -137,15 +139,23 @@ class TestGetScoreTrend:
         for i in range(10):
             date = base_date - timedelta(days=i)
             score = 50 + i * 3  # Increasing scores going back in time
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT INTO score_history
                 (entity_type, entity_id, composite_score, dimensions_json,
                  data_completeness, recorded_at, recorded_date)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (
-                "client", "trend-test-client", score, "[]", 0.9,
-                date.isoformat(), date.strftime("%Y-%m-%d")
-            ))
+            """,
+                (
+                    "client",
+                    "trend-test-client",
+                    score,
+                    "[]",
+                    0.9,
+                    date.isoformat(),
+                    date.strftime("%Y-%m-%d"),
+                ),
+            )
 
         conn.commit()
         conn.close()
@@ -170,15 +180,23 @@ class TestGetScoreTrend:
 
         for i, score in enumerate(scores):
             date = base_date - timedelta(days=len(scores) - 1 - i)
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT INTO score_history
                 (entity_type, entity_id, composite_score, dimensions_json,
                  data_completeness, recorded_at, recorded_date)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (
-                "client", "improving-client", score, "[]", 0.9,
-                date.isoformat(), date.strftime("%Y-%m-%d")
-            ))
+            """,
+                (
+                    "client",
+                    "improving-client",
+                    score,
+                    "[]",
+                    0.9,
+                    date.isoformat(),
+                    date.strftime("%Y-%m-%d"),
+                ),
+            )
 
         conn.commit()
         conn.close()
@@ -198,15 +216,23 @@ class TestGetScoreTrend:
 
         for i, score in enumerate(scores):
             date = base_date - timedelta(days=len(scores) - 1 - i)
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT INTO score_history
                 (entity_type, entity_id, composite_score, dimensions_json,
                  data_completeness, recorded_at, recorded_date)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (
-                "client", "declining-client", score, "[]", 0.9,
-                date.isoformat(), date.strftime("%Y-%m-%d")
-            ))
+            """,
+                (
+                    "client",
+                    "declining-client",
+                    score,
+                    "[]",
+                    0.9,
+                    date.isoformat(),
+                    date.strftime("%Y-%m-%d"),
+                ),
+            )
 
         conn.commit()
         conn.close()
@@ -235,20 +261,23 @@ class TestGetScoreHistorySummary:
         now = datetime.now()
 
         # Insert test data
-        for i, (etype, eid) in enumerate([
-            ("client", "c1"), ("client", "c2"),
-            ("project", "p1"),
-            ("person", "per1"),
-        ]):
-            cursor.execute("""
+        for _i, (etype, eid) in enumerate(
+            [
+                ("client", "c1"),
+                ("client", "c2"),
+                ("project", "p1"),
+                ("person", "per1"),
+            ]
+        ):
+            cursor.execute(
+                """
                 INSERT INTO score_history
                 (entity_type, entity_id, composite_score, dimensions_json,
                  data_completeness, recorded_at, recorded_date)
                 VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (
-                etype, eid, 75.0, "[]", 0.9,
-                now.isoformat(), now.strftime("%Y-%m-%d")
-            ))
+            """,
+                (etype, eid, 75.0, "[]", 0.9, now.isoformat(), now.strftime("%Y-%m-%d")),
+            )
 
         conn.commit()
         conn.close()

@@ -12,34 +12,34 @@
 
 ```sql
 -- Delivery Tile
-SELECT 
+SELECT
     COUNT(*) FILTER (WHERE status = 'active') as active_projects,
     COUNT(*) FILTER (WHERE health = 'red') as red_projects,
     COUNT(*) FILTER (WHERE health = 'yellow') as yellow_projects,
-    (SELECT COUNT(*) FROM tasks WHERE status NOT IN ('done','completed') 
+    (SELECT COUNT(*) FROM tasks WHERE status NOT IN ('done','completed')
      AND due_date < date('now')) as overdue_tasks
 FROM projects WHERE status = 'active';
 
 -- Cash Tile
-SELECT 
+SELECT
     COALESCE(SUM(amount), 0) as total_ar,
     COALESCE(SUM(amount) FILTER (WHERE aging_bucket IN ('61-90','90+')), 0) as severe_ar,
     COUNT(*) as invoice_count
-FROM invoices 
+FROM invoices
 WHERE status IN ('sent','overdue') AND paid_date IS NULL;
 
 -- Clients Tile
-SELECT 
+SELECT
     COUNT(*) as total_clients,
     COUNT(*) FILTER (WHERE relationship_health = 'critical') as critical_clients,
     AVG(health_score) as avg_health
 FROM clients WHERE tier IN ('A','B');
 
 -- Capacity Tile (placeholder - requires time tracking)
-SELECT 
+SELECT
     COUNT(DISTINCT assignee_id) as active_team,
     SUM(duration_min) / 60.0 as total_hours_needed
-FROM tasks 
+FROM tasks
 WHERE status NOT IN ('done','completed');
 ```
 
@@ -62,7 +62,7 @@ WHERE status NOT IN ('done','completed');
 **Purpose:** List all clients with key metrics for portfolio view
 
 ```sql
-SELECT 
+SELECT
     c.id,
     c.name,
     c.tier,
@@ -73,7 +73,7 @@ SELECT
     c.financial_ar_aging,
     COUNT(DISTINCT p.id) as project_count,
     COUNT(DISTINCT t.id) as task_count,
-    SUM(CASE WHEN t.status NOT IN ('done','completed') 
+    SUM(CASE WHEN t.status NOT IN ('done','completed')
         AND t.due_date < date('now') THEN 1 ELSE 0 END) as overdue_tasks
 FROM clients c
 LEFT JOIN projects p ON p.client_id = c.id AND p.status = 'active'
@@ -95,25 +95,25 @@ ORDER BY c.tier, c.health_score DESC;
 SELECT * FROM clients WHERE id = ?;
 
 -- Projects
-SELECT id, name, status, health, deadline, completion_pct 
+SELECT id, name, status, health, deadline, completion_pct
 FROM projects WHERE client_id = ? ORDER BY status, deadline;
 
 -- Recent communications
 SELECT id, subject, from_email, received_at, link_status
-FROM communications 
-WHERE client_id = ? 
+FROM communications
+WHERE client_id = ?
 ORDER BY received_at DESC LIMIT 20;
 
 -- AR invoices
 SELECT id, external_id, amount, due_date, status, aging_bucket
-FROM invoices 
-WHERE client_id = ? 
+FROM invoices
+WHERE client_id = ?
 ORDER BY due_date;
 
 -- Commitments
 SELECT id, text, type, status, deadline
-FROM commitments 
-WHERE client_id = ? 
+FROM commitments
+WHERE client_id = ?
 ORDER BY deadline;
 ```
 
@@ -126,7 +126,7 @@ ORDER BY deadline;
 **Purpose:** List projects for delivery command heatstrip
 
 ```sql
-SELECT 
+SELECT
     p.id,
     p.name,
     p.status,
@@ -140,7 +140,7 @@ SELECT
     c.name as client_name,
     c.tier as client_tier,
     b.name as brand_name,
-    COUNT(DISTINCT t.id) FILTER (WHERE t.status NOT IN ('done','completed') 
+    COUNT(DISTINCT t.id) FILTER (WHERE t.status NOT IN ('done','completed')
         AND t.due_date < date('now')) as overdue_tasks,
     COUNT(DISTINCT t.id) FILTER (WHERE t.status = 'blocked') as blocked_tasks
 FROM projects p
@@ -149,7 +149,7 @@ LEFT JOIN brands b ON p.brand_id = b.id
 LEFT JOIN tasks t ON t.project_id = p.id
 WHERE p.status = 'active'
 GROUP BY p.id
-ORDER BY 
+ORDER BY
     CASE p.health WHEN 'red' THEN 0 WHEN 'yellow' THEN 1 ELSE 2 END,
     p.deadline NULLS LAST;
 ```
@@ -183,20 +183,20 @@ LEFT JOIN brands b ON p.brand_id = b.id
 WHERE p.id = ?;
 
 -- Tasks by status
-SELECT 
+SELECT
     status,
     COUNT(*) as count,
     json_group_array(json_object(
-        'id', id, 'title', title, 'due_date', due_date, 
+        'id', id, 'title', title, 'due_date', due_date,
         'assignee', assignee_raw, 'priority', priority
     )) as tasks
-FROM tasks 
+FROM tasks
 WHERE project_id = ?
 GROUP BY status;
 
 -- Critical path (blocked tasks with dependencies)
 SELECT id, title, blockers, dependencies
-FROM tasks 
+FROM tasks
 WHERE project_id = ? AND (blockers IS NOT NULL OR dependencies IS NOT NULL);
 ```
 
@@ -209,7 +209,7 @@ WHERE project_id = ? AND (blockers IS NOT NULL OR dependencies IS NOT NULL);
 **Purpose:** Cash/AR command overview
 
 ```sql
-SELECT 
+SELECT
     COALESCE(SUM(amount), 0) as total_ar,
     COALESCE(SUM(amount) FILTER (WHERE aging_bucket = 'current'), 0) as current_ar,
     COALESCE(SUM(amount) FILTER (WHERE aging_bucket = '1-30'), 0) as ar_1_30,
@@ -218,7 +218,7 @@ SELECT
     COALESCE(SUM(amount) FILTER (WHERE aging_bucket = '90+'), 0) as ar_90_plus,
     COUNT(*) as invoice_count,
     COUNT(DISTINCT client_id) as debtor_count
-FROM invoices 
+FROM invoices
 WHERE status IN ('sent','overdue') AND paid_date IS NULL;
 ```
 
@@ -229,12 +229,12 @@ WHERE status IN ('sent','overdue') AND paid_date IS NULL;
 **Purpose:** List clients with outstanding AR
 
 ```sql
-SELECT 
+SELECT
     c.id as client_id,
     c.name as client_name,
     c.tier,
     SUM(i.amount) as total_owed,
-    MAX(CASE 
+    MAX(CASE
         WHEN i.aging_bucket = '90+' THEN 4
         WHEN i.aging_bucket = '61-90' THEN 3
         WHEN i.aging_bucket = '31-60' THEN 2
@@ -260,7 +260,7 @@ LIMIT 25;
 **Purpose:** Comms command thread console
 
 ```sql
-SELECT 
+SELECT
     id,
     subject,
     from_email,
@@ -275,7 +275,7 @@ SELECT
     ROUND((julianday('now') - julianday(received_at)) * 24, 1) as age_hours
 FROM communications
 WHERE received_at > datetime('now', '-30 days')
-ORDER BY 
+ORDER BY
     is_unread DESC,
     requires_response DESC,
     received_at DESC
@@ -289,7 +289,7 @@ LIMIT 50;
 **Purpose:** Client-filtered communications
 
 ```sql
-SELECT 
+SELECT
     id, subject, from_email, received_at, snippet, is_unread
 FROM communications
 WHERE client_id = ?
@@ -306,7 +306,7 @@ LIMIT 30;
 **Purpose:** Capacity command lane summary
 
 ```sql
-SELECT 
+SELECT
     l.id as lane_id,
     l.name as lane_name,
     l.weekly_hours,
@@ -314,7 +314,7 @@ SELECT
     SUM(t.duration_min) / 60.0 as hours_needed,
     l.weekly_hours - (SUM(t.duration_min) / 60.0) as hours_gap
 FROM capacity_lanes l
-LEFT JOIN tasks t ON t.lane = l.name 
+LEFT JOIN tasks t ON t.lane = l.name
     AND t.status NOT IN ('done','completed')
 GROUP BY l.id
 ORDER BY hours_gap;
@@ -327,7 +327,7 @@ ORDER BY hours_gap;
 **Purpose:** Team member workload
 
 ```sql
-SELECT 
+SELECT
     tm.id,
     tm.name,
     tm.default_lane,
@@ -335,7 +335,7 @@ SELECT
     SUM(t.duration_min) / 60.0 as hours_assigned,
     SUM(CASE WHEN t.due_date < date('now') THEN 1 ELSE 0 END) as overdue_count
 FROM team_members tm
-LEFT JOIN tasks t ON t.assignee_id = tm.id 
+LEFT JOIN tasks t ON t.assignee_id = tm.id
     AND t.status NOT IN ('done','completed')
 GROUP BY tm.id
 ORDER BY hours_assigned DESC;
@@ -350,7 +350,7 @@ ORDER BY hours_assigned DESC;
 **Purpose:** Resolution queue overview
 
 ```sql
-SELECT 
+SELECT
     entity_type,
     issue_type,
     priority,
@@ -368,7 +368,7 @@ ORDER BY priority, count DESC;
 **Purpose:** List queue items for triage
 
 ```sql
-SELECT 
+SELECT
     rq.id,
     rq.entity_type,
     rq.entity_id,
@@ -397,7 +397,7 @@ LIMIT 50;
 **Purpose:** List actions awaiting approval
 
 ```sql
-SELECT 
+SELECT
     id,
     action_type,
     entity_type,
@@ -410,7 +410,7 @@ SELECT
     expires_at
 FROM pending_actions
 WHERE status = 'pending'
-ORDER BY 
+ORDER BY
     CASE risk_level WHEN 'high' THEN 0 WHEN 'medium' THEN 1 ELSE 2 END,
     proposed_at;
 ```
@@ -424,7 +424,7 @@ ORDER BY
 **Purpose:** Calendar view
 
 ```sql
-SELECT 
+SELECT
     id,
     title,
     start_time,
@@ -445,7 +445,7 @@ ORDER BY start_time;
 **Purpose:** Task due date timeline
 
 ```sql
-SELECT 
+SELECT
     date(due_date) as due_day,
     COUNT(*) as task_count,
     SUM(duration_min) as total_minutes,
@@ -465,7 +465,7 @@ ORDER BY due_day;
 **Purpose:** Health trend chart
 
 ```sql
-SELECT 
+SELECT
     date(computed_at) as day,
     AVG(health_score) as avg_health,
     COUNT(DISTINCT client_id) as clients_tracked
@@ -482,7 +482,7 @@ ORDER BY day;
 **Purpose:** Data freshness indicators
 
 ```sql
-SELECT 
+SELECT
     source,
     last_sync,
     last_success,

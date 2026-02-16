@@ -77,9 +77,7 @@ class TestAuditStore:
         store.record("test", "entity", "id-1", {"key": "value"})
 
         # Try to update (should not affect stored event)
-        temp_db.execute(
-            "UPDATE audit_events SET payload = '{}' WHERE entity_id = 'id-1'"
-        )
+        temp_db.execute("UPDATE audit_events SET payload = '{}' WHERE entity_id = 'id-1'")
         temp_db.commit()
 
         # In a real immutable store, this would be prevented

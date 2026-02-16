@@ -221,8 +221,7 @@ def allocate_lane_budgets(aec_minutes: int, lanes: list[str] = None) -> dict[str
 
     # Calculate total daily budget
     total_budget = sum(
-        lane.get("capacity_budget", {}).get("daily_minutes", 60)
-        for lane in all_lanes.values()
+        lane.get("capacity_budget", {}).get("daily_minutes", 60) for lane in all_lanes.values()
     )
 
     # Proportionally allocate AEC
@@ -274,9 +273,7 @@ def propose_blocks(
         # Get preferred block length from lane config
         lane_config = get_lane(lane)
         block_templates = (
-            lane_config.get("block_templates", [30, 60, 90])
-            if lane_config
-            else [30, 60, 90]
+            lane_config.get("block_templates", [30, 60, 90]) if lane_config else [30, 60, 90]
         )
 
         # Try to find a slot
@@ -307,9 +304,7 @@ def propose_blocks(
 
                         # Update slot (reduce available time)
                         slot.start = proposal.end
-                        slot.duration_minutes = int(
-                            (slot.end - slot.start).total_seconds() / 60
-                        )
+                        slot.duration_minutes = int((slot.end - slot.start).total_seconds() / 60)
 
                         blocks_per_day[target_date] += 1
                         scheduled = True

@@ -280,9 +280,7 @@ class CapacityCommandPage7Engine:
             self.capacity_baseline = len(task_lanes) > 0
         else:
             # Validate all lanes have weekly_hours > 0
-            self.capacity_baseline = all(
-                lane.get("weekly_hours", 0) > 0 for lane in lanes
-            )
+            self.capacity_baseline = all(lane.get("weekly_hours", 0) > 0 for lane in lanes)
 
         # Calendar sync
         last_sync = self._query_one("""
@@ -322,9 +320,7 @@ class CapacityCommandPage7Engine:
         )
 
         if total_tasks > 0:
-            self.duration_missing_pct = (
-                (total_tasks - tasks_with_duration) / total_tasks
-            ) * 100
+            self.duration_missing_pct = ((total_tasks - tasks_with_duration) / total_tasks) * 100
 
         # Reality gap confidence per §5.4
         self._compute_reality_gap_confidence()
@@ -344,9 +340,7 @@ class CapacityCommandPage7Engine:
                 sync_time = datetime.fromisoformat(
                     self.calendar_last_sync_at.replace("Z", "+00:00")
                 )
-                hours_ago = (
-                    self.now - sync_time.replace(tzinfo=None)
-                ).total_seconds() / 3600
+                hours_ago = (self.now - sync_time.replace(tzinfo=None)).total_seconds() / 3600
                 if hours_ago > 24:
                     why_low.append(f"calendar stale ({hours_ago:.0f}h)")
             except (ValueError, TypeError, AttributeError) as e:
@@ -608,9 +602,7 @@ class CapacityCommandPage7Engine:
         # Sort events by start time
         sorted_events = []
         for e in events:
-            if not e.get(
-                "is_focus_block"
-            ):  # Only consider non-focus events as blockers
+            if not e.get("is_focus_block"):  # Only consider non-focus events as blockers
                 try:
                     sorted_events.append(
                         {
@@ -676,8 +668,7 @@ class CapacityCommandPage7Engine:
             # Only count actual work, not tracking items
             work_tasks = [t for t in lane_tasks if not is_tracking_item(t)]
             hours_needed = sum(
-                estimate_duration(t.get("title", ""), lane_name) / 60
-                for t in work_tasks
+                estimate_duration(t.get("title", ""), lane_name) / 60 for t in work_tasks
             )
 
             gap_hours = hours_needed - hours_available
@@ -782,8 +773,7 @@ class CapacityCommandPage7Engine:
                     risk_band=risk_band,
                     confidence=Confidence.MED,
                     why_low=["default capacity assumed"]
-                    if hours_available
-                    == 40 * (1 - self.DEFAULT_BUFFER_PCT) * horizon_mult
+                    if hours_available == 40 * (1 - self.DEFAULT_BUFFER_PCT) * horizon_mult
                     else [],
                 )
             )
@@ -922,9 +912,7 @@ class CapacityCommandPage7Engine:
         if self.horizon == Horizon.TODAY:
             return 4.0
         # 30% of effective capacity
-        total_available = sum(
-            lane.effective_capacity for lane in self._lanes_cache.values()
-        )
+        total_available = sum(lane.effective_capacity for lane in self._lanes_cache.values())
         return total_available * 0.30
 
     def _is_move_eligible(
@@ -1026,9 +1014,7 @@ class CapacityCommandPage7Engine:
             controllability=0.7,
         )
 
-    def _create_meeting_overload_move(
-        self, meeting_hours: float, threshold: float
-    ) -> CapacityMove:
+    def _create_meeting_overload_move(self, meeting_hours: float, threshold: float) -> CapacityMove:
         """Create a meeting overload move."""
         excess = meeting_hours - threshold
         return CapacityMove(
@@ -1070,9 +1056,7 @@ class CapacityCommandPage7Engine:
             score=0.0,
             time_to_consequence_hours=None,
             impact_hours=1.5 - largest_focus,
-            confidence=Confidence.HIGH
-            if self.calendar_last_sync_at
-            else Confidence.LOW,
+            confidence=Confidence.HIGH if self.calendar_last_sync_at else Confidence.LOW,
             why_low=[] if self.calendar_last_sync_at else ["no calendar sync"],
             primary_action={
                 "risk": ActionRisk.AUTO.value,
@@ -1276,9 +1260,7 @@ class CapacityCommandPage7Engine:
             key = f"lane:{lane.lane.lower()}"
 
             # Get top 5 tasks driving demand
-            lane_tasks = [
-                t for t in self._tasks_cache if t.get("resolved_lane") == lane.lane
-            ]
+            lane_tasks = [t for t in self._tasks_cache if t.get("resolved_lane") == lane.lane]
             lane_tasks.sort(key=lambda t: -(t.get("duration_min") or 0))
 
             evidence = [
@@ -1305,9 +1287,7 @@ class CapacityCommandPage7Engine:
         for person in people:
             key = f"person:{person.person_id.lower()}"
 
-            person_tasks = [
-                t for t in self._tasks_cache if t.get("assignee") == person.person_id
-            ]
+            person_tasks = [t for t in self._tasks_cache if t.get("assignee") == person.person_id]
             person_tasks.sort(key=lambda t: -(t.get("duration_min") or 0))
 
             evidence = [
@@ -1335,10 +1315,7 @@ class CapacityCommandPage7Engine:
             key = f"move:{move.move_id}"
             entities[key] = {
                 "summary": move.label,
-                "evidence": [
-                    {"type": "ref", "id": eid, "label": eid}
-                    for eid in move.evidence_ids
-                ],
+                "evidence": [{"type": "ref", "id": eid, "label": eid} for eid in move.evidence_ids],
                 "actions": [move.primary_action] + move.secondary_actions,
                 "reason": f"{self.horizon.value} | {move.type.value} | score={move.score:.2f}",
             }
@@ -1402,9 +1379,7 @@ class CapacityCommandPage7Engine:
                 ],
                 "bottleneck_lane": {
                     "lane": bottleneck_lane.lane if bottleneck_lane else None,
-                    "gap_ratio": round(bottleneck_lane.gap_ratio, 2)
-                    if bottleneck_lane
-                    else 0,
+                    "gap_ratio": round(bottleneck_lane.gap_ratio, 2) if bottleneck_lane else 0,
                 }
                 if bottleneck_lane
                 else None,

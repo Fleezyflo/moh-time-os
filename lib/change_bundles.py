@@ -267,9 +267,7 @@ def cleanup_old_bundles(days: int = 30) -> int:
     for bundle_file in BUNDLES_DIR.glob("*.json"):
         try:
             bundle = json.loads(bundle_file.read_text())
-            created = datetime.fromisoformat(
-                bundle["created_at"].replace("Z", "+00:00")
-            )
+            created = datetime.fromisoformat(bundle["created_at"].replace("Z", "+00:00"))
             if created < cutoff:
                 bundle_file.unlink()
                 removed += 1
@@ -406,9 +404,7 @@ if __name__ == "__main__":
     if cmd == "list":
         bundles = list_bundles()
         for b in bundles:
-            logger.info(
-                f"{b['id']} | {b['domain']} | {b['status']} | {b['description'][:40]}"
-            )
+            logger.info(f"{b['id']} | {b['domain']} | {b['status']} | {b['description'][:40]}")
     elif cmd == "pending":
         bundles = list_pending_bundles()
         for b in bundles:

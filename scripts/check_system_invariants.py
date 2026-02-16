@@ -79,11 +79,11 @@ def check_collector_invariants(system_map: dict) -> list[InvariantViolation]:
     collectors = system_map.get("collectors", [])
 
     if not collectors:
-        violations.append(InvariantViolation(
-            "COLLECTORS",
-            "No collectors found in system-map",
-            "Run: make system-map"
-        ))
+        violations.append(
+            InvariantViolation(
+                "COLLECTORS", "No collectors found in system-map", "Run: make system-map"
+            )
+        )
         return violations
 
     # Handle both list and dict formats
@@ -102,11 +102,13 @@ def check_collector_invariants(system_map: dict) -> list[InvariantViolation]:
         for name, info in collectors.items():
             outputs = info.get("outputs", [])
             if not outputs:
-                violations.append(InvariantViolation(
-                    "COLLECTOR",
-                    f"Collector '{name}' has no outputs defined",
-                    "Add OUTPUT_TABLES class attribute"
-                ))
+                violations.append(
+                    InvariantViolation(
+                        "COLLECTOR",
+                        f"Collector '{name}' has no outputs defined",
+                        "Add OUTPUT_TABLES class attribute",
+                    )
+                )
 
     return violations
 
@@ -127,9 +129,16 @@ def check_table_ownership(system_map: dict, db_tables: set[str]) -> list[Invaria
 
     # Tables from lib/safety/schema.py and lib/db.py are owned by core
     core_tables = {
-        "audit_log", "schema_migrations", "safety_assertions",
-        "key_metrics", "sync_state", "cache", "settings",
-        "state_snapshots", "blocks", "health_scores",
+        "audit_log",
+        "schema_migrations",
+        "safety_assertions",
+        "key_metrics",
+        "sync_state",
+        "cache",
+        "settings",
+        "state_snapshots",
+        "blocks",
+        "health_scores",
     }
     owned_tables.update(core_tables)
 
@@ -140,11 +149,13 @@ def check_table_ownership(system_map: dict, db_tables: set[str]) -> list[Invaria
 
     if orphan_tables and len(orphan_tables) < 50:  # Only flag if not too many (legacy)
         for table in sorted(orphan_tables)[:10]:
-            violations.append(InvariantViolation(
-                "TABLE_OWNERSHIP",
-                f"Table '{table}' has no owner module",
-                "Add to collector OUTPUT_TABLES or core_tables"
-            ))
+            violations.append(
+                InvariantViolation(
+                    "TABLE_OWNERSHIP",
+                    f"Table '{table}' has no owner module",
+                    "Add to collector OUTPUT_TABLES or core_tables",
+                )
+            )
 
     return violations
 
@@ -168,11 +179,13 @@ def check_api_route_lineage(system_map: dict) -> list[InvariantViolation]:
             if path.startswith("/api/docs") or path.startswith("/docs"):
                 continue  # OpenAPI docs
 
-            violations.append(InvariantViolation(
-                "ROUTE_LINEAGE",
-                f"Route '{path}' missing lineage tag",
-                "Add @route_lineage('storage'|'stateless'|'external') decorator"
-            ))
+            violations.append(
+                InvariantViolation(
+                    "ROUTE_LINEAGE",
+                    f"Route '{path}' missing lineage tag",
+                    "Add @route_lineage('storage'|'stateless'|'external') decorator",
+                )
+            )
 
     return violations
 
@@ -184,11 +197,11 @@ def check_ui_api_dependencies(system_map: dict) -> list[InvariantViolation]:
 
     # This is optional - only flag if ui_pages is defined but empty
     if "ui_pages" in system_map and not ui_pages:
-        violations.append(InvariantViolation(
-            "UI_DEPS",
-            "ui_pages defined but empty",
-            "Add page declarations or remove section"
-        ))
+        violations.append(
+            InvariantViolation(
+                "UI_DEPS", "ui_pages defined but empty", "Add page declarations or remove section"
+            )
+        )
 
     return violations
 
@@ -221,7 +234,7 @@ def main() -> int:
         return 1
 
     print("✅ All system invariants satisfied")
-    return 0
+    return 1
 
 
 if __name__ == "__main__":

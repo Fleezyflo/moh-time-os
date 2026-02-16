@@ -74,9 +74,7 @@ class TestGoldenAR:
         conn = sqlite3.connect(db_path)
 
         # Count paid invoices
-        cursor = conn.execute(
-            "SELECT COUNT(*) FROM invoices WHERE payment_date IS NOT NULL"
-        )
+        cursor = conn.execute("SELECT COUNT(*) FROM invoices WHERE payment_date IS NOT NULL")
         paid_count = cursor.fetchone()[0]
 
         # Count unpaid invoices
@@ -87,7 +85,7 @@ class TestGoldenAR:
 
         # Total invoices
         cursor = conn.execute("SELECT COUNT(*) FROM invoices")
-        total_count = cursor.fetchone()[0]
+        cursor.fetchone()[0]
         conn.close()
 
         # Paid + unpaid <= total (some may have other statuses)

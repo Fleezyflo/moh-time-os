@@ -4,6 +4,7 @@ MOH TIME OS CLI - Direct user interface.
 No AI required. Direct control.
 """
 
+import sys
 from datetime import datetime
 
 from lib.analyzers import AnalyzerOrchestrator
@@ -24,19 +25,16 @@ def print_header(text: str):
 def print_table(headers: list, rows: list, widths: list = None):
     """Print a simple table."""
     if not widths:
-        widths = [
-            max(len(str(row[i])) for row in [headers] + rows)
-            for i in range(len(headers))
-        ]
+        widths = [max(len(str(row[i])) for row in [headers] + rows) for i in range(len(headers))]
 
     # Header
-    header_str = " │ ".join(str(h).ljust(w) for h, w in zip(headers, widths))
+    header_str = " │ ".join(str(h).ljust(w) for h, w in zip(headers, widths, strict=False))
     print(header_str)
     print("─" * len(header_str))
 
     # Rows
     for row in rows:
-        print(" │ ".join(str(c)[:w].ljust(w) for c, w in zip(row, widths)))
+        print(" │ ".join(str(c)[:w].ljust(w) for c, w in zip(row, widths, strict=False)))
 
 
 def score_color(score: float) -> str:
@@ -81,9 +79,7 @@ def cmd_priorities(args):
             ]
         )
 
-    print_table(
-        ["#", "Score", "Type", "Title", "Due", "Reason"], rows, [3, 5, 4, 35, 10, 40]
-    )
+    print_table(["#", "Score", "Type", "Title", "Due", "Reason"], rows, [3, 5, 4, 35, 10, 40])
 
 
 def cmd_today(args):
@@ -158,9 +154,7 @@ def cmd_approvals(args):
         return
 
     for item in pending:
-        print(
-            f"\n📋 [{item['domain']}] {item.get('description', item['decision_type'])}"
-        )
+        print(f"\n📋 [{item['domain']}] {item.get('description', item['decision_type'])}")
         print(f"   Rationale: {item.get('rationale', 'N/A')}")
         print(f"   Confidence: {float(item.get('confidence', 0)) * 100:.0f}%")
         print(f"   ID: {item['id']}")

@@ -15,12 +15,8 @@ from dataclasses import dataclass
 from typing import Any
 
 # Context variables for trace propagation
-_trace_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "trace_id", default=None
-)
-_span_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "span_id", default=None
-)
+_trace_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar("trace_id", default=None)
+_span_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar("span_id", default=None)
 _parent_span_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "parent_span_id", default=None
 )

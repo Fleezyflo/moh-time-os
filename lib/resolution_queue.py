@@ -10,6 +10,7 @@ Per MASTER_SPEC.md §5:
 
 import logging
 import sqlite3
+from pathlib import Path
 from typing import Any
 
 from lib import paths

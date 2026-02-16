@@ -57,9 +57,7 @@ def build_team_registry() -> dict:
         lane = a["default_lane"] or "ops"
 
         # Check if already exists
-        cursor.execute(
-            "SELECT id FROM team_members WHERE LOWER(name) = LOWER(?)", (name,)
-        )
+        cursor.execute("SELECT id FROM team_members WHERE LOWER(name) = LOWER(?)", (name,))
         if cursor.fetchone():
             skipped += 1
             continue

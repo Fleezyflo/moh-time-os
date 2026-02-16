@@ -78,9 +78,7 @@ def collect_gmail():
         import importlib.util
 
         collector_path = Path(__file__).parent / "gmail_multi_user.py"
-        spec = importlib.util.spec_from_file_location(
-            "gmail_multi_user", collector_path
-        )
+        spec = importlib.util.spec_from_file_location("gmail_multi_user", collector_path)
         gmail_collector = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(gmail_collector)
 
@@ -94,25 +92,6 @@ def collect_gmail():
         )
 
         return status
-    except Exception as e:
-        import traceback
-
-        print(f"   → Gmail error: {e}")
-        traceback.print_exc()
-        return {}
-
-        data = {
-            "collected_at": datetime.now(UTC).isoformat(),
-            "messages": all_messages,
-            "threads_count": len(seen_ids),
-        }
-        gmail_direct.save(data)
-        gmail_direct.save(data)
-        mark_collected("gmail")
-        print(
-            f"   → {len(data.get('messages', []))} messages from {data.get('threads_count', 0)} threads"
-        )
-        return data
     except Exception as e:
         import traceback
 
@@ -328,11 +307,7 @@ def _collect_all_impl(sources: list = None, v4_ingest: bool = True):
 
     # Run all collectors in parallel
     with ThreadPoolExecutor(max_workers=5) as executor:
-        futures = {
-            executor.submit(collectors[src]): src
-            for src in sources
-            if src in collectors
-        }
+        futures = {executor.submit(collectors[src]): src for src in sources if src in collectors}
 
         for future in as_completed(futures):
             src = futures[future]

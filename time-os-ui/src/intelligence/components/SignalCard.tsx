@@ -48,7 +48,7 @@ export function SignalCard({ signal, compact = false, onClick }: SignalCardProps
 
   return (
     <div className={`rounded-lg border ${bgColor}`}>
-      <div className="p-4 cursor-pointer" onClick={handleClick}>
+      <div className="p-3 sm:p-4 cursor-pointer" onClick={handleClick}>
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
@@ -65,7 +65,7 @@ export function SignalCard({ signal, compact = false, onClick }: SignalCardProps
       </div>
 
       {expanded && (
-        <div className="px-4 pb-4 border-t border-slate-700 pt-4">
+        <div className="px-3 sm:px-4 pb-3 sm:pb-4 border-t border-slate-700 pt-3 sm:pt-4">
           {/* Evidence */}
           <div className="text-sm text-slate-300 mb-4">{signal.evidence}</div>
 

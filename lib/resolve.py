@@ -44,9 +44,7 @@ class ResolutionContext:
         return bool(self.client or self.project or self.person)
 
 
-def resolve_client(
-    query: str, context: ResolutionContext = None
-) -> ResolvedEntity | None:
+def resolve_client(query: str, context: ResolutionContext = None) -> ResolvedEntity | None:
     """
     Resolve a client reference.
 
@@ -118,9 +116,7 @@ def resolve_client(
         words = name_lower.split()
         for word in words:
             if word.startswith(query_lower) or query_lower.startswith(word):
-                score = min(len(query_lower), len(word)) / max(
-                    len(query_lower), len(word)
-                )
+                score = min(len(query_lower), len(word)) / max(len(query_lower), len(word))
                 if score > best_score and score > 0.5:
                     best_score = score
                     best_match = c
@@ -239,9 +235,7 @@ def resolve_person(
     return None
 
 
-def resolve_external_contact(
-    query: str, client_context: Client = None
-) -> ResolvedEntity | None:
+def resolve_external_contact(query: str, client_context: Client = None) -> ResolvedEntity | None:
     """
     Resolve specifically to an external contact.
 
@@ -275,9 +269,7 @@ def resolve_external_contact(
     return None
 
 
-def resolve_project(
-    query: str, context: ResolutionContext = None
-) -> ResolvedEntity | None:
+def resolve_project(query: str, context: ResolutionContext = None) -> ResolvedEntity | None:
     """
     Resolve a project reference.
 

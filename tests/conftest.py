@@ -62,6 +62,7 @@ def guard_live_db_access(monkeypatch):
 # CASSETTE VALIDATION
 # =============================================================================
 
+
 def validate_all_cassettes():
     """
     Validate all cassettes for determinism requirements:
@@ -69,12 +70,13 @@ def validate_all_cassettes():
     - No secrets (redaction markers present where expected)
     - Sorted keys for deterministic JSON
     """
-    from lib.collectors.recorder import validate_cassettes, CASSETTES_DIR
+    from lib.collectors.recorder import CASSETTES_DIR, validate_cassettes
 
     issues = validate_cassettes()
 
     # Additional checks: ensure cassettes use sorted keys
     import json
+
     for path in CASSETTES_DIR.glob("*.json"):
         try:
             text = path.read_text()
@@ -88,9 +90,9 @@ def validate_all_cassettes():
                 issues.append(f"{path.name}: Keys not sorted (non-deterministic)")
 
             # Check for unredacted secrets
-            if '"access_token":' in text and '[REDACTED]' not in text:
+            if '"access_token":' in text and "[REDACTED]" not in text:
                 issues.append(f"{path.name}: Contains unredacted access_token")
-            if '"api_key":' in text and '[REDACTED]' not in text:
+            if '"api_key":' in text and "[REDACTED]" not in text:
                 issues.append(f"{path.name}: Contains unredacted api_key")
 
         except json.JSONDecodeError as e:
@@ -104,8 +106,5 @@ def validated_cassettes():
     """Session-scoped fixture that validates all cassettes once."""
     issues = validate_all_cassettes()
     if issues:
-        pytest.fail(
-            "Cassette validation failed:\n" +
-            "\n".join(f"  - {issue}" for issue in issues)
-        )
+        pytest.fail("Cassette validation failed:\n" + "\n".join(f"  - {issue}" for issue in issues))
     return True

@@ -69,9 +69,7 @@ def run_migration():
 
     logger.info(f"Found {len(projects)} projects needing brands.\n")
     # Track brands by client_id to avoid duplicates
-    brands_by_client: dict[
-        str, dict[str, str]
-    ] = {}  # client_id -> {brand_name: brand_id}
+    brands_by_client: dict[str, dict[str, str]] = {}  # client_id -> {brand_name: brand_id}
 
     for project in projects:
         client_id = project["client_id"]

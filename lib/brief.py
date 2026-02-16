@@ -47,9 +47,7 @@ def generate_morning_brief(
         lines.append("")
 
         for item in recent_overdue[:max_overdue]:
-            lines.append(
-                f"- **{item.what}** — due {item.due} ({item.days_overdue()}d ago)"
-            )
+            lines.append(f"- **{item.what}** — due {item.due} ({item.days_overdue()}d ago)")
 
             # Context line
             context_parts = []
@@ -134,9 +132,7 @@ def generate_morning_brief(
     if include_waiting:
         long_waiting = waiting_long(days=7, limit=5)
         if long_waiting:
-            attention_items.append(
-                f"{len(long_waiting)} items waiting 7+ days on others"
-            )
+            attention_items.append(f"{len(long_waiting)} items waiting 7+ days on others")
 
     if attention_items:
         lines.append("### ⚠️ Attention")
@@ -177,9 +173,7 @@ def generate_status_summary() -> str:
     ]
 
     if stats["clients_ar_overdue"] > 0:
-        lines.append(
-            f"**AR attention**: {stats['clients_ar_overdue']} clients with overdue AR"
-        )
+        lines.append(f"**AR attention**: {stats['clients_ar_overdue']} clients with overdue AR")
 
     return "\n".join(lines)
 

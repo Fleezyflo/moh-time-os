@@ -70,12 +70,8 @@ class IssueService:
                 )
             """)
 
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_issues_state ON issues(state)"
-            )
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_issues_priority ON issues(priority)"
-            )
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_issues_state ON issues(state)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_issues_priority ON issues(priority)")
             cursor.execute(
                 "CREATE INDEX IF NOT EXISTS idx_issues_primary ON issues(primary_ref_type, primary_ref_id)"
             )
@@ -132,9 +128,7 @@ class IssueService:
                 )
             """)
 
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_watchers_issue ON watchers(issue_id)"
-            )
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_watchers_issue ON watchers(issue_id)")
             cursor.execute(
                 "CREATE INDEX IF NOT EXISTS idx_watchers_next ON watchers(next_check_at) WHERE active = 1"
             )
@@ -154,9 +148,7 @@ class IssueService:
                 )
             """)
 
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_handoffs_issue ON handoffs(issue_id)"
-            )
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_handoffs_issue ON handoffs(issue_id)")
 
             # Commitments (if not already exists from M1)
             cursor.execute("""
@@ -222,9 +214,7 @@ class IssueService:
             priority = int(proposal["score"])
 
             # Default resolution criteria based on type
-            resolution_criteria = self._default_resolution_criteria(
-                issue_type, proposal
-            )
+            resolution_criteria = self._default_resolution_criteria(issue_type, proposal)
 
             cursor.execute(
                 """
@@ -674,9 +664,7 @@ class IssueService:
             )
 
             for row in cursor.fetchall():
-                watcher_id, issue_id, watch_type, params_json, state, last_activity = (
-                    row
-                )
+                watcher_id, issue_id, watch_type, params_json, state, last_activity = row
                 params = json.loads(params_json)
 
                 stats["evaluated"] += 1

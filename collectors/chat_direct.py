@@ -25,9 +25,7 @@ from googleapiclient.discovery import build
 
 from lib import paths
 
-SA_FILE = (
-    Path.home() / "Library/Application Support/gogcli/sa-bW9saGFtQGhybW55LmNv.json"
-)
+SA_FILE = Path.home() / "Library/Application Support/gogcli/sa-bW9saGFtQGhybW55LmNv.json"
 SCOPES = [
     "https://www.googleapis.com/auth/chat.spaces.readonly",
     "https://www.googleapis.com/auth/chat.messages.readonly",
@@ -40,9 +38,7 @@ OUT_DIR = paths.out_dir()
 
 def get_chat_service(user: str = DEFAULT_USER):
     """Get Chat API service using service account."""
-    creds = service_account.Credentials.from_service_account_file(
-        str(SA_FILE), scopes=SCOPES
-    )
+    creds = service_account.Credentials.from_service_account_file(str(SA_FILE), scopes=SCOPES)
     creds = creds.with_subject(user)
     return build("chat", "v1", credentials=creds)
 
@@ -64,17 +60,12 @@ def list_spaces(max_spaces: int = 50, user: str = DEFAULT_USER) -> list[dict]:
         socket.setdefaulttimeout(old_timeout)
 
 
-def list_messages(
-    space_name: str, max_messages: int = 20, user: str = DEFAULT_USER
-) -> list[dict]:
+def list_messages(space_name: str, max_messages: int = 20, user: str = DEFAULT_USER) -> list[dict]:
     """List messages in a space."""
     try:
         service = get_chat_service(user)
         results = (
-            service.spaces()
-            .messages()
-            .list(parent=space_name, pageSize=max_messages)
-            .execute()
+            service.spaces().messages().list(parent=space_name, pageSize=max_messages).execute()
         )
         return results.get("messages", [])
     except Exception:

@@ -44,10 +44,10 @@ def run_with_timeout(seconds: float, command: list[str]) -> int:
             text=True,
             bufsize=1,  # Line buffered
         )
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         print(f"timeout: {command[0]}: command not found", file=sys.stderr)
         return 127
-    except PermissionError as e:
+    except PermissionError:
         print(f"timeout: {command[0]}: permission denied", file=sys.stderr)
         return 126
 
@@ -56,6 +56,7 @@ def run_with_timeout(seconds: float, command: list[str]) -> int:
 
     # Use select for non-blocking reads on Unix
     import selectors
+
     sel = selectors.DefaultSelector()
 
     if proc.stdout:
@@ -162,30 +163,17 @@ def self_test() -> int:
 def main() -> NoReturn:
     parser = argparse.ArgumentParser(
         description="Portable timeout wrapper (matches GNU timeout semantics)",
-        usage="%(prog)s <seconds> -- <command> [args...]\n       %(prog)s --self-test"
+        usage="%(prog)s <seconds> -- <command> [args...]\n       %(prog)s --self-test",
     )
-    parser.add_argument(
-        "seconds",
-        nargs="?",
-        type=float,
-        help="Timeout in seconds"
-    )
-    parser.add_argument(
-        "--self-test",
-        action="store_true",
-        help="Run self-tests"
-    )
-    parser.add_argument(
-        "command",
-        nargs="*",
-        help="Command to run (after --)"
-    )
+    parser.add_argument("seconds", nargs="?", type=float, help="Timeout in seconds")
+    parser.add_argument("--self-test", action="store_true", help="Run self-tests")
+    parser.add_argument("command", nargs="*", help="Command to run (after --)")
 
     # Handle -- separator
     if "--" in sys.argv:
         idx = sys.argv.index("--")
         args_before = sys.argv[1:idx]
-        command_after = sys.argv[idx + 1:]
+        command_after = sys.argv[idx + 1 :]
 
         if len(args_before) == 0 or args_before[0] == "--self-test":
             args = parser.parse_args(args_before)

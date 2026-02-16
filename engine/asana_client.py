@@ -6,9 +6,7 @@ from typing import Any
 
 import requests
 
-CONFIG_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "config", ".credentials.json"
-)
+CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", ".credentials.json")
 ASANA_API_BASE = "https://app.asana.com/api/1.0"
 
 
@@ -61,13 +59,9 @@ def get_project(project_gid: str) -> dict:
     return data.get("data", {})
 
 
-def list_tasks_in_project(
-    project_gid: str, *, completed: bool | None = None
-) -> list[dict]:
+def list_tasks_in_project(project_gid: str, *, completed: bool | None = None) -> list[dict]:
     """List tasks in a project."""
-    params = {
-        "opt_fields": "name,completed,due_on,assignee,assignee.name,tags,tags.name"
-    }
+    params = {"opt_fields": "name,completed,due_on,assignee,assignee.name,tags,tags.name"}
     if completed is not None:
         params["completed_since"] = "now" if not completed else None
 
@@ -100,9 +94,7 @@ def search_tasks(workspace_gid: str, query: str) -> list[dict]:
 def get_user_task_list(user_gid: str, workspace_gid: str) -> list[dict]:
     """Get user's task list (My Tasks)."""
     # First get the user task list gid
-    data = asana_get(
-        f"users/{user_gid}/user_task_list", params={"workspace": workspace_gid}
-    )
+    data = asana_get(f"users/{user_gid}/user_task_list", params={"workspace": workspace_gid})
     task_list_gid = data.get("data", {}).get("gid")
 
     if not task_list_gid:

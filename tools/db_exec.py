@@ -24,9 +24,9 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from lib import paths
-from lib.safety import WriteContext, generate_request_id, get_git_sha
-from lib.safety.migrations import disable_maintenance_mode, enable_maintenance_mode
+from lib import paths  # noqa: E402
+from lib.safety import WriteContext, generate_request_id, get_git_sha  # noqa: E402
+from lib.safety.migrations import disable_maintenance_mode, enable_maintenance_mode  # noqa: E402
 
 # Configure logging for stderr (metadata/debug output)
 logging.basicConfig(
@@ -62,12 +62,8 @@ Examples:
 
     parser.add_argument("sql", help="SQL to execute")
     parser.add_argument("--actor", required=True, help="Who is running this (required)")
-    parser.add_argument(
-        "--source", required=True, help="Source of this operation (required)"
-    )
-    parser.add_argument(
-        "--request-id", help="Request ID (auto-generated if not provided)"
-    )
+    parser.add_argument("--source", required=True, help="Source of this operation (required)")
+    parser.add_argument("--request-id", help="Request ID (auto-generated if not provided)")
     parser.add_argument(
         "--maintenance",
         action="store_true",
@@ -111,9 +107,7 @@ Examples:
     try:
         if args.maintenance:
             # Enable maintenance mode
-            enable_maintenance_mode(
-                conn, reason=f"db_exec: {args.sql[:100]}", set_by=args.actor
-            )
+            enable_maintenance_mode(conn, reason=f"db_exec: {args.sql[:100]}", set_by=args.actor)
             logger.info("Maintenance mode ENABLED")
 
         # Set write context

@@ -80,9 +80,7 @@ class ResolutionService:
             return False
 
         if issue["state"] not in ("detected", "surfaced", "acknowledged", "addressing"):
-            logger.warning(
-                f"Issue {issue_id} cannot be resolved from state {issue['state']}"
-            )
+            logger.warning(f"Issue {issue_id} cannot be resolved from state {issue['state']}")
             return False
 
         now = datetime.now()
@@ -94,9 +92,7 @@ class ResolutionService:
             {
                 "state": "monitoring",
                 "resolved_at": now.isoformat(),
-                "resolution_method": method.value
-                if hasattr(method, "value")
-                else method,
+                "resolution_method": method.value if hasattr(method, "value") else method,
                 "resolved_by": resolved_by,
                 "resolution_notes": notes,
                 "monitoring_until": monitoring_until,
@@ -110,15 +106,11 @@ class ResolutionService:
         self._record_state_change(issue_id, "resolved", resolved_by)
         self._record_state_change(issue_id, "monitoring", resolved_by)
 
-        logger.info(
-            f"Issue {issue_id} resolved via {method}, monitoring until {monitoring_until}"
-        )
+        logger.info(f"Issue {issue_id} resolved via {method}, monitoring until {monitoring_until}")
 
         return True
 
-    def dismiss_issue(
-        self, issue_id: str, dismissed_by: str, reason: str | None = None
-    ) -> bool:
+    def dismiss_issue(self, issue_id: str, dismissed_by: str, reason: str | None = None) -> bool:
         """
         Dismiss an issue as not relevant (false positive).
 
@@ -245,10 +237,7 @@ class ResolutionService:
         magnitude = row["magnitude"] or 0
 
         # Check thresholds
-        return (
-            count >= self.REGRESSION_SIGNAL_COUNT
-            or magnitude >= self.REGRESSION_MAGNITUDE
-        )
+        return count >= self.REGRESSION_SIGNAL_COUNT or magnitude >= self.REGRESSION_MAGNITUDE
 
     def _reopen_issue(self, issue_id: str) -> None:
         """Reopen an issue due to regression."""
@@ -304,9 +293,7 @@ class ResolutionService:
     def acknowledge_issue(self, issue_id: str, user_id: str) -> bool:
         """Mark an issue as acknowledged."""
 
-        issue = self.db.fetch_one(
-            "SELECT state FROM issues_v5 WHERE id = ?", (issue_id,)
-        )
+        issue = self.db.fetch_one("SELECT state FROM issues_v5 WHERE id = ?", (issue_id,))
 
         if not issue or issue["state"] != "surfaced":
             return False
@@ -332,9 +319,7 @@ class ResolutionService:
     def start_addressing(self, issue_id: str, user_id: str | None = None) -> bool:
         """Mark an issue as being addressed."""
 
-        issue = self.db.fetch_one(
-            "SELECT state FROM issues_v5 WHERE id = ?", (issue_id,)
-        )
+        issue = self.db.fetch_one("SELECT state FROM issues_v5 WHERE id = ?", (issue_id,))
 
         if not issue or issue["state"] not in ("surfaced", "acknowledged"):
             return False
@@ -360,14 +345,10 @@ class ResolutionService:
     # History Tracking
     # =========================================================================
 
-    def _record_state_change(
-        self, issue_id: str, new_state: str, by: str | None
-    ) -> None:
+    def _record_state_change(self, issue_id: str, new_state: str, by: str | None) -> None:
         """Record state change in history."""
 
-        issue = self.db.fetch_one(
-            "SELECT state_history FROM issues_v5 WHERE id = ?", (issue_id,)
-        )
+        issue = self.db.fetch_one("SELECT state_history FROM issues_v5 WHERE id = ?", (issue_id,))
 
         if not issue:
             return
@@ -375,9 +356,7 @@ class ResolutionService:
         history = json.loads(issue["state_history"] or "[]")
         history.append({"state": new_state, "timestamp": now_iso(), "by": by})
 
-        self.db.update(
-            "issues_v5", {"state_history": json.dumps(history)}, "id = ?", [issue_id]
-        )
+        self.db.update("issues_v5", {"state_history": json.dumps(history)}, "id = ?", [issue_id])
 
     # =========================================================================
     # Batch Operations

@@ -1,0 +1,34 @@
+name: BLOCKING GUARDRAILS
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  block:
+    name: ALL GUARDS MUST PASS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          pip install pre-commit
+          pip install -r requirements.txt || true
+      
+      - name: RUN ALL BLOCKING GUARDS
+        run: pre-commit run --all-files
+        
+      - name: BLOCK ON FAILURE
+        if: failure()
+        run: |
+          echo "❌ GUARDRAILS BLOCKED THIS COMMIT"
+          echo "Fix all violations before merging"
+          exit 1

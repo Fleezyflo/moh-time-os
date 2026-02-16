@@ -27,9 +27,7 @@ LOGGER_INIT = "logger = logging.getLogger(__name__)\n"
 
 def has_logger_import(content: str) -> bool:
     """Check if file already imports logging and creates logger."""
-    return (
-        "logger = logging.getLogger" in content or "logger = log.getLogger" in content
-    )
+    return "logger = logging.getLogger" in content or "logger = log.getLogger" in content
 
 
 def add_logger_import(content: str) -> str:
@@ -69,9 +67,7 @@ def add_logger_import(content: str) -> str:
             break
 
     # Check if logging is already imported
-    has_logging_import = any(
-        "import logging" in line for line in lines[: insert_idx + 5]
-    )
+    has_logging_import = any("import logging" in line for line in lines[: insert_idx + 5])
 
     # Insert logger initialization
     if not has_logging_import:
@@ -174,9 +170,7 @@ def main():
                 if modified:
                     total_files += 1
                     total_prints += count
-                    print(
-                        f"  {'[WOULD MODIFY] ' if DRY_RUN else '✓ '}{filepath} ({count} prints)"
-                    )
+                    print(f"  {'[WOULD MODIFY] ' if DRY_RUN else '✓ '}{filepath} ({count} prints)")
             except Exception as e:
                 print(f"  ✗ {filepath}: {e}")
 

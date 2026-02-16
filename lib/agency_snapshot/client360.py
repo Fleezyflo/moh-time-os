@@ -256,9 +256,7 @@ class Client360Engine:
         finally:
             conn.close()
 
-    def _compute_client_trend(
-        self, client_id: str, current_health: float
-    ) -> float | None:
+    def _compute_client_trend(self, client_id: str, current_health: float) -> float | None:
         """
         Compute client health trend based on recent activity.
         Returns: float (-50 to +50) where positive = improving, negative = worsening
@@ -399,9 +397,7 @@ class Client360Engine:
             # Capacity gap (simplified - assume 40h/week available)
             hours_needed = proj.get("open_hours") or 0
             capacity_gap_ratio = (
-                clamp01((hours_needed - 40) / max(1, hours_needed))
-                if hours_needed > 40
-                else 0
+                clamp01((hours_needed - 40) / max(1, hours_needed)) if hours_needed > 40 else 0
             )
 
             # Slip risk formula per Page 1 §6.3
@@ -691,9 +687,7 @@ class Client360Engine:
 
         return (score, False)
 
-    def compute_health_score(
-        self, client_id: str
-    ) -> tuple[ClientScores, ClientConfidence]:
+    def compute_health_score(self, client_id: str) -> tuple[ClientScores, ClientConfidence]:
         """
         Compute full health score per Page 5 §4.2 (locked).
 
@@ -717,9 +711,7 @@ class Client360Engine:
         scores.finance = cash_health if cash_health is not None else 100.0
         scores.responsiveness = comms_health if comms_health is not None else 100.0
         # Use commitments field for relationship
-        scores.commitments = (
-            relationship_health if relationship_health is not None else 100.0
-        )
+        scores.commitments = relationship_health if relationship_health is not None else 100.0
         scores.finance_unknown = cash_unknown
 
         # Build weighted components for renormalization
@@ -761,9 +753,7 @@ class Client360Engine:
         if components:
             total_weight = sum(weights.values())
             if total_weight > 0:
-                scores.health = sum(
-                    (weights[k] / total_weight) * components[k] for k in components
-                )
+                scores.health = sum((weights[k] / total_weight) * components[k] for k in components)
             else:
                 scores.health = 50.0  # Fallback
         else:
@@ -1045,9 +1035,7 @@ class Client360Engine:
 
         def rank_key(item: ClientPortfolioItem):
             driver_rank = (
-                driver_priority.index(item.top_driver)
-                if item.top_driver in driver_priority
-                else 99
+                driver_priority.index(item.top_driver) if item.top_driver in driver_priority else 99
             )
             conf_order = {Confidence.HIGH: 0, Confidence.MED: 1, Confidence.LOW: 2}
             return (
@@ -1344,9 +1332,7 @@ class Client360Engine:
             remaining_ratio = open_t / max(1, total)
             blocking = clamp01(overdue / max(1, open_t)) if open_t > 0 else 0
 
-            slip_risk = (
-                0.35 * deadline_pressure + 0.25 * remaining_ratio + 0.15 * blocking
-            )
+            slip_risk = 0.35 * deadline_pressure + 0.25 * remaining_ratio + 0.15 * blocking
 
             # Status
             if overdue > 0 or slip_risk >= 0.75:
@@ -1515,9 +1501,7 @@ class Client360Engine:
         return {
             "response_needed": (stats.get("response_needed") or 0) if stats else 0,
             "overdue": (stats.get("overdue") or 0) if stats else 0,
-            "oldest_overdue_age_hours": round(stats.get("oldest_age") or 0, 1)
-            if stats
-            else 0,
+            "oldest_overdue_age_hours": round(stats.get("oldest_age") or 0, 1) if stats else 0,
             "threads": thread_items,
         }
 
@@ -1783,9 +1767,7 @@ class Client360Engine:
                     "data_integrity": self.data_integrity,
                     "client_coverage_pct": self.client_coverage_pct,
                     "finance_ar_coverage_pct": self.finance_ar_coverage_pct,
-                    "commitment_ready_pct": getattr(
-                        self, "commitment_ready_pct", 100.0
-                    ),
+                    "commitment_ready_pct": getattr(self, "commitment_ready_pct", 100.0),
                     "last_sync": last_sync,
                 },
             },
@@ -1906,9 +1888,7 @@ class Client360Engine:
         actions = self._build_actions(client_id, scores, top_driver)
 
         # Build reason line per §6.9
-        reason = (
-            f"{self.horizon.value} | {risk_band} risk | top_driver={top_driver.value}"
-        )
+        reason = f"{self.horizon.value} | {risk_band} risk | top_driver={top_driver.value}"
 
         return {
             "client_id": client_id,
@@ -2101,11 +2081,7 @@ class Client360Engine:
         thread_list = []
         for t in threads:
             age = t.get("age_hours") or 0
-            risk = (
-                "HIGH"
-                if t["response_status"] == "OVERDUE"
-                else ("MED" if age > 24 else "LOW")
-            )
+            risk = "HIGH" if t["response_status"] == "OVERDUE" else ("MED" if age > 24 else "LOW")
             thread_list.append(
                 {
                     "thread_id": t["thread_id"],

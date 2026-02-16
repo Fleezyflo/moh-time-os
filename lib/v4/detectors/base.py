@@ -14,9 +14,7 @@ from typing import Any
 
 from ..signal_service import get_signal_service
 
-DB_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "..", "..", "data", "moh_time_os.db"
-)
+DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "moh_time_os.db")
 
 
 class BaseDetector(ABC):
@@ -55,9 +53,7 @@ class BaseDetector(ABC):
 
     def _compute_inputs_hash(self, scope: dict, data: Any) -> str:
         """Compute a hash of inputs for deduplication."""
-        content = json.dumps(
-            {"scope": scope, "data_summary": str(data)[:1000]}, sort_keys=True
-        )
+        content = json.dumps({"scope": scope, "data_summary": str(data)[:1000]}, sort_keys=True)
         return hashlib.sha256(content.encode()).hexdigest()[:16]
 
     def run(self, scope: dict = None) -> dict[str, Any]:

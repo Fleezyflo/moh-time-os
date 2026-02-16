@@ -77,9 +77,7 @@ def _find_patchwork_boundary_line(filepath: Path) -> int:
     return 999999  # No boundary = scan entire file
 
 
-def _scan_file(
-    filepath: Path, patterns: dict[str, str]
-) -> list[tuple[str, int, str, str]]:
+def _scan_file(filepath: Path, patterns: dict[str, str]) -> list[tuple[str, int, str, str]]:
     """
     Scan a file for banned patterns.
 
@@ -98,9 +96,7 @@ def _scan_file(
         for lineno, line in enumerate(lines, 1):
             if regex.search(line):
                 if not _is_excluded_line(line, str(filepath)):
-                    violations.append(
-                        (pattern_name, lineno, line.strip(), str(filepath))
-                    )
+                    violations.append((pattern_name, lineno, line.strip(), str(filepath)))
 
     return violations
 
@@ -134,9 +130,7 @@ def _scan_for_snapshot_mutations(filepath: Path) -> list[tuple[str, int, str, st
             if is_generator and lineno < boundary_line:
                 continue
 
-            violations.append(
-                ("snapshot_mutation", lineno, line.strip(), str(filepath))
-            )
+            violations.append(("snapshot_mutation", lineno, line.strip(), str(filepath)))
 
     return violations
 

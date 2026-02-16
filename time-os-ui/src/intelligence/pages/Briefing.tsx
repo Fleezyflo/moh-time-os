@@ -14,7 +14,7 @@ export default function Briefing() {
   // Show error state if we have an error and no data
   if (error && !briefing) {
     return (
-      <div className="p-6 max-w-3xl">
+      <div className="p-4 sm:p-6 max-w-3xl">
         <ErrorState error={error} onRetry={refetch} />
       </div>
     );
@@ -26,8 +26,8 @@ export default function Briefing() {
 
   if (!briefing) {
     return (
-      <div className="p-6 max-w-3xl">
-        <h1 className="text-2xl font-semibold mb-6">Daily Briefing</h1>
+      <div className="p-4 sm:p-6 max-w-3xl">
+        <h1 className="text-xl sm:text-2xl font-semibold mb-4 sm:mb-6">Daily Briefing</h1>
         <NoBriefing />
       </div>
     );
@@ -43,14 +43,14 @@ export default function Briefing() {
 
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-semibold">Daily Briefing</h1>
-        <p className="text-slate-400 mt-1">
+        <h1 className="text-xl sm:text-2xl font-semibold">Daily Briefing</h1>
+        <p className="text-sm sm:text-base text-slate-400 mt-1">
           Generated at {new Date(briefing.generated_at).toLocaleString()}
         </p>
       </div>
 
       {/* Summary */}
-      <div className="bg-slate-800 rounded-lg p-6">
+      <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
         <div className="text-lg">
           <span className="text-white font-medium">{summary.total_proposals}</span>
           <span className="text-slate-400"> proposals today: </span>
@@ -73,7 +73,7 @@ export default function Briefing() {
 
       {/* Top Priority */}
       {top_proposal && (
-        <div className="bg-slate-800 border-l-4 border-red-500 rounded-lg p-6">
+        <div className="bg-slate-800 border-l-4 border-red-500 rounded-lg p-4 sm:p-6">
           <div className="text-sm text-slate-500 uppercase tracking-wide mb-2">Top Priority</div>
           <div className="text-lg text-white">{top_proposal}</div>
         </div>
@@ -87,7 +87,7 @@ export default function Briefing() {
           </h2>
           <div className="space-y-3">
             {critical_items.map((item, i) => (
-              <div key={i} className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
+              <div key={i} className="bg-red-500/10 border border-red-500/30 rounded-lg p-3 sm:p-4">
                 <div className="font-medium">{item.headline}</div>
                 <div className="text-sm text-slate-400 mt-2">{item.implied_action}</div>
               </div>
@@ -104,7 +104,10 @@ export default function Briefing() {
           </h2>
           <div className="space-y-3">
             {attention_items.map((item, i) => (
-              <div key={i} className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
+              <div
+                key={i}
+                className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 sm:p-4"
+              >
                 <div className="font-medium">{item.headline}</div>
                 <div className="text-sm text-slate-400 mt-2">{item.implied_action}</div>
               </div>
@@ -121,7 +124,7 @@ export default function Briefing() {
           </summary>
           <div className="space-y-3 mt-3">
             {watching.map((item, i) => (
-              <div key={i} className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+              <div key={i} className="bg-slate-800 border border-slate-700 rounded-lg p-3 sm:p-4">
                 <div className="font-medium">{item.headline}</div>
                 <div className="text-sm text-slate-400 mt-2">{item.implied_action}</div>
               </div>
@@ -132,7 +135,7 @@ export default function Briefing() {
 
       {/* Portfolio Health */}
       {portfolio_health && (
-        <div className="bg-slate-800 rounded-lg p-6">
+        <div className="bg-slate-800 rounded-lg p-4 sm:p-6">
           <div className="text-sm text-slate-500 uppercase tracking-wide mb-2">
             Portfolio Health
           </div>

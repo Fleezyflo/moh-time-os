@@ -93,18 +93,18 @@ export default function Signals() {
 
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Active Signals</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold">Active Signals</h1>
         <div className="text-sm text-slate-500">{data?.total_signals ?? 0} total</div>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-4 bg-slate-800 rounded-lg p-4">
-        <div>
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 bg-slate-800 rounded-lg p-3 sm:p-4">
+        <div className="flex-1 sm:flex-none">
           <label className="text-sm text-slate-400 block mb-1">Severity</label>
           <select
             value={severity}
             onChange={(e) => setSeverity(e.target.value)}
-            className="bg-slate-700 border border-slate-600 rounded px-3 py-1.5 text-sm"
+            className="w-full sm:w-auto bg-slate-700 border border-slate-600 rounded px-3 py-2 min-h-[44px] text-sm"
           >
             {severities.map((s) => (
               <option key={s} value={s}>
@@ -113,12 +113,12 @@ export default function Signals() {
             ))}
           </select>
         </div>
-        <div>
+        <div className="flex-1 sm:flex-none">
           <label className="text-sm text-slate-400 block mb-1">Entity Type</label>
           <select
             value={entityType}
             onChange={(e) => setEntityType(e.target.value)}
-            className="bg-slate-700 border border-slate-600 rounded px-3 py-1.5 text-sm"
+            className="w-full sm:w-auto bg-slate-700 border border-slate-600 rounded px-3 py-2 min-h-[44px] text-sm"
           >
             {entityTypes.map((t) => (
               <option key={t} value={t}>
@@ -127,12 +127,15 @@ export default function Signals() {
             ))}
           </select>
         </div>
-        <div className="flex items-end gap-2">
+        <div className="flex items-center sm:items-end gap-2 pt-2 sm:pt-0">
           <span className="text-sm text-slate-500">
             Showing {filtered.length} of {signals.length}
           </span>
           {(severity !== 'all' || entityType !== 'all') && (
-            <button onClick={resetFilters} className="text-xs text-slate-400 hover:text-white">
+            <button
+              onClick={resetFilters}
+              className="text-xs text-slate-400 hover:text-white px-2 py-1 min-h-[32px]"
+            >
               Reset
             </button>
           )}

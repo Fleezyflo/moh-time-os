@@ -7,12 +7,8 @@ from typing import Any
 
 import requests
 
-CONFIG_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "config", ".credentials.json"
-)
-TOKEN_CACHE_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "config", ".xero_token_cache.json"
-)
+CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", ".credentials.json")
+TOKEN_CACHE_PATH = os.path.join(os.path.dirname(__file__), "..", "config", ".xero_token_cache.json")
 
 XERO_TOKEN_URL = "https://identity.xero.com/connect/token"
 XERO_API_BASE = "https://api.xero.com/api.xro/2.0"

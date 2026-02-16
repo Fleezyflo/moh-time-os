@@ -36,7 +36,7 @@ time-os-ui/src/lib/queries.ts:49:export function getSnapshotIssues(): Issue[] {
 time-os-ui/src/lib/queries.ts:62:export function getSnapshotWatchers(): Watcher[] {
 time-os-ui/src/lib/queries.ts:75:export function getFixDataCount(): number {
 time-os-ui/src/lib/queries.ts:86:export function getClients(): Client[] {
-time-os-ui/src/lib/queries.ts:99:export function getClientDetail(clientId: string): { 
+time-os-ui/src/lib/queries.ts:99:export function getClientDetail(clientId: string): {
 time-os-ui/src/lib/queries.ts:130:export function getTeamMembers(): TeamMember[] {
 time-os-ui/src/lib/queries.ts:143:export function getTeamDetail(memberId: string): {
 time-os-ui/src/lib/queries.ts:199:export function getCouplings(anchorType: string, anchorId: string): Coupling[] {
