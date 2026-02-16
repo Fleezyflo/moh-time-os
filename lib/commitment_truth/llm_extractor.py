@@ -131,7 +131,7 @@ def process_unextracted_communications(limit: int = 50) -> dict:
 
             for c in commitments:
                 hash_input = f"{comm['id']}:{c['text']}"
-                commitment_id = f"llm_{hashlib.md5(hash_input.encode()).hexdigest()[:12]}"
+                commitment_id = f"llm_{hashlib.md5(hash_input.encode(), usedforsecurity=False).hexdigest()[:12]}"
 
                 conn.execute(
                     """

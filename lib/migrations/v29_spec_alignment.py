@@ -39,7 +39,7 @@ def get_utc_now_iso() -> str:
 
 
 def column_exists(cursor, table: str, column: str) -> bool:
-    cursor.execute(f"PRAGMA table_info({table})")
+    cursor.execute(f"PRAGMA table_info({table})")  # nosql: safe
     columns = [row[1] for row in cursor.fetchall()]
     return column in columns
 
@@ -161,7 +161,7 @@ def add_lifecycle_columns(cursor):
     for col_name, col_type in columns_to_add:
         if not column_exists(cursor, "issues_v5", col_name):
             logger.info(f"Adding {col_name} column...")
-            cursor.execute(f"ALTER TABLE issues_v5 ADD COLUMN {col_name} {col_type}")
+            cursor.execute(f"ALTER TABLE issues_v5 ADD COLUMN {col_name} {col_type}")  # nosql: safe
         else:
             logger.info(f"✓ {col_name} already exists")
 

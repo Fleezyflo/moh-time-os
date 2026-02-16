@@ -73,6 +73,7 @@ def refresh_access_token(creds: XeroCredentials) -> str:
             "client_secret": creds.client_secret,
         },
         headers={"Content-Type": "application/x-www-form-urlencoded"},
+        timeout=30,
     )
 
     if resp.status_code != 200:
@@ -107,6 +108,7 @@ def xero_get(endpoint: str) -> dict[str, Any]:
             "Xero-Tenant-Id": tenant_id,
             "Accept": "application/json",
         },
+        timeout=30,
     )
 
     if resp.status_code != 200:

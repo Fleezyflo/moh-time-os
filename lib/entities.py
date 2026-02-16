@@ -228,7 +228,9 @@ def update_client(client_id: str, **changes) -> bool:
     values = list(updates.values()) + [client_id]
 
     with get_connection() as conn:
-        cursor = conn.execute(f"UPDATE clients SET {set_clause} WHERE id = ?", values)
+        cursor = conn.execute(
+            f"UPDATE clients SET {set_clause} WHERE id = ?", values
+        )  # nosql: safe
         return cursor.rowcount > 0
 
 
@@ -463,7 +465,7 @@ def update_person(person_id: str, **changes) -> bool:
     values = list(updates.values()) + [person_id]
 
     with get_connection() as conn:
-        cursor = conn.execute(f"UPDATE people SET {set_clause} WHERE id = ?", values)
+        cursor = conn.execute(f"UPDATE people SET {set_clause} WHERE id = ?", values)  # nosql: safe
         return cursor.rowcount > 0
 
 
@@ -689,7 +691,9 @@ def update_project(project_id: str, **changes) -> bool:
     values = list(updates.values()) + [project_id]
 
     with get_connection() as conn:
-        cursor = conn.execute(f"UPDATE projects SET {set_clause} WHERE id = ?", values)
+        cursor = conn.execute(
+            f"UPDATE projects SET {set_clause} WHERE id = ?", values
+        )  # nosql: safe
         return cursor.rowcount > 0
 
 

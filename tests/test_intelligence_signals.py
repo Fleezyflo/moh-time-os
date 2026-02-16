@@ -353,9 +353,9 @@ class TestFullDetection:
 
         # All detected signals should be threshold type
         for signal in result["signals"]:
-            assert (
-                signal["category"] == "threshold"
-            ), f"Quick mode returned non-threshold signal: {signal['signal_id']}"
+            assert signal["category"] == "threshold", (
+                f"Quick mode returned non-threshold signal: {signal['signal_id']}"
+            )
 
 
 # =============================================================================

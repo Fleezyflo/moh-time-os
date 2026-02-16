@@ -260,7 +260,7 @@ def export_spans_otlp(endpoint: str = "http://localhost:4318/v1/traces") -> int:
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=5):  # noqa: S310
+        with urllib.request.urlopen(req, timeout=5):  # nosec B310 noqa: S310
             clear_span_buffer()
             return len(spans)
     except Exception:

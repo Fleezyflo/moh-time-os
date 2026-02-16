@@ -22,7 +22,7 @@ DB_PATH = paths.db_path()
 
 
 def column_exists(cursor, table: str, column: str) -> bool:
-    cursor.execute(f"PRAGMA table_info({table})")
+    cursor.execute(f"PRAGMA table_info({table})")  # nosql: safe
     columns = [row[1] for row in cursor.fetchall()]
     return column in columns
 

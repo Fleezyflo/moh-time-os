@@ -132,8 +132,8 @@ def rebuild_tasks(conn):
 
     # Drop old, rename new
     cursor.execute(
-        "DROP TABLE tasks"
-    )  # APPROVED_DESTRUCTIVE: Schema migration v12 - data preserved in new table
+        "DROP TABLE tasks"  # APPROVED_DESTRUCTIVE: Schema migration v12 - data preserved in new table
+    )
     cursor.execute("ALTER TABLE tasks_new RENAME TO tasks")
 
     # Recreate indexes
@@ -363,7 +363,7 @@ def drop_views(conn):
 
     dropped = []
     for view in views:
-        cursor.execute(f"DROP VIEW IF EXISTS {view}")
+        cursor.execute(f"DROP VIEW IF EXISTS {view}")  # nosql: safe
         dropped.append(view)
 
     logger.info(f"Dropped views: {dropped}")

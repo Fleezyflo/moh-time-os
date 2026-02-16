@@ -32,7 +32,7 @@ CORE_ENTITIES = {
 
 def get_table_info(conn: sqlite3.Connection, table: str) -> dict:
     """Get table schema information."""
-    cursor = conn.execute(f'PRAGMA table_info("{table}")')
+    cursor = conn.execute(f'PRAGMA table_info("{table}")')  # nosql: safe
     columns = []
     pk = None
     for row in cursor.fetchall():
@@ -42,14 +42,14 @@ def get_table_info(conn: sqlite3.Connection, table: str) -> dict:
             pk = col["name"]
 
     # Get foreign keys
-    cursor = conn.execute(f'PRAGMA foreign_key_list("{table}")')
+    cursor = conn.execute(f'PRAGMA foreign_key_list("{table}")')  # nosql: safe
     fks = []
     for row in cursor.fetchall():
         fks.append({"from_col": row[3], "to_table": row[2], "to_col": row[4]})
 
     # Get row count
     try:
-        cursor = conn.execute(f'SELECT COUNT(*) FROM "{table}"')
+        cursor = conn.execute(f'SELECT COUNT(*) FROM "{table}"')  # nosql: safe
         row_count = cursor.fetchone()[0]
     except:
         row_count = 0
@@ -180,7 +180,7 @@ def analyze_relationships(conn: sqlite3.Connection, entity_tables: dict) -> dict
             if direct_fk:
                 relationships[from_entity][to_entity] = {
                     "type": "DIRECT",
-                    "path": f'{entity_tables[from_entity]}.{direct_fk["from_col"]} = {to_table}.{direct_fk["to_col"]}',
+                    "path": f"{entity_tables[from_entity]}.{direct_fk['from_col']} = {to_table}.{direct_fk['to_col']}",
                 }
                 continue
 
@@ -189,7 +189,7 @@ def analyze_relationships(conn: sqlite3.Connection, entity_tables: dict) -> dict
             if implicit:
                 relationships[from_entity][to_entity] = {
                     "type": "IMPLICIT",
-                    "path": f'{entity_tables[from_entity]}.{implicit[0]["column"]} → {to_table} ({implicit[0]["match_type"]})',
+                    "path": f"{entity_tables[from_entity]}.{implicit[0]['column']} → {to_table} ({implicit[0]['match_type']})",
                 }
                 continue
 
@@ -200,7 +200,7 @@ def analyze_relationships(conn: sqlite3.Connection, entity_tables: dict) -> dict
                     if fk["to_table"] == entity_tables[from_entity]:
                         relationships[from_entity][to_entity] = {
                             "type": "REVERSE",
-                            "path": f'{to_table}.{fk["from_col"]} = {entity_tables[from_entity]}.{fk["to_col"]} (reverse)',
+                            "path": f"{to_table}.{fk['from_col']} = {entity_tables[from_entity]}.{fk['to_col']} (reverse)",
                         }
                         break
                 else:

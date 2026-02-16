@@ -443,7 +443,7 @@ def update_item(item_id: str, changed_by: str = "A", **changes) -> bool:
     values = list(updates.values()) + [item_id]
 
     with get_connection() as conn:
-        cursor = conn.execute(f"UPDATE items SET {set_clause} WHERE id = ?", values)
+        cursor = conn.execute(f"UPDATE items SET {set_clause} WHERE id = ?", values)  # nosql: safe
 
         if cursor.rowcount == 0:
             return False

@@ -140,7 +140,7 @@ def main():
         path = orphan["path"]
         full_path = REPO_ROOT / path
 
-        print(f"[{i+1}/{len(orphans)}] {path}")
+        print(f"[{i + 1}/{len(orphans)}] {path}")
 
         # Check if file exists
         if not full_path.exists():

@@ -229,6 +229,6 @@ class TestCrossViewIntegration:
             )
             profile = check.fetchone()
             if profile:
-                assert (
-                    profile["total_tasks"] == row["task_count"]
-                ), f"Task count mismatch for client {row['client_id']}"
+                assert profile["total_tasks"] == row["task_count"], (
+                    f"Task count mismatch for client {row['client_id']}"
+                )

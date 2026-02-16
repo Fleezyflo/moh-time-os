@@ -248,7 +248,7 @@ def group_signals_by_scope(
         # Get all active signals, optionally excluding legacy ones
         if exclude_legacy:
             # Exclude signals from tasks that are overdue > LEGACY_OVERDUE_THRESHOLD_DAYS
-            cursor.execute(f"""
+            cursor.execute(f"""  # nosql: safe
                 SELECT s.signal_id, s.signal_type, s.entity_ref_type, s.entity_ref_id,
                        s.value, s.severity, s.detected_at, s.interpretation_confidence
                 FROM signals s

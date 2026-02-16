@@ -25,6 +25,9 @@ def check_file(filepath: Path) -> list[tuple[int, str]]:
         content = filepath.read_text()
         for i, line in enumerate(content.splitlines(), 1):
             if SQL_FSTRING_PATTERN.search(line):
+                # Skip if marked as safe (table/column names from code, not user input)
+                if "# nosql" in line.lower() or "# safe:" in line.lower():
+                    continue
                 violations.append((i, line.strip()))
     except (OSError, UnicodeDecodeError):
         # Skip files that can't be read

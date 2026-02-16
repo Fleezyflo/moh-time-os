@@ -201,7 +201,7 @@ These violations exist in the codebase and need to be fixed:
 
 ```
 SQL Injection:     19+ f-string SQL queries
-Duplicate Routes:  5 duplicate API endpoints  
+Duplicate Routes:  5 duplicate API endpoints
 Import Violations: 4 layer boundary breaks
 Complexity:        29+ functions over threshold
 ```

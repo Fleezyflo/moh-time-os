@@ -85,7 +85,7 @@ def save_promises(promises: list) -> None:
 
 def generate_id(text: str, timestamp: str) -> str:
     """Generate unique ID for a promise."""
-    return hashlib.md5(f"{text}{timestamp}".encode()).hexdigest()[:8]
+    return hashlib.md5(f"{text}{timestamp}".encode(), usedforsecurity=False).hexdigest()[:8]
 
 
 def parse_due_date(text: str) -> date | None:

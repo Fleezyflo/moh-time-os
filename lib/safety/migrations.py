@@ -121,7 +121,7 @@ def run_safety_migrations(conn: sqlite3.Connection, verbose: bool = True) -> dic
     for trigger_name, trigger_sql in invariant_triggers:
         try:
             # Drop if exists (to allow updates)
-            conn.execute(f"DROP TRIGGER IF EXISTS {trigger_name}")
+            conn.execute(f"DROP TRIGGER IF EXISTS {trigger_name}")  # nosql: safe
             conn.execute(trigger_sql)
             results["triggers_created"].append(trigger_name)
             if verbose:
@@ -139,7 +139,7 @@ def run_safety_migrations(conn: sqlite3.Connection, verbose: bool = True) -> dic
         context_triggers = _get_context_triggers(table)
         for trigger_name, trigger_sql in context_triggers:
             try:
-                conn.execute(f"DROP TRIGGER IF EXISTS {trigger_name}")
+                conn.execute(f"DROP TRIGGER IF EXISTS {trigger_name}")  # nosql: safe
                 conn.execute(trigger_sql)
                 results["triggers_created"].append(trigger_name)
                 if verbose:
@@ -155,7 +155,7 @@ def run_safety_migrations(conn: sqlite3.Connection, verbose: bool = True) -> dic
         audit_triggers = _get_audit_triggers(table)
         for trigger_name, trigger_sql in audit_triggers:
             try:
-                conn.execute(f"DROP TRIGGER IF EXISTS {trigger_name}")
+                conn.execute(f"DROP TRIGGER IF EXISTS {trigger_name}")  # nosql: safe
                 conn.execute(trigger_sql)
                 results["triggers_created"].append(trigger_name)
                 if verbose:

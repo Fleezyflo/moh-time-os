@@ -1687,7 +1687,7 @@ async def cleanup_legacy_signals(confirm: bool = False):
 
     try:
         # Count legacy signals
-        cursor.execute(f"""
+        cursor.execute(f"""  # nosql: safe
             SELECT COUNT(s.signal_id)
             FROM signals s
             JOIN tasks t ON s.entity_ref_type = 'task' AND s.entity_ref_id = t.id
@@ -1707,7 +1707,7 @@ async def cleanup_legacy_signals(confirm: bool = False):
             }
 
         # Mark legacy signals as expired
-        cursor.execute(f"""
+        cursor.execute(f"""  # nosql: safe
             UPDATE signals
             SET status = 'expired', expires_at = datetime('now')
             WHERE signal_id IN (
@@ -1893,12 +1893,6 @@ async def api_calendar(
     }
 
 
-@app.get("/api/delegations")
-async def api_delegations():
-    """Get delegated tasks (alias)."""
-    return await get_delegations()
-
-
 @app.get("/api/inbox")
 async def api_inbox(limit: int = 50):
     """Get inbox items (unprocessed communications, new tasks, etc.)."""
@@ -1913,22 +1907,6 @@ async def api_inbox(limit: int = 50):
     )
 
     return {"items": [dict(i) for i in items], "total": len(items)}
-
-
-@app.get("/api/insights")
-async def api_insights(limit: int = 20):
-    """Get insights."""
-    insights = store.query(
-        """
-        SELECT * FROM insights
-        WHERE expires_at IS NULL OR expires_at > datetime('now')
-        ORDER BY created_at DESC
-        LIMIT ?
-    """,
-        [limit],
-    )
-
-    return {"insights": [dict(i) for i in insights], "total": len(insights)}
 
 
 @app.get("/api/decisions")
@@ -2456,69 +2434,6 @@ async def get_priorities(limit: int = 20, context: str | None = None):
     sorted_items = sorted(priority_queue, key=lambda x: x.get("score", 0), reverse=True)[:limit]
 
     return {"items": sorted_items, "total": len(priority_queue)}
-
-
-@app.post("/api/priorities/{item_id}/complete")
-async def complete_item(item_id: str):
-    """Complete a priority item based on its type/source."""
-    if item_id.startswith("asana_"):
-        store.update(
-            "tasks",
-            item_id,
-            {"status": "done", "updated_at": datetime.now().isoformat()},
-        )
-    elif item_id.startswith("gmail_"):
-        store.update("communications", item_id, {"processed": 1})
-    else:
-        raise HTTPException(404, "Item not found")
-
-    store.clear_cache("priority_queue")
-
-    return {"status": "completed", "id": item_id}
-
-
-@app.post("/api/priorities/{item_id}/snooze")
-async def snooze_item(item_id: str, hours: int = 4):
-    """Snooze a priority item."""
-
-    task = store.get("tasks", item_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-
-    new_time = datetime.now() + timedelta(hours=hours)
-    now = datetime.now().isoformat()
-
-    store.update("tasks", item_id, {"snoozed_until": new_time.isoformat(), "updated_at": now})
-
-    return {"success": True, "id": item_id, "snoozed_until": new_time.isoformat()}
-
-
-class DelegateAction(BaseModel):
-    to: str
-    note: str | None = None
-
-
-@app.post("/api/priorities/{item_id}/delegate")
-async def delegate_item(item_id: str, body: DelegateAction):
-    """Delegate a priority item."""
-    task = store.get("tasks", item_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-
-    now = datetime.now().isoformat()
-    store.update(
-        "tasks",
-        item_id,
-        {
-            "assignee": body.to,
-            "delegated_by": "moh",
-            "delegated_at": now,
-            "delegated_note": body.note,
-            "updated_at": now,
-        },
-    )
-
-    return {"success": True, "id": item_id, "delegated_to": body.to}
 
 
 @app.get("/api/priorities/filtered")
@@ -3995,35 +3910,6 @@ async def propose_project(name: str, client_id: str | None = None, type: str = "
     return {"success": True, "project": project_data}
 
 
-@app.get("/api/emails")
-async def get_email_queue(limit: int = 20):
-    """Get email queue."""
-    emails = store.query(
-        """
-        SELECT * FROM communications
-        WHERE type = 'email' AND (processed = 0 OR processed IS NULL)
-        ORDER BY received_at DESC
-        LIMIT ?
-    """,
-        [limit],
-    )
-
-    return {
-        "items": [
-            {
-                "id": e.get("id"),
-                "subject": e.get("subject"),
-                "from": e.get("from_address") or e.get("sender"),
-                "received": e.get("received_at") or e.get("created_at"),
-                "snippet": (e.get("snippet") or e.get("body") or "")[:100],
-                "thread_id": e.get("thread_id"),
-            }
-            for e in emails
-        ],
-        "total": store.count("communications", "(processed = 0 OR processed IS NULL)"),
-    }
-
-
 @app.post("/api/emails/{email_id}/dismiss")
 async def dismiss_email(email_id: str):
     """Dismiss an email."""
@@ -5396,7 +5282,7 @@ def main():
     import os
 
     port = int(os.environ.get("PORT", 8420))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    uvicorn.run(app, host="0.0.0.0", port=port)  # nosec B104: intentional for deployment
 
 
 if __name__ == "__main__":

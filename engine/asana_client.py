@@ -28,6 +28,7 @@ def asana_get(endpoint: str, params: dict | None = None) -> dict[str, Any]:
             "Authorization": f"Bearer {pat}",
             "Accept": "application/json",
         },
+        timeout=30,
     )
 
     if resp.status_code != 200:

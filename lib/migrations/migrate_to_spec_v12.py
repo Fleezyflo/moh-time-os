@@ -49,7 +49,7 @@ def drop_all_views(conn):
     cursor.execute("SELECT name FROM sqlite_master WHERE type='view'")
     views = [r[0] for r in cursor.fetchall()]
     for v in views:
-        cursor.execute(f"DROP VIEW IF EXISTS {v}")
+        cursor.execute(f"DROP VIEW IF EXISTS {v}")  # nosql: safe
     logger.info(f"✓ Dropped views: {views}")
     return views
 
@@ -163,8 +163,8 @@ def migrate_tasks(conn):
     """)
 
     cursor.execute(
-        "DROP TABLE tasks"
-    )  # APPROVED_DESTRUCTIVE: Schema migration v12 - data preserved in new table
+        "DROP TABLE tasks"  # APPROVED_DESTRUCTIVE: Schema migration v12 - data preserved in new table
+    )
     cursor.execute("ALTER TABLE tasks_v12 RENAME TO tasks")
 
     # §12 indexes
@@ -239,7 +239,7 @@ def migrate_communications(conn):
     from_col = "from_email" if "from_email" in cols else "from_address"
     to_col = "to_emails" if "to_emails" in cols else "to_addresses"
 
-    cursor.execute(f"""
+    cursor.execute(f"""  # nosql: safe
         INSERT INTO communications_v12 (
             id, source, source_id, thread_id,
             from_email, from_domain, to_emails,

@@ -9,9 +9,17 @@ from pathlib import Path
 API_DIR = Path("api")
 EXCLUDE_PATTERNS = ["_archive", "__pycache__"]
 
+# Router prefix mapping - different routers are mounted at different paths
+ROUTER_PREFIXES = {
+    "spec_router": "/api/v2",
+    "intelligence_router": "/api/v2/intelligence",
+    "app": "",
+    "router": "",
+}
+
 # Pattern: @router.get("/path") or @app.post("/path") etc.
 ENDPOINT_PATTERN = re.compile(
-    r"@(?:app|router|spec_router|intelligence_router)\."
+    r"@(app|router|spec_router|intelligence_router)\."
     r'(get|post|put|delete|patch)\s*\(\s*["\']([^"\']+)["\']'
 )
 
@@ -23,16 +31,20 @@ def should_exclude(path: Path) -> bool:
 
 
 def extract_endpoints(filepath: Path) -> list[tuple[str, str, int]]:
-    """Extract all endpoints from a file. Returns (method, path, line_num)."""
+    """Extract all endpoints from a file. Returns (method, full_path, line_num)."""
     endpoints = []
     try:
         content = filepath.read_text()
         for i, line in enumerate(content.splitlines(), 1):
             match = ENDPOINT_PATTERN.search(line)
             if match:
-                method = match.group(1).upper()
-                path = match.group(2)
-                endpoints.append((method, path, i))
+                router_name = match.group(1)
+                method = match.group(2).upper()
+                path = match.group(3)
+                # Apply router prefix to get full path
+                prefix = ROUTER_PREFIXES.get(router_name, "")
+                full_path = prefix + path
+                endpoints.append((method, full_path, i))
     except (OSError, UnicodeDecodeError):
         # Skip files that can't be read
         pass

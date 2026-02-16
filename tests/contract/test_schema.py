@@ -173,9 +173,9 @@ class TestSchemaVersion:
 
     def test_schema_version_is_2_9_0(self):
         """SCHEMA_VERSION must be exactly 2.9.0 (bound to UI spec)."""
-        assert (
-            SCHEMA_VERSION == "2.9.0"
-        ), f"SCHEMA_VERSION must be '2.9.0' (UI spec version), got '{SCHEMA_VERSION}'"
+        assert SCHEMA_VERSION == "2.9.0", (
+            f"SCHEMA_VERSION must be '2.9.0' (UI spec version), got '{SCHEMA_VERSION}'"
+        )
 
     def test_schema_version_exported(self):
         """SCHEMA_VERSION must be importable from lib.contracts."""

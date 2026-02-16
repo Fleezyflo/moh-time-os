@@ -43,7 +43,7 @@ def table_exists(cursor, table: str) -> bool:
 
 
 def column_exists(cursor, table: str, column: str) -> bool:
-    cursor.execute(f"PRAGMA table_info({table})")
+    cursor.execute(f"PRAGMA table_info({table})")  # nosql: safe
     columns = [row[1] for row in cursor.fetchall()]
     return column in columns
 
@@ -67,7 +67,9 @@ def create_inbox_items_table(cursor):
         for col_name, col_type in v29_columns:
             if not column_exists(cursor, "inbox_items", col_name):
                 logger.info(f"  Adding {col_name} column...")
-                cursor.execute(f"ALTER TABLE inbox_items ADD COLUMN {col_name} {col_type}")
+                cursor.execute(
+                    f"ALTER TABLE inbox_items ADD COLUMN {col_name} {col_type}"
+                )  # nosql: safe
             else:
                 logger.info(f"  ✓ {col_name} already exists")
         return

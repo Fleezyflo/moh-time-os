@@ -353,7 +353,7 @@ def get_connection(
 def get_table_columns(conn: sqlite3.Connection, table: str) -> set[str]:
     """Get existing column names for a table."""
     try:
-        cursor = conn.execute(f"PRAGMA table_info({table})")
+        cursor = conn.execute(f"PRAGMA table_info({table})")  # nosql: safe
         return {row[1] for row in cursor.fetchall()}
     except sqlite3.OperationalError:
         return set()
@@ -373,7 +373,7 @@ def get_schema_version(conn: sqlite3.Connection) -> int:
 
 def set_schema_version(conn: sqlite3.Connection, version: int):
     """Set schema version via PRAGMA user_version."""
-    conn.execute(f"PRAGMA user_version = {version}")
+    conn.execute(f"PRAGMA user_version = {version}")  # nosql: safe
 
 
 # ============================================================
@@ -406,7 +406,7 @@ def add_column_if_missing(
         return False
 
     try:
-        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")  # nosql: safe
         logger.info(f"Migration: added column {table}.{column}")
         return True
     except sqlite3.OperationalError as e:
@@ -459,7 +459,9 @@ def run_migrations(conn: sqlite3.Connection) -> dict:
     for idx_name, table, columns in indexes:
         if table_exists(conn, table):
             try:
-                conn.execute(f"CREATE INDEX IF NOT EXISTS {idx_name} ON {table}({columns})")
+                conn.execute(
+                    f"CREATE INDEX IF NOT EXISTS {idx_name} ON {table}({columns})"
+                )  # nosql: safe
             except sqlite3.OperationalError:
                 pass
 

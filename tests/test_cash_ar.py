@@ -448,9 +448,9 @@ class TestCaps:
 
         result = engine.generate(expanded=False)
 
-        assert (
-            len(result["portfolio"]) <= 12
-        ), f"Portfolio cap violated: {len(result['portfolio'])} > 12"
+        assert len(result["portfolio"]) <= 12, (
+            f"Portfolio cap violated: {len(result['portfolio'])} > 12"
+        )
 
     def test_portfolio_cap_30_expanded(self, test_db, engine):
         """Expanded portfolio max 30 clients."""
@@ -470,9 +470,9 @@ class TestCaps:
 
         result = engine.generate(expanded=True)
 
-        assert (
-            len(result["portfolio"]) <= 30
-        ), f"Expanded cap violated: {len(result['portfolio'])} > 30"
+        assert len(result["portfolio"]) <= 30, (
+            f"Expanded cap violated: {len(result['portfolio'])} > 30"
+        )
 
     def test_global_actions_cap_10(self, test_db, engine):
         """Global actions max 10."""
@@ -493,9 +493,9 @@ class TestCaps:
 
         result = engine.generate()
 
-        assert (
-            len(result["global_actions"]) <= 10
-        ), f"Global actions cap violated: {len(result['global_actions'])} > 10"
+        assert len(result["global_actions"]) <= 10, (
+            f"Global actions cap violated: {len(result['global_actions'])} > 10"
+        )
 
 
 class TestInvalidARActions:

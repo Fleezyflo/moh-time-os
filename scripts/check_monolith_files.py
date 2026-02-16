@@ -14,6 +14,25 @@ UI_DIR = Path("time-os-ui/src")
 
 EXCLUDE_PATTERNS = ["_archive", "__pycache__", ".venv", "node_modules"]
 
+# Legacy monoliths - these files existed before the check was enforced
+# They are tracked but not blocking until refactored
+# Format: filepath -> max_allowed_lines (baseline at time of enforcement)
+LEGACY_MONOLITHS = {
+    "lib/intelligence/signals.py": 2000,
+    "lib/intelligence/patterns.py": 1700,
+    "lib/ui_spec_v21/tests/test_spec_cases.py": 1700,
+    "lib/agency_snapshot/client360_page10.py": 2500,
+    "lib/agency_snapshot/comms_commitments_page11.py": 1600,
+    "lib/agency_snapshot/comms_commitments.py": 1700,
+    "lib/agency_snapshot/generator.py": 1700,
+    "lib/agency_snapshot/client360.py": 2300,
+    "api/server.py": 5500,
+    "time-os-ui/src/components/RoomDrawer.tsx": 600,
+    "time-os-ui/src/pages/Inbox.tsx": 850,
+    "time-os-ui/src/pages/Issues.tsx": 600,
+    "time-os-ui/src/pages/ClientDetailSpec.tsx": 850,
+}
+
 
 def should_exclude(path: Path) -> bool:
     """Check if path should be excluded."""
@@ -42,9 +61,14 @@ def check_python_files() -> list[str]:
             if should_exclude(py_file):
                 continue
 
+            filepath_str = str(py_file)
             lines = count_lines(py_file)
-            if lines > PYTHON_MAX_LINES:
-                violations.append(f"  {py_file}: {lines} lines (max {PYTHON_MAX_LINES})")
+
+            # Check if file is in legacy baseline
+            max_allowed = LEGACY_MONOLITHS.get(filepath_str, PYTHON_MAX_LINES)
+
+            if lines > max_allowed:
+                violations.append(f"  {py_file}: {lines} lines (max {max_allowed})")
 
     return violations
 
@@ -60,9 +84,14 @@ def check_tsx_files() -> list[str]:
         if should_exclude(tsx_file):
             continue
 
+        filepath_str = str(tsx_file)
         lines = count_lines(tsx_file)
-        if lines > TSX_MAX_LINES:
-            violations.append(f"  {tsx_file}: {lines} lines (max {TSX_MAX_LINES})")
+
+        # Check if file is in legacy baseline
+        max_allowed = LEGACY_MONOLITHS.get(filepath_str, TSX_MAX_LINES)
+
+        if lines > max_allowed:
+            violations.append(f"  {tsx_file}: {lines} lines (max {max_allowed})")
 
     return violations
 

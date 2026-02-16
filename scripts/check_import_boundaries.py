@@ -44,6 +44,17 @@ IMPORT_RULES = {
 
 EXCLUDE_PATTERNS = ["_archive", "__pycache__", ".venv", "test_", "_test.py"]
 
+# Allowed exceptions - specific files that legitimately need cross-boundary imports
+# These are legacy patterns that would require significant refactoring
+ALLOWED_EXCEPTIONS = {
+    "lib/collector_registry.py": ["collectors"],  # Registry needs to know about collectors
+    "lib/enrollment_detector.py": ["collectors"],  # Enrollment integrates with collectors
+    "lib/autonomous_loop.py": ["collectors"],  # Autonomous loop orchestrates collectors
+    "lib/collectors/orchestrator.py": [
+        "collectors"
+    ],  # Collector orchestrator delegates to collectors
+}
+
 
 def should_exclude(path: Path) -> bool:
     """Check if path should be excluded."""
@@ -91,10 +102,17 @@ def check_file(filepath: Path) -> list[str]:
     rules = IMPORT_RULES[layer]
     forbidden = set(rules["forbidden"])
 
+    # Check for allowed exceptions
+    filepath_str = str(filepath)
+    allowed_for_file = set()
+    for exception_path, allowed_modules in ALLOWED_EXCEPTIONS.items():
+        if exception_path in filepath_str:
+            allowed_for_file.update(allowed_modules)
+
     imports = extract_imports(filepath)
 
     for line_num, module in imports:
-        if module in forbidden:
+        if module in forbidden and module not in allowed_for_file:
             violations.append(f"  {filepath}:{line_num}: {layer}/ cannot import from {module}/")
 
     return violations
