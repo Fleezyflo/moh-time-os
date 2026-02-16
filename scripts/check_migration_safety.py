@@ -24,11 +24,11 @@ EXCLUDE_PATTERNS = ["_archive", "__pycache__", ".venv"]
 
 # Dangerous patterns in SQL
 DANGEROUS_PATTERNS = [
-    (r'\bDROP\s+TABLE\b', "DROP TABLE"),
-    (r'\bDROP\s+COLUMN\b', "DROP COLUMN"),
-    (r'\bDELETE\s+FROM\s+\w+\s*(?:;|$)', "DELETE without WHERE"),
-    (r'\bTRUNCATE\b', "TRUNCATE"),
-    (r'\bALTER\s+TABLE\s+\w+\s+DROP\b', "ALTER TABLE DROP"),
+    (r"\bDROP\s+TABLE\b", "DROP TABLE"),
+    (r"\bDROP\s+COLUMN\b", "DROP COLUMN"),
+    (r"\bDELETE\s+FROM\s+\w+\s*(?:;|$)", "DELETE without WHERE"),
+    (r"\bTRUNCATE\b", "TRUNCATE"),
+    (r"\bALTER\s+TABLE\s+\w+\s+DROP\b", "ALTER TABLE DROP"),
 ]
 
 # Approval marker
@@ -61,9 +61,7 @@ def check_file(filepath: Path) -> list[str]:
 
             for pattern, name in DANGEROUS_PATTERNS:
                 if re.search(pattern, line, re.IGNORECASE):
-                    violations.append(
-                        f"  {filepath}:{i}: {name}\n    {line.strip()[:80]}"
-                    )
+                    violations.append(f"  {filepath}:{i}: {name}\n    {line.strip()[:80]}")
                     break
 
     except (OSError, UnicodeDecodeError):
@@ -104,7 +102,7 @@ def main() -> int:
         return 1
 
     print("✅ No unsafe migration operations found.")
-    return 1
+    return 0  # PASS when no violations
 
 
 if __name__ == "__main__":

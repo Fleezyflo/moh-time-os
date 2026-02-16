@@ -40,32 +40,32 @@ def should_exclude(path: Path) -> bool:
 def check_http_calls(filepath: Path) -> list[str]:
     """Check for HTTP calls without timeout."""
     violations = []
-    
+
     try:
         content = filepath.read_text()
         tree = ast.parse(content)
-        
+
         for node in ast.walk(tree):
             if isinstance(node, ast.Call):
                 call_name = get_call_name(node)
-                
+
                 if any(http in call_name for http in ["requests.", "httpx.", "urlopen"]):
                     # Check if timeout is specified
                     has_timeout = False
-                    
+
                     for keyword in node.keywords:
                         if keyword.arg == "timeout":
                             has_timeout = True
                             break
-                    
+
                     if not has_timeout:
                         violations.append(
                             f"  {filepath}:{node.lineno}: {call_name}() without timeout"
                         )
-                        
+
     except (SyntaxError, OSError, UnicodeDecodeError):
         pass
-    
+
     return violations
 
 
@@ -85,19 +85,19 @@ def get_call_name(node: ast.Call) -> str:
 def main() -> int:
     """Main entry point."""
     all_violations = []
-    
+
     for dir_name in DIRS_TO_CHECK:
         dir_path = Path(dir_name)
         if not dir_path.exists():
             continue
-        
+
         for py_file in dir_path.rglob("*.py"):
             if should_exclude(py_file):
                 continue
-            
+
             violations = check_http_calls(py_file)
             all_violations.extend(violations)
-    
+
     if all_violations:
         print("⏱️ HTTP CALLS WITHOUT TIMEOUT:")
         print("\n".join(all_violations[:30]))
@@ -106,9 +106,9 @@ def main() -> int:
         print("\nAdd timeout parameter to prevent hanging: requests.get(url, timeout=30)")
         # BLOCKING
         return 1 if all_violations else 0  # BLOCKING
-    
+
     print("✅ All HTTP calls have timeouts.")
-    return 1
+    return 0  # PASS when no violations
 
 
 if __name__ == "__main__":

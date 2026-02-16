@@ -37,11 +37,11 @@ def should_exclude(path: Path) -> bool:
 def find_blocking_in_async(filepath: Path) -> list[str]:
     """Find blocking calls inside async functions."""
     violations = []
-    
+
     try:
         content = filepath.read_text()
         tree = ast.parse(content)
-        
+
         # Find async functions
         for node in ast.walk(tree):
             if isinstance(node, ast.AsyncFunctionDef):
@@ -55,10 +55,10 @@ def find_blocking_in_async(filepath: Path) -> list[str]:
                                 f"  {filepath}:{child.lineno}: {call_name}() in async function '{node.name}'"
                                 f"\n    → {fix}"
                             )
-                            
+
     except (SyntaxError, OSError, UnicodeDecodeError):
         pass
-    
+
     return violations
 
 
@@ -78,19 +78,19 @@ def get_call_name(node: ast.Call) -> str:
 def main() -> int:
     """Main entry point."""
     all_violations = []
-    
+
     for dir_name in DIRS_TO_CHECK:
         dir_path = Path(dir_name)
         if not dir_path.exists():
             continue
-        
+
         for py_file in dir_path.rglob("*.py"):
             if should_exclude(py_file):
                 continue
-            
+
             violations = find_blocking_in_async(py_file)
             all_violations.extend(violations)
-    
+
     if all_violations:
         print("⏳ BLOCKING CALLS IN ASYNC CODE:")
         print("\n".join(all_violations[:20]))
@@ -99,7 +99,7 @@ def main() -> int:
         print("\nBlocking calls in async functions block the event loop.")
         # BLOCKING
         return 1 if all_violations else 0  # BLOCKING
-    
+
     print("✅ No blocking calls in async code.")
     return 0
 

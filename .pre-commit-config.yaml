@@ -71,7 +71,7 @@ repos:
         entry: python scripts/check_vulnerabilities.py
         language: python
         pass_filenames: false
-        stages: [pre-push]
+        always_run: true
 
       - id: no-sql-fstrings
         name: "💉 [P0] No SQL injection"
@@ -148,7 +148,7 @@ repos:
         entry: python scripts/check_licenses.py
         language: python
         pass_filenames: false
-        stages: [pre-push]
+        always_run: true
 
   # ==========================================
   # P2 (BLOCKING) - CODE QUALITY (BLOCKING)

@@ -116,7 +116,7 @@ def main() -> int:
         # BLOCKING for now
         return 1  # BLOCKING
 
-    return 1  # BLOCKING
+    return 0  # PASS when no violations
 
 
 if __name__ == "__main__":

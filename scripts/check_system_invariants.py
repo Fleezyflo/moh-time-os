@@ -234,7 +234,7 @@ def main() -> int:
         return 1
 
     print("✅ All system invariants satisfied")
-    return 1
+    return 0  # PASS when no violations
 
 
 if __name__ == "__main__":

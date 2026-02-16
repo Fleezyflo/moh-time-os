@@ -33,9 +33,7 @@ def check_python_vulnerabilities() -> list[str]:
                     for v in vuln.get("vulns", []):
                         vuln_id = v.get("id", "?")
                         fix = v.get("fix_versions", ["upgrade"])
-                        violations.append(
-                            f"  Python: {name}=={version} ({vuln_id}) - fix: {fix}"
-                        )
+                        violations.append(f"  Python: {name}=={version} ({vuln_id}) - fix: {fix}")
             except json.JSONDecodeError:
                 # Parse text output as fallback
                 if "found" in result.stdout.lower() and "vulnerabilit" in result.stdout.lower():
@@ -121,10 +119,9 @@ def main() -> int:
     violations.extend(node_vulns)
 
     # Filter to only critical/high severity
-    critical_violations = [v for v in violations if
-                          "critical" in v.lower() or
-                          "high" in v.lower() or
-                          "Error" in v]
+    critical_violations = [
+        v for v in violations if "critical" in v.lower() or "high" in v.lower() or "Error" in v
+    ]
 
     if critical_violations:
         print("🚨 VULNERABLE DEPENDENCIES (Critical/High):")
@@ -139,7 +136,7 @@ def main() -> int:
         return 1  # BLOCKING
 
     print("✅ No critical vulnerabilities found.")
-    return 1
+    return 0  # PASS when no violations
 
 
 if __name__ == "__main__":

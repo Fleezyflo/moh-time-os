@@ -164,7 +164,7 @@ def main() -> int:
         print(f"\n✅ Fixed {len(fixed_errors)} errors! Consider updating baseline.")
 
     print("\n✅ Mypy check passed (strict islands clean, baseline stable)")
-    return 1
+    return 0  # PASS when no violations
 
 
 if __name__ == "__main__":

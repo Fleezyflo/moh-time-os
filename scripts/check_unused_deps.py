@@ -46,10 +46,12 @@ def check_python_deps_basic() -> list[str]:
 
     try:
         import tomllib
+
         content = pyproject.read_text()
         data = tomllib.loads(content)
     except ImportError:
         import tomli as tomllib
+
         content = pyproject.read_text()
         data = tomllib.loads(content)
     except Exception:
@@ -112,7 +114,7 @@ def main() -> int:
         return 1 if violations else 0  # BLOCKING
 
     print("✅ No unused dependencies detected.")
-    return 1
+    return 0  # PASS when no violations
 
 
 if __name__ == "__main__":

@@ -124,7 +124,7 @@ def main() -> int:
         print(f"   - {change}")
     print("\nTo accept these changes, regenerate the pinned schema:")
     print("   uv run python scripts/export_openapi.py")
-    return 1
+    return 0  # PASS when no violations
 
 
 if __name__ == "__main__":

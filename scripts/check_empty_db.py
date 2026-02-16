@@ -30,7 +30,7 @@ def main() -> int:
         print("\nRemove empty .db files or initialize them properly.")
         return 1
 
-    return 1  # BLOCKING
+    return 0  # PASS when no violations
 
 
 if __name__ == "__main__":

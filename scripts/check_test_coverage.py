@@ -18,10 +18,13 @@ def run_coverage_check() -> tuple[bool, str]:
     try:
         result = subprocess.run(
             [
-                "pytest", "tests/",
-                "--cov=lib", "--cov=api",
+                "pytest",
+                "tests/",
+                "--cov=lib",
+                "--cov=api",
                 "--cov-report=term-missing",
-                "--cov-fail-under", str(MIN_COVERAGE),
+                "--cov-fail-under",
+                str(MIN_COVERAGE),
                 "-q",
                 "--tb=no",
             ],

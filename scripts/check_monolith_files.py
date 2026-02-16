@@ -86,7 +86,7 @@ def main() -> int:
         print("Split large files into smaller, focused modules.")
         return 1
 
-    return 1  # BLOCKING
+    return 0  # PASS when no violations
 
 
 if __name__ == "__main__":

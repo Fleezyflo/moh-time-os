@@ -55,7 +55,7 @@ def main() -> int:
         print("\nUse parameterized queries instead: cursor.execute(sql, params)")
         return 1
 
-    return 1  # BLOCKING
+    return 0  # PASS when no violations
 
 
 if __name__ == "__main__":

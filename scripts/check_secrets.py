@@ -21,57 +21,57 @@ EXCLUDE_PATTERNS = ["_archive", "__pycache__", ".venv", "node_modules", ".git"]
 # Known secret patterns
 SECRET_PATTERNS = [
     # OpenAI
-    (r'sk-[a-zA-Z0-9]{20,}', "OpenAI API key"),
+    (r"sk-[a-zA-Z0-9]{20,}", "OpenAI API key"),
     # Anthropic
-    (r'sk-ant-[a-zA-Z0-9\-]{20,}', "Anthropic API key"),
+    (r"sk-ant-[a-zA-Z0-9\-]{20,}", "Anthropic API key"),
     # AWS
-    (r'AKIA[0-9A-Z]{16}', "AWS Access Key ID"),
+    (r"AKIA[0-9A-Z]{16}", "AWS Access Key ID"),
     # AWS Secret Key - must not be all same char or separator
-    (r'(?<![=\-#])[a-zA-Z0-9/+=]{40}(?![=\-#])', "Potential AWS Secret Key"),
+    (r"(?<![=\-#])[a-zA-Z0-9/+=]{40}(?![=\-#])", "Potential AWS Secret Key"),
     # GitHub
-    (r'ghp_[a-zA-Z0-9]{36}', "GitHub Personal Access Token"),
-    (r'gho_[a-zA-Z0-9]{36}', "GitHub OAuth Token"),
-    (r'ghu_[a-zA-Z0-9]{36}', "GitHub User Token"),
-    (r'ghs_[a-zA-Z0-9]{36}', "GitHub Server Token"),
+    (r"ghp_[a-zA-Z0-9]{36}", "GitHub Personal Access Token"),
+    (r"gho_[a-zA-Z0-9]{36}", "GitHub OAuth Token"),
+    (r"ghu_[a-zA-Z0-9]{36}", "GitHub User Token"),
+    (r"ghs_[a-zA-Z0-9]{36}", "GitHub Server Token"),
     # Slack
-    (r'xox[baprs]-[a-zA-Z0-9\-]{10,}', "Slack Token"),
+    (r"xox[baprs]-[a-zA-Z0-9\-]{10,}", "Slack Token"),
     # Discord
-    (r'[MN][a-zA-Z0-9]{23,}\.[a-zA-Z0-9\-_]{6}\.[a-zA-Z0-9\-_]{27}', "Discord Token"),
+    (r"[MN][a-zA-Z0-9]{23,}\.[a-zA-Z0-9\-_]{6}\.[a-zA-Z0-9\-_]{27}", "Discord Token"),
     # Stripe
-    (r'sk_live_[a-zA-Z0-9]{24,}', "Stripe Live Secret Key"),
-    (r'sk_test_[a-zA-Z0-9]{24,}', "Stripe Test Secret Key"),
+    (r"sk_live_[a-zA-Z0-9]{24,}", "Stripe Live Secret Key"),
+    (r"sk_test_[a-zA-Z0-9]{24,}", "Stripe Test Secret Key"),
     # Google
-    (r'AIza[a-zA-Z0-9\-_]{35}', "Google API Key"),
+    (r"AIza[a-zA-Z0-9\-_]{35}", "Google API Key"),
     # Twilio
-    (r'SK[a-f0-9]{32}', "Twilio API Key"),
+    (r"SK[a-f0-9]{32}", "Twilio API Key"),
     # SendGrid
-    (r'SG\.[a-zA-Z0-9\-_]{22}\.[a-zA-Z0-9\-_]{43}', "SendGrid API Key"),
+    (r"SG\.[a-zA-Z0-9\-_]{22}\.[a-zA-Z0-9\-_]{43}", "SendGrid API Key"),
     # Generic patterns
     (r'(?i)password\s*=\s*["\'][^"\']{8,}["\']', "Hardcoded password"),
     (r'(?i)secret\s*=\s*["\'][^"\']{8,}["\']', "Hardcoded secret"),
     (r'(?i)api_key\s*=\s*["\'][^"\']{8,}["\']', "Hardcoded API key"),
     (r'(?i)token\s*=\s*["\'][a-zA-Z0-9\-_]{20,}["\']', "Hardcoded token"),
     # Private keys
-    (r'-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----', "Private key"),
-    (r'-----BEGIN PGP PRIVATE KEY BLOCK-----', "PGP private key"),
+    (r"-----BEGIN (?:RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----", "Private key"),
+    (r"-----BEGIN PGP PRIVATE KEY BLOCK-----", "PGP private key"),
 ]
 
 # Allowlist patterns (false positives)
 ALLOWLIST = [
-    r'XERO_TOKEN_URL',  # URL constant, not a token
-    r'sync_token',  # Parameter name, not a value
-    r'token_uri',  # OAuth endpoint name
-    r'_token',  # Suffix in variable names
-    r'test.*token',  # Test fixtures
-    r'example\.com',  # Example domains
-    r'\.env\.example',  # Example files
-    r'SECRET_KEY.*=.*os\.getenv',  # Env var lookup (correct pattern)
-    r'# noqa: secret',  # Explicit ignore
-    r'^#\s*[=\-]{10,}',  # Comment separator lines
-    r'[=]{10,}',  # Separator lines with equals
-    r'[-]{10,}',  # Separator lines with dashes
-    r'^\s*#.*={5,}',  # Any comment with repeated equals
-    r'check_secrets\.py',  # Self-reference in this file
+    r"XERO_TOKEN_URL",  # URL constant, not a token
+    r"sync_token",  # Parameter name, not a value
+    r"token_uri",  # OAuth endpoint name
+    r"_token",  # Suffix in variable names
+    r"test.*token",  # Test fixtures
+    r"example\.com",  # Example domains
+    r"\.env\.example",  # Example files
+    r"SECRET_KEY.*=.*os\.getenv",  # Env var lookup (correct pattern)
+    r"# noqa: secret",  # Explicit ignore
+    r"^#\s*[=\-]{10,}",  # Comment separator lines
+    r"[=]{10,}",  # Separator lines with equals
+    r"[-]{10,}",  # Separator lines with dashes
+    r"^\s*#.*={5,}",  # Any comment with repeated equals
+    r"check_secrets\.py",  # Self-reference in this file
     r'\(r["\']-----BEGIN',  # Regex pattern definitions
 ]
 
@@ -158,10 +158,12 @@ def main() -> int:
         print("\n".join(all_violations[:20]))  # Limit output
         if len(all_violations) > 20:
             print(f"  ... and {len(all_violations) - 20} more")
-        print("\nUse environment variables instead. Add '# noqa: secret' to ignore false positives.")
+        print(
+            "\nUse environment variables instead. Add '# noqa: secret' to ignore false positives."
+        )
         return 1
 
-    return 1  # BLOCKING
+    return 0  # PASS when no violations
 
 
 if __name__ == "__main__":

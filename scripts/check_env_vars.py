@@ -16,8 +16,17 @@ EXCLUDE_PATTERNS = ["_archive", "__pycache__", ".venv", "test_"]
 
 # Environment variables that don't need documentation
 STANDARD_ENV_VARS = {
-    "HOME", "USER", "PATH", "PWD", "SHELL", "TERM",
-    "LANG", "LC_ALL", "TZ", "PYTHONPATH", "VIRTUAL_ENV",
+    "HOME",
+    "USER",
+    "PATH",
+    "PWD",
+    "SHELL",
+    "TERM",
+    "LANG",
+    "LC_ALL",
+    "TZ",
+    "PYTHONPATH",
+    "VIRTUAL_ENV",
 }
 
 
@@ -151,7 +160,7 @@ def main() -> int:
         return 1  # BLOCKING
 
     print(f"✅ All {len(used_vars)} environment variables are documented.")
-    return 1
+    return 0  # PASS when no violations
 
 
 if __name__ == "__main__":

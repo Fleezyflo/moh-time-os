@@ -19,7 +19,7 @@ EXCLUDE_PATTERNS = ["_archive", "__pycache__", "test_"]
 
 # Regex to extract endpoints
 ENDPOINT_PATTERN = re.compile(
-    r'@(?:app|router|spec_router|intelligence_router)\.'
+    r"@(?:app|router|spec_router|intelligence_router)\."
     r'(get|post|put|delete|patch)\s*\(\s*["\']([^"\']+)["\']'
 )
 
@@ -117,7 +117,7 @@ def main() -> int:
         return 1
 
     print(f"✅ No breaking API changes. ({len(current)} endpoints)")
-    return 1
+    return 0  # PASS when no violations
 
 
 if __name__ == "__main__":

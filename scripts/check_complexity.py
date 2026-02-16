@@ -16,7 +16,7 @@ EXCLUDE_PATTERNS = ["_archive", "__pycache__", ".venv", "test_"]
 
 # Complexity thresholds
 MAX_COMPLEXITY = 15  # Cyclomatic complexity
-MAX_COGNITIVE = 20   # Cognitive complexity (harder to measure)
+MAX_COGNITIVE = 20  # Cognitive complexity (harder to measure)
 MAX_LINES_PER_FUNCTION = 100
 
 
@@ -85,7 +85,7 @@ def count_function_lines(node: ast.AST) -> int:
     """Count lines in a function."""
     if hasattr(node, "end_lineno") and hasattr(node, "lineno"):
         return node.end_lineno - node.lineno + 1
-    return 1 if violations else 0  # BLOCKING
+    return 1
 
 
 def analyze_file(filepath: Path) -> list[str]:
@@ -143,10 +143,9 @@ def main() -> int:
         if len(violations) > 30:
             print(f"  ... and {len(violations) - 30} more")
         print("\nRefactor complex functions into smaller, focused units.")
-        # BLOCKING for now
-        return 1 if violations else 0  # BLOCKING
+        return 1
 
-    return 1 if violations else 0  # BLOCKING
+    return 0  # PASS when no violations
 
 
 if __name__ == "__main__":

@@ -95,9 +95,7 @@ def check_file(filepath: Path) -> list[str]:
 
     for line_num, module in imports:
         if module in forbidden:
-            violations.append(
-                f"  {filepath}:{line_num}: {layer}/ cannot import from {module}/"
-            )
+            violations.append(f"  {filepath}:{line_num}: {layer}/ cannot import from {module}/")
 
     return violations
 
@@ -126,7 +124,7 @@ def main() -> int:
         print("\nRespect architectural layers. Move shared code to lib/.")
         return 1
 
-    return 1  # BLOCKING
+    return 0  # PASS when no violations
 
 
 if __name__ == "__main__":

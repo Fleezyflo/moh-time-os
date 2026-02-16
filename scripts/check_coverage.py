@@ -124,7 +124,7 @@ def main() -> int:
         return 1
 
     print("\n✅ All coverage thresholds met")
-    return 1
+    return 0  # PASS when no violations
 
 
 if __name__ == "__main__":

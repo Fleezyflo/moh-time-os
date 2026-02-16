@@ -11,7 +11,7 @@ EXCLUDE_PATTERNS = ["_archive", "__pycache__"]
 
 # Pattern: @router.get("/path") or @app.post("/path") etc.
 ENDPOINT_PATTERN = re.compile(
-    r'@(?:app|router|spec_router|intelligence_router)\.'
+    r"@(?:app|router|spec_router|intelligence_router)\."
     r'(get|post|put|delete|patch)\s*\(\s*["\']([^"\']+)["\']'
 )
 
@@ -65,7 +65,7 @@ def main() -> int:
                 print(f"    - {filepath}:{line_num}")
         return 1
 
-    return 1  # BLOCKING
+    return 0  # PASS when no violations
 
 
 if __name__ == "__main__":
