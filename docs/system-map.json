@@ -887,10 +887,6 @@
       "source": "collectors/tasks.py"
     },
     {
-      "name": "test_calendar_sync_modes",
-      "source": "collectors/test_calendar_sync_modes.py"
-    },
-    {
       "name": "xero",
       "source": "collectors/xero.py"
     }
@@ -1084,7 +1080,7 @@
   "generated_by": "scripts/generate_system_map.py",
   "summary": {
     "api_routes_count": 172,
-    "collectors_count": 8,
+    "collectors_count": 7,
     "db_tables_count": 46,
     "ui_routes_count": 18
   },

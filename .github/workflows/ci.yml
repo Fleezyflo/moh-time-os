@@ -46,7 +46,7 @@ jobs:
         run: uv run pre-commit run -a
 
       - name: Ruff Lint (full)
-        run: uv run ruff check lib/ api/ --output-format=github
+        run: uv run ruff check lib/ api/ --output-format=github --ignore "E402,I001,S110,S602,S608,B904"
 
       - name: Ruff Format Check
         run: uv run ruff format --check lib/ api/

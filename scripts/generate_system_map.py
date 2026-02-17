@@ -46,6 +46,8 @@ def get_collectors() -> list[dict]:
     collectors_dir = Path("lib/collectors")
     if collectors_dir.exists():
         for py_file in collectors_dir.glob("*.py"):
+            if py_file.name.startswith("debug_") or py_file.name.startswith("test_"):
+                continue
             if py_file.name in ["__init__.py", "base.py", "orchestrator.py"]:
                 continue
             name = py_file.stem
