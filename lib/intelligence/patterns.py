@@ -18,6 +18,57 @@ This module contains DEFINITIONS only. Detection logic is in Task 2.2.
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
+import threading
+
+
+# =============================================================================
+# ERROR TRACKING - Pattern detection errors are tracked, not swallowed
+# =============================================================================
+
+@dataclass
+class PatternDetectionError:
+    """Tracks an error that occurred during pattern detection."""
+    pattern_id: str
+    error_type: str
+    message: str
+    timestamp: str = ""
+    
+    def __post_init__(self):
+        if not self.timestamp:
+            from datetime import datetime
+            self.timestamp = datetime.now().isoformat()
+    
+    def to_dict(self) -> dict:
+        return {
+            "pattern_id": self.pattern_id,
+            "error_type": self.error_type,
+            "message": self.message,
+            "timestamp": self.timestamp,
+        }
+
+
+class PatternErrorCollector:
+    """Thread-safe collector for pattern detection errors."""
+    
+    def __init__(self):
+        self._errors: list[PatternDetectionError] = []
+        self._lock = threading.Lock()
+    
+    def add(self, error: PatternDetectionError):
+        with self._lock:
+            self._errors.append(error)
+    
+    def get_all(self) -> list[PatternDetectionError]:
+        with self._lock:
+            return list(self._errors)
+    
+    def count(self) -> int:
+        with self._lock:
+            return len(self._errors)
+    
+    def clear(self):
+        with self._lock:
+            self._errors.clear()
 
 
 class PatternType(Enum):
@@ -1480,9 +1531,11 @@ def detect_all_patterns(db_path: Optional[Path] = None) -> dict:
     """
     Run the complete pattern library against the database.
     
-    Returns comprehensive detection results.
+    Returns comprehensive detection results INCLUDING ERRORS.
+    Errors are tracked, not swallowed.
     """
     all_detected = []
+    error_collector = PatternErrorCollector()
     
     for pattern_id, pattern_def in PATTERN_LIBRARY.items():
         try:
@@ -1490,7 +1543,12 @@ def detect_all_patterns(db_path: Optional[Path] = None) -> dict:
             if evidence:
                 all_detected.append(evidence.to_dict())
         except Exception as e:
-            logger.warning(f"Error detecting pattern {pattern_id}: {e}")
+            logger.warning(f"Error detecting pattern {pattern_id}: {e}", exc_info=True)
+            error_collector.add(PatternDetectionError(
+                pattern_id=pattern_id,
+                error_type=type(e).__name__,
+                message=str(e),
+            ))
     
     # Organize by type and severity
     by_type = {pt.value: [] for pt in PatternType}
@@ -1505,10 +1563,16 @@ def detect_all_patterns(db_path: Optional[Path] = None) -> dict:
         if sev in by_severity:
             by_severity[sev].append(pattern)
     
+    # Collect errors
+    errors = error_collector.get_all()
+    
     return {
         "detected_at": datetime.now().isoformat(),
+        "success": len(errors) == 0,
         "total_detected": len(all_detected),
         "total_patterns": len(PATTERN_LIBRARY),
+        "detection_errors": len(errors),
+        "errors": [e.to_dict() for e in errors],
         "by_type": {k: len(v) for k, v in by_type.items()},
         "by_severity": {k: len(v) for k, v in by_severity.items()},
         "patterns": all_detected,
