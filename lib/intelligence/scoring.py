@@ -38,6 +38,11 @@ class NormMethod(Enum):
     RELATIVE = "relative"       # Against own history
 
 
+# Sentinel value for insufficient data - distinguishes from real scores
+# When this is returned, the score should be flagged as "data_unavailable"
+INSUFFICIENT_DATA_SCORE = -1.0
+
+
 @dataclass
 class ScoringDimension:
     """
@@ -600,12 +605,18 @@ def _compute_dimension_raw_value(dimension: ScoringDimension, metrics: dict) -> 
         return metrics.get("communications_count", metrics.get("entity_links_count", 0))
     
     elif name == "engagement_trajectory":
-        # This requires trend data; use placeholder if not available
-        return metrics.get("trend_score", 60)
+        # Requires trend data from score_history table
+        trend_score = metrics.get("trend_score")
+        if trend_score is None:
+            return INSUFFICIENT_DATA_SCORE  # No trend data available
+        return trend_score
     
     # PROJECT DIMENSIONS
     elif name == "velocity":
-        return metrics.get("completion_rate_pct", 50)
+        rate = metrics.get("completion_rate_pct")
+        if rate is None:
+            return INSUFFICIENT_DATA_SCORE
+        return rate
     
     elif name == "risk_exposure":
         overdue = metrics.get("overdue_tasks", 0)

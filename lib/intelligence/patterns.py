@@ -989,12 +989,14 @@ def _detect_concentration(
                     "top_n": top_n,
                     "top_n_share_pct": round(top_share * 100, 1),
                     "total_people": len(people),
+                    "proxy_metric": "active_task_count",  # TRANSPARENT: using task count as proxy
+                    "proxy_reason": "communication data unavailable",
                 },
                 supporting_signals=[],
-                evidence_narrative=f"Top {top_n} team members handle {round(top_share * 100, 1)}% of workload.",
+                evidence_narrative=f"Top {top_n} team members handle {round(top_share * 100, 1)}% of workload (based on task assignments; communication data unavailable).",
                 operational_meaning=pattern_def.operational_meaning,
                 implied_action=pattern_def.implied_action,
-                confidence="medium",  # Using proxy metric
+                confidence="low",  # Proxy metric = low confidence
             )
         
         elif pattern_def.id == "pat_client_type_concentration":
@@ -1108,12 +1110,14 @@ def _detect_cascade(
                 metrics={
                     "high_exposure_people": len(high_exposure),
                     "max_exposure_pct": round(max(h["exposure_pct"] for h in high_exposure), 1),
+                    "calculation_method": "proportional_approximation",
+                    "calculation_note": "Assumes equal revenue per project; actual person->project->client->revenue mapping not implemented",
                 },
                 supporting_signals=[],
-                evidence_narrative=f"{len(high_exposure)} person(s) with blast radius >{threshold_pct}% of portfolio.",
+                evidence_narrative=f"{len(high_exposure)} person(s) with estimated blast radius >{threshold_pct}% of portfolio (proportional approximation; actual dependency mapping unavailable).",
                 operational_meaning=pattern_def.operational_meaning,
                 implied_action=pattern_def.implied_action,
-                confidence="medium",
+                confidence="low",  # Approximation = low confidence
             )
         
         elif pattern_def.id == "pat_project_dependency_chain":

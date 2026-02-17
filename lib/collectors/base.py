@@ -146,9 +146,10 @@ class BaseCollector(ABC):
         import shutil
 
         try:
-            # Include GOG_ACCOUNT for gog CLI commands
+            # Include GOG_ACCOUNT for gog CLI commands (from env or default)
             env = os.environ.copy()
-            env["GOG_ACCOUNT"] = "molham@hrmny.co"
+            if "GOG_ACCOUNT" not in env:
+                env["GOG_ACCOUNT"] = os.environ.get("DEFAULT_GOG_ACCOUNT", "")
 
             # Validate command exists (first element)
             if not cmd or not shutil.which(cmd[0]):

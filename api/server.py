@@ -3230,8 +3230,82 @@ async def get_status():
 
 @app.get("/api/health")
 async def health_check():
-    """Health check endpoint."""
-    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+    """
+    Health check endpoint for load balancers and k8s probes.
+
+    Checks:
+    - DB connectivity
+    - Schema version
+    - Basic query execution
+
+    Returns 200 if healthy, 503 if unhealthy.
+    """
+    checks = {
+        "db_connected": False,
+        "db_version": None,
+        "db_query": False,
+    }
+
+    try:
+        db_path = db_module.get_db_path()
+        checks["db_exists"] = db_path.exists()
+
+        if db_path.exists():
+            with db_module.get_connection() as conn:
+                checks["db_connected"] = True
+
+                # Check schema version
+                version = db_module.get_schema_version(conn)
+                checks["db_version"] = version
+
+                # Test query execution
+                cursor = conn.execute("SELECT COUNT(*) FROM clients")
+                count = cursor.fetchone()[0]
+                checks["db_query"] = True
+                checks["client_count"] = count
+    except Exception as e:
+        checks["error"] = str(e)
+
+    healthy = checks.get("db_connected") and checks.get("db_query")
+
+    response = {
+        "status": "healthy" if healthy else "unhealthy",
+        "timestamp": datetime.now().isoformat(),
+        "checks": checks,
+    }
+
+    if not healthy:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(content=response, status_code=503)
+
+    return response
+
+
+@app.get("/api/ready")
+async def readiness_check():
+    """
+    Readiness probe for k8s.
+
+    Returns 200 if the service is ready to accept traffic.
+    Lighter than /health - just checks DB is accessible.
+    """
+    try:
+        db_path = db_module.get_db_path()
+        if not db_path.exists():
+            return JSONResponse(
+                content={"ready": False, "reason": "database not found"},
+                status_code=503
+            )
+
+        with db_module.get_connection() as conn:
+            conn.execute("SELECT 1")
+
+        return {"ready": True}
+    except Exception as e:
+        return JSONResponse(
+            content={"ready": False, "reason": str(e)},
+            status_code=503
+        )
 
 
 @app.get("/api/metrics")
@@ -5380,7 +5454,16 @@ async def spa_fallback(path: str, request: Request = None):
         return JSONResponse(content={"error": "ui_build_missing", "hint": hint}, status_code=404)
 
     # Try to serve the actual file first (for assets, manifest, etc.)
-    file_path = UI_DIR / path
+    file_path = (UI_DIR / path).resolve()
+
+    # SECURITY: Prevent path traversal attacks
+    # Resolved path must be within UI_DIR
+    try:
+        file_path.relative_to(UI_DIR.resolve())
+    except ValueError:
+        # Path escapes UI_DIR - this is a traversal attempt
+        raise HTTPException(status_code=400, detail="Invalid path")
+
     if file_path.exists() and file_path.is_file():
         # Set correct MIME type for common extensions
         import mimetypes
