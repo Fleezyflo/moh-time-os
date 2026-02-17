@@ -1,0 +1,9 @@
+{
+  "sql_fstring_count": 82,
+  "unprotected_write_endpoints": 58,
+  "server_py_lines": 5290,
+  "duplicate_routes": 0,
+  "traceback_leak_count": 3,
+  "hardcoded_email_count": 27,
+  "bare_except_count": 405
+}

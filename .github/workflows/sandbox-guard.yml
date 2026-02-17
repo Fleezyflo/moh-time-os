@@ -1,0 +1,315 @@
+# Sandbox Guard — Security checks for sandbox/** branches
+#
+# Sandbox branches allow direct push for experimentation.
+# This workflow HARD-FAILS on P0 security issues only.
+# Everything else is warnings/annotations.
+#
+# P0 HARD BLOCKS: secrets, SQL injection, hardcoded tokens, .db files
+# WARNINGS: AI slop, unsigned commits, divergence, large files
+
+name: Sandbox Guard
+
+on:
+  push:
+    branches:
+      - 'sandbox/**'
+
+jobs:
+  security-gate:
+    name: Sandbox Security
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          fetch-depth: 0  # Full history for divergence check
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: '3.11'
+
+      - name: Install security tools
+        run: |
+          pip install detect-secrets semgrep
+
+      # =========================================================
+      # P0 HARD BLOCKS — These fail the workflow
+      # =========================================================
+
+      - name: "🔐 P0: Detect Secrets"
+        id: secrets
+        run: |
+          echo "Scanning for secrets..."
+          
+          # Scan all files, output JSON
+          detect-secrets scan \
+            --exclude-files '\.lock$' \
+            --exclude-files 'node_modules' \
+            --exclude-files '\.venv' \
+            --exclude-files '_archive' \
+            --all-files \
+            > /tmp/secrets-scan.json 2>&1 || true
+          
+          # Check if any secrets found
+          SECRETS_COUNT=$(jq '.results | to_entries | map(.value | length) | add // 0' /tmp/secrets-scan.json)
+          
+          if [ "$SECRETS_COUNT" -gt 0 ]; then
+            echo "::error::❌ SECRETS DETECTED: $SECRETS_COUNT potential secrets found"
+            jq -r '.results | to_entries[] | select(.value | length > 0) | "\(.key): \(.value | length) secret(s)"' /tmp/secrets-scan.json
+            echo "secrets_found=true" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "✅ No secrets detected"
+            echo "secrets_found=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: "💉 P0: SQL Injection Scan"
+        id: sql-injection
+        run: |
+          echo "Scanning for SQL injection patterns..."
+          
+          # Create focused SQL injection rules
+          cat > /tmp/sql-rules.yaml << 'EOF'
+          rules:
+            - id: sql-fstring-execute
+              patterns:
+                - pattern-either:
+                    - pattern: $CURSOR.execute(f"...", ...)
+                    - pattern: $CONN.execute(f"...", ...)
+                    - pattern: $DB.execute(f"...", ...)
+              message: "SQL injection risk: f-string in execute()"
+              languages: [python]
+              severity: ERROR
+            
+            - id: sql-format-execute
+              patterns:
+                - pattern-either:
+                    - pattern: $CURSOR.execute("...".format(...), ...)
+                    - pattern: $CONN.execute("...".format(...), ...)
+              message: "SQL injection risk: .format() in execute()"
+              languages: [python]
+              severity: ERROR
+            
+            - id: sql-percent-execute
+              patterns:
+                - pattern-either:
+                    - pattern: $CURSOR.execute("..." % ..., ...)
+                    - pattern: $CONN.execute("..." % ..., ...)
+              message: "SQL injection risk: % formatting in execute()"
+              languages: [python]
+              severity: ERROR
+          EOF
+          
+          # Run semgrep with SQL rules
+          semgrep --config /tmp/sql-rules.yaml \
+            --error \
+            --json \
+            lib/ api/ engine/ collectors/ 2>/dev/null > /tmp/sql-scan.json || true
+          
+          # Check results
+          SQL_ISSUES=$(jq '.results | length' /tmp/sql-scan.json 2>/dev/null || echo "0")
+          
+          if [ "$SQL_ISSUES" -gt 0 ]; then
+            echo "::error::❌ SQL INJECTION PATTERNS: $SQL_ISSUES issues found"
+            jq -r '.results[] | "  \(.path):\(.start.line): \(.extra.message)"' /tmp/sql-scan.json
+            exit 1
+          else
+            echo "✅ No SQL injection patterns detected"
+          fi
+
+      - name: "🔑 P0: Hardcoded Tokens"
+        id: tokens
+        run: |
+          echo "Scanning for hardcoded tokens..."
+          
+          ISSUES=0
+          
+          # Common token patterns
+          PATTERNS=(
+            'sk-[a-zA-Z0-9]{20,}'           # OpenAI
+            'xoxb-[a-zA-Z0-9-]+'            # Slack bot
+            'xoxp-[a-zA-Z0-9-]+'            # Slack user
+            'ghp_[a-zA-Z0-9]{36}'           # GitHub PAT
+            'gho_[a-zA-Z0-9]{36}'           # GitHub OAuth
+            'AKIA[0-9A-Z]{16}'              # AWS Access Key
+            'AIza[0-9A-Za-z_-]{35}'         # Google API
+            'ya29\.[0-9A-Za-z_-]+'          # Google OAuth
+          )
+          
+          for pattern in "${PATTERNS[@]}"; do
+            MATCHES=$(grep -rn --include="*.py" --include="*.ts" --include="*.tsx" --include="*.js" --include="*.json" --include="*.yaml" --include="*.yml" -E "$pattern" . 2>/dev/null | grep -v node_modules | grep -v .venv | grep -v _archive || true)
+            if [ -n "$MATCHES" ]; then
+              echo "::error::Hardcoded token pattern found: $pattern"
+              echo "$MATCHES"
+              ISSUES=$((ISSUES + 1))
+            fi
+          done
+          
+          if [ "$ISSUES" -gt 0 ]; then
+            echo "::error::❌ HARDCODED TOKENS: $ISSUES pattern types found"
+            exit 1
+          else
+            echo "✅ No hardcoded tokens detected"
+          fi
+
+      - name: "🗄️ P0: Database & Credential Files"
+        id: db-files
+        run: |
+          echo "Checking for database and credential files..."
+          
+          BLOCKED_FILES=""
+          
+          # Check for .db files
+          DB_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null | grep -E '\.(db|sqlite|sqlite3)$' || true)
+          if [ -n "$DB_FILES" ]; then
+            BLOCKED_FILES="$BLOCKED_FILES$DB_FILES"$'\n'
+          fi
+          
+          # Check for credential files
+          CRED_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null | grep -E '(credentials\.json|token.*\.json|\.env$|\.env\.|sa-.*\.json)' || true)
+          if [ -n "$CRED_FILES" ]; then
+            BLOCKED_FILES="$BLOCKED_FILES$CRED_FILES"$'\n'
+          fi
+          
+          # Check for -full.json data dumps
+          DUMP_FILES=$(git diff --name-only origin/main...HEAD 2>/dev/null | grep -E '\-full\.json$' || true)
+          if [ -n "$DUMP_FILES" ]; then
+            BLOCKED_FILES="$BLOCKED_FILES$DUMP_FILES"$'\n'
+          fi
+          
+          if [ -n "$BLOCKED_FILES" ]; then
+            echo "::error::❌ BLOCKED FILES DETECTED:"
+            echo "$BLOCKED_FILES"
+            exit 1
+          else
+            echo "✅ No database or credential files in diff"
+          fi
+
+  # =========================================================
+  # WARNINGS — Annotate but don't fail
+  # =========================================================
+  
+  warnings:
+    name: Warnings (Non-Blocking)
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Never fail the workflow
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: "🤖 Warning: AI Slop Patterns"
+        run: |
+          echo "Checking for AI slop patterns..."
+          
+          SLOP_PATTERNS=(
+            "NotImplementedError"
+            "TODO: implement"
+            "FIXME: implement"
+            "pass  # placeholder"
+            "raise NotImplementedError"
+            "# This is a placeholder"
+            "# Implementation needed"
+          )
+          
+          FOUND=0
+          for pattern in "${SLOP_PATTERNS[@]}"; do
+            MATCHES=$(grep -rn --include="*.py" "$pattern" lib/ api/ 2>/dev/null | head -10 || true)
+            if [ -n "$MATCHES" ]; then
+              echo "::warning::AI slop pattern: $pattern"
+              echo "$MATCHES"
+              FOUND=$((FOUND + 1))
+            fi
+          done
+          
+          if [ "$FOUND" -gt 0 ]; then
+            echo "::warning::⚠️ Found $FOUND AI slop pattern types"
+          else
+            echo "✅ No AI slop patterns detected"
+          fi
+
+      - name: "✍️ Warning: Unsigned Commits"
+        run: |
+          echo "Checking for unsigned commits..."
+          
+          # Get commits unique to this branch
+          UNSIGNED=$(git log origin/main..HEAD --pretty=format:'%H %G? %an <%ae> %s' 2>/dev/null | grep -E '^\S+ N ' || true)
+          
+          if [ -n "$UNSIGNED" ]; then
+            COUNT=$(echo "$UNSIGNED" | wc -l | tr -d ' ')
+            echo "::warning::⚠️ UNSIGNED COMMITS: $COUNT"
+            echo "$UNSIGNED" | while read line; do
+              echo "::warning::$line"
+            done
+          else
+            echo "✅ All commits are signed"
+          fi
+
+      - name: "📏 Warning: Sandbox Divergence"
+        run: |
+          echo "Checking divergence from main..."
+          
+          # Get line diff stats
+          STATS=$(git diff --stat origin/main...HEAD 2>/dev/null | tail -1 || echo "0 files changed")
+          
+          # Extract insertions and deletions
+          INSERTIONS=$(echo "$STATS" | grep -oE '[0-9]+ insertion' | grep -oE '[0-9]+' || echo "0")
+          DELETIONS=$(echo "$STATS" | grep -oE '[0-9]+ deletion' | grep -oE '[0-9]+' || echo "0")
+          TOTAL=$((INSERTIONS + DELETIONS))
+          
+          echo "Divergence: +$INSERTIONS -$DELETIONS = $TOTAL lines"
+          
+          if [ "$TOTAL" -gt 1000 ]; then
+            echo "::warning::⚠️ LARGE DIVERGENCE: $TOTAL lines changed from main (threshold: 1000)"
+            echo "::warning::Consider breaking this into smaller PRs"
+          else
+            echo "✅ Divergence within limits: $TOTAL lines"
+          fi
+
+      - name: "📦 Warning: Large Files"
+        run: |
+          echo "Checking for large files..."
+          
+          # Find files > 500KB in the diff
+          LARGE_FILES=""
+          
+          for file in $(git diff --name-only origin/main...HEAD 2>/dev/null); do
+            if [ -f "$file" ]; then
+              SIZE=$(stat -f%z "$file" 2>/dev/null || stat -c%s "$file" 2>/dev/null || echo "0")
+              if [ "$SIZE" -gt 512000 ]; then
+                SIZE_KB=$((SIZE / 1024))
+                LARGE_FILES="$LARGE_FILES  $file (${SIZE_KB}KB)"$'\n'
+              fi
+            fi
+          done
+          
+          if [ -n "$LARGE_FILES" ]; then
+            echo "::warning::⚠️ LARGE FILES (>500KB):"
+            echo "$LARGE_FILES"
+          else
+            echo "✅ No large files detected"
+          fi
+
+  summary:
+    name: Summary
+    runs-on: ubuntu-latest
+    needs: [security-gate, warnings]
+    if: always()
+    steps:
+      - name: Report Status
+        run: |
+          echo "## Sandbox Guard Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ needs.security-gate.result }}" == "success" ]; then
+            echo "✅ **P0 Security Gate: PASSED**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **P0 Security Gate: FAILED**" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "Fix security issues before merging to main." >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⚠️ **Warnings:** Check annotations above (non-blocking)" >> $GITHUB_STEP_SUMMARY

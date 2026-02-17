@@ -1,0 +1,190 @@
+rules:
+  # ============================================================================
+  # SECURITY - SQL Injection
+  # Note: Some f-string SQL is intentional (dynamic column names with validation)
+  # These are marked with # nosql: safe comments. Set to WARNING for review.
+  # ============================================================================
+  - id: sql-fstring-injection
+    patterns:
+      - pattern-either:
+          - pattern: $CURSOR.execute(f"...", ...)
+          - pattern: $CONN.execute(f"...", ...)
+          - pattern: $DB.execute(f"...", ...)
+          - pattern: execute(f"SELECT ...", ...)
+          - pattern: execute(f"INSERT ...", ...)
+          - pattern: execute(f"UPDATE ...", ...)
+          - pattern: execute(f"DELETE ...", ...)
+    message: "SQL injection risk: use parameterized queries instead of f-strings"
+    languages: [python]
+    severity: WARNING
+    paths:
+      include:
+        - lib/
+        - api/
+        - engine/
+
+  # ============================================================================
+  # SECURITY - Command Injection
+  # ============================================================================
+  - id: no-shell-true
+    patterns:
+      - pattern-either:
+          - pattern: subprocess.run(..., shell=True, ...)
+          - pattern: subprocess.call(..., shell=True, ...)
+          - pattern: subprocess.Popen(..., shell=True, ...)
+    message: "Command injection risk: avoid shell=True, use list args"
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - lib/
+        - api/
+        - scripts/
+
+  - id: no-os-system
+    pattern: os.system(...)
+    message: "Command injection risk: use subprocess with list args"
+    languages: [python]
+    severity: ERROR
+
+  # ============================================================================
+  # SECURITY - Code Injection
+  # ============================================================================
+  - id: no-eval-exec
+    pattern-either:
+      - pattern: eval(...)
+      - pattern: exec(...)
+    message: "Code injection risk: avoid eval/exec"
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - lib/
+        - api/
+
+  # ============================================================================
+  # SECURITY - Secrets
+  # ============================================================================
+  - id: no-hardcoded-secrets
+    patterns:
+      - pattern-either:
+          - pattern: $KEY = "sk-..."
+          - pattern: $KEY = "api_key_..."
+          - pattern: password = "..."
+          - pattern: api_key = "..."
+          - pattern: secret = "..."
+    message: "Hardcoded secret detected: use environment variables"
+    languages: [python]
+    severity: ERROR
+    paths:
+      exclude:
+        - "**/*test*.py"
+        - "**/fixtures/*"
+
+  # ============================================================================
+  # ERROR HANDLING
+  # ============================================================================
+  - id: no-bare-except
+    pattern-either:
+      - pattern: |
+          try:
+            ...
+          except Exception:
+            ...
+      - pattern: |
+          try:
+            ...
+          except Exception as $E:
+            ...
+      - pattern: |
+          try:
+            ...
+          except:
+            ...
+    message: "Bare 'except' or 'except Exception' catches too much. Be specific."
+    languages: [python]
+    severity: WARNING
+    paths:
+      include:
+        - lib/
+        - api/
+
+  - id: no-traceback-in-response
+    pattern-either:
+      - pattern: |
+          {..., "traceback": traceback.format_exc(), ...}
+      - pattern: |
+          {..., "trace": traceback.format_exc(), ...}
+      - pattern: |
+          {..., "error": traceback.format_exc(), ...}
+      - pattern: HTTPException(..., detail=f"...\n{traceback.format_exc()}")
+    message: "Do not leak tracebacks in API responses"
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - api/
+
+  # ============================================================================
+  # API PATTERNS
+  # ============================================================================
+  - id: api-route-needs-tag
+    patterns:
+      - pattern: |
+          @$ROUTER.$METHOD("$PATH")
+          def $FUNC(...):
+              ...
+      - pattern-not: |
+          @$ROUTER.$METHOD("$PATH", tags=[...])
+          def $FUNC(...):
+              ...
+    message: "API routes should have tags for documentation"
+    languages: [python]
+    severity: WARNING
+    paths:
+      include:
+        - api/
+
+  # ============================================================================
+  # DATABASE PATTERNS
+  # ============================================================================
+  # Note: connection-not-closed rule disabled - too many false positives
+  # in class-based connection management. Kept for reference.
+  # - id: connection-not-closed
+  #   patterns:
+  #     - pattern: |
+  #         $CONN = sqlite3.connect(...)
+  #         ...
+  #     - pattern-not: |
+  #         $CONN = sqlite3.connect(...)
+  #         ...
+  #         $CONN.close()
+  #   message: "Database connection may not be closed. Use context manager."
+  #   languages: [python]
+  #   severity: WARNING
+
+  # ============================================================================
+  # TYPESCRIPT/JAVASCRIPT
+  # ============================================================================
+  - id: no-any-type
+    pattern: "$X: any"
+    message: "Avoid 'any' type. Use specific types or 'unknown'."
+    languages: [typescript]
+    severity: WARNING
+    paths:
+      include:
+        - time-os-ui/src/
+
+  - id: no-console-log
+    pattern-either:
+      - pattern: console.log(...)
+      - pattern: console.warn(...)
+      - pattern: console.error(...)
+    message: "Remove console.* statements before commit"
+    languages: [typescript, javascript]
+    severity: WARNING
+    paths:
+      include:
+        - "**/time-os-ui/src/"
+      exclude:
+        - "**/*.test.*"

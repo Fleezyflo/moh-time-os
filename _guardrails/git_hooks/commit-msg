@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# ============================================
+# COMMIT-MSG HOOK - VERIFY PRE-COMMIT RAN
+# ============================================
+# This hook runs AFTER pre-commit. If we get here and pre-commit
+# marker doesn't exist, user bypassed with --no-verify.
+
+MARKER="/tmp/.pre-commit-ran-$$"
+
+# Check if pre-commit marker exists (set by pre-commit hook)
+# If not, pre-commit was bypassed
+if [ ! -f "/tmp/.pre-commit-ran-$(git rev-parse --short HEAD 2>/dev/null || echo 'new')" ]; then
+    # Pre-commit didn't run - warn but allow (pre-push will catch)
+    echo ""
+    echo "⚠️  WARNING: pre-commit hooks were bypassed"
+    echo "   Pre-push hook will run ALL checks before push is allowed."
+    echo ""
+fi
+
+exit 0

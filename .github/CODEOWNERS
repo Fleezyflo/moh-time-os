@@ -1,0 +1,73 @@
+# CODEOWNERS — Require review for critical paths
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+#
+# ⚠️  IMPORTANT: This file only provides enforcement when:
+#    1. Ruleset/branch protection has "Require code owner review" ENABLED
+#    2. The PR targets a protected branch
+#
+# Without that setting, this file is just documentation.
+
+# ═══════════════════════════════════════════════════════════════════════════
+# CI/CD & Security Infrastructure — HIGHEST PRIORITY
+# ═══════════════════════════════════════════════════════════════════════════
+
+# GitHub workflows — prevents "edit CI to remove checks" attack
+/.github/                       @Fleezyflo
+
+# Security rules — prevents weakening security scans
+/.semgrep/                      @Fleezyflo
+
+# Pre-commit hooks — prevents disabling local checks
+.pre-commit-config.yaml         @Fleezyflo
+
+# Git ignore — prevents adding sensitive files to tracking
+.gitignore                      @Fleezyflo
+
+# This file — prevents removing code owner requirements
+CODEOWNERS                      @Fleezyflo
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Configuration — May contain secrets or security settings
+# ═══════════════════════════════════════════════════════════════════════════
+
+/config/                        @Fleezyflo
+
+# ═══════════════════════════════════════════════════════════════════════════
+# API Layer — Core business logic and security boundaries
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Main API server — 5000+ lines, security critical
+/api/server.py                  @Fleezyflo
+
+# Protected routes — schema-driven, must not drift
+/api/spec_router.py             @Fleezyflo
+
+# Intelligence API — new sensitive endpoints
+/api/intelligence_router.py     @Fleezyflo
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Data & Scripts — Can affect production data
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Scripts that run in CI or affect data
+/scripts/                       @Fleezyflo
+
+# Data collectors — external API integrations
+/collectors/                    @Fleezyflo
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Baselines & Metrics — Ratchet enforcement
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Ratchet baseline — prevents weakening quality gates
+.ratchet-baseline.json          @Fleezyflo
+
+# Secrets baseline — prevents adding new secrets
+.secrets.baseline               @Fleezyflo
+
+# ═══════════════════════════════════════════════════════════════════════════
+# Default — Everything else
+# ═══════════════════════════════════════════════════════════════════════════
+
+# Catch-all for any file not matched above
+*                               @Fleezyflo

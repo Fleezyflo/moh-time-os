@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# ============================================
+# PRE-COMMIT HOOK - ENFORCED
+# ============================================
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT"
+
+# Write marker that pre-commit ran (for pre-push to verify)
+MARKER_DIR="/tmp/.git-hooks-$(id -u)"
+mkdir -p "$MARKER_DIR"
+echo "$(date +%s)" > "$MARKER_DIR/pre-commit-ran"
+
+# Activate venv and run pre-commit
+if [ -d ".venv" ]; then
+    source .venv/bin/activate
+fi
+
+# Run pre-commit framework
+if command -v pre-commit &> /dev/null; then
+    pre-commit run --config .pre-commit-config.yaml --hook-stage pre-commit
+    exit $?
+else
+    echo "❌ pre-commit not installed. Run: pip install pre-commit && pre-commit install"
+    exit 1
+fi

@@ -1,0 +1,393 @@
+# Pre-commit hooks - MANDATORY BLOCKING GUARD SYSTEM
+# Install: pip install pre-commit && pre-commit install
+#
+# POLICY: ALL GUARDS BLOCK. NO EXCEPTIONS. NO ADVISORY MODE.
+#
+# Total Guards: 45+
+#   P0 (BLOCKING): Security critical - secrets, vulnerabilities, injection
+#   P1 (BLOCKING): Architecture - duplicates, boundaries, breaking changes
+#   P2 (BLOCKING): Quality - complexity, docs, patterns, performance
+#
+# ANY violation = exit code 1 = commit blocked
+
+repos:
+  # ==========================================
+  # RUFF - Python Linting & Formatting
+  # ==========================================
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.6
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        types_or: [python, pyi]
+        exclude: ^(_archive/|\.venv/|dist/|.*\.egg-info/|time-os-ui/)
+      - id: ruff-format
+        types_or: [python, pyi]
+        exclude: ^(_archive/|\.venv/|dist/|.*\.egg-info/|time-os-ui/)
+
+  # ==========================================
+  # BANDIT - Security Scanning
+  # ==========================================
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.8
+    hooks:
+      - id: bandit
+        args: [-r, -ll, --skip, "B101,B608"]
+        exclude: ^(tests/|_archive/|\.venv/|dist/|time-os-ui/)
+
+  # ==========================================
+  # GENERAL FILE CHECKS
+  # ==========================================
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^(_archive/|\.venv/|dist/|time-os-ui/node_modules/)
+      - id: end-of-file-fixer
+        exclude: ^(_archive/|\.venv/|dist/|time-os-ui/node_modules/)
+      - id: check-yaml
+        exclude: ^(time-os-ui/node_modules/)
+      - id: check-json
+        exclude: ^(_archive/|\.venv/|dist/|time-os-ui/node_modules/)
+      - id: check-added-large-files
+        args: [--maxkb=500]
+      - id: check-merge-conflict
+      - id: detect-private-key
+        exclude: ^scripts/check_secrets\.py$
+
+  # ==========================================
+  # P0 - SECURITY (BLOCKING)
+  # ==========================================
+  - repo: local
+    hooks:
+      - id: no-secrets
+        name: "🔐 [P0] No hardcoded secrets"
+        entry: python scripts/check_secrets.py
+        language: python
+        pass_filenames: false
+        always_run: true
+
+      - id: no-vulnerabilities
+        name: "🚨 [P0] No vulnerable dependencies"
+        entry: python scripts/check_vulnerabilities.py
+        language: python
+        pass_filenames: false
+        always_run: true
+
+      - id: no-sql-fstrings
+        name: "💉 [P0] No SQL injection"
+        entry: python scripts/check_sql_fstrings.py
+        language: python
+        pass_filenames: false
+        always_run: true
+
+      - id: path-traversal
+        name: "🛤️ [P0] Path traversal check"
+        entry: python scripts/check_path_traversal.py
+        language: python
+        pass_filenames: false
+        always_run: true
+        verbose: true
+
+      - id: pii-logging
+        name: "🔐 [P0] No PII in logs"
+        entry: python scripts/check_pii_logging.py
+        language: python
+        pass_filenames: false
+        always_run: true
+        verbose: true
+
+  # ==========================================
+  # P1 - ARCHITECTURE (BLOCKING)
+  # ==========================================
+  - repo: local
+    hooks:
+      - id: no-duplicate-endpoints
+        name: "🔀 [P1] No duplicate endpoints"
+        entry: python scripts/check_duplicate_endpoints.py
+        language: python
+        pass_filenames: false
+        always_run: true
+
+      - id: import-boundaries
+        name: "🏗️ [P1] Import boundaries"
+        entry: python scripts/check_import_boundaries.py
+        language: python
+        pass_filenames: false
+        always_run: true
+
+      - id: no-breaking-api
+        name: "💔 [P1] No breaking API changes"
+        entry: python scripts/check_api_breaking.py
+        language: python
+        pass_filenames: false
+        always_run: true
+
+      - id: no-monolith-files
+        name: "📏 [P1] No monolith files"
+        entry: python scripts/check_monolith_files.py
+        language: python
+        pass_filenames: false
+        always_run: true
+
+      - id: no-empty-db-files
+        name: "🗄️ [P1] No empty .db files"
+        entry: python scripts/check_empty_db.py
+        language: python
+        pass_filenames: false
+        always_run: true
+
+      - id: safe-migrations
+        name: "💥 [P1] Safe migrations only"
+        entry: python scripts/check_migration_safety.py
+        language: python
+        pass_filenames: false
+        always_run: true
+
+      - id: license-check
+        name: "⚖️ [P1] License compatibility"
+        entry: python scripts/check_licenses.py
+        language: python
+        pass_filenames: false
+        always_run: true
+
+  # ==========================================
+  # P2 (BLOCKING) - CODE QUALITY (BLOCKING)
+  # ==========================================
+  - repo: local
+    hooks:
+      - id: no-circular-imports
+        name: "🔄 [P2] Circular imports"
+        entry: python scripts/check_circular_imports.py
+        language: python
+        pass_filenames: false
+        verbose: true
+
+      - id: dead-code
+        name: "💀 [P2] Dead code"
+        entry: python scripts/check_dead_code.py
+        language: python
+        pass_filenames: false
+        verbose: true
+
+      - id: complexity
+        name: "🧩 [P2] Complexity"
+        entry: python scripts/check_complexity.py
+        language: python
+        pass_filenames: false
+        verbose: true
+
+      - id: docstrings
+        name: "📝 [P2] Docstrings"
+        entry: python scripts/check_docstrings.py
+        language: python
+        pass_filenames: false
+        verbose: true
+
+      - id: error-handling
+        name: "🔇 [P2] Error handling"
+        entry: python scripts/check_error_handling.py
+        language: python
+        pass_filenames: false
+        verbose: true
+
+      - id: no-print
+        name: "🖨️ [P2] No print()"
+        entry: python scripts/check_no_print.py
+        language: python
+        pass_filenames: false
+        verbose: true
+
+      - id: global-state
+        name: "🌍 [P2] Global state"
+        entry: python scripts/check_global_state.py
+        language: python
+        pass_filenames: false
+        verbose: true
+
+  # ==========================================
+  # P2 (BLOCKING) - DATABASE & QUERIES
+  # ==========================================
+  - repo: local
+    hooks:
+      - id: query-safety
+        name: "🔍 [P2] Query safety"
+        entry: python scripts/check_query_safety.py
+        language: python
+        pass_filenames: false
+        verbose: true
+
+      - id: transaction-safety
+        name: "💾 [P2] Transaction safety"
+        entry: python scripts/check_transaction_safety.py
+        language: python
+        pass_filenames: false
+        verbose: true
+
+  # ==========================================
+  # P2 (BLOCKING) - API QUALITY
+  # ==========================================
+  - repo: local
+    hooks:
+      - id: endpoint-auth
+        name: "🔓 [P2] Endpoint auth"
+        entry: python scripts/check_endpoint_auth.py
+        language: python
+        pass_filenames: false
+        verbose: true
+
+      - id: pagination
+        name: "📜 [P2] Pagination"
+        entry: python scripts/check_pagination.py
+        language: python
+        pass_filenames: false
+        verbose: true
+
+      - id: response-types
+        name: "📋 [P2] Response types"
+        entry: python scripts/check_response_types.py
+        language: python
+        pass_filenames: false
+        verbose: true
+
+      - id: http-timeouts
+        name: "⏱️ [P2] HTTP timeouts"
+        entry: python scripts/check_http_timeouts.py
+        language: python
+        pass_filenames: false
+        verbose: true
+
+  # ==========================================
+  # P2 (BLOCKING) - ASYNC & PERFORMANCE
+  # ==========================================
+  - repo: local
+    hooks:
+      - id: async-blocking
+        name: "⏳ [P2] Async blocking"
+        entry: python scripts/check_async_blocking.py
+        language: python
+        pass_filenames: false
+        verbose: true
+
+      - id: hardcoded-config
+        name: "🔧 [P2] Hardcoded config"
+        entry: python scripts/check_hardcoded_config.py
+        language: python
+        pass_filenames: false
+        verbose: true
+
+  # ==========================================
+  # P2 (BLOCKING) - TESTING
+  # ==========================================
+  - repo: local
+    hooks:
+      - id: test-skips
+        name: "⏭️ [P2] Test skips"
+        entry: python scripts/check_test_skips.py
+        language: python
+        pass_filenames: false
+        verbose: true
+
+      - id: new-code-tests
+        name: "🧪 [P2] New code tests"
+        entry: python scripts/check_new_code_tests.py
+        language: python
+        pass_filenames: false
+        verbose: true
+
+  # ==========================================
+  # P2 (BLOCKING) - DEPENDENCIES & CONFIG
+  # ==========================================
+  - repo: local
+    hooks:
+      - id: lockfile-sync
+        name: "🔒 [P2] Lockfile sync"
+        entry: python scripts/check_lockfile_sync.py
+        language: python
+        pass_filenames: false
+        verbose: true
+
+      - id: unused-deps
+        name: "📦 [P2] Unused deps"
+        entry: python scripts/check_unused_deps.py
+        language: python
+        pass_filenames: false
+        verbose: true
+
+      - id: env-vars
+        name: "📋 [P2] Env vars"
+        entry: python scripts/check_env_vars.py
+        language: python
+        pass_filenames: false
+        verbose: true
+
+  # ==========================================
+  # FRONTEND CHECKS
+  # ==========================================
+  - repo: local
+    hooks:
+      - id: ui-typecheck
+        name: "📘 [FE] TypeScript"
+        entry: python scripts/run_ui_check.py typecheck
+        language: python
+        pass_filenames: false
+        files: ^time-os-ui/.*\.(ts|tsx)$
+
+      - id: ui-lint
+        name: "📘 [FE] ESLint"
+        entry: python scripts/run_ui_check.py lint
+        language: python
+        pass_filenames: false
+        files: ^time-os-ui/.*\.(ts|tsx)$
+
+      - id: ui-format
+        name: "📘 [FE] Prettier"
+        entry: python scripts/run_ui_check.py format
+        language: python
+        pass_filenames: false
+        files: ^time-os-ui/.*\.(ts|tsx|css|json)$
+
+      - id: no-console
+        name: "🖥️ [FE] No console.*"
+        entry: python scripts/check_no_console.py
+        language: python
+        pass_filenames: false
+        verbose: true
+
+      - id: accessibility
+        name: "♿ [FE] Accessibility"
+        entry: python scripts/check_accessibility.py
+        language: python
+        pass_filenames: false
+        verbose: true
+
+      - id: bundle-size
+        name: "📦 [FE] Bundle size"
+        entry: python scripts/check_bundle_size.py
+        language: python
+        pass_filenames: false
+        verbose: true
+
+  # ==========================================
+  # TYPE CHECKING
+  # ==========================================
+  - repo: local
+    hooks:
+      - id: mypy
+        name: "🔤 [P2] Type checking (baseline)"
+        entry: python scripts/check_mypy_baseline.py
+        language: python
+        pass_filenames: false
+        verbose: true
+
+  # ==========================================
+  # COMMIT MESSAGE
+  # ==========================================
+  - repo: local
+    hooks:
+      - id: conventional-commits
+        name: "📝 Conventional commits"
+        entry: python scripts/check_commit_message.py --file
+        language: python
+        stages: [commit-msg]
+        pass_filenames: true

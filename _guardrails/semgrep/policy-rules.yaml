@@ -1,0 +1,247 @@
+rules:
+  # ============================================================================
+  # TIER 1: PR-BLOCKING POLICY RULES
+  # ============================================================================
+  # High-signal, repo-specific enforcement. Target: <10s, 0 findings.
+
+  # --------------------------------------------------------------------------
+  # (1) SUBPROCESS POLICY
+  # --------------------------------------------------------------------------
+  # Rule 1a: shell=True is banned (injection risk)
+  - id: subprocess-no-shell-true
+    patterns:
+      - pattern-either:
+          - pattern: subprocess.run(..., shell=True, ...)
+          - pattern: subprocess.call(..., shell=True, ...)
+          - pattern: subprocess.Popen(..., shell=True, ...)
+          - pattern: subprocess.check_output(..., shell=True, ...)
+          - pattern: subprocess.check_call(..., shell=True, ...)
+    message: |
+      POLICY: shell=True banned (injection risk). Use list args: subprocess.run(["cmd", "arg"])
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - /lib/
+        - /api/
+        - /scripts/
+      exclude:
+        # BASELINE [subprocess-no-shell-true]: Legacy shell execution
+        # Why: Complex piping/quoting for CLI tool invocations
+        # Migration: Refactor to list args with shutil.which
+        # Tracking: SHELL-MIGRATION
+        # Deadline: Q2 2026
+        - /lib/collectors/base.py
+        - /lib/executor/handlers.py
+
+  # Rule 1b: Literal string command banned (must use list)
+  - id: subprocess-literal-string-cmd
+    patterns:
+      - pattern-either:
+          - pattern: subprocess.run("...", ...)
+          - pattern: subprocess.run(f"...", ...)
+          - pattern: subprocess.Popen("...", ...)
+          - pattern: subprocess.Popen(f"...", ...)
+          - pattern: subprocess.call("...", ...)
+          - pattern: subprocess.call(f"...", ...)
+    message: |
+      POLICY: String command banned. Use list args: subprocess.run(["cmd", "arg"])
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - /lib/
+        - /api/
+        - /scripts/
+      exclude:
+        # Same baseline as subprocess-no-shell-true
+        - /lib/collectors/base.py
+        - /lib/executor/handlers.py
+
+  # Rule 1c: git must use shutil.which
+  - id: subprocess-bare-git
+    patterns:
+      - pattern-either:
+          - pattern: subprocess.run(["git", ...], ...)
+          - pattern: subprocess.Popen(["git", ...], ...)
+      - pattern-not-inside: |
+          $GIT = shutil.which("git")
+          ...
+    message: |
+      POLICY: Resolve git with shutil.which() first.
+      Example: git = shutil.which("git"); subprocess.run([git, "status"])
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - /lib/
+        - /api/
+        - /scripts/
+      exclude:
+        # BASELINE [subprocess-bare-git]: Uses shutil.which correctly
+        # Why: Already resolves git path before invocation (line 20-22)
+        # Migration: N/A - already compliant
+        # Tracking: N/A
+        # Deadline: N/A
+        - /lib/safety/utils.py
+
+  # Rule 1d: rg must use shutil.which
+  - id: subprocess-bare-rg
+    patterns:
+      - pattern-either:
+          - pattern: subprocess.run(["rg", ...], ...)
+          - pattern: subprocess.Popen(["rg", ...], ...)
+      - pattern-not-inside: |
+          $RG = shutil.which("rg")
+          ...
+    message: |
+      POLICY: Resolve rg with shutil.which() first.
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - /lib/
+        - /api/
+        - /scripts/
+      exclude:
+        # BASELINE [subprocess-bare-rg]: Uses shutil.which correctly
+        # Why: Already resolves rg path before invocation (line 270-275)
+        # Migration: N/A - already compliant
+        # Tracking: N/A
+        # Deadline: N/A
+        - /lib/safety/schema.py
+
+  # Rule 1e: gog CLI must use shutil.which (repo-derived: integrations use gog)
+  - id: subprocess-bare-gog
+    patterns:
+      - pattern-either:
+          - pattern: subprocess.run(["gog", ...], ...)
+          - pattern: subprocess.Popen(["gog", ...], ...)
+      - pattern-not-inside: |
+          $GOG = shutil.which("gog")
+          ...
+    message: |
+      POLICY: Resolve gog with shutil.which() first.
+      Example: gog = shutil.which("gog"); subprocess.run([gog, "gmail", "list"])
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - /lib/
+        - /api/
+        - /scripts/
+      exclude:
+        # BASELINE [subprocess-bare-gog]: Legacy gog invocations without shutil.which
+        # Why: gog CLI assumed to be in PATH; works but not defensive
+        # Migration: Add shutil.which("gog") check at module init
+        # Tracking: GOG-INTEGRATION-HARDENING
+        # Deadline: Q3 2026
+        - /lib/integrations/email_integration.py
+        - /lib/integrations/tasks_integration.py
+        - /lib/integrations/calendar_integration.py
+
+  # --------------------------------------------------------------------------
+  # (2) SQL POLICY - User Input Injection
+  # --------------------------------------------------------------------------
+  # High-signal: Catch user-input interpolation in execute().
+  # Repo-derived sources: FastAPI Query/Path params, Pydantic model attrs.
+
+  # Rule 2a: Query/Path param interpolation in execute()
+  - id: sql-query-param-fstring
+    patterns:
+      - pattern-either:
+          # Direct parameter names from FastAPI endpoints (repo-derived)
+          - pattern: $X.execute(f"...{$PARAM}...", ...)
+          - pattern: cursor.execute(f"...{$PARAM}...", ...)
+          - pattern: conn.execute(f"...{$PARAM}...", ...)
+          - pattern: cur.execute(f"...{$PARAM}...", ...)
+      - metavariable-regex:
+          metavariable: $PARAM
+          # Repo-derived: common user-input parameter names from api/ endpoints
+          regex: ^(client_id|user_id|task_id|issue_id|item_id|entity_id|engagement_id|project_id|signal_id|decision_id|bundle_id|debt_id|commitment_id|notif_id|email_id|thread_id|event_id|list_id)$
+    message: |
+      SECURITY: User input parameter interpolated in SQL. Use parameterized queries.
+      Example: cursor.execute("SELECT * WHERE id = ?", (client_id,))
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - /lib/
+        - /api/
+      exclude:
+        - /lib/migrations/
+        - /lib/v5/migrations/
+        - /lib/ui_spec_v21/migrations/
+
+  # Rule 2b: .format() in execute() - always risky
+  - id: sql-format-execute
+    patterns:
+      - pattern-either:
+          - pattern: $X.execute($SQL.format(...), ...)
+          - pattern: $X.execute($SQL.format(...))
+          - pattern: cursor.execute($SQL.format(...), ...)
+          - pattern: cursor.execute($SQL.format(...))
+          - pattern: conn.execute($SQL.format(...), ...)
+          - pattern: conn.execute($SQL.format(...))
+          - pattern: cur.execute($SQL.format(...), ...)
+          - pattern: cur.execute($SQL.format(...))
+    message: |
+      POLICY: .format() in execute() banned. Use parameterized queries.
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - /lib/
+        - /api/
+      exclude:
+        - /lib/migrations/
+        - /lib/v5/migrations/
+        - /lib/ui_spec_v21/migrations/
+        # BASELINE [sql-format-execute]: Safe IN-clause placeholder builder
+        # Why: Builds "?,?,?" placeholders, values are parameterized separately
+        # Migration: Extract to safe_in_clause() helper function
+        # Tracking: SQL-HELPERS
+        # Deadline: Q3 2026
+        - /lib/v4/signal_service.py
+
+  # Rule 2c: % formatting in execute() - always risky
+  - id: sql-percent-execute
+    patterns:
+      - pattern-either:
+          - pattern: $X.execute($SQL % $ARGS, ...)
+          - pattern: $X.execute($SQL % $ARGS)
+          - pattern: cursor.execute($SQL % $ARGS, ...)
+          - pattern: cursor.execute($SQL % $ARGS)
+          - pattern: conn.execute($SQL % $ARGS, ...)
+          - pattern: conn.execute($SQL % $ARGS)
+          - pattern: cur.execute($SQL % $ARGS, ...)
+          - pattern: cur.execute($SQL % $ARGS)
+    message: |
+      POLICY: % formatting in execute() banned. Use parameterized queries.
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - /lib/
+        - /api/
+      exclude:
+        - /lib/migrations/
+        - /lib/v5/migrations/
+        - /lib/ui_spec_v21/migrations/
+
+  # --------------------------------------------------------------------------
+  # (3) ROUTE LINEAGE: V2 routes MUST use spec_router
+  # --------------------------------------------------------------------------
+  # Repo convention: All /api/v2/* routes go through spec_router (APIRouter with tags=["Spec v2.9"])
+  # spec_router is mounted at prefix="/api/v2" in server.py:86
+  - id: route-v2-on-app-banned
+    pattern-regex: "@app\\.(get|post|put|patch|delete)\\s*\\(\\s*[\"']/api/v2/"
+    message: |
+      POLICY: V2 routes on @app banned. Use @spec_router in api/spec_router.py.
+      The spec_router provides lineage tags=["Spec v2.9"] for OpenAPI.
+      See: api/spec_router.py:46 for spec_router definition.
+    languages: [python]
+    severity: ERROR
+    paths:
+      include:
+        - /api/server.py

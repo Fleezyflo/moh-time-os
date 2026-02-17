@@ -1,0 +1,184 @@
+# Org-Level Required Security Workflow
+#
+# This workflow is designed to be registered as a REQUIRED WORKFLOW at the
+# GitHub Organization level. Once registered, it runs on ALL repos in the org
+# and CANNOT be disabled by repo admins.
+#
+# Non-bypassable chain:
+# 1. Rulesets block merge without CI passing
+# 2. CI can't be modified without PR + approval (Ruleset 4)
+# 3. Even if CI file is deleted, THIS org-level workflow still blocks
+# 4. No one is in the bypass list
+#
+# To register at org level (requires org admin):
+#   gh api /orgs/{org}/rulesets -X POST --input org-ruleset.json
+#
+# NOTE: This only works for Organization-owned repos.
+# Personal repos cannot use org-level required workflows.
+
+name: Org Security Gate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_call:  # Allow org-level invocation
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  org-security-scan:
+    name: Org Security Gate
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: '3.11'
+
+      - name: Install security tools
+        run: |
+          pip install semgrep detect-secrets
+
+      # ═══════════════════════════════════════════════════════════════════
+      # P0: SEMGREP — Static analysis with project-specific rules
+      # ═══════════════════════════════════════════════════════════════════
+      - name: "🔍 Semgrep Security Scan"
+        run: |
+          # Check if project-specific rules exist
+          if [ -f .semgrep/moh-time-os-rules.yaml ]; then
+            CONFIG=".semgrep/moh-time-os-rules.yaml"
+          else
+            CONFIG="p/python"
+          fi
+          
+          semgrep --config "$CONFIG" \
+            --config p/security-audit \
+            --error \
+            --json \
+            --output /tmp/semgrep-results.json \
+            . \
+            --exclude '_archive' \
+            --exclude '.venv' \
+            --exclude 'node_modules' \
+            || SEMGREP_EXIT=$?
+          
+          # Report findings
+          if [ -f /tmp/semgrep-results.json ]; then
+            FINDINGS=$(jq '.results | length' /tmp/semgrep-results.json)
+            echo "Semgrep findings: $FINDINGS"
+            
+            if [ "$FINDINGS" -gt 0 ]; then
+              echo "::error::Semgrep found $FINDINGS security issues"
+              jq -r '.results[] | "  \(.path):\(.start.line): \(.check_id)"' /tmp/semgrep-results.json | head -20
+            fi
+          fi
+          
+          exit ${SEMGREP_EXIT:-0}
+
+      # ═══════════════════════════════════════════════════════════════════
+      # P0: SECRETS — Detect hardcoded secrets
+      # ═══════════════════════════════════════════════════════════════════
+      - name: "🔐 Detect Secrets"
+        run: |
+          detect-secrets scan \
+            --exclude-files '\.lock$' \
+            --exclude-files 'node_modules' \
+            --exclude-files '\.venv' \
+            --exclude-files '_archive' \
+            --all-files \
+            > /tmp/secrets-scan.json 2>&1 || true
+          
+          SECRETS=$(jq '.results | to_entries | map(.value | length) | add // 0' /tmp/secrets-scan.json)
+          
+          # If baseline exists, compare
+          if [ -f .secrets.baseline ]; then
+            BASELINE=$(jq '.results | to_entries | map(.value | length) | add // 0' .secrets.baseline)
+            if [ "$SECRETS" -gt "$BASELINE" ]; then
+              echo "::error::New secrets detected! Baseline: $BASELINE, Current: $SECRETS"
+              exit 1
+            fi
+          elif [ "$SECRETS" -gt 0 ]; then
+            echo "::warning::$SECRETS potential secrets found (no baseline to compare)"
+          fi
+          
+          echo "✅ Secret scan passed"
+
+      # ═══════════════════════════════════════════════════════════════════
+      # P0: BANNED FILES — Block sensitive file types
+      # ═══════════════════════════════════════════════════════════════════
+      - name: "🚫 Banned File Check"
+        run: |
+          ERRORS=0
+          
+          # Check for database files
+          DB_FILES=$(find . -type f \( -name "*.db" -o -name "*.sqlite" -o -name "*.sqlite3" \) \
+            ! -path "./.git/*" ! -path "./node_modules/*" ! -path "./.venv/*" 2>/dev/null || true)
+          if [ -n "$DB_FILES" ]; then
+            echo "::error::Database files found:"
+            echo "$DB_FILES"
+            ERRORS=$((ERRORS + 1))
+          fi
+          
+          # Check for .env files
+          ENV_FILES=$(find . -type f -name ".env*" \
+            ! -path "./.git/*" ! -name ".env.example" ! -name ".env.template" 2>/dev/null || true)
+          if [ -n "$ENV_FILES" ]; then
+            echo "::error::.env files found:"
+            echo "$ENV_FILES"
+            ERRORS=$((ERRORS + 1))
+          fi
+          
+          # Check for data dumps
+          DUMP_FILES=$(find . -type f -name "*-full.json" \
+            ! -path "./.git/*" ! -path "./node_modules/*" 2>/dev/null || true)
+          if [ -n "$DUMP_FILES" ]; then
+            echo "::error::Data dump files found:"
+            echo "$DUMP_FILES"
+            ERRORS=$((ERRORS + 1))
+          fi
+          
+          # Check for private keys
+          KEY_FILES=$(find . -type f \( -name "*.pem" -o -name "*.key" -o -name "*.p12" \) \
+            ! -path "./.git/*" 2>/dev/null || true)
+          if [ -n "$KEY_FILES" ]; then
+            echo "::error::Private key files found:"
+            echo "$KEY_FILES"
+            ERRORS=$((ERRORS + 1))
+          fi
+          
+          # Check for service account files
+          SA_FILES=$(find . -type f -name "sa-*.json" \
+            ! -path "./.git/*" 2>/dev/null || true)
+          if [ -n "$SA_FILES" ]; then
+            echo "::error::Service account files found:"
+            echo "$SA_FILES"
+            ERRORS=$((ERRORS + 1))
+          fi
+          
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "::error::$ERRORS banned file type(s) detected"
+            exit 1
+          fi
+          
+          echo "✅ No banned files found"
+
+      # ═══════════════════════════════════════════════════════════════════
+      # SUMMARY
+      # ═══════════════════════════════════════════════════════════════════
+      - name: "📊 Security Summary"
+        if: always()
+        run: |
+          echo "## Org Security Gate Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Check | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Semgrep | ${{ job.status == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Secrets | ${{ job.status == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Banned Files | ${{ job.status == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY

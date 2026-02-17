@@ -1,0 +1,27 @@
+# Semgrep ignore patterns
+# Excludes build artifacts and dependencies from scanning
+
+# Node.js dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+.next/
+
+# Python cache
+__pycache__/
+*.pyc
+.mypy_cache/
+
+# Test fixtures (explicit paths - contain intentional bad patterns for testing)
+tests/fixtures/
+time-os-ui/src/__tests__/fixtures/
+time-os-ui/src/api/fixtures/
+
+# Vendor/third-party
+vendor/
+
+# IDE
+.vscode/
+.idea/
