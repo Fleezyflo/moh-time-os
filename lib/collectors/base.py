@@ -127,18 +127,36 @@ class BaseCollector(ABC):
             self.logger.error(f"Health check failed: {e}")
             return False
 
-    def _run_command(self, cmd: str, timeout: int = 30) -> str:
-        """Run a shell command and return output."""
+    def _run_command(self, cmd: list[str], timeout: int = 30) -> str:
+        """
+        Run a command and return output.
+
+        Args:
+            cmd: Command as list of arguments (NOT a shell string).
+                 Example: ["gog", "tasks", "lists", "--json"]
+            timeout: Timeout in seconds
+
+        Returns:
+            Command stdout
+
+        Security: No shell=True. Commands are executed directly without
+        shell interpretation, preventing command injection.
+        """
         import os
+        import shutil
 
         try:
             # Include GOG_ACCOUNT for gog CLI commands
             env = os.environ.copy()
             env["GOG_ACCOUNT"] = "molham@hrmny.co"
 
-            result = subprocess.run(
+            # Validate command exists (first element)
+            if not cmd or not shutil.which(cmd[0]):
+                raise Exception(f"Command not found: {cmd[0] if cmd else 'empty'}")
+
+            result = subprocess.run(  # noqa: S603 - shell=False is secure
                 cmd,
-                shell=True,  # nosec B602 nosemgrep: subprocess-no-shell-true (legacy, TODO: migrate)
+                shell=False,  # SECURE: no shell interpretation
                 capture_output=True,
                 text=True,
                 timeout=timeout,

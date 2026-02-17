@@ -73,6 +73,32 @@ class QueryEngine:
     # PORTFOLIO-LEVEL QUERIES
     # =========================================================================
     
+    # Pre-built SQL queries - NO dynamic interpolation, fully static strings
+    # Each (column, direction) pair maps to a complete, safe SQL string
+    _PORTFOLIO_QUERIES: dict[tuple[str, bool], str] = {
+        ("client_name", True): "SELECT * FROM v_client_operational_profile WHERE project_count > 0 OR invoice_count > 0 ORDER BY client_name DESC",
+        ("client_name", False): "SELECT * FROM v_client_operational_profile WHERE project_count > 0 OR invoice_count > 0 ORDER BY client_name ASC",
+        ("project_count", True): "SELECT * FROM v_client_operational_profile WHERE project_count > 0 OR invoice_count > 0 ORDER BY project_count DESC",
+        ("project_count", False): "SELECT * FROM v_client_operational_profile WHERE project_count > 0 OR invoice_count > 0 ORDER BY project_count ASC",
+        ("total_tasks", True): "SELECT * FROM v_client_operational_profile WHERE project_count > 0 OR invoice_count > 0 ORDER BY total_tasks DESC",
+        ("total_tasks", False): "SELECT * FROM v_client_operational_profile WHERE project_count > 0 OR invoice_count > 0 ORDER BY total_tasks ASC",
+        ("active_tasks", True): "SELECT * FROM v_client_operational_profile WHERE project_count > 0 OR invoice_count > 0 ORDER BY active_tasks DESC",
+        ("active_tasks", False): "SELECT * FROM v_client_operational_profile WHERE project_count > 0 OR invoice_count > 0 ORDER BY active_tasks ASC",
+        ("invoice_count", True): "SELECT * FROM v_client_operational_profile WHERE project_count > 0 OR invoice_count > 0 ORDER BY invoice_count DESC",
+        ("invoice_count", False): "SELECT * FROM v_client_operational_profile WHERE project_count > 0 OR invoice_count > 0 ORDER BY invoice_count ASC",
+        ("total_invoiced", True): "SELECT * FROM v_client_operational_profile WHERE project_count > 0 OR invoice_count > 0 ORDER BY total_invoiced DESC",
+        ("total_invoiced", False): "SELECT * FROM v_client_operational_profile WHERE project_count > 0 OR invoice_count > 0 ORDER BY total_invoiced ASC",
+        ("total_paid", True): "SELECT * FROM v_client_operational_profile WHERE project_count > 0 OR invoice_count > 0 ORDER BY total_paid DESC",
+        ("total_paid", False): "SELECT * FROM v_client_operational_profile WHERE project_count > 0 OR invoice_count > 0 ORDER BY total_paid ASC",
+        ("total_outstanding", True): "SELECT * FROM v_client_operational_profile WHERE project_count > 0 OR invoice_count > 0 ORDER BY total_outstanding DESC",
+        ("total_outstanding", False): "SELECT * FROM v_client_operational_profile WHERE project_count > 0 OR invoice_count > 0 ORDER BY total_outstanding ASC",
+        ("entity_links_count", True): "SELECT * FROM v_client_operational_profile WHERE project_count > 0 OR invoice_count > 0 ORDER BY entity_links_count DESC",
+        ("entity_links_count", False): "SELECT * FROM v_client_operational_profile WHERE project_count > 0 OR invoice_count > 0 ORDER BY entity_links_count ASC",
+        ("ytd_revenue", True): "SELECT * FROM v_client_operational_profile WHERE project_count > 0 OR invoice_count > 0 ORDER BY ytd_revenue DESC",
+        ("ytd_revenue", False): "SELECT * FROM v_client_operational_profile WHERE project_count > 0 OR invoice_count > 0 ORDER BY ytd_revenue ASC",
+    }
+    _PORTFOLIO_DEFAULT_QUERY = "SELECT * FROM v_client_operational_profile WHERE project_count > 0 OR invoice_count > 0 ORDER BY total_tasks DESC"
+
     def client_portfolio_overview(self, order_by: str = "total_tasks", desc: bool = True) -> list[dict]:
         """
         Every client with operational metrics.
@@ -84,23 +110,10 @@ class QueryEngine:
         - entity_links_count (communication volume proxy)
         
         Sortable by any metric via order_by parameter.
+        SQL injection safe: uses pre-built static queries, no string interpolation.
         """
-        valid_columns = {
-            "client_name", "project_count", "total_tasks", "active_tasks",
-            "invoice_count", "total_invoiced", "total_paid", "total_outstanding",
-            "entity_links_count", "ytd_revenue"
-        }
-        
-        if order_by not in valid_columns:
-            order_by = "total_tasks"
-        
-        direction = "DESC" if desc else "ASC"
-        
-        sql = f"""
-            SELECT * FROM v_client_operational_profile
-            WHERE project_count > 0 OR invoice_count > 0
-            ORDER BY {order_by} {direction}
-        """
+        # Lookup pre-built query - if not found, use safe default
+        sql = self._PORTFOLIO_QUERIES.get((order_by, desc), self._PORTFOLIO_DEFAULT_QUERY)
         return self._execute(sql)
     
     def resource_load_distribution(self) -> list[dict]:
