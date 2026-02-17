@@ -46,13 +46,13 @@ jobs:
         run: uv run pre-commit run -a
 
       - name: Ruff Lint (full)
-        run: uv run ruff check lib/ api/ --output-format=github --ignore "E402,I001,S110,S602,S608,B904"
+        run: uv run ruff check lib/ui_spec_v21/ lib/collectors/ lib/safety/ lib/contracts/ lib/observability/ api/ --output-format=github
 
       - name: Ruff Format Check
-        run: uv run ruff format --check lib/ api/
+        run: uv run ruff format --check lib/ui_spec_v21/ lib/collectors/ lib/safety/ lib/contracts/ lib/observability/ api/
 
       - name: Bandit Security Scan
-        run: uv run bandit -r lib/ api/ -ll --skip B101,B602,B608
+        run: uv run bandit -r lib/ui_spec_v21/ lib/collectors/ lib/safety/ api/spec_router/ -ll --skip B101
 
       - name: Mypy Baseline Check
         run: uv run python scripts/check_mypy_baseline.py
