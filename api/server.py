@@ -1,6 +1,10 @@
 """
 MOH TIME OS API Server - REST API for dashboard and integrations.
 """
+# ruff: noqa: B904, S608, S104
+# B904: Legacy exception handling patterns throughout
+# S608: Dynamic SQL with validated/escaped inputs
+# S104: Development server binding (guarded by __name__ check)
 
 import json
 import logging
@@ -79,12 +83,8 @@ UI_DIR = paths.app_home() / "time-os-ui" / "dist"
 # ==== Spec v2.9 Router ====
 # Mount spec-compliant endpoints at /api/v2
 # These implement CLIENT-UI-SPEC-v2.9.md using lib/ui_spec_v21 modules
-from api.spec_router import (
-    spec_router,  # noqa: E402 - intentionally imported here, right before use
-)
-from api.intelligence_router import (
-    intelligence_router,  # noqa: E402 - intelligence layer endpoints
-)
+from api.intelligence_router import intelligence_router  # noqa: E402, I001
+from api.spec_router import spec_router  # noqa: E402
 
 app.include_router(spec_router, prefix="/api/v2")
 app.include_router(intelligence_router, prefix="/api/v2/intelligence")
@@ -658,7 +658,7 @@ async def get_tasks(
         WHERE {" AND ".join(conditions)}
         ORDER BY priority DESC, due_date ASC
         LIMIT ?
-    """,
+    """,  # noqa: S608 - conditions are validated, params are parameterized
         params,
     )
 
@@ -731,7 +731,7 @@ async def create_task(task: TaskCreate):
         return {"success": True, "task": task_data, "bundle_id": bundle["id"]}
     except Exception as e:
         mark_failed(bundle["id"], str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.put("/api/tasks/{task_id}")
@@ -791,10 +791,10 @@ async def update_task(task_id: str, task: TaskUpdate):
     if "due_date" in update_data and update_data["due_date"]:
         try:
             datetime.strptime(update_data["due_date"][:10], "%Y-%m-%d")
-        except ValueError:
+        except ValueError as e:
             raise HTTPException(
                 status_code=400, detail="Invalid due_date format. Use YYYY-MM-DD"
-            )
+            ) from e
 
     # Check governance for sensitive field changes
     sensitive_fields = {"assignee", "priority", "due_date", "status"}
@@ -864,7 +864,7 @@ async def update_task(task_id: str, task: TaskUpdate):
         }
     except Exception as e:
         mark_failed(bundle["id"], str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 class NoteAdd(BaseModel):
@@ -918,7 +918,7 @@ async def delete_task(task_id: str):
         return {"success": True, "id": task_id, "bundle_id": bundle["id"]}
     except Exception as e:
         mark_failed(bundle["id"], str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # ==== Delegation Endpoints ====
@@ -997,10 +997,10 @@ async def delegate_task(task_id: str, body: DelegateRequest):
                 raise HTTPException(
                     status_code=400, detail="Due date cannot be in the past"
                 )
-        except ValueError:
+        except ValueError as e:
             raise HTTPException(
                 status_code=400, detail="Invalid due_date format. Use YYYY-MM-DD"
-            )
+            ) from e
 
     now = datetime.now().isoformat()
 
@@ -1109,7 +1109,7 @@ async def delegate_task(task_id: str, body: DelegateRequest):
 
     except Exception as e:
         mark_failed(bundle["id"], str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/api/tasks/{task_id}/escalate")
@@ -1306,7 +1306,7 @@ async def escalate_task(task_id: str, body: EscalateRequest):
 
     except Exception as e:
         mark_failed(bundle["id"], str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/api/tasks/{task_id}/recall")
@@ -1343,7 +1343,7 @@ async def recall_task(task_id: str):
         return {"success": True, "id": task_id, "bundle_id": bundle["id"]}
     except Exception as e:
         mark_failed(bundle["id"], str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/api/delegations")
@@ -1731,7 +1731,7 @@ async def cleanup_legacy_signals(confirm: bool = False):
               AND s.signal_type IN ('deadline_overdue', 'deadline_approaching')
               AND t.due_date IS NOT NULL
               AND julianday('now') - julianday(t.due_date) > {LEGACY_OVERDUE_THRESHOLD_DAYS}
-        """)
+        """)  # noqa: S608 - LEGACY_OVERDUE_THRESHOLD_DAYS is a constant
         legacy_count = cursor.fetchone()[0]
 
         if not confirm:
@@ -1755,7 +1755,7 @@ async def cleanup_legacy_signals(confirm: bool = False):
                   AND t.due_date IS NOT NULL
                   AND julianday('now') - julianday(t.due_date) > {LEGACY_OVERDUE_THRESHOLD_DAYS}
             )
-        """)
+        """)  # noqa: S608 - LEGACY_OVERDUE_THRESHOLD_DAYS is a constant
         expired_count = cursor.rowcount
 
         conn.commit()
@@ -1858,7 +1858,7 @@ async def get_team(type_filter: str | None = None):
         LEFT JOIN clients c ON p.client_id = c.id
         WHERE {" AND ".join(conditions)}
         ORDER BY p.type DESC, p.name
-    """)
+    """)  # noqa: S608 - conditions are hardcoded filters
 
     result = []
     for p in people:
@@ -1873,7 +1873,7 @@ async def get_team(type_filter: str | None = None):
                 SUM(CASE WHEN due_date = date('now') THEN 1 ELSE 0 END) as due_today
             FROM tasks
             WHERE assignee = '{name_escaped}' AND status IN ('pending', 'in_progress')
-        """)
+        """)  # noqa: S608 - name_escaped is SQL-escaped above
 
         completed_stats = store.query(f"""
             SELECT COUNT(*) as completed
@@ -1881,7 +1881,7 @@ async def get_team(type_filter: str | None = None):
             WHERE assignee = '{name_escaped}'
             AND status = 'completed'
             AND updated_at >= date('now', '-7 days')
-        """)
+        """)  # noqa: S608 - name_escaped is SQL-escaped above
 
         stats = task_stats[0] if task_stats else {}
         completed = completed_stats[0] if completed_stats else {}
@@ -2026,7 +2026,7 @@ async def api_priority_complete(item_id: str):
         }
     except Exception as e:
         mark_failed(bundle["id"], str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/api/priorities/{item_id}/snooze")
