@@ -57,6 +57,7 @@ lib/collectors/orchestrator.py:31: error: Incompatible default for argument "con
 lib/collectors/orchestrator.py:31: error: Incompatible default for argument "store" (default has type "None", argument has type "StateStore")  [assignment]
 lib/collectors/orchestrator.py:94: error: Argument "source" to "force_sync" of "CollectorOrchestrator" has incompatible type "None"; expected "str"  [arg-type]
 lib/collectors/orchestrator.py:96: error: Incompatible default for argument "source" (default has type "None", argument has type "str")  [assignment]
+lib/collectors/orchestrator.py:9: error: Library stubs not installed for "yaml"  [import-untyped]
 lib/collectors/tasks.py:104: error: Returning Any from function declared to return "str"  [no-any-return]
 lib/collectors/tasks.py:105: error: Incompatible return value type (got "None", expected "str")  [return-value]
 lib/collectors/xero.py:239: error: Incompatible types in assignment (expression has type "float", target has type "int")  [assignment]
