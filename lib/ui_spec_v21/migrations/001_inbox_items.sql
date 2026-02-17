@@ -74,7 +74,7 @@ BEGIN
     client_id, brand_id, engagement_id, title, evidence, evidence_version,
     resolution_reason, created_at, updated_at
   ) VALUES (
-    NEW.id, NEW.type, NEW.state, NEW.severity, NEW.proposed_at, 
+    NEW.id, NEW.type, NEW.state, NEW.severity, NEW.proposed_at,
     COALESCE(NEW.last_refreshed_at, NEW.proposed_at), NEW.read_at, NEW.resurfaced_at,
     NEW.resolved_at, NEW.snooze_until, NEW.snoozed_by, NEW.snoozed_at, NEW.snooze_reason,
     NEW.dismissed_by, NEW.dismissed_at, NEW.dismiss_reason, NEW.suppression_key,
