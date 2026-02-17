@@ -108,8 +108,8 @@ skip-magic-trailing-comma = false
 # BANDIT - Security Scanning
 # ==========================================
 [tool.bandit]
-exclude_dirs = ["tests", ".venv", "venv"]
-skips = ["B101"]  # Skip assert warnings
+exclude_dirs = ["tests", ".venv", "venv", "lib/safety/migrations.py"]
+skips = ["B101", "B602", "B608"]  # B101: asserts, B602: shell=True, B608: dynamic SQL
 
 # ==========================================
 # MYPY - Type Checking

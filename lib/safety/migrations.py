@@ -4,6 +4,8 @@ Safety Migrations
 Creates all tables, triggers, and constraints required for the safety system.
 Idempotent - safe to run multiple times.
 """
+# nosec B608 - All SQL in this file uses table names from hardcoded SAFETY_MANAGED_TABLES list
+# Dynamic DDL construction is intentional for trigger generation patterns
 
 import logging
 import sqlite3
@@ -304,6 +306,7 @@ def _get_context_triggers(table: str) -> list[tuple[str, str]]:
     """
     safe_table = table.replace("-", "_")
 
+    # nosec B608 - table names are from hardcoded SAFETY_MANAGED_TABLES list
     return [
         # Check context on INSERT
         (
@@ -321,7 +324,7 @@ def _get_context_triggers(table: str) -> list[tuple[str, str]]:
             BEGIN
                 SELECT RAISE(ABORT, 'SAFETY: write context required - use WriteContext or set maintenance_mode');
             END
-        """,
+        """,  # nosec B608
         ),
         # Check context on UPDATE
         (
@@ -339,7 +342,7 @@ def _get_context_triggers(table: str) -> list[tuple[str, str]]:
             BEGIN
                 SELECT RAISE(ABORT, 'SAFETY: write context required - use WriteContext or set maintenance_mode');
             END
-        """,
+        """,  # nosec B608
         ),
         # Check context on DELETE
         (
@@ -357,7 +360,7 @@ def _get_context_triggers(table: str) -> list[tuple[str, str]]:
             BEGIN
                 SELECT RAISE(ABORT, 'SAFETY: write context required - use WriteContext or set maintenance_mode');
             END
-        """,
+        """,  # nosec B608
         ),
     ]
 
@@ -416,7 +419,7 @@ def _get_audit_triggers(table: str) -> list[tuple[str, str]]:
                 FROM (SELECT 1) AS dummy
                 LEFT JOIN write_context_v1 wc ON wc.id = 1;
             END
-        """,
+        """,  # nosec B608
         ),
         # Audit UPDATE
         (
@@ -445,7 +448,7 @@ def _get_audit_triggers(table: str) -> list[tuple[str, str]]:
                 FROM (SELECT 1) AS dummy
                 LEFT JOIN write_context_v1 wc ON wc.id = 1;
             END
-        """,
+        """,  # nosec B608
         ),
         # Audit DELETE
         (
@@ -474,7 +477,7 @@ def _get_audit_triggers(table: str) -> list[tuple[str, str]]:
                 FROM (SELECT 1) AS dummy
                 LEFT JOIN write_context_v1 wc ON wc.id = 1;
             END
-        """,
+        """,  # nosec B608
         ),
     ]
 
