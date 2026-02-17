@@ -103,19 +103,21 @@ class CalendarCollector(BaseCollector):
             _debug_print(f"STATUS: 200 OK, {len(events)} events")
 
             for event in events[:max_results]:
-                all_events.append({
-                    "id": event.get("id"),
-                    "summary": event.get("summary", ""),
-                    "start": event.get("start", {}),
-                    "end": event.get("end", {}),
-                    "location": event.get("location", ""),
-                    "description": event.get("description", ""),
-                    "attendees": event.get("attendees", []),
-                    "status": event.get("status", "confirmed"),
-                    "created": event.get("created", ""),
-                    "updated": event.get("updated", ""),
-                    "htmlLink": event.get("htmlLink", ""),
-                })
+                all_events.append(
+                    {
+                        "id": event.get("id"),
+                        "summary": event.get("summary", ""),
+                        "start": event.get("start", {}),
+                        "end": event.get("end", {}),
+                        "location": event.get("location", ""),
+                        "description": event.get("description", ""),
+                        "attendees": event.get("attendees", []),
+                        "status": event.get("status", "confirmed"),
+                        "created": event.get("created", ""),
+                        "updated": event.get("updated", ""),
+                        "htmlLink": event.get("htmlLink", ""),
+                    }
+                )
 
             return {"events": all_events}
 
@@ -140,21 +142,23 @@ class CalendarCollector(BaseCollector):
             if not start_time:
                 continue
 
-            transformed.append({
-                "id": f"calendar_{event_id}",
-                "source": "calendar",
-                "source_id": event_id,
-                "title": event.get("summary", "No Title"),
-                "start_time": start_time,
-                "end_time": end_time,
-                "location": event.get("location", ""),
-                "attendees": json.dumps(self._extract_attendees(event)),
-                "status": event.get("status", "confirmed"),
-                "prep_notes": json.dumps(self._infer_prep(event)),
-                "context": json.dumps(event),
-                "created_at": event.get("created", now),
-                "updated_at": now,
-            })
+            transformed.append(
+                {
+                    "id": f"calendar_{event_id}",
+                    "source": "calendar",
+                    "source_id": event_id,
+                    "title": event.get("summary", "No Title"),
+                    "start_time": start_time,
+                    "end_time": end_time,
+                    "location": event.get("location", ""),
+                    "attendees": json.dumps(self._extract_attendees(event)),
+                    "status": event.get("status", "confirmed"),
+                    "prep_notes": json.dumps(self._infer_prep(event)),
+                    "context": json.dumps(event),
+                    "created_at": event.get("created", now),
+                    "updated_at": now,
+                }
+            )
 
         return transformed
 
@@ -247,21 +251,27 @@ if __name__ == "__main__":
 
     print("[AUTH_DEBUG] ENDPOINT: calendar.calendarList.list", file=sys.stderr)
     calendars = service.calendarList().list().execute()
-    print(f"[AUTH_DEBUG] STATUS: 200 OK, {len(calendars.get('items', []))} calendars", file=sys.stderr)
+    print(
+        f"[AUTH_DEBUG] STATUS: 200 OK, {len(calendars.get('items', []))} calendars", file=sys.stderr
+    )
 
     print("[AUTH_DEBUG] ENDPOINT: calendar.events.list(calendarId='primary')", file=sys.stderr)
     now = datetime.now(UTC)
     time_min = (now - timedelta(days=7)).isoformat()
     time_max = (now + timedelta(days=7)).isoformat()
 
-    results = service.events().list(
-        calendarId="primary",
-        timeMin=time_min,
-        timeMax=time_max,
-        maxResults=args.limit,
-        singleEvents=True,
-        orderBy="startTime",
-    ).execute()
+    results = (
+        service.events()
+        .list(
+            calendarId="primary",
+            timeMin=time_min,
+            timeMax=time_max,
+            maxResults=args.limit,
+            singleEvents=True,
+            orderBy="startTime",
+        )
+        .execute()
+    )
 
     events = results.get("items", [])
     print(f"[AUTH_DEBUG] STATUS: 200 OK, {len(events)} events", file=sys.stderr)

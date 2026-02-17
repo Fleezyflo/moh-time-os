@@ -63,7 +63,7 @@ def get_db_tables() -> list[dict]:
     db_path = Path("lib/db.py")
     if db_path.exists():
         content = db_path.read_text()
-        for match in re.finditer(r'CREATE TABLE IF NOT EXISTS (\w+)', content):
+        for match in re.finditer(r"CREATE TABLE IF NOT EXISTS (\w+)", content):
             tables.append({"name": match.group(1), "source": "lib/db.py"})
 
     # From migrations
@@ -71,7 +71,7 @@ def get_db_tables() -> list[dict]:
     if migrations_dir.exists():
         for py_file in migrations_dir.glob("*.py"):
             content = py_file.read_text()
-            for match in re.finditer(r'CREATE TABLE IF NOT EXISTS (\w+)', content):
+            for match in re.finditer(r"CREATE TABLE IF NOT EXISTS (\w+)", content):
                 name = match.group(1)
                 if not any(t["name"] == name for t in tables):
                     tables.append({"name": name, "source": f"migrations/{py_file.name}"})
@@ -81,7 +81,7 @@ def get_db_tables() -> list[dict]:
     if v5_migrations.exists():
         for sql_file in v5_migrations.glob("*.sql"):
             content = sql_file.read_text()
-            for match in re.finditer(r'CREATE TABLE IF NOT EXISTS (\w+)', content):
+            for match in re.finditer(r"CREATE TABLE IF NOT EXISTS (\w+)", content):
                 name = match.group(1)
                 if not any(t["name"] == name for t in tables):
                     tables.append({"name": name, "source": f"v5/migrations/{sql_file.name}"})
@@ -107,11 +107,13 @@ def get_api_routes() -> list[dict]:
         ):
             method = match.group(1).upper()
             route_path = match.group(2)
-            routes.append({
-                "method": method,
-                "path": route_path,
-                "source": api_file,
-            })
+            routes.append(
+                {
+                    "method": method,
+                    "path": route_path,
+                    "source": api_file,
+                }
+            )
 
     return routes
 
@@ -146,18 +148,22 @@ def get_ui_api_calls() -> list[dict]:
         content = ts_file.read_text()
         # Match fetch calls to /api/
         for match in re.finditer(r'fetch\s*\(\s*[`"\']([^`"\']*\/api\/[^`"\']+)[`"\']', content):
-            api_calls.append({
-                "endpoint": match.group(1),
-                "source": str(ts_file.relative_to(src_dir)),
-            })
+            api_calls.append(
+                {
+                    "endpoint": match.group(1),
+                    "source": str(ts_file.relative_to(src_dir)),
+                }
+            )
 
     for tsx_file in src_dir.rglob("*.tsx"):
         content = tsx_file.read_text()
         for match in re.finditer(r'fetch\s*\(\s*[`"\']([^`"\']*\/api\/[^`"\']+)[`"\']', content):
-            api_calls.append({
-                "endpoint": match.group(1),
-                "source": str(tsx_file.relative_to(src_dir)),
-            })
+            api_calls.append(
+                {
+                    "endpoint": match.group(1),
+                    "source": str(tsx_file.relative_to(src_dir)),
+                }
+            )
 
     return api_calls
 
@@ -201,7 +207,10 @@ def main() -> int:
     for key, val in system_map.items():
         if isinstance(val, list):
             try:
-                system_map[key] = sorted(val, key=lambda x: json.dumps(x, sort_keys=True) if isinstance(x, dict) else str(x))
+                system_map[key] = sorted(
+                    val,
+                    key=lambda x: json.dumps(x, sort_keys=True) if isinstance(x, dict) else str(x),
+                )
             except TypeError:
                 pass
     system_map_json = json.dumps(system_map, indent=2, sort_keys=True) + "\n"

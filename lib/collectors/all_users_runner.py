@@ -887,7 +887,7 @@ def run_all_users(
         # Check blocklist first
         blocked, block_reason = is_blocklisted(db_path, user)
         if blocked:
-            logger.info(f"[{i+1}/{len(users)}] SKIP (blocklisted): {user} - {block_reason}")
+            logger.info(f"[{i + 1}/{len(users)}] SKIP (blocklisted): {user} - {block_reason}")
             report["per_user"][user] = {
                 "status": "skipped",
                 "reason": f"blocklisted: {block_reason}",
@@ -895,7 +895,7 @@ def run_all_users(
             report["totals"]["skipped_invalid_subject_count"] += 1
             continue
 
-        logger.info(f"[{i+1}/{len(users)}] Processing: {user}")
+        logger.info(f"[{i + 1}/{len(users)}] Processing: {user}")
         report["totals"]["attempted_count"] += 1
 
         user_report: dict[str, Any] = {"status": "attempted"}
