@@ -863,12 +863,20 @@
   ],
   "collectors": [
     {
+      "name": "debug_dwd_token",
+      "source": "collectors/debug_dwd_token.py"
+    },
+    {
       "name": "tasks",
       "source": "collectors/tasks.py"
     },
     {
       "name": "asana",
       "source": "collectors/asana.py"
+    },
+    {
+      "name": "debug_dwd_token3",
+      "source": "collectors/debug_dwd_token3.py"
     },
     {
       "name": "all_users_runner",
@@ -879,8 +887,20 @@
       "source": "collectors/recorder.py"
     },
     {
+      "name": "debug_directory_auth",
+      "source": "collectors/debug_directory_auth.py"
+    },
+    {
       "name": "xero",
       "source": "collectors/xero.py"
+    },
+    {
+      "name": "test_calendar_sync_modes",
+      "source": "collectors/test_calendar_sync_modes.py"
+    },
+    {
+      "name": "debug_dwd_token2",
+      "source": "collectors/debug_dwd_token2.py"
     },
     {
       "name": "calendar",
@@ -997,6 +1017,10 @@
       "source": "migrations/v29_engagement_lifecycle.py"
     },
     {
+      "name": "score_history",
+      "source": "migrations/v30_score_history.py"
+    },
+    {
       "name": "org_settings",
       "source": "migrations/v29_org_settings.py"
     },
@@ -1076,9 +1100,9 @@
   "generated_by": "scripts/generate_system_map.py",
   "summary": {
     "api_routes_count": 172,
-    "collectors_count": 7,
-    "db_tables_count": 45,
-    "ui_routes_count": 10
+    "collectors_count": 12,
+    "db_tables_count": 46,
+    "ui_routes_count": 18
   },
   "ui_api_calls": [],
   "ui_routes": [
@@ -1120,6 +1144,38 @@
     },
     {
       "path": "/fix-data",
+      "source": "router.tsx"
+    },
+    {
+      "path": "/intel",
+      "source": "router.tsx"
+    },
+    {
+      "path": "/intel/briefing",
+      "source": "router.tsx"
+    },
+    {
+      "path": "/intel/signals",
+      "source": "router.tsx"
+    },
+    {
+      "path": "/intel/patterns",
+      "source": "router.tsx"
+    },
+    {
+      "path": "/intel/proposals",
+      "source": "router.tsx"
+    },
+    {
+      "path": "/intel/client/$clientId",
+      "source": "router.tsx"
+    },
+    {
+      "path": "/intel/person/$personId",
+      "source": "router.tsx"
+    },
+    {
+      "path": "/intel/project/$projectId",
       "source": "router.tsx"
     }
   ],
