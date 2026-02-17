@@ -12,11 +12,44 @@ env:
 
 jobs:
   # ==========================================
+  # ENFORCEMENT INTEGRITY (must run first)
+  # ==========================================
+  integrity:
+    name: Enforcement Integrity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Clone enforcement repo
+        run: git clone --depth 1 https://x-access-token:${{ secrets.ENFORCEMENT_READ_TOKEN }}@github.com/Fleezyflo/enforcement.git /tmp/enforcement
+      - name: Verify protected files
+        run: |
+          TAMPERED=0
+          while IFS= read -r file; do
+            [[ -z "$file" || "$file" == \#* ]] && continue
+            [ ! -f "/tmp/enforcement/blessed/$file" ] && continue
+            if [ ! -f "./$file" ]; then
+              mkdir -p "$(dirname "./$file")"
+              cp "/tmp/enforcement/blessed/$file" "./$file"
+              echo "🚨 MISSING: $file — restored"
+              TAMPERED=1
+            elif ! diff -q "/tmp/enforcement/blessed/$file" "./$file" > /dev/null 2>&1; then
+              cp "/tmp/enforcement/blessed/$file" "./$file"
+              echo "🚨 MODIFIED: $file — restored"
+              TAMPERED=1
+            else
+              echo "✅ $file"
+            fi
+          done < /tmp/enforcement/protected-files.txt
+          [ "$TAMPERED" -eq 1 ] && echo "⚠️ Protected files were restored to blessed versions"
+          echo "✅ Integrity check complete"
+
+  # ==========================================
   # PYTHON QUALITY
   # ==========================================
   python-quality:
     name: Python Quality
     runs-on: ubuntu-latest
+    needs: integrity
     steps:
       - uses: actions/checkout@v4
 
@@ -66,7 +99,7 @@ jobs:
   python-tests:
     name: Python Tests
     runs-on: ubuntu-latest
-    needs: python-quality
+    needs: [integrity, python-quality]
     steps:
       - uses: actions/checkout@v4
 
@@ -116,6 +149,7 @@ jobs:
   drift-detection:
     name: Drift Detection
     runs-on: ubuntu-latest
+    needs: integrity
     steps:
       - uses: actions/checkout@v4
 
@@ -150,6 +184,7 @@ jobs:
   ui-quality:
     name: UI Quality
     runs-on: ubuntu-latest
+    needs: integrity
     defaults:
       run:
         working-directory: time-os-ui
@@ -201,7 +236,7 @@ jobs:
   system-invariants:
     name: System Invariants
     runs-on: ubuntu-latest
-    needs: drift-detection
+    needs: [integrity, drift-detection]
     steps:
       - uses: actions/checkout@v4
 
@@ -227,6 +262,7 @@ jobs:
   governance:
     name: Governance Checks
     runs-on: ubuntu-latest
+    needs: integrity
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
@@ -250,6 +286,7 @@ jobs:
   reproducibility:
     name: Reproducibility Pins
     runs-on: ubuntu-latest
+    needs: integrity
     steps:
       - uses: actions/checkout@v4
 
@@ -291,6 +328,7 @@ jobs:
   security-audit:
     name: Security Audit
     runs-on: ubuntu-latest
+    needs: integrity
     steps:
       - uses: actions/checkout@v4
 
@@ -343,7 +381,7 @@ jobs:
   api-smoke-test:
     name: API Smoke Test
     runs-on: ubuntu-latest
-    needs: python-quality
+    needs: [integrity, python-quality]
     steps:
       - uses: actions/checkout@v4
 
@@ -404,7 +442,7 @@ jobs:
   scenarios:
     name: Golden Scenarios
     runs-on: ubuntu-latest
-    needs: python-quality
+    needs: [integrity, python-quality]
     steps:
       - uses: actions/checkout@v4
 
@@ -430,7 +468,7 @@ jobs:
   extended-tests:
     name: Extended Tests
     runs-on: ubuntu-latest
-    needs: python-quality
+    needs: [integrity, python-quality]
     steps:
       - uses: actions/checkout@v4
 
@@ -465,7 +503,7 @@ jobs:
   db-rehearsal:
     name: DB Migration Rehearsal
     runs-on: ubuntu-latest
-    needs: python-quality
+    needs: [integrity, python-quality]
     steps:
       - uses: actions/checkout@v4
 
@@ -487,3 +525,19 @@ jobs:
 
       - name: Run Rollback Drill
         run: uv run python scripts/rollback_drill.py
+
+  # ==========================================
+  # SYNC ENFORCEMENT (only on main, after all pass)
+  # ==========================================
+  sync-enforcement:
+    name: Sync Enforcement
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [integrity, python-quality, python-tests, drift-detection, ui-quality, system-invariants, security-audit, api-smoke-test, scenarios, extended-tests, db-rehearsal]
+    steps:
+      - name: Trigger sync
+        run: |
+          curl -X POST \
+            -H "Authorization: Bearer ${{ secrets.ENFORCEMENT_DISPATCH_TOKEN }}" \
+            https://api.github.com/repos/Fleezyflo/enforcement/dispatches \
+            -d '{"event_type":"ci-passed-on-main","client_payload":{"sha":"${{ github.sha }}"}}'
