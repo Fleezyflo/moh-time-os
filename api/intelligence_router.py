@@ -4,6 +4,10 @@ Intelligence API Router — Cross-Entity Query Endpoints
 This router exposes the query engine functions via REST API.
 All endpoints are read-only GET requests.
 
+AUTHENTICATION: All endpoints require a valid Bearer token.
+Set INTEL_API_TOKEN environment variable to enable auth.
+Without this env var, auth is disabled (development mode).
+
 Usage in server.py:
     from api.intelligence_router import intelligence_router
     app.include_router(intelligence_router, prefix="/api/v2/intelligence")
@@ -13,14 +17,18 @@ import logging
 from datetime import datetime
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
+from api.auth import require_auth
 from lib.query_engine import QueryEngine
 
 logger = logging.getLogger(__name__)
 
-# Router
-intelligence_router = APIRouter(tags=["Intelligence"])
+# Router - ALL endpoints require authentication
+intelligence_router = APIRouter(
+    tags=["Intelligence"],
+    dependencies=[Depends(require_auth)],  # Auth required for all endpoints
+)
 
 # Singleton query engine
 _engine: QueryEngine | None = None
