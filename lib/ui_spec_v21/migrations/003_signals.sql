@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS signals_v29 (
   analysis_provider TEXT,
 
   -- Dismissal (if dismissed without becoming issue)
+  dismissed INTEGER NOT NULL DEFAULT 0,
   dismissed_at TEXT,
   dismissed_by TEXT,
 
@@ -56,11 +57,11 @@ BEGIN
   INSERT INTO signals_v29 (
     id, source, source_id, sentiment, signal_type, rule_triggered, severity, title,
     client_id, brand_id, engagement_id, summary, payload, evidence, analysis_provider,
-    dismissed_at, dismissed_by, first_seen_at, last_seen_at, observed_at, ingested_at, cleared_at, created_at, updated_at
+    dismissed, dismissed_at, dismissed_by, first_seen_at, last_seen_at, observed_at, ingested_at, cleared_at, created_at, updated_at
   ) VALUES (
     NEW.id, NEW.source, NEW.source_id, NEW.sentiment, NEW.signal_type, NEW.rule_triggered, NEW.severity, NEW.title,
     NEW.client_id, NEW.brand_id, NEW.engagement_id, NEW.summary, NEW.payload, NEW.evidence, NEW.analysis_provider,
-    NEW.dismissed_at, NEW.dismissed_by, NEW.first_seen_at, NEW.last_seen_at, NEW.observed_at, NEW.ingested_at, NEW.cleared_at, NEW.created_at, NEW.updated_at
+    COALESCE(NEW.dismissed, 0), NEW.dismissed_at, NEW.dismissed_by, NEW.first_seen_at, NEW.last_seen_at, NEW.observed_at, NEW.ingested_at, NEW.cleared_at, NEW.created_at, NEW.updated_at
   );
 END;
 
@@ -73,7 +74,7 @@ BEGIN
     sentiment = NEW.sentiment, signal_type = NEW.signal_type, rule_triggered = NEW.rule_triggered, severity = NEW.severity, title = NEW.title,
     client_id = NEW.client_id, brand_id = NEW.brand_id, engagement_id = NEW.engagement_id,
     summary = NEW.summary, payload = NEW.payload, evidence = NEW.evidence, analysis_provider = NEW.analysis_provider,
-    dismissed_at = NEW.dismissed_at, dismissed_by = NEW.dismissed_by,
+    dismissed = NEW.dismissed, dismissed_at = NEW.dismissed_at, dismissed_by = NEW.dismissed_by,
     first_seen_at = NEW.first_seen_at, last_seen_at = NEW.last_seen_at, observed_at = NEW.observed_at, ingested_at = NEW.ingested_at, cleared_at = NEW.cleared_at,
     updated_at = NEW.updated_at
   WHERE id = OLD.id;
