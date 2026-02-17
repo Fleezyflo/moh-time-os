@@ -1,0 +1,9 @@
+# Default owner for everything
+* @Fleezyflo
+
+# Critical paths require explicit owner review
+/.github/                @Fleezyflo
+/.github/workflows/      @Fleezyflo
+/config/                 @Fleezyflo
+/.semgrep/               @Fleezyflo
+/scripts/                @Fleezyflo

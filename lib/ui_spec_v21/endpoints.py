@@ -1143,7 +1143,7 @@ class InboxEndpoints:
             SELECT * FROM inbox_items_v29
             WHERE {where_clause}
             ORDER BY {order}
-        """,
+        """,  # nosec B608 - where_clause and order built from validated params
             params,
         )
 
@@ -1267,7 +1267,7 @@ class InboxEndpoints:
             SELECT * FROM inbox_items_v29
             WHERE {where_clause}
             ORDER BY resolved_at DESC
-        """,
+        """,  # nosec B608 - where_clause built from validated params
             params,
         )
 

@@ -7559,6 +7559,1589 @@
         ]
       }
     },
+    "/api/v2/intelligence/briefing": {
+      "get": {
+        "description": "Get daily briefing summary.\n\nReturns structured briefing with:\n- Summary counts (immediate, this_week, monitor)\n- Critical items list\n- Attention items list\n- Watching items list\n- Portfolio health\n- Top proposal headline",
+        "operationId": "daily_briefing_api_v2_intelligence_briefing_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Daily Briefing",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/changes": {
+      "get": {
+        "description": "Run change detection and return delta report.\n\nCompares current state to last saved snapshot.\nReturns new/cleared signals, new proposals, score changes.",
+        "operationId": "detect_changes_api_v2_intelligence_changes_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Detect Changes",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/clients/compare": {
+      "get": {
+        "description": "Compare all clients between two time periods.\n\nReturns list of clients with their metrics in each period and deltas.",
+        "operationId": "clients_compare_api_v2_intelligence_clients_compare_get",
+        "parameters": [
+          {
+            "description": "Period A start date (ISO)",
+            "in": "query",
+            "name": "period_a_start",
+            "required": true,
+            "schema": {
+              "description": "Period A start date (ISO)",
+              "title": "Period A Start",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Period A end date (ISO)",
+            "in": "query",
+            "name": "period_a_end",
+            "required": true,
+            "schema": {
+              "description": "Period A end date (ISO)",
+              "title": "Period A End",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Period B start date (ISO)",
+            "in": "query",
+            "name": "period_b_start",
+            "required": true,
+            "schema": {
+              "description": "Period B start date (ISO)",
+              "title": "Period B Start",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Period B end date (ISO)",
+            "in": "query",
+            "name": "period_b_end",
+            "required": true,
+            "schema": {
+              "description": "Period B end date (ISO)",
+              "title": "Period B End",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Clients Compare",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/clients/{client_id}/communication": {
+      "get": {
+        "description": "Get communication metrics for a client.\n\nReturns total_communications, by_type breakdown, and recent messages.",
+        "operationId": "client_communication_api_v2_intelligence_clients__client_id__communication_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Start date (ISO format)",
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Start date (ISO format)",
+              "title": "Since"
+            }
+          },
+          {
+            "description": "End date (ISO format)",
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "End date (ISO format)",
+              "title": "Until"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Client Communication",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/clients/{client_id}/compare": {
+      "get": {
+        "description": "Compare a client's metrics between two time periods.\n\nReturns metrics for each period, deltas, and percentage changes.",
+        "operationId": "client_compare_api_v2_intelligence_clients__client_id__compare_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Period A start date (ISO)",
+            "in": "query",
+            "name": "period_a_start",
+            "required": true,
+            "schema": {
+              "description": "Period A start date (ISO)",
+              "title": "Period A Start",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Period A end date (ISO)",
+            "in": "query",
+            "name": "period_a_end",
+            "required": true,
+            "schema": {
+              "description": "Period A end date (ISO)",
+              "title": "Period A End",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Period B start date (ISO)",
+            "in": "query",
+            "name": "period_b_start",
+            "required": true,
+            "schema": {
+              "description": "Period B start date (ISO)",
+              "title": "Period B Start",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Period B end date (ISO)",
+            "in": "query",
+            "name": "period_b_end",
+            "required": true,
+            "schema": {
+              "description": "Period B end date (ISO)",
+              "title": "Period B End",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Client Compare",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/clients/{client_id}/profile": {
+      "get": {
+        "description": "Get deep operational profile for a client.\n\nReturns client info, financial metrics, projects list,\npeople involved, and recent invoices.",
+        "operationId": "client_profile_api_v2_intelligence_clients__client_id__profile_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Client Profile",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/clients/{client_id}/tasks": {
+      "get": {
+        "description": "Get task summary for a client.\n\nReturns total_tasks, active_tasks, completed_tasks, overdue_tasks,\ncompletion_rate, tasks_by_status, tasks_by_assignee.",
+        "operationId": "client_tasks_api_v2_intelligence_clients__client_id__tasks_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Client Tasks",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/clients/{client_id}/trajectory": {
+      "get": {
+        "description": "Get trajectory analysis for a client.\n\nShows metrics over rolling time windows with trend analysis\n(increasing/stable/declining) for each metric.",
+        "operationId": "client_trajectory_api_v2_intelligence_clients__client_id__trajectory_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Size of each time window in days",
+            "in": "query",
+            "name": "window_days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "description": "Size of each time window in days",
+              "title": "Window Days",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Number of windows to analyze",
+            "in": "query",
+            "name": "num_windows",
+            "required": false,
+            "schema": {
+              "default": 6,
+              "description": "Number of windows to analyze",
+              "title": "Num Windows",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Client Trajectory",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/critical": {
+      "get": {
+        "description": "Get critical items only (IMMEDIATE urgency proposals).\n\nThe \"30-second scan\" view \u2014 what needs attention right now.\nFaster than full snapshot.",
+        "operationId": "critical_items_api_v2_intelligence_critical_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Critical Items",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/entity/client/{client_id}": {
+      "get": {
+        "description": "Get complete intelligence for a client.\n\nReturns everything the system knows:\n- Scorecard\n- Active signals\n- Signal history\n- Trajectory\n- Related proposals",
+        "operationId": "client_intelligence_api_v2_intelligence_entity_client__client_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Client Intelligence",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/entity/person/{person_id}": {
+      "get": {
+        "description": "Get complete intelligence for a person.\n\nReturns everything the system knows:\n- Scorecard\n- Active signals\n- Signal history\n- Operational profile",
+        "operationId": "person_intelligence_api_v2_intelligence_entity_person__person_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Person Intelligence",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/entity/portfolio": {
+      "get": {
+        "description": "Get portfolio-level intelligence.\n\nLighter than full snapshot:\n- Portfolio score\n- Signal summary\n- Structural patterns\n- Top proposals",
+        "operationId": "portfolio_intelligence_api_v2_intelligence_entity_portfolio_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Portfolio Intelligence",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/financial/aging": {
+      "get": {
+        "description": "Get invoice aging report.\n\nReturns total_outstanding, by_bucket breakdown (current, 30, 60, 90+),\nand list of clients with overdue amounts.",
+        "operationId": "financial_aging_api_v2_intelligence_financial_aging_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Financial Aging",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/patterns": {
+      "get": {
+        "description": "Detect all active patterns.\n\nReturns structural patterns across entities:\n- Concentration (revenue, resource, communication)\n- Cascade (blast radius, dependency chains)\n- Degradation (quality, engagement erosion)\n- Drift (workload, ownership)\n- Correlation (load-quality, comm-payment)",
+        "operationId": "list_patterns_api_v2_intelligence_patterns_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Patterns",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/patterns/catalog": {
+      "get": {
+        "description": "Get pattern library (all defined patterns with detection logic).",
+        "operationId": "pattern_catalog_api_v2_intelligence_patterns_catalog_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Pattern Catalog",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/portfolio/overview": {
+      "get": {
+        "description": "Get portfolio overview with all clients and their operational metrics.\n\nReturns clients with project_count, total_tasks, active_tasks,\ninvoice_count, total_invoiced, total_outstanding, etc.",
+        "operationId": "portfolio_overview_api_v2_intelligence_portfolio_overview_get",
+        "parameters": [
+          {
+            "description": "Field to sort by",
+            "in": "query",
+            "name": "order_by",
+            "required": false,
+            "schema": {
+              "default": "total_tasks",
+              "description": "Field to sort by",
+              "title": "Order By",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Sort descending",
+            "in": "query",
+            "name": "desc",
+            "required": false,
+            "schema": {
+              "default": true,
+              "description": "Sort descending",
+              "title": "Desc",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Portfolio Overview",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/portfolio/risks": {
+      "get": {
+        "description": "Get structural risks across the portfolio.\n\nReturns risks categorized as OVERDUE_PROJECT, OVERLOADED_PERSON,\nAGING_INVOICE with severity (HIGH/MEDIUM/LOW) and evidence.",
+        "operationId": "portfolio_risks_api_v2_intelligence_portfolio_risks_get",
+        "parameters": [
+          {
+            "description": "Min overdue tasks to flag project",
+            "in": "query",
+            "name": "overdue_threshold",
+            "required": false,
+            "schema": {
+              "default": 5,
+              "description": "Min overdue tasks to flag project",
+              "title": "Overdue Threshold",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Days overdue to flag invoice",
+            "in": "query",
+            "name": "aging_threshold",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "description": "Days overdue to flag invoice",
+              "title": "Aging Threshold",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Portfolio Risks",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/portfolio/trajectory": {
+      "get": {
+        "description": "Get trajectory analysis for all clients.\n\nShows direction of travel (increasing/stable/declining) for each client\nbased on rolling time windows.",
+        "operationId": "portfolio_trajectory_api_v2_intelligence_portfolio_trajectory_get",
+        "parameters": [
+          {
+            "description": "Size of each time window in days",
+            "in": "query",
+            "name": "window_days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "description": "Size of each time window in days",
+              "title": "Window Days",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Number of windows to analyze",
+            "in": "query",
+            "name": "num_windows",
+            "required": false,
+            "schema": {
+              "default": 6,
+              "description": "Number of windows to analyze",
+              "title": "Num Windows",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Minimum activity to include client",
+            "in": "query",
+            "name": "min_activity",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Minimum activity to include client",
+              "title": "Min Activity",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Portfolio Trajectory",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/projects/health": {
+      "get": {
+        "description": "Get all projects ranked by health score.\n\nhealth_score = completion_rate - (overdue_ratio * 50)\nHigher is healthier.",
+        "operationId": "projects_health_api_v2_intelligence_projects_health_get",
+        "parameters": [
+          {
+            "description": "Minimum tasks to include project",
+            "in": "query",
+            "name": "min_tasks",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Minimum tasks to include project",
+              "title": "Min Tasks",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Projects Health",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/projects/{project_id}/state": {
+      "get": {
+        "description": "Get operational state of a project.\n\nReturns project info, task metrics (total, open, completed, overdue),\ncompletion_rate_pct, and assigned people count.",
+        "operationId": "project_state_api_v2_intelligence_projects__project_id__state_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Project State",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/proposals": {
+      "get": {
+        "description": "Get ranked proposals.\n\nReturns proposals sorted by priority score with:\n- Headline, summary, entity\n- Evidence list\n- Implied action\n- Urgency and confidence",
+        "operationId": "list_proposals_api_v2_intelligence_proposals_get",
+        "parameters": [
+          {
+            "description": "Max proposals to return",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "description": "Max proposals to return",
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Filter by urgency (immediate, this_week, monitor)",
+            "in": "query",
+            "name": "urgency",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by urgency (immediate, this_week, monitor)",
+              "title": "Urgency"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Proposals",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/scores/client/{client_id}": {
+      "get": {
+        "description": "Get scorecard for a client.\n\nReturns composite score and dimension scores:\n- Operational health\n- Financial health\n- Communication health\n- Engagement trajectory",
+        "operationId": "client_score_api_v2_intelligence_scores_client__client_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Client Score",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/scores/history/summary": {
+      "get": {
+        "description": "Get summary of score history data collection.\n\nShows total records, breakdown by entity type, and recent recording activity.\nUseful for monitoring data health.",
+        "operationId": "score_history_summary_api_v2_intelligence_scores_history_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Score History Summary",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/scores/person/{person_id}": {
+      "get": {
+        "description": "Get scorecard for a person.\n\nReturns composite score and dimension scores:\n- Load balance\n- Output consistency\n- Spread\n- Availability risk",
+        "operationId": "person_score_api_v2_intelligence_scores_person__person_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Person Score",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/scores/portfolio": {
+      "get": {
+        "description": "Get portfolio scorecard.\n\nReturns composite score and dimension scores:\n- Revenue concentration\n- Resource concentration\n- Client health distribution\n- Capacity utilization",
+        "operationId": "portfolio_score_api_v2_intelligence_scores_portfolio_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Portfolio Score",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/scores/project/{project_id}": {
+      "get": {
+        "description": "Get scorecard for a project.\n\nReturns composite score and dimension scores:\n- Velocity\n- Risk exposure\n- Team coverage\n- Scope control",
+        "operationId": "project_score_api_v2_intelligence_scores_project__project_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "project_id",
+            "required": true,
+            "schema": {
+              "title": "Project Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Project Score",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/scores/record": {
+      "post": {
+        "description": "Record current scores for all entities.\n\nThis endpoint triggers score recording for trend tracking.\nShould be called once per day (e.g., via cron).\n\nReturns counts of recorded scores by entity type.",
+        "operationId": "record_scores_api_v2_intelligence_scores_record_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Record Scores",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/scores/{entity_type}/{entity_id}/history": {
+      "get": {
+        "description": "Get score history for an entity.\n\nReturns historical scores with trend analysis:\n- history: list of {date, score, classification}\n- trend: 'improving', 'declining', 'stable', or 'insufficient_data'\n- change_pct: percentage change over the period\n- current_score, period_high, period_low",
+        "operationId": "score_history_api_v2_intelligence_scores__entity_type___entity_id__history_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entity_type",
+            "required": true,
+            "schema": {
+              "title": "Entity Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Number of days of history",
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "description": "Number of days of history",
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Score History",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/signals": {
+      "get": {
+        "description": "Detect all active signals.\n\nReturns signals with severity, entity, evidence, and implied action.",
+        "operationId": "list_signals_api_v2_intelligence_signals_get",
+        "parameters": [
+          {
+            "description": "Use quick mode (sample portfolio)",
+            "in": "query",
+            "name": "quick",
+            "required": false,
+            "schema": {
+              "default": true,
+              "description": "Use quick mode (sample portfolio)",
+              "title": "Quick",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Signals",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/signals/active": {
+      "get": {
+        "description": "Get currently active signals from state tracking.",
+        "operationId": "active_signals_api_v2_intelligence_signals_active_get",
+        "parameters": [
+          {
+            "description": "Filter by entity type",
+            "in": "query",
+            "name": "entity_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by entity type",
+              "title": "Entity Type"
+            }
+          },
+          {
+            "description": "Filter by entity ID",
+            "in": "query",
+            "name": "entity_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by entity ID",
+              "title": "Entity Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Active Signals",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/signals/export": {
+      "get": {
+        "description": "Export all current signal detections as CSV for threshold tuning review.\n\nReturns CSV data with signal_id, severity, entity, metric,\ncurrent_value, threshold_value, etc.",
+        "operationId": "export_signals_api_v2_intelligence_signals_export_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Export Signals",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/signals/history": {
+      "get": {
+        "description": "Get signal history for an entity.",
+        "operationId": "signal_history_api_v2_intelligence_signals_history_get",
+        "parameters": [
+          {
+            "description": "Entity type (client, project, person)",
+            "in": "query",
+            "name": "entity_type",
+            "required": true,
+            "schema": {
+              "description": "Entity type (client, project, person)",
+              "title": "Entity Type",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Entity ID",
+            "in": "query",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "description": "Entity ID",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Max records to return",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Max records to return",
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Signal History",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/signals/summary": {
+      "get": {
+        "description": "Get signal summary (counts by severity and state).",
+        "operationId": "signals_summary_api_v2_intelligence_signals_summary_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Signals Summary",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/signals/thresholds": {
+      "get": {
+        "description": "Get current threshold configuration for all signals.",
+        "operationId": "get_thresholds_api_v2_intelligence_signals_thresholds_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Thresholds",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/snapshot": {
+      "get": {
+        "description": "Get complete intelligence snapshot.\n\nRuns the full intelligence pipeline:\n- Scores all entities\n- Detects all signals\n- Detects all patterns\n- Generates and ranks proposals\n- Produces daily briefing\n\nThis is a heavy endpoint (~45s). Use targeted endpoints for faster responses.",
+        "operationId": "intelligence_snapshot_api_v2_intelligence_snapshot_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Intelligence Snapshot",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/team/capacity": {
+      "get": {
+        "description": "Get team capacity overview.\n\nReturns total_people, total_active_tasks, avg_tasks_per_person,\npeople_overloaded, people_available, and full distribution.",
+        "operationId": "team_capacity_api_v2_intelligence_team_capacity_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Team Capacity",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/team/distribution": {
+      "get": {
+        "description": "Get team load distribution.\n\nReturns list of people with assigned_tasks, active_tasks,\nproject_count, and computed load_score (0-100).",
+        "operationId": "team_distribution_api_v2_intelligence_team_distribution_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Team Distribution",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/team/{person_id}/profile": {
+      "get": {
+        "description": "Get operational profile for a person.\n\nReturns person info, load metrics, projects they're on,\nand clients they work with.",
+        "operationId": "team_person_profile_api_v2_intelligence_team__person_id__profile_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Team Person Profile",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/team/{person_id}/trajectory": {
+      "get": {
+        "description": "Get trajectory analysis for a person.\n\nShows load and activity over rolling time windows with trend analysis.",
+        "operationId": "team_person_trajectory_api_v2_intelligence_team__person_id__trajectory_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "title": "Person Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Size of each time window in days",
+            "in": "query",
+            "name": "window_days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "description": "Size of each time window in days",
+              "title": "Window Days",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Number of windows to analyze",
+            "in": "query",
+            "name": "num_windows",
+            "required": false,
+            "schema": {
+              "default": 6,
+              "description": "Number of windows to analyze",
+              "title": "Num Windows",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Team Person Trajectory",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
     "/api/v2/invoices": {
       "get": {
         "description": "GET /api/v2/invoices\n\nGlobal invoices endpoint for frontend compatibility.",

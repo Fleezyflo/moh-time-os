@@ -577,7 +577,7 @@ def validate_timestamp_ordering(conn) -> list:
             cursor = conn.execute(f"""
                 SELECT id, created_at, updated_at FROM {table}
                 WHERE updated_at IS NOT NULL AND created_at IS NOT NULL AND updated_at < created_at
-            """)
+            """)  # nosec B608 - table is from hardcoded list above
             for row in cursor.fetchall():
                 violations.append((table, "updated_at", row[0], row[2], "updated_before_created"))
         except Exception:
@@ -653,7 +653,7 @@ def validate_all_timestamps(conn) -> tuple:
     for table, columns in TIMESTAMP_COLUMNS.items():
         try:
             for col in columns:
-                cursor = conn.execute(f"SELECT id, {col} FROM {table} WHERE {col} IS NOT NULL")
+                cursor = conn.execute(f"SELECT id, {col} FROM {table} WHERE {col} IS NOT NULL")  # nosec B608
                 for row in cursor.fetchall():
                     if not validate_timestamp_semantic(row[1]):
                         violations.append((table, col, row[0], row[1], "invalid_format"))

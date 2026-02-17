@@ -96,7 +96,9 @@ class HealthChecker:
             # Aggregate status (worst wins)
             if result.status == HealthStatus.UNHEALTHY:
                 overall_status = HealthStatus.UNHEALTHY
-            elif result.status == HealthStatus.DEGRADED and overall_status != HealthStatus.UNHEALTHY:
+            elif (
+                result.status == HealthStatus.DEGRADED and overall_status != HealthStatus.UNHEALTHY
+            ):
                 overall_status = HealthStatus.DEGRADED
 
         return HealthReport(

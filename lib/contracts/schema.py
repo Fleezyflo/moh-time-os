@@ -205,9 +205,7 @@ class CapacityCommandSection(BaseModel):
     people_overview: list[PersonEntry] = Field(default_factory=list)
     total_assigned: float = 0.0
     total_capacity: float = 0.0
-    utilization_rate: float = Field(
-        ge=0.0, le=2.0, default=0.0
-    )  # Can exceed 1.0 if overloaded
+    utilization_rate: float = Field(ge=0.0, le=2.0, default=0.0)  # Can exceed 1.0 if overloaded
     drawer: dict = Field(default_factory=dict)
 
 
@@ -261,9 +259,7 @@ class AgencySnapshotContract(BaseModel):
     trust: TrustSection
 
     # Page 0 LOCKED STRUCTURE — ALL REQUIRED per spec lines 513-559
-    narrative: (
-        dict  # REQUIRED: first_to_break + deltas (deltas is INSIDE narrative per spec)
-    )
+    narrative: dict  # REQUIRED: first_to_break + deltas (deltas is INSIDE narrative per spec)
     tiles: dict  # REQUIRED: 5 tiles (delivery, cash, clients, churn_x_money, delivery_x_capacity)
     heatstrip_projects: list[HeatstripProject]  # REQUIRED: max 25
     constraints: list  # REQUIRED: max 12

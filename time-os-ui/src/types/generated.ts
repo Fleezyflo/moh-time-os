@@ -3045,6 +3045,928 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/intelligence/briefing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Daily Briefing
+         * @description Get daily briefing summary.
+         *
+         *     Returns structured briefing with:
+         *     - Summary counts (immediate, this_week, monitor)
+         *     - Critical items list
+         *     - Attention items list
+         *     - Watching items list
+         *     - Portfolio health
+         *     - Top proposal headline
+         */
+        get: operations["daily_briefing_api_v2_intelligence_briefing_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Detect Changes
+         * @description Run change detection and return delta report.
+         *
+         *     Compares current state to last saved snapshot.
+         *     Returns new/cleared signals, new proposals, score changes.
+         */
+        get: operations["detect_changes_api_v2_intelligence_changes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/clients/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Clients Compare
+         * @description Compare all clients between two time periods.
+         *
+         *     Returns list of clients with their metrics in each period and deltas.
+         */
+        get: operations["clients_compare_api_v2_intelligence_clients_compare_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/clients/{client_id}/communication": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Client Communication
+         * @description Get communication metrics for a client.
+         *
+         *     Returns total_communications, by_type breakdown, and recent messages.
+         */
+        get: operations["client_communication_api_v2_intelligence_clients__client_id__communication_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/clients/{client_id}/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Client Compare
+         * @description Compare a client's metrics between two time periods.
+         *
+         *     Returns metrics for each period, deltas, and percentage changes.
+         */
+        get: operations["client_compare_api_v2_intelligence_clients__client_id__compare_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/clients/{client_id}/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Client Profile
+         * @description Get deep operational profile for a client.
+         *
+         *     Returns client info, financial metrics, projects list,
+         *     people involved, and recent invoices.
+         */
+        get: operations["client_profile_api_v2_intelligence_clients__client_id__profile_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/clients/{client_id}/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Client Tasks
+         * @description Get task summary for a client.
+         *
+         *     Returns total_tasks, active_tasks, completed_tasks, overdue_tasks,
+         *     completion_rate, tasks_by_status, tasks_by_assignee.
+         */
+        get: operations["client_tasks_api_v2_intelligence_clients__client_id__tasks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/clients/{client_id}/trajectory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Client Trajectory
+         * @description Get trajectory analysis for a client.
+         *
+         *     Shows metrics over rolling time windows with trend analysis
+         *     (increasing/stable/declining) for each metric.
+         */
+        get: operations["client_trajectory_api_v2_intelligence_clients__client_id__trajectory_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/critical": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Critical Items
+         * @description Get critical items only (IMMEDIATE urgency proposals).
+         *
+         *     The "30-second scan" view — what needs attention right now.
+         *     Faster than full snapshot.
+         */
+        get: operations["critical_items_api_v2_intelligence_critical_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/entity/client/{client_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Client Intelligence
+         * @description Get complete intelligence for a client.
+         *
+         *     Returns everything the system knows:
+         *     - Scorecard
+         *     - Active signals
+         *     - Signal history
+         *     - Trajectory
+         *     - Related proposals
+         */
+        get: operations["client_intelligence_api_v2_intelligence_entity_client__client_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/entity/person/{person_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Person Intelligence
+         * @description Get complete intelligence for a person.
+         *
+         *     Returns everything the system knows:
+         *     - Scorecard
+         *     - Active signals
+         *     - Signal history
+         *     - Operational profile
+         */
+        get: operations["person_intelligence_api_v2_intelligence_entity_person__person_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/entity/portfolio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Portfolio Intelligence
+         * @description Get portfolio-level intelligence.
+         *
+         *     Lighter than full snapshot:
+         *     - Portfolio score
+         *     - Signal summary
+         *     - Structural patterns
+         *     - Top proposals
+         */
+        get: operations["portfolio_intelligence_api_v2_intelligence_entity_portfolio_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/financial/aging": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Financial Aging
+         * @description Get invoice aging report.
+         *
+         *     Returns total_outstanding, by_bucket breakdown (current, 30, 60, 90+),
+         *     and list of clients with overdue amounts.
+         */
+        get: operations["financial_aging_api_v2_intelligence_financial_aging_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/patterns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Patterns
+         * @description Detect all active patterns.
+         *
+         *     Returns structural patterns across entities:
+         *     - Concentration (revenue, resource, communication)
+         *     - Cascade (blast radius, dependency chains)
+         *     - Degradation (quality, engagement erosion)
+         *     - Drift (workload, ownership)
+         *     - Correlation (load-quality, comm-payment)
+         */
+        get: operations["list_patterns_api_v2_intelligence_patterns_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/patterns/catalog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Pattern Catalog
+         * @description Get pattern library (all defined patterns with detection logic).
+         */
+        get: operations["pattern_catalog_api_v2_intelligence_patterns_catalog_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/portfolio/overview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Portfolio Overview
+         * @description Get portfolio overview with all clients and their operational metrics.
+         *
+         *     Returns clients with project_count, total_tasks, active_tasks,
+         *     invoice_count, total_invoiced, total_outstanding, etc.
+         */
+        get: operations["portfolio_overview_api_v2_intelligence_portfolio_overview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/portfolio/risks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Portfolio Risks
+         * @description Get structural risks across the portfolio.
+         *
+         *     Returns risks categorized as OVERDUE_PROJECT, OVERLOADED_PERSON,
+         *     AGING_INVOICE with severity (HIGH/MEDIUM/LOW) and evidence.
+         */
+        get: operations["portfolio_risks_api_v2_intelligence_portfolio_risks_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/portfolio/trajectory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Portfolio Trajectory
+         * @description Get trajectory analysis for all clients.
+         *
+         *     Shows direction of travel (increasing/stable/declining) for each client
+         *     based on rolling time windows.
+         */
+        get: operations["portfolio_trajectory_api_v2_intelligence_portfolio_trajectory_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/projects/health": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Projects Health
+         * @description Get all projects ranked by health score.
+         *
+         *     health_score = completion_rate - (overdue_ratio * 50)
+         *     Higher is healthier.
+         */
+        get: operations["projects_health_api_v2_intelligence_projects_health_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/projects/{project_id}/state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Project State
+         * @description Get operational state of a project.
+         *
+         *     Returns project info, task metrics (total, open, completed, overdue),
+         *     completion_rate_pct, and assigned people count.
+         */
+        get: operations["project_state_api_v2_intelligence_projects__project_id__state_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Proposals
+         * @description Get ranked proposals.
+         *
+         *     Returns proposals sorted by priority score with:
+         *     - Headline, summary, entity
+         *     - Evidence list
+         *     - Implied action
+         *     - Urgency and confidence
+         */
+        get: operations["list_proposals_api_v2_intelligence_proposals_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/scores/client/{client_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Client Score
+         * @description Get scorecard for a client.
+         *
+         *     Returns composite score and dimension scores:
+         *     - Operational health
+         *     - Financial health
+         *     - Communication health
+         *     - Engagement trajectory
+         */
+        get: operations["client_score_api_v2_intelligence_scores_client__client_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/scores/history/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Score History Summary
+         * @description Get summary of score history data collection.
+         *
+         *     Shows total records, breakdown by entity type, and recent recording activity.
+         *     Useful for monitoring data health.
+         */
+        get: operations["score_history_summary_api_v2_intelligence_scores_history_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/scores/person/{person_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Person Score
+         * @description Get scorecard for a person.
+         *
+         *     Returns composite score and dimension scores:
+         *     - Load balance
+         *     - Output consistency
+         *     - Spread
+         *     - Availability risk
+         */
+        get: operations["person_score_api_v2_intelligence_scores_person__person_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/scores/portfolio": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Portfolio Score
+         * @description Get portfolio scorecard.
+         *
+         *     Returns composite score and dimension scores:
+         *     - Revenue concentration
+         *     - Resource concentration
+         *     - Client health distribution
+         *     - Capacity utilization
+         */
+        get: operations["portfolio_score_api_v2_intelligence_scores_portfolio_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/scores/project/{project_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Project Score
+         * @description Get scorecard for a project.
+         *
+         *     Returns composite score and dimension scores:
+         *     - Velocity
+         *     - Risk exposure
+         *     - Team coverage
+         *     - Scope control
+         */
+        get: operations["project_score_api_v2_intelligence_scores_project__project_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/scores/record": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record Scores
+         * @description Record current scores for all entities.
+         *
+         *     This endpoint triggers score recording for trend tracking.
+         *     Should be called once per day (e.g., via cron).
+         *
+         *     Returns counts of recorded scores by entity type.
+         */
+        post: operations["record_scores_api_v2_intelligence_scores_record_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/scores/{entity_type}/{entity_id}/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Score History
+         * @description Get score history for an entity.
+         *
+         *     Returns historical scores with trend analysis:
+         *     - history: list of {date, score, classification}
+         *     - trend: 'improving', 'declining', 'stable', or 'insufficient_data'
+         *     - change_pct: percentage change over the period
+         *     - current_score, period_high, period_low
+         */
+        get: operations["score_history_api_v2_intelligence_scores__entity_type___entity_id__history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/signals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Signals
+         * @description Detect all active signals.
+         *
+         *     Returns signals with severity, entity, evidence, and implied action.
+         */
+        get: operations["list_signals_api_v2_intelligence_signals_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/signals/active": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Active Signals
+         * @description Get currently active signals from state tracking.
+         */
+        get: operations["active_signals_api_v2_intelligence_signals_active_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/signals/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Export Signals
+         * @description Export all current signal detections as CSV for threshold tuning review.
+         *
+         *     Returns CSV data with signal_id, severity, entity, metric,
+         *     current_value, threshold_value, etc.
+         */
+        get: operations["export_signals_api_v2_intelligence_signals_export_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/signals/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Signal History
+         * @description Get signal history for an entity.
+         */
+        get: operations["signal_history_api_v2_intelligence_signals_history_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/signals/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Signals Summary
+         * @description Get signal summary (counts by severity and state).
+         */
+        get: operations["signals_summary_api_v2_intelligence_signals_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/signals/thresholds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Thresholds
+         * @description Get current threshold configuration for all signals.
+         */
+        get: operations["get_thresholds_api_v2_intelligence_signals_thresholds_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/snapshot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Intelligence Snapshot
+         * @description Get complete intelligence snapshot.
+         *
+         *     Runs the full intelligence pipeline:
+         *     - Scores all entities
+         *     - Detects all signals
+         *     - Detects all patterns
+         *     - Generates and ranks proposals
+         *     - Produces daily briefing
+         *
+         *     This is a heavy endpoint (~45s). Use targeted endpoints for faster responses.
+         */
+        get: operations["intelligence_snapshot_api_v2_intelligence_snapshot_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/team/capacity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Team Capacity
+         * @description Get team capacity overview.
+         *
+         *     Returns total_people, total_active_tasks, avg_tasks_per_person,
+         *     people_overloaded, people_available, and full distribution.
+         */
+        get: operations["team_capacity_api_v2_intelligence_team_capacity_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/team/distribution": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Team Distribution
+         * @description Get team load distribution.
+         *
+         *     Returns list of people with assigned_tasks, active_tasks,
+         *     project_count, and computed load_score (0-100).
+         */
+        get: operations["team_distribution_api_v2_intelligence_team_distribution_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/team/{person_id}/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Team Person Profile
+         * @description Get operational profile for a person.
+         *
+         *     Returns person info, load metrics, projects they're on,
+         *     and clients they work with.
+         */
+        get: operations["team_person_profile_api_v2_intelligence_team__person_id__profile_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/team/{person_id}/trajectory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Team Person Trajectory
+         * @description Get trajectory analysis for a person.
+         *
+         *     Shows load and activity over rolling time windows with trend analysis.
+         */
+        get: operations["team_person_trajectory_api_v2_intelligence_team__person_id__trajectory_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/invoices": {
         parameters: {
             query?: never;
@@ -8112,6 +9034,1098 @@ export interface operations {
             };
             path: {
                 item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    daily_briefing_api_v2_intelligence_briefing_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    detect_changes_api_v2_intelligence_changes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    clients_compare_api_v2_intelligence_clients_compare_get: {
+        parameters: {
+            query: {
+                /** @description Period A start date (ISO) */
+                period_a_start: string;
+                /** @description Period A end date (ISO) */
+                period_a_end: string;
+                /** @description Period B start date (ISO) */
+                period_b_start: string;
+                /** @description Period B end date (ISO) */
+                period_b_end: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    client_communication_api_v2_intelligence_clients__client_id__communication_get: {
+        parameters: {
+            query?: {
+                /** @description Start date (ISO format) */
+                since?: string | null;
+                /** @description End date (ISO format) */
+                until?: string | null;
+            };
+            header?: never;
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    client_compare_api_v2_intelligence_clients__client_id__compare_get: {
+        parameters: {
+            query: {
+                /** @description Period A start date (ISO) */
+                period_a_start: string;
+                /** @description Period A end date (ISO) */
+                period_a_end: string;
+                /** @description Period B start date (ISO) */
+                period_b_start: string;
+                /** @description Period B end date (ISO) */
+                period_b_end: string;
+            };
+            header?: never;
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    client_profile_api_v2_intelligence_clients__client_id__profile_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    client_tasks_api_v2_intelligence_clients__client_id__tasks_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    client_trajectory_api_v2_intelligence_clients__client_id__trajectory_get: {
+        parameters: {
+            query?: {
+                /** @description Size of each time window in days */
+                window_days?: number;
+                /** @description Number of windows to analyze */
+                num_windows?: number;
+            };
+            header?: never;
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    critical_items_api_v2_intelligence_critical_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    client_intelligence_api_v2_intelligence_entity_client__client_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    person_intelligence_api_v2_intelligence_entity_person__person_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    portfolio_intelligence_api_v2_intelligence_entity_portfolio_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    financial_aging_api_v2_intelligence_financial_aging_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    list_patterns_api_v2_intelligence_patterns_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    pattern_catalog_api_v2_intelligence_patterns_catalog_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    portfolio_overview_api_v2_intelligence_portfolio_overview_get: {
+        parameters: {
+            query?: {
+                /** @description Field to sort by */
+                order_by?: string;
+                /** @description Sort descending */
+                desc?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    portfolio_risks_api_v2_intelligence_portfolio_risks_get: {
+        parameters: {
+            query?: {
+                /** @description Min overdue tasks to flag project */
+                overdue_threshold?: number;
+                /** @description Days overdue to flag invoice */
+                aging_threshold?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    portfolio_trajectory_api_v2_intelligence_portfolio_trajectory_get: {
+        parameters: {
+            query?: {
+                /** @description Size of each time window in days */
+                window_days?: number;
+                /** @description Number of windows to analyze */
+                num_windows?: number;
+                /** @description Minimum activity to include client */
+                min_activity?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    projects_health_api_v2_intelligence_projects_health_get: {
+        parameters: {
+            query?: {
+                /** @description Minimum tasks to include project */
+                min_tasks?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    project_state_api_v2_intelligence_projects__project_id__state_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_proposals_api_v2_intelligence_proposals_get: {
+        parameters: {
+            query?: {
+                /** @description Max proposals to return */
+                limit?: number;
+                /** @description Filter by urgency (immediate, this_week, monitor) */
+                urgency?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    client_score_api_v2_intelligence_scores_client__client_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    score_history_summary_api_v2_intelligence_scores_history_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    person_score_api_v2_intelligence_scores_person__person_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    portfolio_score_api_v2_intelligence_scores_portfolio_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    project_score_api_v2_intelligence_scores_project__project_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    record_scores_api_v2_intelligence_scores_record_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    score_history_api_v2_intelligence_scores__entity_type___entity_id__history_get: {
+        parameters: {
+            query?: {
+                /** @description Number of days of history */
+                days?: number;
+            };
+            header?: never;
+            path: {
+                entity_type: string;
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_signals_api_v2_intelligence_signals_get: {
+        parameters: {
+            query?: {
+                /** @description Use quick mode (sample portfolio) */
+                quick?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    active_signals_api_v2_intelligence_signals_active_get: {
+        parameters: {
+            query?: {
+                /** @description Filter by entity type */
+                entity_type?: string | null;
+                /** @description Filter by entity ID */
+                entity_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_signals_api_v2_intelligence_signals_export_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    signal_history_api_v2_intelligence_signals_history_get: {
+        parameters: {
+            query: {
+                /** @description Entity type (client, project, person) */
+                entity_type: string;
+                /** @description Entity ID */
+                entity_id: string;
+                /** @description Max records to return */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    signals_summary_api_v2_intelligence_signals_summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    get_thresholds_api_v2_intelligence_signals_thresholds_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    intelligence_snapshot_api_v2_intelligence_snapshot_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    team_capacity_api_v2_intelligence_team_capacity_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    team_distribution_api_v2_intelligence_team_distribution_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+        };
+    };
+    team_person_profile_api_v2_intelligence_team__person_id__profile_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    team_person_trajectory_api_v2_intelligence_team__person_id__trajectory_get: {
+        parameters: {
+            query?: {
+                /** @description Size of each time window in days */
+                window_days?: number;
+                /** @description Number of windows to analyze */
+                num_windows?: number;
+            };
+            header?: never;
+            path: {
+                person_id: string;
             };
             cookie?: never;
         };

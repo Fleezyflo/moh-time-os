@@ -20,6 +20,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
+from lib.paths import db_path as get_db_path_from_lib
+
 logger = logging.getLogger(__name__)
 
 
@@ -59,8 +61,8 @@ class Notification:
         }
 
 
-# Default DB path
-DEFAULT_DB = Path(__file__).parent.parent.parent / "data" / "moh_time_os.db"
+# Default DB path from lib.paths
+DEFAULT_DB = get_db_path_from_lib()
 
 
 def _get_db_path(db_path: Optional[Path] = None) -> Path:

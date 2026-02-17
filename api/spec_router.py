@@ -116,16 +116,10 @@ class IssueTransitionRequest(BaseModel):
 
 @spec_router.get("/clients")
 async def get_clients(
-    status: str | None = Query(
-        None, description="Filter by status: active|recently_active|cold"
-    ),
+    status: str | None = Query(None, description="Filter by status: active|recently_active|cold"),
     tier: str | None = Query(None, description="Filter by tier"),
-    has_issues: bool | None = Query(
-        None, description="Filter clients with open issues"
-    ),
-    has_overdue_ar: bool | None = Query(
-        None, description="Filter clients with overdue AR"
-    ),
+    has_issues: bool | None = Query(None, description="Filter clients with open issues"),
+    has_overdue_ar: bool | None = Query(None, description="Filter clients with overdue AR"),
 ):
     """
     GET /api/v2/clients
@@ -153,9 +147,7 @@ async def get_clients(
 @spec_router.get("/clients/{client_id}")
 async def get_client_detail(
     client_id: str,
-    include: str | None = Query(
-        None, description="Comma-separated sections to include"
-    ),
+    include: str | None = Query(None, description="Comma-separated sections to include"),
 ):
     """
     GET /api/v2/clients/:id
@@ -168,9 +160,7 @@ async def get_client_detail(
         include_sections = include.split(",") if include else None
         result, error_code = endpoints.get_client_detail(client_id, include_sections)
         if error_code:
-            raise HTTPException(
-                status_code=error_code, detail=result.get("error", "Error")
-            )
+            raise HTTPException(status_code=error_code, detail=result.get("error", "Error"))
         if not result:
             raise HTTPException(status_code=404, detail="Client not found")
         return result
@@ -222,9 +212,7 @@ async def get_client_invoices(
     conn = get_db()
     try:
         endpoints = FinancialsEndpoints(conn)
-        return endpoints.get_invoices(
-            client_id, {"status": status, "page": page, "limit": limit}
-        )
+        return endpoints.get_invoices(client_id, {"status": status, "page": page, "limit": limit})
     finally:
         conn.close()
 
@@ -256,9 +244,7 @@ async def get_inbox(
     severity: str | None = Query(None, description="Filter by severity"),
     client_id: str | None = Query(None, description="Filter by client"),
     unread_only: bool | None = Query(None, description="Only unread items"),
-    sort: str | None = Query(
-        "severity", description="Sort by: severity|age|age_desc|client"
-    ),
+    sort: str | None = Query("severity", description="Sort by: severity|age|age_desc|client"),
 ):
     """
     GET /api/v2/inbox
@@ -368,9 +354,7 @@ async def execute_inbox_action(
         # Remove None values
         payload = {k: v for k, v in payload.items() if v is not None}
 
-        result, error_code = endpoints.execute_action(
-            item_id, request.action, payload, actor
-        )
+        result, error_code = endpoints.execute_action(item_id, request.action, payload, actor)
 
         if error_code:
             raise HTTPException(status_code=error_code, detail=result)
@@ -400,9 +384,7 @@ async def mark_inbox_read(
         success = lifecycle.mark_read(item_id, actor)
 
         if not success:
-            raise HTTPException(
-                status_code=404, detail="Inbox item not found or already terminal"
-            )
+            raise HTTPException(status_code=404, detail="Inbox item not found or already terminal")
 
         conn.commit()
         return {"success": True, "read_at": now_iso(), "request_id": request_id}
@@ -472,9 +454,7 @@ async def get_issues(
             issue = dict(row)
             # Add available_actions
             try:
-                issue["available_actions"] = AVAILABLE_ACTIONS.get(
-                    IssueState(issue["state"]), []
-                )
+                issue["available_actions"] = AVAILABLE_ACTIONS.get(IssueState(issue["state"]), [])
             except ValueError:
                 issue["available_actions"] = []
             issues.append(issue)
@@ -501,9 +481,7 @@ async def get_issue(issue_id: str):
 
         # Add available_actions
         try:
-            issue["available_actions"] = AVAILABLE_ACTIONS.get(
-                IssueState(issue["state"]), []
-            )
+            issue["available_actions"] = AVAILABLE_ACTIONS.get(IssueState(issue["state"]), [])
         except ValueError:
             issue["available_actions"] = []
 
@@ -810,9 +788,7 @@ async def get_engagements(
             eng = dict(row)
             # Add available_actions
             try:
-                eng["available_actions"] = AVAILABLE_ACTIONS.get(
-                    EngagementState(eng["state"]), []
-                )
+                eng["available_actions"] = AVAILABLE_ACTIONS.get(EngagementState(eng["state"]), [])
             except ValueError:
                 eng["available_actions"] = []
             engagements.append(eng)
@@ -869,9 +845,7 @@ async def get_engagement(engagement_id: str):
             engagement["available_actions"] = []
 
         # Add transition history
-        engagement["transition_history"] = lifecycle.get_transition_history(
-            engagement_id, limit=10
-        )
+        engagement["transition_history"] = lifecycle.get_transition_history(engagement_id, limit=10)
 
         return engagement
     finally:

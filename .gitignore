@@ -56,7 +56,6 @@ logs/
 **/.DS_Store
 
 # Lock files (regenerable)
-uv.lock
 
 # Agent runtime state
 agent_state.json

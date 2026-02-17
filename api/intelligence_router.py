@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 intelligence_router = APIRouter(tags=["Intelligence"])
 
 # Singleton query engine
-_engine: Optional[QueryEngine] = None
+_engine: QueryEngine | None = None
 
 
 def get_engine() -> QueryEngine:
@@ -75,7 +75,7 @@ def portfolio_overview(
         return _wrap_response(data, {"order_by": order_by, "desc": desc})
     except Exception as e:
         logger.exception("portfolio_overview failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @intelligence_router.get("/portfolio/risks")
@@ -101,7 +101,7 @@ def portfolio_risks(
         )
     except Exception as e:
         logger.exception("portfolio_risks failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @intelligence_router.get("/portfolio/trajectory")
@@ -133,7 +133,7 @@ def portfolio_trajectory(
         )
     except Exception as e:
         logger.exception("portfolio_trajectory failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # =============================================================================
@@ -159,7 +159,7 @@ def client_profile(client_id: str):
         raise
     except Exception as e:
         logger.exception("client_profile failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @intelligence_router.get("/clients/{client_id}/tasks")
@@ -176,14 +176,14 @@ def client_tasks(client_id: str):
         return _wrap_response(data, {"client_id": client_id})
     except Exception as e:
         logger.exception("client_tasks failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @intelligence_router.get("/clients/{client_id}/communication")
 def client_communication(
     client_id: str,
-    since: Optional[str] = Query(None, description="Start date (ISO format)"),
-    until: Optional[str] = Query(None, description="End date (ISO format)"),
+    since: str | None = Query(None, description="Start date (ISO format)"),
+    until: str | None = Query(None, description="End date (ISO format)"),
 ):
     """
     Get communication metrics for a client.
@@ -196,7 +196,7 @@ def client_communication(
         return _wrap_response(data, {"client_id": client_id, "since": since, "until": until})
     except Exception as e:
         logger.exception("client_communication failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @intelligence_router.get("/clients/{client_id}/trajectory")
@@ -224,7 +224,7 @@ def client_trajectory(
         )
     except Exception as e:
         logger.exception("client_trajectory failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @intelligence_router.get("/clients/{client_id}/compare")
@@ -257,7 +257,7 @@ def client_compare(
         )
     except Exception as e:
         logger.exception("client_compare failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @intelligence_router.get("/clients/compare")
@@ -287,7 +287,7 @@ def clients_compare(
         )
     except Exception as e:
         logger.exception("clients_compare failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # =============================================================================
@@ -309,7 +309,7 @@ def team_distribution():
         return _wrap_response(data)
     except Exception as e:
         logger.exception("team_distribution failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @intelligence_router.get("/team/capacity")
@@ -326,7 +326,7 @@ def team_capacity():
         return _wrap_response(data)
     except Exception as e:
         logger.exception("team_capacity failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @intelligence_router.get("/team/{person_id}/profile")
@@ -347,7 +347,7 @@ def team_person_profile(person_id: str):
         raise
     except Exception as e:
         logger.exception("team_person_profile failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @intelligence_router.get("/team/{person_id}/trajectory")
@@ -374,7 +374,7 @@ def team_person_trajectory(
         )
     except Exception as e:
         logger.exception("team_person_trajectory failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # =============================================================================
@@ -400,7 +400,7 @@ def project_state(project_id: str):
         raise
     except Exception as e:
         logger.exception("project_state failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @intelligence_router.get("/projects/health")
@@ -419,7 +419,7 @@ def projects_health(
         return _wrap_response(data, {"min_tasks": min_tasks})
     except Exception as e:
         logger.exception("projects_health failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # =============================================================================
@@ -441,7 +441,7 @@ def financial_aging():
         return _wrap_response(data)
     except Exception as e:
         logger.exception("financial_aging failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # =============================================================================
@@ -465,11 +465,12 @@ def intelligence_snapshot():
     """
     try:
         from lib.intelligence import generate_intelligence_snapshot
+
         data = generate_intelligence_snapshot()
         return _wrap_response(data)
     except Exception as e:
         logger.exception("intelligence_snapshot failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @intelligence_router.get("/critical")
@@ -482,11 +483,12 @@ def critical_items():
     """
     try:
         from lib.intelligence import get_critical_items
+
         data = get_critical_items()
         return _wrap_response(data)
     except Exception as e:
         logger.exception("critical_items failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @intelligence_router.get("/briefing")
@@ -504,10 +506,10 @@ def daily_briefing():
     """
     try:
         from lib.intelligence import (
-            detect_all_signals,
             detect_all_patterns,
-            generate_proposals,
+            detect_all_signals,
             generate_daily_briefing,
+            generate_proposals,
         )
 
         signals = detect_all_signals(quick=True)
@@ -522,7 +524,7 @@ def daily_briefing():
         return _wrap_response(briefing)
     except Exception as e:
         logger.exception("daily_briefing failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # =============================================================================
@@ -541,11 +543,12 @@ def list_signals(
     """
     try:
         from lib.intelligence import detect_all_signals
+
         data = detect_all_signals(quick=quick)
         return _wrap_response(data, {"quick": quick})
     except Exception as e:
         logger.exception("list_signals failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @intelligence_router.get("/signals/summary")
@@ -555,28 +558,30 @@ def signals_summary():
     """
     try:
         from lib.intelligence.signals import get_signal_summary
+
         data = get_signal_summary()
         return _wrap_response(data)
     except Exception as e:
         logger.exception("signals_summary failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @intelligence_router.get("/signals/active")
 def active_signals(
-    entity_type: Optional[str] = Query(None, description="Filter by entity type"),
-    entity_id: Optional[str] = Query(None, description="Filter by entity ID"),
+    entity_type: str | None = Query(None, description="Filter by entity type"),
+    entity_id: str | None = Query(None, description="Filter by entity ID"),
 ):
     """
     Get currently active signals from state tracking.
     """
     try:
         from lib.intelligence.signals import get_active_signals
+
         data = get_active_signals(entity_type=entity_type, entity_id=entity_id)
         return _wrap_response(data, {"entity_type": entity_type, "entity_id": entity_id})
     except Exception as e:
         logger.exception("active_signals failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @intelligence_router.get("/signals/history")
@@ -590,11 +595,14 @@ def signal_history(
     """
     try:
         from lib.intelligence.signals import get_signal_history
+
         data = get_signal_history(entity_type=entity_type, entity_id=entity_id, limit=limit)
-        return _wrap_response(data, {"entity_type": entity_type, "entity_id": entity_id, "limit": limit})
+        return _wrap_response(
+            data, {"entity_type": entity_type, "entity_id": entity_id, "limit": limit}
+        )
     except Exception as e:
         logger.exception("signal_history failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @intelligence_router.get("/signals/export")
@@ -606,18 +614,19 @@ def export_signals():
     current_value, threshold_value, etc.
     """
     try:
-        from lib.intelligence.signals import export_signals_for_review
         from fastapi.responses import PlainTextResponse
+
+        from lib.intelligence.signals import export_signals_for_review
 
         csv_data = export_signals_for_review()
         return PlainTextResponse(
             content=csv_data,
             media_type="text/csv",
-            headers={"Content-Disposition": "attachment; filename=signals_export.csv"}
+            headers={"Content-Disposition": "attachment; filename=signals_export.csv"},
         )
     except Exception as e:
         logger.exception("export_signals failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @intelligence_router.get("/signals/thresholds")
@@ -627,11 +636,12 @@ def get_thresholds():
     """
     try:
         from lib.intelligence.signals import load_thresholds
+
         data = load_thresholds()
         return _wrap_response(data)
     except Exception as e:
         logger.exception("get_thresholds failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # =============================================================================
@@ -653,11 +663,12 @@ def list_patterns():
     """
     try:
         from lib.intelligence import detect_all_patterns
+
         data = detect_all_patterns()
         return _wrap_response(data)
     except Exception as e:
         logger.exception("list_patterns failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @intelligence_router.get("/patterns/catalog")
@@ -669,21 +680,23 @@ def pattern_catalog():
         from lib.intelligence.patterns import PATTERN_LIBRARY
 
         catalog = []
-        for pat_id, pat in PATTERN_LIBRARY.items():
-            catalog.append({
-                "id": pat.id,
-                "name": pat.name,
-                "description": pat.description,
-                "type": pat.pattern_type.value,
-                "severity": pat.severity.value,
-                "entities_involved": pat.entities_involved,
-                "implied_action": pat.implied_action,
-            })
+        for _pat_id, pat in PATTERN_LIBRARY.items():
+            catalog.append(
+                {
+                    "id": pat.id,
+                    "name": pat.name,
+                    "description": pat.description,
+                    "type": pat.pattern_type.value,
+                    "severity": pat.severity.value,
+                    "entities_involved": pat.entities_involved,
+                    "implied_action": pat.implied_action,
+                }
+            )
 
         return _wrap_response(catalog)
     except Exception as e:
         logger.exception("pattern_catalog failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # =============================================================================
@@ -694,7 +707,9 @@ def pattern_catalog():
 @intelligence_router.get("/proposals")
 def list_proposals(
     limit: int = Query(20, description="Max proposals to return"),
-    urgency: Optional[str] = Query(None, description="Filter by urgency (immediate, this_week, monitor)"),
+    urgency: str | None = Query(
+        None, description="Filter by urgency (immediate, this_week, monitor)"
+    ),
 ):
     """
     Get ranked proposals.
@@ -707,12 +722,12 @@ def list_proposals(
     """
     try:
         from lib.intelligence import (
-            detect_all_signals,
-            detect_all_patterns,
-            generate_proposals,
-            rank_proposals,
-            get_top_proposals,
             ProposalUrgency,
+            detect_all_patterns,
+            detect_all_signals,
+            generate_proposals,
+            get_top_proposals,
+            rank_proposals,
         )
 
         signals = detect_all_signals(quick=True)
@@ -729,22 +744,19 @@ def list_proposals(
                 target_urgency = ProposalUrgency(urgency)
                 proposals = [p for p in proposals if p.urgency == target_urgency]
             except ValueError:
-                raise HTTPException(status_code=400, detail=f"Invalid urgency: {urgency}")
+                raise HTTPException(status_code=400, detail=f"Invalid urgency: {urgency}") from None
 
         # Rank and limit
         top = get_top_proposals(proposals, n=limit)
 
-        result = [
-            {**p.to_dict(), "priority_score": s.to_dict()}
-            for p, s in top
-        ]
+        result = [{**p.to_dict(), "priority_score": s.to_dict()} for p, s in top]
 
         return _wrap_response(result, {"limit": limit, "urgency": urgency})
     except HTTPException:
         raise
     except Exception as e:
         logger.exception("list_proposals failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # =============================================================================
@@ -765,11 +777,12 @@ def client_score(client_id: str):
     """
     try:
         from lib.intelligence import score_client
+
         data = score_client(client_id)
         return _wrap_response(data, {"client_id": client_id})
     except Exception as e:
         logger.exception("client_score failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @intelligence_router.get("/scores/project/{project_id}")
@@ -785,11 +798,12 @@ def project_score(project_id: str):
     """
     try:
         from lib.intelligence import score_project
+
         data = score_project(project_id)
         return _wrap_response(data, {"project_id": project_id})
     except Exception as e:
         logger.exception("project_score failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @intelligence_router.get("/scores/person/{person_id}")
@@ -805,11 +819,12 @@ def person_score(person_id: str):
     """
     try:
         from lib.intelligence import score_person
+
         data = score_person(person_id)
         return _wrap_response(data, {"person_id": person_id})
     except Exception as e:
         logger.exception("person_score failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @intelligence_router.get("/scores/portfolio")
@@ -825,11 +840,12 @@ def portfolio_score():
     """
     try:
         from lib.intelligence import score_portfolio
+
         data = score_portfolio()
         return _wrap_response(data)
     except Exception as e:
         logger.exception("portfolio_score failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # =============================================================================
@@ -855,17 +871,19 @@ def score_history(
     valid_types = {"client", "project", "person", "portfolio"}
     if entity_type not in valid_types:
         raise HTTPException(
-            status_code=400,
-            detail=f"Invalid entity_type. Must be one of: {valid_types}"
+            status_code=400, detail=f"Invalid entity_type. Must be one of: {valid_types}"
         )
 
     try:
         from lib.intelligence.scorecard import get_score_trend
+
         data = get_score_trend(entity_type, entity_id, days=days)
-        return _wrap_response(data, {"entity_type": entity_type, "entity_id": entity_id, "days": days})
+        return _wrap_response(
+            data, {"entity_type": entity_type, "entity_id": entity_id, "days": days}
+        )
     except Exception as e:
         logger.exception("score_history failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @intelligence_router.get("/scores/history/summary")
@@ -878,11 +896,12 @@ def score_history_summary():
     """
     try:
         from lib.intelligence.scorecard import get_score_history_summary
+
         data = get_score_history_summary()
         return _wrap_response(data)
     except Exception as e:
         logger.exception("score_history_summary failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @intelligence_router.post("/scores/record")
@@ -897,11 +916,12 @@ def record_scores():
     """
     try:
         from lib.intelligence.scorecard import record_all_scores
+
         data = record_all_scores()
         return _wrap_response(data)
     except Exception as e:
         logger.exception("record_scores failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # =============================================================================
@@ -923,11 +943,12 @@ def client_intelligence(client_id: str):
     """
     try:
         from lib.intelligence import get_client_intelligence
+
         data = get_client_intelligence(client_id)
         return _wrap_response(data, {"client_id": client_id})
     except Exception as e:
         logger.exception("client_intelligence failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @intelligence_router.get("/entity/person/{person_id}")
@@ -943,11 +964,12 @@ def person_intelligence(person_id: str):
     """
     try:
         from lib.intelligence import get_person_intelligence
+
         data = get_person_intelligence(person_id)
         return _wrap_response(data, {"person_id": person_id})
     except Exception as e:
         logger.exception("person_intelligence failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @intelligence_router.get("/entity/portfolio")
@@ -963,11 +985,12 @@ def portfolio_intelligence():
     """
     try:
         from lib.intelligence import get_portfolio_intelligence
+
         data = get_portfolio_intelligence()
         return _wrap_response(data)
     except Exception as e:
         logger.exception("portfolio_intelligence failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # =============================================================================
@@ -992,11 +1015,13 @@ def detect_changes():
         # Run change detection
         changes = run_change_detection(snapshot)
 
-        return _wrap_response({
-            "changes": changes.to_dict(),
-            "summary": changes.summary,
-            "has_changes": changes.has_changes,
-        })
+        return _wrap_response(
+            {
+                "changes": changes.to_dict(),
+                "summary": changes.summary,
+                "has_changes": changes.has_changes,
+            }
+        )
     except Exception as e:
         logger.exception("detect_changes failed")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e

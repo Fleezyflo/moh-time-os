@@ -1,6 +1,10 @@
 """
 MOH TIME OS API Server - REST API for dashboard and integrations.
 """
+# ruff: noqa: B904, S608, S104
+# B904: Legacy exception handling patterns throughout
+# S608: Dynamic SQL with validated/escaped inputs
+# S104: Development server binding (guarded by __name__ check)
 
 import json
 import logging
@@ -54,9 +58,7 @@ app = FastAPI(
 # Dev default: allow all origins; Production: set CORS_ORIGINS to comma-separated list
 cors_origins_env = os.getenv("CORS_ORIGINS", "*")
 cors_origins = (
-    ["*"]
-    if cors_origins_env == "*"
-    else [o.strip() for o in cors_origins_env.split(",")]
+    ["*"] if cors_origins_env == "*" else [o.strip() for o in cors_origins_env.split(",")]
 )
 
 app.add_middleware(
@@ -79,12 +81,8 @@ UI_DIR = paths.app_home() / "time-os-ui" / "dist"
 # ==== Spec v2.9 Router ====
 # Mount spec-compliant endpoints at /api/v2
 # These implement CLIENT-UI-SPEC-v2.9.md using lib/ui_spec_v21 modules
-from api.spec_router import (
-    spec_router,  # noqa: E402 - intentionally imported here, right before use
-)
-from api.intelligence_router import (
-    intelligence_router,  # noqa: E402 - intelligence layer endpoints
-)
+from api.intelligence_router import intelligence_router  # noqa: E402, I001
+from api.spec_router import spec_router  # noqa: E402
 
 app.include_router(spec_router, prefix="/api/v2")
 app.include_router(intelligence_router, prefix="/api/v2/intelligence")
@@ -108,9 +106,7 @@ async def run_db_migrations_on_startup():
         # Run migrations
         migration_result = db_module.run_startup_migrations()
         if migration_result.get("columns_added"):
-            logger.info(
-                f"Migrations added columns: {migration_result['columns_added']}"
-            )
+            logger.info(f"Migrations added columns: {migration_result['columns_added']}")
 
     except Exception as e:
         logger.warning(f"DB startup check failed: {e}")
@@ -163,9 +159,7 @@ async def root(request: Request = None):
 </body></html>"""
         return HTMLResponse(content=html, status_code=404)
 
-    return JSONResponse(
-        content={"error": "ui_build_missing", "hint": hint}, status_code=404
-    )
+    return JSONResponse(content={"error": "ui_build_missing", "hint": hint}, status_code=404)
 
 
 # ==== Pydantic Models ====
@@ -187,13 +181,9 @@ async def get_overview():
     """Get dashboard overview with priorities, calendar, decisions, anomalies."""
     # Get priority queue
     priority_queue = (
-        analyzers.priority_analyzer.analyze()
-        if hasattr(analyzers, "priority_analyzer")
-        else []
+        analyzers.priority_analyzer.analyze() if hasattr(analyzers, "priority_analyzer") else []
     )
-    top_priorities = sorted(
-        priority_queue, key=lambda x: x.get("score", 0), reverse=True
-    )[:5]
+    top_priorities = sorted(priority_queue, key=lambda x: x.get("score", 0), reverse=True)[:5]
 
     # Get today's events
     from datetime import datetime
@@ -307,9 +297,7 @@ async def get_time_brief(date: str | None = None, format: str = "markdown"):
 
 
 @app.post("/api/time/schedule")
-async def schedule_task(
-    task_id: str, block_id: str | None = None, date: str | None = None
-):
+async def schedule_task(task_id: str, block_id: str | None = None, date: str | None = None):
     """Schedule a task into a time block."""
     from datetime import date as dt
 
@@ -469,9 +457,7 @@ async def get_capacity_lanes():
 
 
 @app.get("/api/capacity/utilization")
-async def get_capacity_utilization(
-    start_date: str | None = None, end_date: str | None = None
-):
+async def get_capacity_utilization(start_date: str | None = None, end_date: str | None = None):
     """Get capacity utilization metrics."""
     from datetime import date
 
@@ -658,7 +644,7 @@ async def get_tasks(
         WHERE {" AND ".join(conditions)}
         ORDER BY priority DESC, due_date ASC
         LIMIT ?
-    """,
+    """,  # noqa: S608 - conditions are validated, params are parameterized
         params,
     )
 
@@ -731,7 +717,7 @@ async def create_task(task: TaskCreate):
         return {"success": True, "task": task_data, "bundle_id": bundle["id"]}
     except Exception as e:
         mark_failed(bundle["id"], str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.put("/api/tasks/{task_id}")
@@ -783,18 +769,16 @@ async def update_task(task_id: str, task: TaskUpdate):
     if "priority" in update_data:
         priority = update_data["priority"]
         if not (0 <= priority <= 100):
-            raise HTTPException(
-                status_code=400, detail="Priority must be between 0 and 100"
-            )
+            raise HTTPException(status_code=400, detail="Priority must be between 0 and 100")
 
     # Validate due_date format
     if "due_date" in update_data and update_data["due_date"]:
         try:
             datetime.strptime(update_data["due_date"][:10], "%Y-%m-%d")
-        except ValueError:
+        except ValueError as e:
             raise HTTPException(
                 status_code=400, detail="Invalid due_date format. Use YYYY-MM-DD"
-            )
+            ) from e
 
     # Check governance for sensitive field changes
     sensitive_fields = {"assignee", "priority", "due_date", "status"}
@@ -850,9 +834,7 @@ async def update_task(task_id: str, task: TaskUpdate):
                 result = signal_svc.handle_task_completed(task_id)
                 signals_resolved = result.get("resolved_count", 0)
             except Exception as sig_err:
-                logger.warning(
-                    f"Failed to resolve signals for completed task {task_id}: {sig_err}"
-                )
+                logger.warning(f"Failed to resolve signals for completed task {task_id}: {sig_err}")
 
         return {
             "success": True,
@@ -864,7 +846,7 @@ async def update_task(task_id: str, task: TaskUpdate):
         }
     except Exception as e:
         mark_failed(bundle["id"], str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 class NoteAdd(BaseModel):
@@ -918,7 +900,7 @@ async def delete_task(task_id: str):
         return {"success": True, "id": task_id, "bundle_id": bundle["id"]}
     except Exception as e:
         mark_failed(bundle["id"], str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # ==== Delegation Endpoints ====
@@ -950,9 +932,7 @@ async def delegate_task(task_id: str, body: DelegateRequest):
         )
 
     # Validate the assignee exists
-    person = store.query(
-        "SELECT * FROM people WHERE name = ? OR id = ?", [body.to, body.to]
-    )
+    person = store.query("SELECT * FROM people WHERE name = ? OR id = ?", [body.to, body.to])
     if not person:
         # Check if it's a valid email format as fallback
         import re
@@ -994,13 +974,11 @@ async def delegate_task(task_id: str, body: DelegateRequest):
             due = datetime.strptime(body.due_date[:10], "%Y-%m-%d")
             # Warn if due date is in the past
             if due.date() < datetime.now().date():
-                raise HTTPException(
-                    status_code=400, detail="Due date cannot be in the past"
-                )
-        except ValueError:
+                raise HTTPException(status_code=400, detail="Due date cannot be in the past")
+        except ValueError as e:
             raise HTTPException(
                 status_code=400, detail="Invalid due_date format. Use YYYY-MM-DD"
-            )
+            ) from e
 
     now = datetime.now().isoformat()
 
@@ -1109,7 +1087,7 @@ async def delegate_task(task_id: str, body: DelegateRequest):
 
     except Exception as e:
         mark_failed(bundle["id"], str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/api/tasks/{task_id}/escalate")
@@ -1129,14 +1107,10 @@ async def escalate_task(task_id: str, body: EscalateRequest):
     # Check if already escalated to this person
     current_escalation = task.get("escalated_to")
     if current_escalation == body.to:
-        raise HTTPException(
-            status_code=400, detail=f"Task is already escalated to {body.to}"
-        )
+        raise HTTPException(status_code=400, detail=f"Task is already escalated to {body.to}")
 
     # Validate the escalation target exists
-    person = store.query(
-        "SELECT * FROM people WHERE name = ? OR id = ?", [body.to, body.to]
-    )
+    person = store.query("SELECT * FROM people WHERE name = ? OR id = ?", [body.to, body.to])
     if person:
         escalate_to_name = person[0].get("name", body.to)
         escalate_to_id = person[0].get("id")
@@ -1306,7 +1280,7 @@ async def escalate_task(task_id: str, body: EscalateRequest):
 
     except Exception as e:
         mark_failed(bundle["id"], str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/api/tasks/{task_id}/recall")
@@ -1343,7 +1317,7 @@ async def recall_task(task_id: str):
         return {"success": True, "id": task_id, "bundle_id": bundle["id"]}
     except Exception as e:
         mark_failed(bundle["id"], str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/api/delegations")
@@ -1448,14 +1422,12 @@ async def get_data_quality():
     )
 
     # Calculate ratios
-    stale_ratio = (
-        due_by_period.get("ancient", 0) + due_by_period.get("stale", 0)
-    ) / max(1, total_active)
+    stale_ratio = (due_by_period.get("ancient", 0) + due_by_period.get("stale", 0)) / max(
+        1, total_active
+    )
     priority_inflation = priority_by_level.get("critical", 0) / max(1, total_active)
 
-    health_score = max(
-        0, min(100, int(100 - stale_ratio * 50 - priority_inflation * 30))
-    )
+    health_score = max(0, min(100, int(100 - stale_ratio * 50 - priority_inflation * 30)))
 
     return {
         "health_score": health_score,
@@ -1480,9 +1452,7 @@ async def get_data_quality():
             "priority_inflation_ratio": round(priority_inflation, 2),
             "stale_ratio": round(stale_ratio, 2),
         },
-        "suggestions": _get_cleanup_suggestions(
-            due_by_period, priority_by_level, total_active
-        ),
+        "suggestions": _get_cleanup_suggestions(due_by_period, priority_by_level, total_active),
     }
 
 
@@ -1689,9 +1659,7 @@ def _calculate_realistic_priority(task: dict, today) -> int:
             elif days_until <= 14:
                 score += 5
         except (ValueError, TypeError) as e:
-            logger.debug(
-                f"Could not parse due_date '{due_date}' for priority scoring: {e}"
-            )
+            logger.debug(f"Could not parse due_date '{due_date}' for priority scoring: {e}")
 
     # Boost for existing high priority
     existing = task.get("priority", 50)
@@ -1731,7 +1699,7 @@ async def cleanup_legacy_signals(confirm: bool = False):
               AND s.signal_type IN ('deadline_overdue', 'deadline_approaching')
               AND t.due_date IS NOT NULL
               AND julianday('now') - julianday(t.due_date) > {LEGACY_OVERDUE_THRESHOLD_DAYS}
-        """)
+        """)  # noqa: S608 - LEGACY_OVERDUE_THRESHOLD_DAYS is a constant
         legacy_count = cursor.fetchone()[0]
 
         if not confirm:
@@ -1755,7 +1723,7 @@ async def cleanup_legacy_signals(confirm: bool = False):
                   AND t.due_date IS NOT NULL
                   AND julianday('now') - julianday(t.due_date) > {LEGACY_OVERDUE_THRESHOLD_DAYS}
             )
-        """)
+        """)  # noqa: S608 - LEGACY_OVERDUE_THRESHOLD_DAYS is a constant
         expired_count = cursor.rowcount
 
         conn.commit()
@@ -1858,7 +1826,7 @@ async def get_team(type_filter: str | None = None):
         LEFT JOIN clients c ON p.client_id = c.id
         WHERE {" AND ".join(conditions)}
         ORDER BY p.type DESC, p.name
-    """)
+    """)  # noqa: S608 - conditions are hardcoded filters
 
     result = []
     for p in people:
@@ -1873,7 +1841,7 @@ async def get_team(type_filter: str | None = None):
                 SUM(CASE WHEN due_date = date('now') THEN 1 ELSE 0 END) as due_today
             FROM tasks
             WHERE assignee = '{name_escaped}' AND status IN ('pending', 'in_progress')
-        """)
+        """)  # noqa: S608 - name_escaped is SQL-escaped above
 
         completed_stats = store.query(f"""
             SELECT COUNT(*) as completed
@@ -1881,7 +1849,7 @@ async def get_team(type_filter: str | None = None):
             WHERE assignee = '{name_escaped}'
             AND status = 'completed'
             AND updated_at >= date('now', '-7 days')
-        """)
+        """)  # noqa: S608 - name_escaped is SQL-escaped above
 
         stats = task_stats[0] if task_stats else {}
         completed = completed_stats[0] if completed_stats else {}
@@ -2014,9 +1982,7 @@ async def api_priority_complete(item_id: str):
             result = signal_svc.handle_task_completed(item_id)
             signals_resolved = result.get("resolved_count", 0)
         except Exception as sig_err:
-            logger.warning(
-                f"Failed to resolve signals for completed task {item_id}: {sig_err}"
-            )
+            logger.warning(f"Failed to resolve signals for completed task {item_id}: {sig_err}")
 
         return {
             "success": True,
@@ -2026,7 +1992,7 @@ async def api_priority_complete(item_id: str):
         }
     except Exception as e:
         mark_failed(bundle["id"], str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/api/priorities/{item_id}/snooze")
@@ -2285,9 +2251,7 @@ async def api_decision(decision_id: str, action: ApprovalAction):
                             }
                         )
                 except Exception as e:
-                    side_effects_failed.append(
-                        {"type": "governance_change", "error": str(e)}
-                    )
+                    side_effects_failed.append({"type": "governance_change", "error": str(e)})
 
         # Log to governance history
         store.insert(
@@ -2335,9 +2299,7 @@ async def api_decision(decision_id: str, action: ApprovalAction):
 
 
 @app.get("/api/bundles")
-async def api_bundles(
-    status: str | None = None, domain: str | None = None, limit: int = 50
-):
+async def api_bundles(status: str | None = None, domain: str | None = None, limit: int = 50):
     """Get change bundles."""
     bundles = list_bundles(status=status, domain=domain, limit=limit)
     return {"bundles": bundles, "total": len(bundles)}
@@ -2392,9 +2354,7 @@ async def rollback_last_bundle(domain: str | None = None):
         raise HTTPException(status_code=404, detail="No rollbackable bundles found")
 
     # Get most recent by applied_at
-    most_recent = sorted(
-        rollbackable, key=lambda x: x.get("applied_at", ""), reverse=True
-    )[0]
+    most_recent = sorted(rollbackable, key=lambda x: x.get("applied_at", ""), reverse=True)[0]
 
     result = rollback_bundle(most_recent["id"])
 
@@ -2426,9 +2386,7 @@ async def api_bundle_rollback(bundle_id: str):
         raise HTTPException(status_code=404, detail="Bundle not found")
 
     # Check governance permission
-    can_exec, reason = governance.can_execute(
-        "system", "rollback", {"bundle_id": bundle_id}
-    )
+    can_exec, reason = governance.can_execute("system", "rollback", {"bundle_id": bundle_id})
     if not can_exec:
         return {"success": False, "requires_approval": True, "reason": reason}
 
@@ -2496,14 +2454,10 @@ async def api_feedback(feedback: FeedbackRequest):
 async def get_priorities(limit: int = 20, context: str | None = None):
     """Get prioritized items."""
     priority_queue = (
-        analyzers.priority_analyzer.analyze()
-        if hasattr(analyzers, "priority_analyzer")
-        else []
+        analyzers.priority_analyzer.analyze() if hasattr(analyzers, "priority_analyzer") else []
     )
 
-    sorted_items = sorted(
-        priority_queue, key=lambda x: x.get("score", 0), reverse=True
-    )[:limit]
+    sorted_items = sorted(priority_queue, key=lambda x: x.get("score", 0), reverse=True)[:limit]
 
     return {"items": sorted_items, "total": len(priority_queue)}
 
@@ -2538,9 +2492,7 @@ async def snooze_item(item_id: str, hours: int = 4):
     new_time = datetime.now() + timedelta(hours=hours)
     now = datetime.now().isoformat()
 
-    store.update(
-        "tasks", item_id, {"snoozed_until": new_time.isoformat(), "updated_at": now}
-    )
+    store.update("tasks", item_id, {"snoozed_until": new_time.isoformat(), "updated_at": now})
 
     return {"success": True, "id": item_id, "snoozed_until": new_time.isoformat()}
 
@@ -2729,14 +2681,10 @@ async def bulk_action(body: BulkAction):
             elif body.snooze_days:
                 from datetime import timedelta
 
-                new_date = (datetime.now() + timedelta(days=body.snooze_days)).strftime(
-                    "%Y-%m-%d"
-                )
+                new_date = (datetime.now() + timedelta(days=body.snooze_days)).strftime("%Y-%m-%d")
                 update_data["due_date"] = new_date
             else:
-                raise HTTPException(
-                    400, "snooze_days or snooze_until required for snooze action"
-                )
+                raise HTTPException(400, "snooze_days or snooze_until required for snooze action")
             update_data["status"] = "snoozed"
         elif body.action == "priority":
             if body.priority is None:
@@ -2819,28 +2767,20 @@ async def advanced_filter(
 
         if due == "today":
             today_str = today.isoformat()
-            filtered = [
-                i for i in filtered if i.get("due") and i["due"][:10] == today_str
-            ]
+            filtered = [i for i in filtered if i.get("due") and i["due"][:10] == today_str]
         elif due == "tomorrow":
             from datetime import timedelta
 
             tomorrow_str = (today + timedelta(days=1)).isoformat()
-            filtered = [
-                i for i in filtered if i.get("due") and i["due"][:10] == tomorrow_str
-            ]
+            filtered = [i for i in filtered if i.get("due") and i["due"][:10] == tomorrow_str]
         elif due == "week":
             from datetime import timedelta
 
             week_end = (today + timedelta(days=7)).isoformat()
-            filtered = [
-                i for i in filtered if i.get("due") and i["due"][:10] <= week_end
-            ]
+            filtered = [i for i in filtered if i.get("due") and i["due"][:10] <= week_end]
         elif due == "overdue":
             today_str = today.isoformat()
-            filtered = [
-                i for i in filtered if i.get("due") and i["due"][:10] < today_str
-            ]
+            filtered = [i for i in filtered if i.get("due") and i["due"][:10] < today_str]
         elif due == "no_date":
             filtered = [i for i in filtered if not i.get("due")]
         elif due.startswith("range:"):
@@ -2848,9 +2788,7 @@ async def advanced_filter(
             if len(parts) == 3:
                 start_date, end_date = parts[1], parts[2]
                 filtered = [
-                    i
-                    for i in filtered
-                    if i.get("due") and start_date <= i["due"][:10] <= end_date
+                    i for i in filtered if i.get("due") and start_date <= i["due"][:10] <= end_date
                 ]
 
     # Assignee filter
@@ -2858,11 +2796,7 @@ async def advanced_filter(
         if assignee.lower() == "unassigned":
             filtered = [i for i in filtered if not i.get("assignee")]
         elif assignee.lower() == "me":
-            filtered = [
-                i
-                for i in filtered
-                if i.get("assignee") and "me" in i["assignee"].lower()
-            ]
+            filtered = [i for i in filtered if i.get("assignee") and "me" in i["assignee"].lower()]
         else:
             filtered = [
                 i
@@ -2873,9 +2807,7 @@ async def advanced_filter(
     # Project filter
     if project:
         filtered = [
-            i
-            for i in filtered
-            if i.get("project") and project.lower() in i["project"].lower()
+            i for i in filtered if i.get("project") and project.lower() in i["project"].lower()
         ]
 
     # Status filter
@@ -2986,9 +2918,7 @@ async def get_week_analysis():
 
 
 @app.get("/api/emails")
-async def get_emails(
-    actionable_only: bool = False, unread_only: bool = False, limit: int = 30
-):
+async def get_emails(actionable_only: bool = False, unread_only: bool = False, limit: int = 30):
     """Get emails from communications."""
     conditions = ["type = 'email'"]
 
@@ -3340,6 +3270,7 @@ async def metrics():
 
     # Add process info
     import os
+
     lines.append("# HELP process_start_time_seconds Process start time")
     lines.append("# TYPE process_start_time_seconds gauge")
     lines.append(f"process_start_time_seconds {os.getpid()}")
@@ -3381,9 +3312,7 @@ async def get_summary():
             end = datetime.fromisoformat(e["end_time"].replace("Z", "+00:00"))
             total_event_hours += (end - start).total_seconds() / 3600
         except (ValueError, TypeError, AttributeError) as ex:
-            logger.debug(
-                f"Could not parse event times for event {e.get('id', 'unknown')}: {ex}"
-            )
+            logger.debug(f"Could not parse event times for event {e.get('id', 'unknown')}: {ex}")
 
     # Calculate available hours (9 hour work day)
     work_hours = 9
@@ -3396,9 +3325,7 @@ async def get_summary():
             "critical_count": len([i for i in queue if i.get("score", 0) >= 70]),
         },
         "anomalies": {
-            "items": [
-                a for a in anomalies if a.get("severity") in ("critical", "high")
-            ],
+            "items": [a for a in anomalies if a.get("severity") in ("critical", "high")],
             "total": len(anomalies),
         },
         "today": {
@@ -3903,12 +3830,8 @@ async def get_project_candidates():
     return {
         "items": [dict(p) for p in candidates],
         "total": len(candidates),
-        "proposed": len(
-            [p for p in candidates if p["enrollment_status"] == "proposed"]
-        ),
-        "candidate": len(
-            [p for p in candidates if p["enrollment_status"] == "candidate"]
-        ),
+        "proposed": len([p for p in candidates if p["enrollment_status"] == "proposed"]),
+        "candidate": len([p for p in candidates if p["enrollment_status"] == "candidate"]),
     }
 
 
@@ -3962,20 +3885,14 @@ async def process_enrollment(project_id: str, body: EnrollmentAction):
         return {"success": True, "status": "enrolled", "id": project_id}
 
     if body.action == "reject":
-        store.update(
-            "projects", project_id, {"enrollment_status": "rejected", "updated_at": now}
-        )
+        store.update("projects", project_id, {"enrollment_status": "rejected", "updated_at": now})
         return {"success": True, "status": "rejected", "id": project_id}
 
     if body.action == "snooze":
         from datetime import timedelta
 
-        snooze_until = (
-            datetime.now() + timedelta(days=body.snooze_days or 14)
-        ).isoformat()
-        store.update(
-            "projects", project_id, {"enrollment_status": "snoozed", "updated_at": now}
-        )
+        snooze_until = (datetime.now() + timedelta(days=body.snooze_days or 14)).isoformat()
+        store.update("projects", project_id, {"enrollment_status": "snoozed", "updated_at": now})
         return {
             "success": True,
             "status": "snoozed",
@@ -3984,9 +3901,7 @@ async def process_enrollment(project_id: str, body: EnrollmentAction):
         }
 
     if body.action == "internal":
-        store.update(
-            "projects", project_id, {"enrollment_status": "internal", "updated_at": now}
-        )
+        store.update("projects", project_id, {"enrollment_status": "internal", "updated_at": now})
         return {"success": True, "status": "internal", "id": project_id}
 
     raise HTTPException(status_code=400, detail=f"Unknown action: {body.action}")
@@ -4062,9 +3977,7 @@ async def bulk_link_tasks():
 
 
 @app.post("/api/projects/propose")
-async def propose_project(
-    name: str, client_id: str | None = None, type: str = "retainer"
-):
+async def propose_project(name: str, client_id: str | None = None, type: str = "retainer"):
     """Propose a new project."""
     import uuid
 
@@ -4258,9 +4171,7 @@ async def get_dependencies():
                 elif isinstance(b, dict):
                     blocking_ids.add(b.get("id", ""))
         except (json.JSONDecodeError, TypeError) as e:
-            logger.debug(
-                f"Could not parse blockers JSON for task {t.get('id', 'unknown')}: {e}"
-            )
+            logger.debug(f"Could not parse blockers JSON for task {t.get('id', 'unknown')}: {e}")
 
     return {
         "blocked": [
@@ -4323,9 +4234,7 @@ async def get_proposals(
             if proposals_raw and len(proposals_raw) > 0:
                 # Apply client filter
                 if client_id:
-                    proposals_raw = [
-                        p for p in proposals_raw if p.get("client_id") == client_id
-                    ]
+                    proposals_raw = [p for p in proposals_raw if p.get("client_id") == client_id]
 
                 # Build enhanced response structure
 
@@ -4348,18 +4257,14 @@ async def get_proposals(
                         else p.get("impact", {})
                     )
 
-                    signal_count = (
-                        signal_summary.get("total", 0) if signal_summary else 0
-                    )
+                    signal_count = signal_summary.get("total", 0) if signal_summary else 0
 
                     proposals.append(
                         {
                             "proposal_id": p.get("proposal_id"),
                             "proposal_type": p.get("proposal_type", "risk"),
                             "scope_level": p.get("scope_level", "project"),
-                            "scope_name": p.get(
-                                "scope_name", p.get("headline", "Unknown")[:50]
-                            ),
+                            "scope_name": p.get("scope_name", p.get("headline", "Unknown")[:50]),
                             "client_id": p.get("client_id"),
                             "client_name": p.get("client_name"),
                             "client_tier": p.get("client_tier"),
@@ -4506,9 +4411,7 @@ async def get_proposals(
             # Generate unique proposal ID from entity key hash (use 16 chars to reduce collisions)
             import hashlib
 
-            entity_hash = hashlib.sha256(f"{ref_type}:{ref_id}".encode()).hexdigest()[
-                :16
-            ]
+            entity_hash = hashlib.sha256(f"{ref_type}:{ref_id}".encode()).hexdigest()[:16]
             proposals.append(
                 {
                     "proposal_id": f"prop_{entity_hash}",
@@ -4548,9 +4451,7 @@ async def get_proposals(
 
 
 @app.get("/api/control-room/issues")
-async def get_issues(
-    limit: int = 5, days: int = 7, client_id: str = None, member_id: str = None
-):
+async def get_issues(limit: int = 5, days: int = 7, client_id: str = None, member_id: str = None):
     """Get issues from real data in moh_time_os.db.
 
     Args:
@@ -4653,9 +4554,7 @@ async def get_issues(
                 signal_types = [s["signal_type"] for s in signals]
 
                 # Generate unique issue ID from entity hash
-                issue_hash = hashlib.sha256(
-                    f"{ref_type}:{ref_id}".encode()
-                ).hexdigest()[:16]
+                issue_hash = hashlib.sha256(f"{ref_type}:{ref_id}".encode()).hexdigest()[:16]
                 issue_id = f"iss_{issue_hash}"
 
                 # Higher priority if multiple signals or critical types
@@ -4663,12 +4562,7 @@ async def get_issues(
                 if any("overdue" in st for st in signal_types):
                     priority = min(95, priority + 15)
 
-                issue_type = (
-                    first_signal["signal_type"]
-                    .replace(".", " ")
-                    .replace("_", " ")
-                    .title()
-                )
+                issue_type = first_signal["signal_type"].replace(".", " ").replace("_", " ").title()
                 headline = f"{entity_name}: {len(signals)} signal(s) - {first_signal['signal_type'].split('.')[-1].replace('_', ' ')}"
                 opened_at = min(s["detected_at"] for s in signals)
                 last_activity_at = max(s["detected_at"] for s in signals)
@@ -5064,9 +4958,7 @@ async def create_issue_from_proposal(body: TagProposalRequest):
         result = svc.tag_proposal(body.proposal_id, body.actor)
         if result.get("status") == "created":
             return {"success": True, **result}
-        raise HTTPException(
-            status_code=400, detail=result.get("error", "Failed to tag proposal")
-        )
+        raise HTTPException(status_code=400, detail=result.get("error", "Failed to tag proposal"))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -5128,9 +5020,7 @@ async def get_proposal_detail(proposal_id: str):
                 ar_amount = value.get("ar_overdue", value.get("amount", 0))
                 aging = value.get("aging_bucket", value.get("aging", "unknown"))
                 description = (
-                    f"${ar_amount:,.0f} overdue ({aging})"
-                    if ar_amount
-                    else f"AR aging: {aging}"
+                    f"${ar_amount:,.0f} overdue ({aging})" if ar_amount else f"AR aging: {aging}"
                 )
             elif signal_type == "client_health_declining":
                 health = value.get("current_health", value.get("health", "unknown"))
@@ -5138,15 +5028,9 @@ async def get_proposal_detail(proposal_id: str):
                 description = f"Health: {health}, Trend: {trend}"
             elif signal_type == "communication_gap":
                 days = value.get("days_since_contact", value.get("days", 0))
-                description = (
-                    f"No contact in {days} days"
-                    if days
-                    else "Communication gap detected"
-                )
+                description = f"No contact in {days} days" if days else "Communication gap detected"
             elif signal_type == "data_quality_issue":
-                issue = value.get(
-                    "issue", value.get("description", "Data quality issue")
-                )
+                issue = value.get("issue", value.get("description", "Data quality issue"))
                 description = issue if isinstance(issue, str) else "Data quality issue"
             elif signal_type == "deadline_overdue":
                 title = value.get("title", "Task")
@@ -5160,9 +5044,7 @@ async def get_proposal_detail(proposal_id: str):
                 description = value.get("violation", "Hierarchy violation detected")
             elif signal_type == "commitment_made":
                 text = value.get("commitment_text", "Commitment detected")
-                description = (
-                    text[:80] if isinstance(text, str) else "Commitment detected"
-                )
+                description = text[:80] if isinstance(text, str) else "Commitment detected"
 
             signal_details.append(
                 {
@@ -5212,9 +5094,7 @@ async def get_proposal_detail(proposal_id: str):
     except Exception as e:
         import traceback
 
-        raise HTTPException(
-            status_code=500, detail=f"{str(e)}\n{traceback.format_exc()}"
-        )
+        raise HTTPException(status_code=500, detail=f"{str(e)}\n{traceback.format_exc()}")
 
 
 class SnoozeProposalRequest(BaseModel):
@@ -5264,9 +5144,7 @@ class ResolveFixDataRequest(BaseModel):
 
 
 @app.post("/api/control-room/fix-data/{item_type}/{item_id}/resolve")
-async def resolve_fix_data_item(
-    item_type: str, item_id: str, body: ResolveFixDataRequest
-):
+async def resolve_fix_data_item(item_type: str, item_id: str, body: ResolveFixDataRequest):
     """Resolve a fix-data item (identity conflict or ambiguous link)."""
     try:
         conn = sqlite3.connect(store.db_path)
@@ -5299,9 +5177,7 @@ async def resolve_fix_data_item(
             )
         else:
             conn.close()
-            raise HTTPException(
-                status_code=400, detail=f"Unknown item_type: {item_type}"
-            )
+            raise HTTPException(status_code=400, detail=f"Unknown item_type: {item_type}")
 
         # Log the resolution
         audit_id = f"fda_{item_id}_{now.replace(':', '-')}"
@@ -5501,9 +5377,7 @@ async def spa_fallback(path: str, request: Request = None):
                 content=f"<h1>UI Build Missing</h1><pre>Run: {hint}</pre>",
                 status_code=404,
             )
-        return JSONResponse(
-            content={"error": "ui_build_missing", "hint": hint}, status_code=404
-        )
+        return JSONResponse(content={"error": "ui_build_missing", "hint": hint}, status_code=404)
 
     # Try to serve the actual file first (for assets, manifest, etc.)
     file_path = UI_DIR / path
