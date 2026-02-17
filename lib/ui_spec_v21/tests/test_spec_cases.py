@@ -1287,7 +1287,7 @@ def test_spec_30_actions_match_state(db):
         IssueState.RESOLVED: [],
         IssueState.REGRESSION_WATCH: [],
         IssueState.CLOSED: [],
-        IssueState.REGRESSED: ["acknowledge", "snooze", "resolve"],
+        IssueState.REGRESSED: ["acknowledge", "assign", "snooze", "resolve"],
         IssueState.DETECTED: [],
     }
 
