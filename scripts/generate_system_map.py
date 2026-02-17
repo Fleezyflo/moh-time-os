@@ -213,7 +213,7 @@ def main() -> int:
 
         existing = output_path.read_text()
         if existing != system_map_json:
-            print(f"❌ System map drift detected! {output_path} is stale.")
+            import difflib; diff = difflib.unified_diff(existing.splitlines(), system_map_json.splitlines(), lineterm="", n=3); print("\n".join(list(diff)[:50])); print(f"❌ System map drift detected! {output_path} is stale.")
             print("   Run: uv run python scripts/generate_system_map.py")
             return 1
 
