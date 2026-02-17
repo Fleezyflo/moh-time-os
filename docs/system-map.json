@@ -875,22 +875,6 @@
       "source": "collectors/calendar.py"
     },
     {
-      "name": "debug_directory_auth",
-      "source": "collectors/debug_directory_auth.py"
-    },
-    {
-      "name": "debug_dwd_token",
-      "source": "collectors/debug_dwd_token.py"
-    },
-    {
-      "name": "debug_dwd_token2",
-      "source": "collectors/debug_dwd_token2.py"
-    },
-    {
-      "name": "debug_dwd_token3",
-      "source": "collectors/debug_dwd_token3.py"
-    },
-    {
       "name": "gmail",
       "source": "collectors/gmail.py"
     },
@@ -1100,7 +1084,7 @@
   "generated_by": "scripts/generate_system_map.py",
   "summary": {
     "api_routes_count": 172,
-    "collectors_count": 12,
+    "collectors_count": 8,
     "db_tables_count": 46,
     "ui_routes_count": 18
   },
