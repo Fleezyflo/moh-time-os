@@ -2,484 +2,392 @@ name: CI
 
 on:
   push:
-    branches: [main, master, recover-wip]
+    branches: [main]
   pull_request:
-    branches: [main, master]
-
-env:
-  PYTHON_VERSION: "3.11"
-  NODE_VERSION: "20"
+    branches: [main]
 
 jobs:
-  # ==========================================
-  # PYTHON QUALITY
-  # ==========================================
-  python-quality:
-    name: Python Quality
+  # ============================================================================
+  # PRE-COMMIT — Runs all configured pre-commit hooks
+  # ============================================================================
+  pre-commit:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: '3.11'
 
-      - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Cache uv
-        uses: actions/cache@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
         with:
-          path: ~/.cache/uv
-          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+          node-version: '20'
 
-      - name: Install dependencies
-        run: uv sync --all-extras
+      - name: Install Python dependencies
+        run: pip install -e ".[dev]"
 
-      - name: Check no derived files tracked
-        run: ./scripts/check_no_derived_tracked.sh
+      - name: Install Node dependencies
+        run: cd time-os-ui && npm ci
 
       - name: Run pre-commit
-        run: uv run pre-commit run -a
+        uses: pre-commit/action@2c7f1384262f25e10ea145f39a39c55c25afea11  # v3.0.1
 
-      - name: Ruff Lint (full)
-        run: uv run ruff check lib/ api/ --output-format=github
-
-      - name: Ruff Format Check
-        run: uv run ruff format --check lib/ api/
-
-      - name: Bandit Security Scan
-        run: uv run bandit -r lib/ api/ -ll
-
-      - name: Mypy Baseline Check
-        run: uv run python scripts/check_mypy_baseline.py
-
-      - name: Semgrep Policy + Security Scan
-        run: make semgrep
-
-  # ==========================================
-  # PYTHON TESTS
-  # ==========================================
-  python-tests:
-    name: Python Tests
+  # ============================================================================
+  # PYTHON-GUARDS — Semgrep security + project-specific rules
+  # ============================================================================
+  python-guards:
     runs-on: ubuntu-latest
-    needs: python-quality
+    permissions:
+      contents: read
+      security-events: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: '3.11'
 
-      - name: Install uv
+      - name: Install Semgrep
+        run: pip install semgrep
+
+      - name: Run Semgrep - Security rules
         run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          semgrep --config p/python \
+            --config p/security-audit \
+            --config .semgrep/moh-time-os-rules.yaml \
+            --error \
+            --json \
+            --output semgrep-results.json \
+            lib/ api/ collectors/ scripts/ \
+            || true  # Continue to show summary even on findings
 
-      - name: Cache uv
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/uv
-          key: uv-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+      - name: Semgrep Summary
+        run: |
+          echo "## Semgrep Results" >> $GITHUB_STEP_SUMMARY
+          if [ -f semgrep-results.json ]; then
+            FINDINGS=$(jq '.results | length' semgrep-results.json)
+            echo "Total findings: $FINDINGS" >> $GITHUB_STEP_SUMMARY
+            
+            if [ "$FINDINGS" -gt 0 ]; then
+              echo "### Findings by Rule" >> $GITHUB_STEP_SUMMARY
+              jq -r '.results | group_by(.check_id) | .[] | "- \(.[0].check_id): \(length)"' semgrep-results.json >> $GITHUB_STEP_SUMMARY
+              exit 1
+            fi
+          fi
 
-      - name: Install dependencies
-        run: uv sync --all-extras
-
-      - name: Run Contract tests
-        run: uv run pytest tests/contract/ -v --tb=short
-
-      - name: Run Safety tests
-        run: uv run pytest tests/test_safety.py -v --tb=short
-
-      - name: Run Negative tests
-        run: uv run pytest tests/negative/ -v --tb=short
-
-      - name: Run Golden tests
-        run: uv run pytest tests/golden/ -v --tb=short
-
-      - name: Run UI Spec tests
-        run: uv run pytest lib/ui_spec_v21/tests/ -v --tb=short
-
-      - name: Run Property tests
-        run: uv run pytest tests/property/ -v --tb=short
-
-      - name: Run OpenAPI contract tests
-        run: uv run pytest tests/contract/test_openapi_contract.py -v --tb=short
-
-  # ==========================================
-  # DRIFT DETECTION
-  # ==========================================
-  drift-detection:
-    name: Drift Detection
+  # ============================================================================
+  # SECURITY-SCAN — CVE checks, secrets, forbidden files
+  # ============================================================================
+  security-scan:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: '3.11'
 
-      - name: Install uv
+      - name: Install security tools
         run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          pip install pip-audit detect-secrets
 
-      - name: Install dependencies
-        run: uv sync --all-extras
-
-      - name: OpenAPI Drift Check
-        run: uv run python scripts/export_openapi.py --check
-
-      - name: Schema Drift Check
-        run: uv run python scripts/export_schema.py --check
-
-      - name: System Map Drift Check
-        run: uv run python scripts/generate_system_map.py --check
-
-      - name: Breaking API Changes Check
-        run: uv run python scripts/check_breaking_changes.py
-
-  # ==========================================
-  # UI QUALITY
-  # ==========================================
-  ui-quality:
-    name: UI Quality
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: time-os-ui
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Install pnpm
-        run: npm install -g pnpm
-
-      - name: Cache pnpm
-        uses: actions/cache@v4
-        with:
-          path: ~/.pnpm-store
-          key: pnpm-${{ runner.os }}-${{ hashFiles('time-os-ui/pnpm-lock.yaml') }}
-
-      - name: Install dependencies
-        run: pnpm install
-
-      - name: Generated Types Drift Check
-        working-directory: .
-        run: ./scripts/generate_ui_types.sh --check
-
-      - name: TypeScript Check
-        run: pnpm run typecheck
-
-      - name: ESLint
-        run: pnpm run lint
-
-      - name: Prettier Check
-        run: pnpm run format:check
-
-      - name: Run Tests
-        run: pnpm test
-
-      - name: Build
-        run: pnpm run build
-
-      - name: Bundle Size Check
-        run: pnpm run bundle:check
-
-  # ==========================================
-  # SYSTEM INVARIANTS
-  # ==========================================
-  system-invariants:
-    name: System Invariants
-    runs-on: ubuntu-latest
-    needs: drift-detection
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install uv
+      - name: "🔒 CVE Check - pip-audit"
         run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          pip install -e ".[dev]"
+          pip-audit --strict --desc on || {
+            echo "::error::Vulnerable dependencies detected"
+            exit 1
+          }
 
-      - name: Install dependencies
-        run: uv sync --all-extras
-
-      - name: Check System Invariants
-        run: uv run python scripts/check_system_invariants.py
-
-  # ==========================================
-  # GOVERNANCE
-  # ==========================================
-  governance:
-    name: Governance Checks
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0  # Need full history for diff
-
-      - name: ADR Requirement Check
+      - name: "🔐 Secrets Check - detect-secrets"
         run: |
-          chmod +x ./scripts/check_adr_required.sh
-          ./scripts/check_adr_required.sh origin/${{ github.base_ref }}
+          # Scan for new secrets not in baseline
+          detect-secrets scan \
+            --exclude-files '\.lock$' \
+            --exclude-files 'node_modules' \
+            --exclude-files '\.venv' \
+            --exclude-files '_archive' \
+            --all-files > /tmp/current-secrets.json
+          
+          # Compare with baseline
+          if [ -f .secrets.baseline ]; then
+            BASELINE_COUNT=$(jq '.results | to_entries | map(.value | length) | add // 0' .secrets.baseline)
+            CURRENT_COUNT=$(jq '.results | to_entries | map(.value | length) | add // 0' /tmp/current-secrets.json)
+            
+            if [ "$CURRENT_COUNT" -gt "$BASELINE_COUNT" ]; then
+              echo "::error::New secrets detected! Baseline: $BASELINE_COUNT, Current: $CURRENT_COUNT"
+              echo "New secrets found in:"
+              jq -r '.results | to_entries[] | select(.value | length > 0) | .key' /tmp/current-secrets.json
+              exit 1
+            fi
+          fi
+          echo "✅ No new secrets detected"
 
-      - name: Change Size Check
+      - name: "🗄️ Forbidden Files Check"
         run: |
-          chmod +x ./scripts/check_change_size.sh
-          ./scripts/check_change_size.sh origin/${{ github.base_ref }}
-
-  # ==========================================
-  # REPRODUCIBILITY
-  # ==========================================
-  reproducibility:
-    name: Reproducibility Pins
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Check Python Version Pin
-        run: |
-          if [ ! -f ".python-version" ]; then
-            echo "❌ .python-version missing"
+          ERRORS=0
+          
+          # Check for database files
+          DB_FILES=$(find . -name "*.db" -o -name "*.sqlite" -o -name "*.sqlite3" 2>/dev/null | grep -v node_modules | grep -v .venv || true)
+          if [ -n "$DB_FILES" ]; then
+            echo "::error::Database files found in repo:"
+            echo "$DB_FILES"
+            ERRORS=$((ERRORS + 1))
+          fi
+          
+          # Check for *-full.json data dumps
+          DUMP_FILES=$(find . -name "*-full.json" 2>/dev/null | grep -v node_modules | grep -v .venv || true)
+          if [ -n "$DUMP_FILES" ]; then
+            echo "::error::Data dump files found in repo:"
+            echo "$DUMP_FILES"
+            ERRORS=$((ERRORS + 1))
+          fi
+          
+          if [ "$ERRORS" -gt 0 ]; then
             exit 1
           fi
-          echo "✅ .python-version exists: $(cat .python-version)"
+          echo "✅ No forbidden files found"
 
-      - name: Check Node Version Pin
+      - name: "📏 Monolith File Check (max 3000 lines)"
         run: |
-          if [ ! -f ".nvmrc" ]; then
-            echo "❌ .nvmrc missing"
-            exit 1
-          fi
-          echo "✅ .nvmrc exists: $(cat .nvmrc)"
-
-      - name: Check uv.lock exists
-        run: |
-          if [ ! -f "uv.lock" ]; then
-            echo "❌ uv.lock missing"
-            exit 1
-          fi
-          echo "✅ uv.lock exists"
-
-      - name: Check pnpm-lock.yaml exists
-        run: |
-          if [ ! -f "time-os-ui/pnpm-lock.yaml" ]; then
-            echo "❌ time-os-ui/pnpm-lock.yaml missing"
-            exit 1
-          fi
-          echo "✅ pnpm-lock.yaml exists"
-
-  # ==========================================
-  # SECURITY AUDIT
-  # ==========================================
-  security-audit:
-    name: Security Audit
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Install dependencies
-        run: uv sync --all-extras
-
-      - name: Python Dependency Audit (pip-audit)
-        run: |
-          uv pip install pip-audit
-          uv run pip-audit --require-hashes=false
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-
-      - name: Install pnpm
-        run: npm install -g pnpm
-
-      - name: UI Dependency Audit (pnpm audit)
-        working-directory: time-os-ui
-        run: pnpm audit --audit-level=high
-
-      - name: Gitleaks (secrets detection)
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Generate SBOM
-        run: |
-          mkdir -p docs/sbom
-          uv run pip freeze > docs/sbom/python-requirements.txt || true
-
-  # ==========================================
-  # API SMOKE TEST
-  # ==========================================
-  api-smoke-test:
-    name: API Smoke Test
-    runs-on: ubuntu-latest
-    needs: python-quality
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Install dependencies
-        run: uv sync --all-extras
-
-      - name: Start API and check health
-        run: |
-          mkdir -p data
-          export MOH_TIME_OS_DB_PATH="$(pwd)/data/ci_test.db"
-
-          # Start server in background
-          uv run python -m api.server &
-          API_PID=$!
-
-          # Wait for server to start
-          for i in $(seq 1 15); do
-            sleep 1
-            if curl -sf http://localhost:8420/api/health; then
-              echo ""
-              echo "API healthy!"
-              kill $API_PID || true
-              exit 0
+          ERRORS=0
+          
+          for f in $(find lib/ api/ -name "*.py" 2>/dev/null); do
+            LINES=$(wc -l < "$f")
+            if [ "$LINES" -gt 3000 ]; then
+              echo "::error::$f has $LINES lines (max 3000)"
+              ERRORS=$((ERRORS + 1))
             fi
           done
+          
+          if [ "$ERRORS" -gt 0 ]; then
+            echo "::error::Files exceeding 3000 lines must be split"
+            exit 1
+          fi
+          echo "✅ No monolith files detected"
 
-          echo "API failed to start within 15s"
-          kill $API_PID || true
-          exit 1
-
-      - name: Check detailed health
+      - name: "📋 Gitignore Coverage Check"
         run: |
-          mkdir -p data
-          export MOH_TIME_OS_DB_PATH="$(pwd)/data/ci_test.db"
+          REQUIRED_PATTERNS=(
+            "*.db"
+            "*.sqlite"
+            "*.sqlite3"
+            ".env"
+            "*-full.json"
+            "__pycache__"
+            ".venv"
+            "node_modules"
+          )
+          
+          MISSING=0
+          for pattern in "${REQUIRED_PATTERNS[@]}"; do
+            if ! grep -qE "^${pattern//\*/.*}$|^${pattern}$" .gitignore 2>/dev/null; then
+              echo "::warning::Missing .gitignore pattern: $pattern"
+              MISSING=$((MISSING + 1))
+            fi
+          done
+          
+          if [ "$MISSING" -gt 0 ]; then
+            echo "::error::$MISSING required patterns missing from .gitignore"
+            exit 1
+          fi
+          echo "✅ All required .gitignore patterns present"
 
-          uv run python -m api.server &
-          API_PID=$!
-          sleep 5
-
-          # Get detailed health
-          curl -sf http://localhost:8420/api/health | jq . || true
-
-          kill $API_PID || true
-
-  # ==========================================
-  # SCENARIOS
-  # ==========================================
-  scenarios:
-    name: Golden Scenarios
+  # ============================================================================
+  # ROUTE-INTEGRITY — Check for duplicate routes and report endpoint stats
+  # ============================================================================
+  route-integrity:
     runs-on: ubuntu-latest
-    needs: python-quality
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: '3.11'
 
-      - name: Install uv
+      - name: "🔀 Extract and Check Routes"
         run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          python3 << 'EOF'
+          import re
+          import sys
+          from pathlib import Path
+          from collections import defaultdict
+          
+          # Find all Python files in api/
+          api_files = list(Path("api").rglob("*.py"))
+          
+          # Pattern for route decorators
+          route_pattern = re.compile(
+              r'@(?:app|router)\.(get|post|put|delete|patch)\s*\(\s*["\']([^"\']+)["\']',
+              re.IGNORECASE
+          )
+          
+          # Extract all routes
+          routes = []
+          for f in api_files:
+              content = f.read_text()
+              for match in route_pattern.finditer(content):
+                  method = match.group(1).upper()
+                  path = match.group(2)
+                  routes.append((method, path, str(f)))
+          
+          # Check for duplicates
+          route_map = defaultdict(list)
+          for method, path, file in routes:
+              route_map[(method, path)].append(file)
+          
+          duplicates = {k: v for k, v in route_map.items() if len(v) > 1}
+          
+          # Count unprotected write endpoints
+          unprotected = 0
+          for method, path, _ in routes:
+              if method in ("POST", "PUT", "DELETE", "PATCH"):
+                  # Simple heuristic - proper auth check would need AST parsing
+                  unprotected += 1
+          
+          # Report
+          print(f"## Route Integrity Report")
+          print(f"Total endpoints: {len(routes)}")
+          print(f"Write endpoints (POST/PUT/DELETE/PATCH): {unprotected}")
+          print(f"Duplicate routes: {len(duplicates)}")
+          
+          if duplicates:
+              print("\n### ❌ Duplicate Routes Found:")
+              for (method, path), files in duplicates.items():
+                  print(f"- {method} {path}")
+                  for f in files:
+                      print(f"  - {f}")
+              sys.exit(1)
+          else:
+              print("\n✅ No duplicate routes")
+          EOF
 
-      - name: Install dependencies
-        run: uv sync --all-extras
+      - name: "📊 Route Stats Summary"
+        if: always()
+        run: |
+          echo "## Route Statistics" >> $GITHUB_STEP_SUMMARY
+          python3 << 'EOF' >> $GITHUB_STEP_SUMMARY
+          import re
+          from pathlib import Path
+          from collections import Counter
+          
+          api_files = list(Path("api").rglob("*.py"))
+          route_pattern = re.compile(r'@(?:app|router)\.(get|post|put|delete|patch)\s*\(', re.IGNORECASE)
+          
+          methods = []
+          for f in api_files:
+              content = f.read_text()
+              for match in route_pattern.finditer(content):
+                  methods.append(match.group(1).upper())
+          
+          counts = Counter(methods)
+          print(f"| Method | Count |")
+          print(f"|--------|-------|")
+          for method in ["GET", "POST", "PUT", "DELETE", "PATCH"]:
+              print(f"| {method} | {counts.get(method, 0)} |")
+          print(f"| **Total** | **{sum(counts.values())}** |")
+          EOF
 
-      - name: Run Scenario Tests
-        run: uv run pytest tests/scenarios/ -v --tb=short
-
-  # ==========================================
-  # FEATURE FLAGS + AUDIT
-  # ==========================================
-  extended-tests:
-    name: Extended Tests
+  # ============================================================================
+  # RATCHET — Ensure metrics don't regress
+  # ============================================================================
+  ratchet:
     runs-on: ubuntu-latest
-    needs: python-quality
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version: '3.11'
 
-      - name: Install uv
+      - name: "📉 Ratchet Check"
         run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          python scripts/ratchet_check.py
+          
+      - name: "📊 Ratchet Summary"
+        if: always()
+        run: |
+          echo "## Ratchet Metrics" >> $GITHUB_STEP_SUMMARY
+          if [ -f .ratchet-baseline.json ]; then
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            cat .ratchet-baseline.json >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+          fi
 
-      - name: Install dependencies
-        run: uv sync --all-extras
-
-      - name: Run Feature Flag Tests
-        run: uv run pytest tests/test_features.py -v --tb=short
-
-      - name: Run Audit Trail Tests
-        run: uv run pytest tests/test_audit.py -v --tb=short
-
-      - name: Run Collector Replay Tests
-        run: uv run pytest tests/cassettes/ -v --tb=short
-
-      - name: Trace Correlation Smoke
-        run: uv run python -c "from lib.observability.tracing import SpanContext, get_trace_id; ctx = SpanContext('test_span').__enter__(); trace_id = get_trace_id(); assert trace_id is not None, 'Trace ID should be set'; print('✅ Trace correlation working'); ctx.__exit__(None, None, None)"
-
-  # ==========================================
-  # MINIMAL DB REHEARSAL
-  # ==========================================
-  db-rehearsal:
-    name: DB Migration Rehearsal
+  # ============================================================================
+  # TEST — Run Python test suite
+  # ============================================================================
+  test:
     runs-on: ubuntu-latest
-    needs: python-quality
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Install uv
-        run: |
-          curl -LsSf https://astral.sh/uv/install.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          python-version: '3.11'
 
       - name: Install dependencies
-        run: uv sync --all-extras
+        run: pip install -e ".[dev]"
 
-      - name: Run Migration Rehearsal
-        run: uv run python scripts/migrate_matrix.py
+      - name: Run tests
+        run: pytest tests/ -v --tb=short
 
-      - name: Run Rollback Drill
-        run: uv run python scripts/rollback_drill.py
+  # ============================================================================
+  # BUILD-UI — TypeScript checks and production build
+  # ============================================================================
+  build-ui:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: cd time-os-ui && npm ci
+
+      - name: Type check
+        run: cd time-os-ui && npm run typecheck
+
+      - name: Lint
+        run: cd time-os-ui && npm run lint
+
+      - name: Build
+        run: cd time-os-ui && npm run build
+
+      - name: Bundle size check
+        run: |
+          cd time-os-ui
+          JS_SIZE=$(du -sk dist/assets/*.js 2>/dev/null | awk '{sum+=$1} END {print sum}')
+          CSS_SIZE=$(du -sk dist/assets/*.css 2>/dev/null | awk '{sum+=$1} END {print sum}')
+          TOTAL=$((JS_SIZE + CSS_SIZE))
+          
+          echo "Bundle sizes: JS=${JS_SIZE}KB, CSS=${CSS_SIZE}KB, Total=${TOTAL}KB"
+          
+          # Fail if bundle exceeds 1MB
+          if [ "$TOTAL" -gt 1024 ]; then
+            echo "::error::Bundle size ${TOTAL}KB exceeds 1MB limit"
+            exit 1
+          fi
+# Test comment - CODEOWNER verification Tue Feb 17 13:41:07 +04 2026

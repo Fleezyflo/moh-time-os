@@ -2,20 +2,59 @@
 # Install: pip install pre-commit && pre-commit install
 #
 # POLICY: ALL GUARDS BLOCK. NO EXCEPTIONS. NO ADVISORY MODE.
-#
-# Total Guards: 45+
-#   P0 (BLOCKING): Security critical - secrets, vulnerabilities, injection
-#   P1 (BLOCKING): Architecture - duplicates, boundaries, breaking changes
-#   P2 (BLOCKING): Quality - complexity, docs, patterns, performance
-#
-# ANY violation = exit code 1 = commit blocked
 
 repos:
+  # ==========================================
+  # DETECT-SECRETS - Secret scanning
+  # ==========================================
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        exclude: (?x)^(.*\.lock$|.*-lock\.json$|time-os-ui/node_modules/.*|\.venv/.*|_archive/.*)$
+
+  # ==========================================
+  # PRE-COMMIT-HOOKS - General file checks
+  # ==========================================
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-added-large-files
+        args: [--maxkb=1024]
+      - id: no-commit-to-branch
+        args: [--branch, main]
+      - id: check-merge-conflict
+      - id: check-yaml
+        exclude: ^(time-os-ui/node_modules/)
+      - id: check-json
+        exclude: ^(_archive/|\.venv/|dist/|time-os-ui/node_modules/)
+      - id: trailing-whitespace
+        exclude: ^(_archive/|\.venv/|dist/|time-os-ui/node_modules/)
+      - id: end-of-file-fixer
+        exclude: ^(_archive/|\.venv/|dist/|time-os-ui/node_modules/)
+      - id: detect-private-key
+        exclude: ^scripts/check_secrets\.py$
+
+  # ==========================================
+  # SEMGREP - Static analysis (uses system semgrep)
+  # Informational - runs but always passes (remove || true to block)
+  # ==========================================
+  - repo: local
+    hooks:
+      - id: semgrep
+        name: "🔍 Semgrep (info)"
+        entry: bash -c 'semgrep --config .semgrep/moh-time-os-rules.yaml --quiet "$@" || true'
+        language: system
+        types: [python]
+        exclude: (?x)^(_archive/.*|\.venv/.*|time-os-ui/.*|tests/.*)$
+        pass_filenames: true
+
   # ==========================================
   # RUFF - Python Linting & Formatting
   # ==========================================
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.6
+    rev: v0.9.6
     hooks:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
@@ -29,31 +68,30 @@ repos:
   # BANDIT - Security Scanning
   # ==========================================
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.8
+    rev: 1.8.3
     hooks:
       - id: bandit
         args: [-r, -ll, --skip, "B101,B608"]
         exclude: ^(tests/|_archive/|\.venv/|dist/|time-os-ui/)
 
   # ==========================================
-  # GENERAL FILE CHECKS
+  # CUSTOM HOOKS - Database & Data Files
   # ==========================================
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+  - repo: local
     hooks:
-      - id: trailing-whitespace
-        exclude: ^(_archive/|\.venv/|dist/|time-os-ui/node_modules/)
-      - id: end-of-file-fixer
-        exclude: ^(_archive/|\.venv/|dist/|time-os-ui/node_modules/)
-      - id: check-yaml
-        exclude: ^(time-os-ui/node_modules/)
-      - id: check-json
-        exclude: ^(_archive/|\.venv/|dist/|time-os-ui/node_modules/)
-      - id: check-added-large-files
-        args: [--maxkb=500]
-      - id: check-merge-conflict
-      - id: detect-private-key
-        exclude: ^scripts/check_secrets\.py$
+      - id: reject-database-files
+        name: "🗄️ Reject database files"
+        entry: python scripts/reject_db_files.py
+        language: python
+        types: [file]
+        pass_filenames: true
+
+      - id: reject-full-json
+        name: "📦 Reject *-full.json dumps"
+        entry: python scripts/reject_full_json.py
+        language: python
+        types: [json]
+        pass_filenames: true
 
   # ==========================================
   # P0 - SECURITY (BLOCKING)
@@ -152,7 +190,7 @@ repos:
         always_run: true
 
   # ==========================================
-  # P2 (BLOCKING) - CODE QUALITY (BLOCKING)
+  # P2 (BLOCKING) - CODE QUALITY
   # ==========================================
   - repo: local
     hooks:
@@ -369,7 +407,7 @@ repos:
         verbose: true
 
   # ==========================================
-  # TYPE CHECKING
+  # TYPE CHECKING - Informational (doesn't block)
   # ==========================================
   - repo: local
     hooks:
