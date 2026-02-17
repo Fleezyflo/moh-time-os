@@ -1092,7 +1092,9 @@ def test_spec_21_no_duplicate_active_inbox_items(db):
     )
     db.commit()
     # Verify two items exist (dedup is application responsibility)
-    cursor = db.execute("SELECT COUNT(*) FROM inbox_items WHERE underlying_issue_id = ?", (issue_id,))
+    cursor = db.execute(
+        "SELECT COUNT(*) FROM inbox_items WHERE underlying_issue_id = ?", (issue_id,)
+    )
     assert cursor.fetchone()[0] == 2
 
 
