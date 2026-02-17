@@ -66,7 +66,7 @@ def apply_constraint_triggers(conn: sqlite3.Connection, verbose: bool = True):
         # chk_underlying_exclusive
         """
         CREATE TRIGGER IF NOT EXISTS trg_inbox_underlying_exclusive_insert
-        BEFORE INSERT ON inbox_items
+        BEFORE INSERT ON inbox_items_v29
         FOR EACH ROW
         WHEN NOT ((NEW.underlying_issue_id IS NOT NULL) != (NEW.underlying_signal_id IS NOT NULL))
         BEGIN
@@ -75,7 +75,7 @@ def apply_constraint_triggers(conn: sqlite3.Connection, verbose: bool = True):
         """,
         """
         CREATE TRIGGER IF NOT EXISTS trg_inbox_underlying_exclusive_update
-        BEFORE UPDATE ON inbox_items
+        BEFORE UPDATE ON inbox_items_v29
         FOR EACH ROW
         WHEN NOT ((NEW.underlying_issue_id IS NOT NULL) != (NEW.underlying_signal_id IS NOT NULL))
         BEGIN
@@ -85,7 +85,7 @@ def apply_constraint_triggers(conn: sqlite3.Connection, verbose: bool = True):
         # chk_type_issue_mapping
         """
         CREATE TRIGGER IF NOT EXISTS trg_inbox_type_issue_mapping_insert
-        BEFORE INSERT ON inbox_items
+        BEFORE INSERT ON inbox_items_v29
         FOR EACH ROW
         WHEN NEW.type = 'issue' AND (NEW.underlying_issue_id IS NULL OR NEW.underlying_signal_id IS NOT NULL)
         BEGIN
@@ -95,7 +95,7 @@ def apply_constraint_triggers(conn: sqlite3.Connection, verbose: bool = True):
         # chk_type_signal_mapping
         """
         CREATE TRIGGER IF NOT EXISTS trg_inbox_type_signal_mapping_insert
-        BEFORE INSERT ON inbox_items
+        BEFORE INSERT ON inbox_items_v29
         FOR EACH ROW
         WHEN NEW.type IN ('flagged_signal', 'orphan', 'ambiguous')
              AND (NEW.underlying_signal_id IS NULL OR NEW.underlying_issue_id IS NOT NULL)
@@ -106,7 +106,7 @@ def apply_constraint_triggers(conn: sqlite3.Connection, verbose: bool = True):
         # chk_snooze_requires_until
         """
         CREATE TRIGGER IF NOT EXISTS trg_inbox_snooze_requires_until_insert
-        BEFORE INSERT ON inbox_items
+        BEFORE INSERT ON inbox_items_v29
         FOR EACH ROW
         WHEN NEW.state = 'snoozed' AND NEW.snooze_until IS NULL
         BEGIN
@@ -115,7 +115,7 @@ def apply_constraint_triggers(conn: sqlite3.Connection, verbose: bool = True):
         """,
         """
         CREATE TRIGGER IF NOT EXISTS trg_inbox_snooze_requires_until_update
-        BEFORE UPDATE ON inbox_items
+        BEFORE UPDATE ON inbox_items_v29
         FOR EACH ROW
         WHEN NEW.state = 'snoozed' AND NEW.snooze_until IS NULL
         BEGIN
@@ -125,7 +125,7 @@ def apply_constraint_triggers(conn: sqlite3.Connection, verbose: bool = True):
         # chk_dismissed_requires_key
         """
         CREATE TRIGGER IF NOT EXISTS trg_inbox_dismissed_requires_key_insert
-        BEFORE INSERT ON inbox_items
+        BEFORE INSERT ON inbox_items_v29
         FOR EACH ROW
         WHEN NEW.state = 'dismissed' AND NEW.suppression_key IS NULL
         BEGIN
@@ -134,7 +134,7 @@ def apply_constraint_triggers(conn: sqlite3.Connection, verbose: bool = True):
         """,
         """
         CREATE TRIGGER IF NOT EXISTS trg_inbox_dismissed_requires_key_update
-        BEFORE UPDATE ON inbox_items
+        BEFORE UPDATE ON inbox_items_v29
         FOR EACH ROW
         WHEN NEW.state = 'dismissed' AND NEW.suppression_key IS NULL
         BEGIN
@@ -144,7 +144,7 @@ def apply_constraint_triggers(conn: sqlite3.Connection, verbose: bool = True):
         # chk_terminal_requires_resolved
         """
         CREATE TRIGGER IF NOT EXISTS trg_inbox_terminal_requires_resolved_insert
-        BEFORE INSERT ON inbox_items
+        BEFORE INSERT ON inbox_items_v29
         FOR EACH ROW
         WHEN NEW.state IN ('dismissed', 'linked_to_issue') AND NEW.resolved_at IS NULL
         BEGIN
@@ -153,7 +153,7 @@ def apply_constraint_triggers(conn: sqlite3.Connection, verbose: bool = True):
         """,
         """
         CREATE TRIGGER IF NOT EXISTS trg_inbox_terminal_requires_resolved_update
-        BEFORE UPDATE ON inbox_items
+        BEFORE UPDATE ON inbox_items_v29
         FOR EACH ROW
         WHEN NEW.state IN ('dismissed', 'linked_to_issue') AND NEW.resolved_at IS NULL
         BEGIN
@@ -163,7 +163,7 @@ def apply_constraint_triggers(conn: sqlite3.Connection, verbose: bool = True):
         # chk_linked_requires_issue
         """
         CREATE TRIGGER IF NOT EXISTS trg_inbox_linked_requires_issue_insert
-        BEFORE INSERT ON inbox_items
+        BEFORE INSERT ON inbox_items_v29
         FOR EACH ROW
         WHEN NEW.state = 'linked_to_issue' AND NEW.resolved_issue_id IS NULL
         BEGIN
@@ -172,7 +172,7 @@ def apply_constraint_triggers(conn: sqlite3.Connection, verbose: bool = True):
         """,
         """
         CREATE TRIGGER IF NOT EXISTS trg_inbox_linked_requires_issue_update
-        BEFORE UPDATE ON inbox_items
+        BEFORE UPDATE ON inbox_items_v29
         FOR EACH ROW
         WHEN NEW.state = 'linked_to_issue' AND NEW.resolved_issue_id IS NULL
         BEGIN
@@ -182,7 +182,7 @@ def apply_constraint_triggers(conn: sqlite3.Connection, verbose: bool = True):
         # chk_dismissed_requires_audit
         """
         CREATE TRIGGER IF NOT EXISTS trg_inbox_dismissed_requires_audit_insert
-        BEFORE INSERT ON inbox_items
+        BEFORE INSERT ON inbox_items_v29
         FOR EACH ROW
         WHEN NEW.state = 'dismissed' AND (NEW.dismissed_at IS NULL OR NEW.dismissed_by IS NULL)
         BEGIN
@@ -191,7 +191,7 @@ def apply_constraint_triggers(conn: sqlite3.Connection, verbose: bool = True):
         """,
         """
         CREATE TRIGGER IF NOT EXISTS trg_inbox_dismissed_requires_audit_update
-        BEFORE UPDATE ON inbox_items
+        BEFORE UPDATE ON inbox_items_v29
         FOR EACH ROW
         WHEN NEW.state = 'dismissed' AND (NEW.dismissed_at IS NULL OR NEW.dismissed_by IS NULL)
         BEGIN
