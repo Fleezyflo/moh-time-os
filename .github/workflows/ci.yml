@@ -456,14 +456,7 @@ jobs:
         run: uv run pytest tests/cassettes/ -v --tb=short
 
       - name: Trace Correlation Smoke
-        run: |
-          uv run python -c "
-from lib.observability.tracing import SpanContext, get_trace_id
-with SpanContext('test_span') as ctx:
-    trace_id = get_trace_id()
-    assert trace_id is not None, 'Trace ID should be set'
-print('✅ Trace correlation working')
-"
+        run: uv run python -c "from lib.observability.tracing import SpanContext, get_trace_id; ctx = SpanContext('test_span'); ctx.__enter__(); trace_id = get_trace_id(); assert trace_id is not None; ctx.__exit__(None,None,None); print('Trace correlation working')"
 
   # ==========================================
   # MINIMAL DB REHEARSAL
