@@ -16,6 +16,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
+from lib.paths import data_dir
+
 logger = logging.getLogger(__name__)
 
 
@@ -98,7 +100,7 @@ class ChangeReport:
 
 
 # Storage path for snapshots
-SNAPSHOT_DIR = Path(__file__).parent.parent.parent / "data" / "snapshots"
+SNAPSHOT_DIR = data_dir() / "snapshots"
 
 
 def _ensure_snapshot_dir():
