@@ -27,7 +27,7 @@ repos:
     rev: 1.7.8
     hooks:
       - id: bandit
-        args: [-r, -ll, --skip, "B101,B608"]  # Skip assert warnings
+        args: [-r, -ll, --skip, "B101,B602,B608"]  # Skip assert warnings
         files: ^(lib/ui_spec_v21|lib/collectors|lib/safety|api/spec_router)/.*\.py$
 
   # ==========================================

@@ -197,6 +197,13 @@ def main() -> int:
 
     output_path = Path(args.output)
     system_map = generate_system_map()
+    # Sort lists for cross-platform determinism
+    for key, val in system_map.items():
+        if isinstance(val, list):
+            try:
+                system_map[key] = sorted(val, key=lambda x: json.dumps(x, sort_keys=True) if isinstance(x, dict) else str(x))
+            except TypeError:
+                pass
     system_map_json = json.dumps(system_map, indent=2, sort_keys=True) + "\n"
 
     if args.check:
