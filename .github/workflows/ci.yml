@@ -5,6 +5,7 @@ on:
     branches: [main, master, recover-wip]
   pull_request:
     branches: [main, master]
+  merge_group:
 
 env:
   PYTHON_VERSION: "3.11"
