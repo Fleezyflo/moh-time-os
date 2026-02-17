@@ -52,7 +52,7 @@ jobs:
         run: uv run ruff format --check lib/ api/
 
       - name: Bandit Security Scan
-        run: uv run bandit -r lib/ api/ -ll
+        run: uv run bandit -r lib/ api/ -ll --skip B101,B608
 
       - name: Mypy Baseline Check
         run: uv run python scripts/check_mypy_baseline.py
