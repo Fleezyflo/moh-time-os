@@ -465,6 +465,7 @@ def intelligence_snapshot():
     """
     try:
         from lib.intelligence import generate_intelligence_snapshot
+
         data = generate_intelligence_snapshot()
         return _wrap_response(data)
     except Exception as e:
@@ -482,6 +483,7 @@ def critical_items():
     """
     try:
         from lib.intelligence import get_critical_items
+
         data = get_critical_items()
         return _wrap_response(data)
     except Exception as e:
@@ -541,6 +543,7 @@ def list_signals(
     """
     try:
         from lib.intelligence import detect_all_signals
+
         data = detect_all_signals(quick=quick)
         return _wrap_response(data, {"quick": quick})
     except Exception as e:
@@ -555,6 +558,7 @@ def signals_summary():
     """
     try:
         from lib.intelligence.signals import get_signal_summary
+
         data = get_signal_summary()
         return _wrap_response(data)
     except Exception as e:
@@ -572,6 +576,7 @@ def active_signals(
     """
     try:
         from lib.intelligence.signals import get_active_signals
+
         data = get_active_signals(entity_type=entity_type, entity_id=entity_id)
         return _wrap_response(data, {"entity_type": entity_type, "entity_id": entity_id})
     except Exception as e:
@@ -590,8 +595,11 @@ def signal_history(
     """
     try:
         from lib.intelligence.signals import get_signal_history
+
         data = get_signal_history(entity_type=entity_type, entity_id=entity_id, limit=limit)
-        return _wrap_response(data, {"entity_type": entity_type, "entity_id": entity_id, "limit": limit})
+        return _wrap_response(
+            data, {"entity_type": entity_type, "entity_id": entity_id, "limit": limit}
+        )
     except Exception as e:
         logger.exception("signal_history failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -614,7 +622,7 @@ def export_signals():
         return PlainTextResponse(
             content=csv_data,
             media_type="text/csv",
-            headers={"Content-Disposition": "attachment; filename=signals_export.csv"}
+            headers={"Content-Disposition": "attachment; filename=signals_export.csv"},
         )
     except Exception as e:
         logger.exception("export_signals failed")
@@ -628,6 +636,7 @@ def get_thresholds():
     """
     try:
         from lib.intelligence.signals import load_thresholds
+
         data = load_thresholds()
         return _wrap_response(data)
     except Exception as e:
@@ -654,6 +663,7 @@ def list_patterns():
     """
     try:
         from lib.intelligence import detect_all_patterns
+
         data = detect_all_patterns()
         return _wrap_response(data)
     except Exception as e:
@@ -671,15 +681,17 @@ def pattern_catalog():
 
         catalog = []
         for _pat_id, pat in PATTERN_LIBRARY.items():
-            catalog.append({
-                "id": pat.id,
-                "name": pat.name,
-                "description": pat.description,
-                "type": pat.pattern_type.value,
-                "severity": pat.severity.value,
-                "entities_involved": pat.entities_involved,
-                "implied_action": pat.implied_action,
-            })
+            catalog.append(
+                {
+                    "id": pat.id,
+                    "name": pat.name,
+                    "description": pat.description,
+                    "type": pat.pattern_type.value,
+                    "severity": pat.severity.value,
+                    "entities_involved": pat.entities_involved,
+                    "implied_action": pat.implied_action,
+                }
+            )
 
         return _wrap_response(catalog)
     except Exception as e:
@@ -695,7 +707,9 @@ def pattern_catalog():
 @intelligence_router.get("/proposals")
 def list_proposals(
     limit: int = Query(20, description="Max proposals to return"),
-    urgency: str | None = Query(None, description="Filter by urgency (immediate, this_week, monitor)"),
+    urgency: str | None = Query(
+        None, description="Filter by urgency (immediate, this_week, monitor)"
+    ),
 ):
     """
     Get ranked proposals.
@@ -735,10 +749,7 @@ def list_proposals(
         # Rank and limit
         top = get_top_proposals(proposals, n=limit)
 
-        result = [
-            {**p.to_dict(), "priority_score": s.to_dict()}
-            for p, s in top
-        ]
+        result = [{**p.to_dict(), "priority_score": s.to_dict()} for p, s in top]
 
         return _wrap_response(result, {"limit": limit, "urgency": urgency})
     except HTTPException:
@@ -766,6 +777,7 @@ def client_score(client_id: str):
     """
     try:
         from lib.intelligence import score_client
+
         data = score_client(client_id)
         return _wrap_response(data, {"client_id": client_id})
     except Exception as e:
@@ -786,6 +798,7 @@ def project_score(project_id: str):
     """
     try:
         from lib.intelligence import score_project
+
         data = score_project(project_id)
         return _wrap_response(data, {"project_id": project_id})
     except Exception as e:
@@ -806,6 +819,7 @@ def person_score(person_id: str):
     """
     try:
         from lib.intelligence import score_person
+
         data = score_person(person_id)
         return _wrap_response(data, {"person_id": person_id})
     except Exception as e:
@@ -826,6 +840,7 @@ def portfolio_score():
     """
     try:
         from lib.intelligence import score_portfolio
+
         data = score_portfolio()
         return _wrap_response(data)
     except Exception as e:
@@ -856,14 +871,16 @@ def score_history(
     valid_types = {"client", "project", "person", "portfolio"}
     if entity_type not in valid_types:
         raise HTTPException(
-            status_code=400,
-            detail=f"Invalid entity_type. Must be one of: {valid_types}"
+            status_code=400, detail=f"Invalid entity_type. Must be one of: {valid_types}"
         )
 
     try:
         from lib.intelligence.scorecard import get_score_trend
+
         data = get_score_trend(entity_type, entity_id, days=days)
-        return _wrap_response(data, {"entity_type": entity_type, "entity_id": entity_id, "days": days})
+        return _wrap_response(
+            data, {"entity_type": entity_type, "entity_id": entity_id, "days": days}
+        )
     except Exception as e:
         logger.exception("score_history failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
@@ -879,6 +896,7 @@ def score_history_summary():
     """
     try:
         from lib.intelligence.scorecard import get_score_history_summary
+
         data = get_score_history_summary()
         return _wrap_response(data)
     except Exception as e:
@@ -898,6 +916,7 @@ def record_scores():
     """
     try:
         from lib.intelligence.scorecard import record_all_scores
+
         data = record_all_scores()
         return _wrap_response(data)
     except Exception as e:
@@ -924,6 +943,7 @@ def client_intelligence(client_id: str):
     """
     try:
         from lib.intelligence import get_client_intelligence
+
         data = get_client_intelligence(client_id)
         return _wrap_response(data, {"client_id": client_id})
     except Exception as e:
@@ -944,6 +964,7 @@ def person_intelligence(person_id: str):
     """
     try:
         from lib.intelligence import get_person_intelligence
+
         data = get_person_intelligence(person_id)
         return _wrap_response(data, {"person_id": person_id})
     except Exception as e:
@@ -964,6 +985,7 @@ def portfolio_intelligence():
     """
     try:
         from lib.intelligence import get_portfolio_intelligence
+
         data = get_portfolio_intelligence()
         return _wrap_response(data)
     except Exception as e:
@@ -993,11 +1015,13 @@ def detect_changes():
         # Run change detection
         changes = run_change_detection(snapshot)
 
-        return _wrap_response({
-            "changes": changes.to_dict(),
-            "summary": changes.summary,
-            "has_changes": changes.has_changes,
-        })
+        return _wrap_response(
+            {
+                "changes": changes.to_dict(),
+                "summary": changes.summary,
+                "has_changes": changes.has_changes,
+            }
+        )
     except Exception as e:
         logger.exception("detect_changes failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
