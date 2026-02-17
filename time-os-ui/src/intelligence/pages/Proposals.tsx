@@ -40,8 +40,8 @@ function ProposalCard({ proposal, rank }: { proposal: Proposal; rank: number }) 
             : 'bg-slate-800 border-slate-700'
       }`}
     >
-      <div className="p-4 cursor-pointer" onClick={() => setExpanded(!expanded)}>
-        <div className="flex items-start justify-between gap-4">
+      <div className="p-3 sm:p-4 cursor-pointer" onClick={() => setExpanded(!expanded)}>
+        <div className="flex items-start justify-between gap-3 sm:gap-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
               <span className="text-slate-500 font-mono text-sm">#{rank}</span>
@@ -65,7 +65,7 @@ function ProposalCard({ proposal, rank }: { proposal: Proposal; rank: number }) 
       </div>
 
       {expanded && (
-        <div className="px-4 pb-4 border-t border-slate-700 pt-4">
+        <div className="px-3 sm:px-4 pb-3 sm:pb-4 border-t border-slate-700 pt-3 sm:pt-4">
           <div className="text-sm text-slate-300 mb-4">{proposal.summary}</div>
 
           {/* Evidence */}
@@ -122,18 +122,18 @@ export default function Proposals() {
 
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Proposals</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold">Proposals</h1>
         <div className="text-sm text-slate-500">{proposalList.length} proposals</div>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-4 bg-slate-800 rounded-lg p-4">
-        <div>
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 bg-slate-800 rounded-lg p-3 sm:p-4">
+        <div className="flex-1 sm:flex-none">
           <label className="text-sm text-slate-400 block mb-1">Urgency</label>
           <select
             value={urgency}
             onChange={(e) => setUrgency(e.target.value)}
-            className="bg-slate-700 border border-slate-600 rounded px-3 py-1.5 text-sm"
+            className="w-full sm:w-auto bg-slate-700 border border-slate-600 rounded px-3 py-2 min-h-[44px] text-sm"
           >
             <option value="">All</option>
             <option value="immediate">Immediate</option>
@@ -141,12 +141,12 @@ export default function Proposals() {
             <option value="monitor">Monitor</option>
           </select>
         </div>
-        <div>
+        <div className="flex-1 sm:flex-none">
           <label className="text-sm text-slate-400 block mb-1">Limit</label>
           <select
             value={limit}
             onChange={(e) => setLimit(Number(e.target.value))}
-            className="bg-slate-700 border border-slate-600 rounded px-3 py-1.5 text-sm"
+            className="w-full sm:w-auto bg-slate-700 border border-slate-600 rounded px-3 py-2 min-h-[44px] text-sm"
           >
             <option value={10}>10</option>
             <option value={20}>20</option>
@@ -155,8 +155,11 @@ export default function Proposals() {
           </select>
         </div>
         {urgency && (
-          <div className="flex items-end">
-            <button onClick={resetFilters} className="text-xs text-slate-400 hover:text-white">
+          <div className="flex items-center sm:items-end pt-2 sm:pt-0">
+            <button
+              onClick={resetFilters}
+              className="text-xs text-slate-400 hover:text-white px-2 py-1 min-h-[32px]"
+            >
               Reset
             </button>
           </div>

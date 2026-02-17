@@ -149,9 +149,7 @@ def build_normalized_from_snapshot(snapshot: dict) -> NormalizedData:
     people = []
     for p in snapshot.get("people", []):
         people.append(
-            MinimalPerson(
-                id=p.get("id", ""), name=p.get("name", ""), hours=p.get("hours", 0)
-            )
+            MinimalPerson(id=p.get("id", ""), name=p.get("name", ""), hours=p.get("hours", 0))
         )
 
     return NormalizedData(
@@ -173,9 +171,7 @@ def compute_resolution_stats(normalized: NormalizedData) -> ResolutionStats:
     threads_with_client = sum(1 for t in normalized.threads if t.client_id)
 
     invoices_total = len(normalized.invoices)
-    invoices_valid = sum(
-        1 for i in normalized.invoices if i.client_id and i.status != "draft"
-    )
+    invoices_valid = sum(1 for i in normalized.invoices if i.client_id and i.status != "draft")
 
     people_total = len(normalized.people)
     people_with_hours = sum(1 for p in normalized.people if p.hours > 0)
@@ -291,14 +287,10 @@ def validate_artifact(filepath: Path) -> bool:
 
 def main():
     if len(sys.argv) < 2:
-        logger.info(
-            "Usage: python scripts/validate_snapshot_artifact.py <path_to_snapshot.json>"
-        )
+        logger.info("Usage: python scripts/validate_snapshot_artifact.py <path_to_snapshot.json>")
         logger.info("")
         logger.info("Example:")
-        logger.info(
-            "  python scripts/validate_snapshot_artifact.py output/agency_snapshot.json"
-        )
+        logger.info("  python scripts/validate_snapshot_artifact.py output/agency_snapshot.json")
         sys.exit(2)
 
     filepath = Path(sys.argv[1])

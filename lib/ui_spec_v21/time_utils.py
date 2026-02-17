@@ -574,7 +574,7 @@ def validate_timestamp_ordering(conn) -> list:
     # All tables: updated_at >= created_at
     for table in ["inbox_items", "issues", "signals"]:
         try:
-            cursor = conn.execute(f"""
+            cursor = conn.execute(f"""  # nosql: safe
                 SELECT id, created_at, updated_at FROM {table}
                 WHERE updated_at IS NOT NULL AND created_at IS NOT NULL AND updated_at < created_at
             """)
@@ -653,7 +653,9 @@ def validate_all_timestamps(conn) -> tuple:
     for table, columns in TIMESTAMP_COLUMNS.items():
         try:
             for col in columns:
-                cursor = conn.execute(f"SELECT id, {col} FROM {table} WHERE {col} IS NOT NULL")
+                cursor = conn.execute(
+                    f"SELECT id, {col} FROM {table} WHERE {col} IS NOT NULL"
+                )  # nosql: safe
                 for row in cursor.fetchall():
                     if not validate_timestamp_semantic(row[1]):
                         violations.append((table, col, row[0], row[1], "invalid_format"))

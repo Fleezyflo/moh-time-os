@@ -15,12 +15,8 @@ from dataclasses import dataclass
 from typing import Any
 
 # Context variables for trace propagation
-_trace_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "trace_id", default=None
-)
-_span_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar(
-    "span_id", default=None
-)
+_trace_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar("trace_id", default=None)
+_span_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar("span_id", default=None)
 _parent_span_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "parent_span_id", default=None
 )
@@ -264,7 +260,7 @@ def export_spans_otlp(endpoint: str = "http://localhost:4318/v1/traces") -> int:
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=5):  # noqa: S310
+        with urllib.request.urlopen(req, timeout=5):  # nosec B310 noqa: S310
             clear_span_buffer()
             return len(spans)
     except Exception:

@@ -48,9 +48,7 @@ class DeltaTracker:
 
     def get_previous_snapshot(self) -> dict | None:
         """Load the most recent previous snapshot."""
-        history_files = sorted(
-            self.SNAPSHOT_HISTORY_PATH.glob("snapshot_*.json"), reverse=True
-        )
+        history_files = sorted(self.SNAPSHOT_HISTORY_PATH.glob("snapshot_*.json"), reverse=True)
 
         # Skip the most recent (current), get the one before
         if len(history_files) >= 2:
@@ -71,9 +69,7 @@ class DeltaTracker:
             json.dump(snapshot, f)
 
         # Keep only last 10 snapshots
-        history_files = sorted(
-            self.SNAPSHOT_HISTORY_PATH.glob("snapshot_*.json"), reverse=True
-        )
+        history_files = sorted(self.SNAPSHOT_HISTORY_PATH.glob("snapshot_*.json"), reverse=True)
         for old_file in history_files[10:]:
             old_file.unlink()
 
@@ -155,12 +151,8 @@ class DeltaTracker:
         """Compare project statuses."""
         deltas = []
 
-        curr_projects = {
-            p["project_id"]: p for p in current.get("heatstrip_projects", [])
-        }
-        prev_projects = {
-            p["project_id"]: p for p in previous.get("heatstrip_projects", [])
-        }
+        curr_projects = {p["project_id"]: p for p in current.get("heatstrip_projects", [])}
+        prev_projects = {p["project_id"]: p for p in previous.get("heatstrip_projects", [])}
 
         # Find projects that turned Red
         new_red = []
@@ -249,9 +241,7 @@ class DeltaTracker:
         deltas = []
 
         curr_count = current.get("tiles", {}).get("clients", {}).get("at_risk_count", 0)
-        prev_count = (
-            previous.get("tiles", {}).get("clients", {}).get("at_risk_count", 0)
-        )
+        prev_count = previous.get("tiles", {}).get("clients", {}).get("at_risk_count", 0)
 
         if curr_count > prev_count:
             deltas.append(

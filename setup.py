@@ -31,7 +31,7 @@ def main():
 
     # Initialize database
     print("\nInitializing database...")
-    store = get_store()
+    get_store()  # Initialize DB on first call
     print("  ✓ Database initialized")
 
     # Check for config files

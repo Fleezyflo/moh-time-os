@@ -30,25 +30,44 @@ OPERATIONS_FILES = {
 
 # Patterns that indicate historical specs
 HISTORICAL_PATTERNS = [
-    r'v[0-3]\.', r'_v[0-3]_', r'V[0-3]\.', r'_V[0-3]_',
-    r'DEPRECATED', r'deprecated', r'LEGACY', r'legacy',
-    r'OLD', r'old_', r'_old', r'archive',
-    r'draft', r'DRAFT', r'wip', r'WIP',
+    r"v[0-3]\.",
+    r"_v[0-3]_",
+    r"V[0-3]\.",
+    r"_V[0-3]_",
+    r"DEPRECATED",
+    r"deprecated",
+    r"LEGACY",
+    r"legacy",
+    r"OLD",
+    r"old_",
+    r"_old",
+    r"archive",
+    r"draft",
+    r"DRAFT",
+    r"wip",
+    r"WIP",
 ]
 
 # Patterns that indicate agent output
 AGENT_OUTPUT_PATTERNS = [
-    r'agent_output', r'agent-output',
-    r'session_', r'run_log', r'RUN_LOG',
-    r'\d{4}-\d{2}-\d{2}.*output',
-    r'evidence/', r'logs/',
+    r"agent_output",
+    r"agent-output",
+    r"session_",
+    r"run_log",
+    r"RUN_LOG",
+    r"\d{4}-\d{2}-\d{2}.*output",
+    r"evidence/",
+    r"logs/",
 ]
 
 # Patterns that indicate active specs
 ACTIVE_SPEC_PATTERNS = [
-    r'SPEC.*v2\.9', r'v29', r'_v29',
-    r'ui_spec_v21', r'UI-SPEC-v2\.9',
-    r'CLIENT-UI-SPEC',
+    r"SPEC.*v2\.9",
+    r"v29",
+    r"_v29",
+    r"ui_spec_v21",
+    r"UI-SPEC-v2\.9",
+    r"CLIENT-UI-SPEC",
 ]
 
 
@@ -60,16 +79,10 @@ def get_file_metadata(file_path: Path) -> dict:
             "path": str(file_path.relative_to(REPO_ROOT)),
             "size": stat.st_size,
             "mtime": datetime.fromtimestamp(stat.st_mtime).isoformat(),
-            "lines": len(file_path.read_text(errors="ignore").splitlines())
+            "lines": len(file_path.read_text(errors="ignore").splitlines()),
         }
     except Exception as e:
-        return {
-            "path": str(file_path),
-            "size": 0,
-            "mtime": "",
-            "lines": 0,
-            "error": str(e)
-        }
+        return {"path": str(file_path), "size": 0, "mtime": "", "lines": 0, "error": str(e)}
 
 
 def get_first_lines(file_path: Path, n: int = 30) -> str:
@@ -96,7 +109,13 @@ def classify_file(file_path: Path, first_lines: str) -> str:
         return "ACTIVE-OPERATIONS"
 
     # README/DOCS
-    if filename.lower() in ["readme.md", "contributing.md", "license.md", "deploy.md", "architecture.md"]:
+    if filename.lower() in [
+        "readme.md",
+        "contributing.md",
+        "license.md",
+        "deploy.md",
+        "architecture.md",
+    ]:
         return "README/DOCS"
 
     # Check path for patterns
@@ -115,17 +134,28 @@ def classify_file(file_path: Path, first_lines: str) -> str:
 
     # Check for active spec indicators
     for pattern in ACTIVE_SPEC_PATTERNS:
-        if re.search(pattern, path_str, re.IGNORECASE) or re.search(pattern, first_lines, re.IGNORECASE):
+        if re.search(pattern, path_str, re.IGNORECASE) or re.search(
+            pattern, first_lines, re.IGNORECASE
+        ):
             return "ACTIVE-SPEC"
 
     # Check for historical indicators in content
-    if any(x in content_lower for x in ["deprecated", "legacy", "this file is outdated", "superseded by"]):
+    if any(
+        x in content_lower
+        for x in ["deprecated", "legacy", "this file is outdated", "superseded by"]
+    ):
         return "HISTORICAL-SPEC"
 
     # Check for spec indicators
-    if any(x in content_lower for x in ["specification", "spec:", "## overview", "## endpoints", "## schema"]):
+    if any(
+        x in content_lower
+        for x in ["specification", "spec:", "## overview", "## endpoints", "## schema"]
+    ):
         # Determine if historical or active based on path/content
-        if any(x in path_str.lower() for x in ["v1", "v2", "v3", "old", "legacy"]) and "v29" not in path_str.lower():
+        if (
+            any(x in path_str.lower() for x in ["v1", "v2", "v3", "old", "legacy"])
+            and "v29" not in path_str.lower()
+        ):
             return "HISTORICAL-SPEC"
         return "ACTIVE-SPEC"
 
@@ -212,79 +242,95 @@ def generate_report(files: list, canonical: dict) -> str:
             lines.append(f"| {purpose} | _(not identified)_ | — |")
 
     # ACTIVE-SPEC files
-    lines.extend([
-        "",
-        "---",
-        "",
-        "## ACTIVE-SPEC Files (keep in tree)",
-        "| Path | Lines | Last Modified |",
-        "|------|-------|---------------|",
-    ])
+    lines.extend(
+        [
+            "",
+            "---",
+            "",
+            "## ACTIVE-SPEC Files (keep in tree)",
+            "| Path | Lines | Last Modified |",
+            "|------|-------|---------------|",
+        ]
+    )
 
     for f in sorted([f for f in files if f["category"] == "ACTIVE-SPEC"], key=lambda x: x["path"]):
         lines.append(f"| `{f['path']}` | {f['lines']} | {f['mtime'][:10]} |")
 
     # ACTIVE-OPERATIONS files
-    lines.extend([
-        "",
-        "---",
-        "",
-        "## ACTIVE-OPERATIONS Files (keep in tree)",
-        "| Path | Lines | Last Modified |",
-        "|------|-------|---------------|",
-    ])
+    lines.extend(
+        [
+            "",
+            "---",
+            "",
+            "## ACTIVE-OPERATIONS Files (keep in tree)",
+            "| Path | Lines | Last Modified |",
+            "|------|-------|---------------|",
+        ]
+    )
 
-    for f in sorted([f for f in files if f["category"] == "ACTIVE-OPERATIONS"], key=lambda x: x["path"]):
+    for f in sorted(
+        [f for f in files if f["category"] == "ACTIVE-OPERATIONS"], key=lambda x: x["path"]
+    ):
         lines.append(f"| `{f['path']}` | {f['lines']} | {f['mtime'][:10]} |")
 
     # README/DOCS files
-    lines.extend([
-        "",
-        "---",
-        "",
-        "## README/DOCS Files (keep in tree)",
-        "| Path | Lines | Last Modified |",
-        "|------|-------|---------------|",
-    ])
+    lines.extend(
+        [
+            "",
+            "---",
+            "",
+            "## README/DOCS Files (keep in tree)",
+            "| Path | Lines | Last Modified |",
+            "|------|-------|---------------|",
+        ]
+    )
 
     for f in sorted([f for f in files if f["category"] == "README/DOCS"], key=lambda x: x["path"]):
         lines.append(f"| `{f['path']}` | {f['lines']} | {f['mtime'][:10]} |")
 
     # HISTORICAL-SPEC files
-    lines.extend([
-        "",
-        "---",
-        "",
-        "## HISTORICAL-SPEC Files (archive candidates)",
-        "| Path | Lines | Last Modified |",
-        "|------|-------|---------------|",
-    ])
+    lines.extend(
+        [
+            "",
+            "---",
+            "",
+            "## HISTORICAL-SPEC Files (archive candidates)",
+            "| Path | Lines | Last Modified |",
+            "|------|-------|---------------|",
+        ]
+    )
 
-    for f in sorted([f for f in files if f["category"] == "HISTORICAL-SPEC"], key=lambda x: x["path"]):
+    for f in sorted(
+        [f for f in files if f["category"] == "HISTORICAL-SPEC"], key=lambda x: x["path"]
+    ):
         lines.append(f"| `{f['path']}` | {f['lines']} | {f['mtime'][:10]} |")
 
     # AGENT-OUTPUT files
-    lines.extend([
-        "",
-        "---",
-        "",
-        "## AGENT-OUTPUT Files (archive candidates)",
-        "| Path | Lines | Last Modified |",
-        "|------|-------|---------------|",
-    ])
+    lines.extend(
+        [
+            "",
+            "---",
+            "",
+            "## AGENT-OUTPUT Files (archive candidates)",
+            "| Path | Lines | Last Modified |",
+            "|------|-------|---------------|",
+        ]
+    )
 
     for f in sorted([f for f in files if f["category"] == "AGENT-OUTPUT"], key=lambda x: x["path"]):
         lines.append(f"| `{f['path']}` | {f['lines']} | {f['mtime'][:10]} |")
 
     # UNKNOWN files
-    lines.extend([
-        "",
-        "---",
-        "",
-        "## UNKNOWN (needs manual review)",
-        "| Path | Lines | First line |",
-        "|------|-------|------------|",
-    ])
+    lines.extend(
+        [
+            "",
+            "---",
+            "",
+            "## UNKNOWN (needs manual review)",
+            "| Path | Lines | First line |",
+            "|------|-------|------------|",
+        ]
+    )
 
     for f in sorted([f for f in files if f["category"] == "UNKNOWN"], key=lambda x: x["path"]):
         first = f.get("first_line", "")[:50].replace("|", "\\|")
@@ -313,11 +359,13 @@ def main():
         first_lines = get_first_lines(file_path)
         category = classify_file(file_path, first_lines)
 
-        files.append({
-            **metadata,
-            "category": category,
-            "first_line": first_lines.split("\n")[0] if first_lines else ""
-        })
+        files.append(
+            {
+                **metadata,
+                "category": category,
+                "first_line": first_lines.split("\n")[0] if first_lines else "",
+            }
+        )
 
     # Identify canonical specs
     print("Identifying canonical specs...")
@@ -349,7 +397,7 @@ def main():
     print(f"README/DOCS:        {counts.get('README/DOCS', 0)}")
     print(f"UNKNOWN:            {counts.get('UNKNOWN', 0)}")
 
-    archive_candidates = counts.get('HISTORICAL-SPEC', 0) + counts.get('AGENT-OUTPUT', 0)
+    archive_candidates = counts.get("HISTORICAL-SPEC", 0) + counts.get("AGENT-OUTPUT", 0)
     print(f"\nArchive candidates: {archive_candidates}")
 
 

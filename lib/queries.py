@@ -81,17 +81,17 @@ def summary_stats() -> dict[str, Any]:
 
         stats["total_items"] = conn.execute("SELECT COUNT(*) FROM items").fetchone()[0]
 
-        stats["open"] = conn.execute(
-            "SELECT COUNT(*) FROM items WHERE status = 'open'"
-        ).fetchone()[0]
+        stats["open"] = conn.execute("SELECT COUNT(*) FROM items WHERE status = 'open'").fetchone()[
+            0
+        ]
 
         stats["waiting"] = conn.execute(
             "SELECT COUNT(*) FROM items WHERE status = 'waiting'"
         ).fetchone()[0]
 
-        stats["done"] = conn.execute(
-            "SELECT COUNT(*) FROM items WHERE status = 'done'"
-        ).fetchone()[0]
+        stats["done"] = conn.execute("SELECT COUNT(*) FROM items WHERE status = 'done'").fetchone()[
+            0
+        ]
 
         stats["overdue"] = conn.execute(
             "SELECT COUNT(*) FROM items WHERE status = 'open' AND due IS NOT NULL AND due < date('now')"
@@ -171,8 +171,7 @@ def needs_attention() -> dict[str, Any]:
         "due_today": len(result["due_today"]),
         "due_this_week": len(result["due_this_week"]),
         "waiting_too_long": len(result["waiting_too_long"]),
-        "clients_at_risk": len(result["critical_clients"])
-        + len(result["poor_clients"]),
+        "clients_at_risk": len(result["critical_clients"]) + len(result["poor_clients"]),
         "projects_at_risk": len(result["at_risk_projects"]),
     }
 
@@ -226,9 +225,7 @@ def generate_brief() -> str:
         lines.append("")
 
     # Due this week (excluding today)
-    due_week = [
-        i for i in attention["due_this_week"] if i not in attention["due_today"]
-    ]
+    due_week = [i for i in attention["due_this_week"] if i not in attention["due_today"]]
     if due_week:
         lines.append(f"### 📆 Due This Week ({len(due_week)})")
         for item in due_week[:5]:

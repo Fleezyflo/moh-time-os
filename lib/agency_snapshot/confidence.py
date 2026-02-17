@@ -186,9 +186,7 @@ class ConfidenceModel:
 
         # Check data integrity (blocking for all)
         if not trust.data_integrity:
-            return ConfidenceResult(
-                level=Confidence.LOW, why_low=["Data integrity check failed"]
-            )
+            return ConfidenceResult(level=Confidence.LOW, why_low=["Data integrity check failed"])
 
         # Domain-specific checks
         if domain == "delivery":
@@ -203,15 +201,11 @@ class ConfidenceModel:
 
         elif domain == "cash":
             if trust.finance_ar_coverage_pct < self.AR_COVERAGE_THRESHOLD * 100:
-                why_low.append(
-                    f"AR data coverage at {trust.finance_ar_coverage_pct:.0f}%"
-                )
+                why_low.append(f"AR data coverage at {trust.finance_ar_coverage_pct:.0f}%")
 
         elif domain == "comms":
             if trust.commitment_ready_pct < self.COMMITMENT_THRESHOLD * 100:
-                why_low.append(
-                    f"Commitment extraction at {trust.commitment_ready_pct:.0f}%"
-                )
+                why_low.append(f"Commitment extraction at {trust.commitment_ready_pct:.0f}%")
 
         # Check collector staleness
         staleness_checks = {

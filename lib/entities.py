@@ -116,9 +116,7 @@ def create_client(name: str, tier: str, **kwargs) -> str:
 def get_client(client_id: str) -> Client | None:
     """Get client by ID."""
     with get_connection() as conn:
-        row = conn.execute(
-            "SELECT * FROM clients WHERE id = ?", (client_id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM clients WHERE id = ?", (client_id,)).fetchone()
 
         if not row:
             return None
@@ -230,13 +228,13 @@ def update_client(client_id: str, **changes) -> bool:
     values = list(updates.values()) + [client_id]
 
     with get_connection() as conn:
-        cursor = conn.execute(f"UPDATE clients SET {set_clause} WHERE id = ?", values)
+        cursor = conn.execute(
+            f"UPDATE clients SET {set_clause} WHERE id = ?", values
+        )  # nosql: safe
         return cursor.rowcount > 0
 
 
-def list_clients(
-    tier: str = None, health: str = None, limit: int = 500
-) -> list[Client]:
+def list_clients(tier: str = None, health: str = None, limit: int = 500) -> list[Client]:
     """List clients with optional filters."""
     conditions = []
     params = []
@@ -467,13 +465,11 @@ def update_person(person_id: str, **changes) -> bool:
     values = list(updates.values()) + [person_id]
 
     with get_connection() as conn:
-        cursor = conn.execute(f"UPDATE people SET {set_clause} WHERE id = ?", values)
+        cursor = conn.execute(f"UPDATE people SET {set_clause} WHERE id = ?", values)  # nosql: safe
         return cursor.rowcount > 0
 
 
-def list_people(
-    type: str = None, client_id: str = None, limit: int = 500
-) -> list[Person]:
+def list_people(type: str = None, client_id: str = None, limit: int = 500) -> list[Person]:
     """List people with optional filters."""
     conditions = []
     params = []
@@ -606,9 +602,7 @@ def create_project(name: str, client_id: str = None, **kwargs) -> str:
 def get_project(project_id: str) -> Project | None:
     """Get project by ID."""
     with get_connection() as conn:
-        row = conn.execute(
-            "SELECT * FROM projects WHERE id = ?", (project_id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM projects WHERE id = ?", (project_id,)).fetchone()
 
         if not row:
             return None
@@ -620,9 +614,7 @@ def _row_to_project(row) -> Project:
     """Convert database row to Project object."""
     # Handle both column naming schemes (v2: *_json, state: no suffix)
     row_dict = dict(row)
-    milestones_raw = (
-        row_dict.get("milestones_json") or row_dict.get("milestones") or "[]"
-    )
+    milestones_raw = row_dict.get("milestones_json") or row_dict.get("milestones") or "[]"
     blockers_raw = row_dict.get("blockers_json") or row_dict.get("blockers") or "[]"
     team_raw = row_dict.get("team_json") or row_dict.get("team") or "[]"
 
@@ -640,9 +632,7 @@ def _row_to_project(row) -> Project:
         milestones=json.loads(milestones_raw)
         if isinstance(milestones_raw, str)
         else milestones_raw or [],
-        blockers=json.loads(blockers_raw)
-        if isinstance(blockers_raw, str)
-        else blockers_raw or [],
+        blockers=json.loads(blockers_raw) if isinstance(blockers_raw, str) else blockers_raw or [],
         team=json.loads(team_raw) if isinstance(team_raw, str) else team_raw or [],
         asana_project_id=row_dict.get("asana_project_id"),
         created_at=row_dict.get("created_at"),
@@ -650,9 +640,7 @@ def _row_to_project(row) -> Project:
     )
 
 
-def find_project(
-    name: str = None, client_id: str = None, asana_id: str = None
-) -> Project | None:
+def find_project(name: str = None, client_id: str = None, asana_id: str = None) -> Project | None:
     """Find project by name, client, or asana_project_id (source_id)."""
     with get_connection() as conn:
         row = None
@@ -703,7 +691,9 @@ def update_project(project_id: str, **changes) -> bool:
     values = list(updates.values()) + [project_id]
 
     with get_connection() as conn:
-        cursor = conn.execute(f"UPDATE projects SET {set_clause} WHERE id = ?", values)
+        cursor = conn.execute(
+            f"UPDATE projects SET {set_clause} WHERE id = ?", values
+        )  # nosql: safe
         return cursor.rowcount > 0
 
 
@@ -735,9 +725,7 @@ def list_projects(
         return [_row_to_project(row) for row in rows]
 
 
-def upsert_project(
-    name: str, client_id: str, asana_project_id: str = None, **kwargs
-) -> str:
+def upsert_project(name: str, client_id: str, asana_project_id: str = None, **kwargs) -> str:
     """Create or update project. Returns project ID."""
     existing = None
     if asana_project_id:

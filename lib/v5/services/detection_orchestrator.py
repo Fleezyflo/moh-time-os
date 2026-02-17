@@ -175,9 +175,7 @@ class DetectionOrchestrator:
 
         return stats
 
-    def run_detector(
-        self, detector_id: str, skip_duplicates: bool = True
-    ) -> DetectionStats:
+    def run_detector(self, detector_id: str, skip_duplicates: bool = True) -> DetectionStats:
         """
         Run a single detector.
 
@@ -236,9 +234,7 @@ class DetectionOrchestrator:
 
         stats.record_detector(detector_id, detected_count, stored, duplicates, errors)
 
-        logger.info(
-            f"[{detector_id}] Stored {stored}, duplicates {duplicates}, errors {errors}"
-        )
+        logger.info(f"[{detector_id}] Stored {stored}, duplicates {duplicates}, errors {errors}")
 
     def _is_duplicate(self, signal: Signal, detector: SignalDetector) -> bool:
         """

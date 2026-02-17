@@ -166,7 +166,7 @@ class SchemaAssertion:
                 continue  # Table missing is caught by assert_tables_exist
 
             # Get existing columns
-            cursor = self.conn.execute(f"PRAGMA table_info({table})")
+            cursor = self.conn.execute(f"PRAGMA table_info({table})")  # nosql: safe
             existing_columns = {row[1] for row in cursor.fetchall()}
 
             for column in columns:

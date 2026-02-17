@@ -124,9 +124,7 @@ class CouplingService:
                     (
                         coupling_id,
                         signal_type,
-                        json.dumps(
-                            [{"type": type1, "id": id1}, {"type": type2, "id": id2}]
-                        ),
+                        json.dumps([{"type": type1, "id": id1}, {"type": type2, "id": id2}]),
                         strength,
                         json.dumps({"signal_type": signal_type, "shared_count": count}),
                         json.dumps([type1, id1, type2, id2]),
@@ -134,9 +132,7 @@ class CouplingService:
                     ),
                 )
                 stats["created"] += 1
-                stats["types"]["shared_signals"] = (
-                    stats["types"].get("shared_signals", 0) + 1
-                )
+                stats["types"]["shared_signals"] = stats["types"].get("shared_signals", 0) + 1
 
             # Find clients with multiple shared risk categories
             cursor.execute("""
@@ -176,10 +172,7 @@ class CouplingService:
                     (
                         coupling_id,
                         json.dumps(
-                            [
-                                {"type": "client", "id": c["id"]}
-                                for c in high_risk_clients[:10]
-                            ]
+                            [{"type": "client", "id": c["id"]} for c in high_risk_clients[:10]]
                         ),
                         0.9,
                         json.dumps({"clients": high_risk_clients[:10]}),
@@ -196,9 +189,7 @@ class CouplingService:
         finally:
             conn.close()
 
-    def get_couplings_for_entity(
-        self, entity_type: str, entity_id: str
-    ) -> list[dict[str, Any]]:
+    def get_couplings_for_entity(self, entity_type: str, entity_id: str) -> list[dict[str, Any]]:
         """Get all couplings involving an entity."""
         conn = self._get_conn()
         cursor = conn.cursor()

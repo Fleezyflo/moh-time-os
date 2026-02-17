@@ -74,9 +74,7 @@ class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
                 self.send_response(400)
                 self.send_header("Content-type", "text/html")
                 self.end_headers()
-                self.wfile.write(
-                    f"<h1>Error: {OAuthCallbackHandler.error}</h1>".encode()
-                )
+                self.wfile.write(f"<h1>Error: {OAuthCallbackHandler.error}</h1>".encode())
             elif "code" in params:
                 OAuthCallbackHandler.auth_code = params["code"][0]
                 OAuthCallbackHandler.state = params.get("state", [None])[0]
@@ -102,9 +100,7 @@ class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
         pass  # Suppress logging
 
 
-def exchange_code_for_tokens(
-    client_id: str, client_secret: str, auth_code: str
-) -> dict:
+def exchange_code_for_tokens(client_id: str, client_secret: str, auth_code: str) -> dict:
     """Exchange authorization code for access and refresh tokens."""
     resp = requests.post(
         XERO_TOKEN_URL,
@@ -116,6 +112,7 @@ def exchange_code_for_tokens(
             "client_secret": client_secret,
         },
         headers={"Content-Type": "application/x-www-form-urlencoded"},
+        timeout=30,
     )
 
     if resp.status_code != 200:
@@ -129,6 +126,7 @@ def get_tenant_id(access_token: str) -> str:
     resp = requests.get(
         XERO_CONNECTIONS_URL,
         headers={"Authorization": f"Bearer {access_token}"},
+        timeout=30,
     )
 
     if resp.status_code != 200:
@@ -191,10 +189,7 @@ def main():
 
         # Wait for callback
         print("Waiting for authorization...")
-        while (
-            OAuthCallbackHandler.auth_code is None
-            and OAuthCallbackHandler.error is None
-        ):
+        while OAuthCallbackHandler.auth_code is None and OAuthCallbackHandler.error is None:
             httpd.handle_request()
 
     if OAuthCallbackHandler.error:
@@ -209,9 +204,7 @@ def main():
 
     # Exchange for tokens
     print("Exchanging code for tokens...")
-    tokens = exchange_code_for_tokens(
-        client_id, client_secret, OAuthCallbackHandler.auth_code
-    )
+    tokens = exchange_code_for_tokens(client_id, client_secret, OAuthCallbackHandler.auth_code)
 
     access_token = tokens["access_token"]
     refresh_token = tokens["refresh_token"]

@@ -19,8 +19,8 @@
 
 ## 2. TasksCollector (Google Tasks)
 
-**Source:** Google Tasks via `gog tasks` CLI  
-**Target Table:** `tasks`  
+**Source:** Google Tasks via `gog tasks` CLI
+**Target Table:** `tasks`
 **Sync Interval:** 300 seconds (5 minutes)
 
 ### Fields Produced
@@ -82,9 +82,9 @@ return clamp(0, 100, score)
 
 ## 3. CalendarCollector (Google Calendar)
 
-**Source:** Google Calendar via `gog calendar` CLI  
-**Target Table:** `events`  
-**Sync Interval:** 60 seconds (1 minute)  
+**Source:** Google Calendar via `gog calendar` CLI
+**Target Table:** `events`
+**Sync Interval:** 60 seconds (1 minute)
 **Lookback:** 30 days | **Lookahead:** 30 days
 
 ### Fields Produced
@@ -137,10 +137,10 @@ if location and not virtual:
 
 ## 4. GmailCollector (Gmail)
 
-**Source:** Gmail via `gog gmail` CLI  
-**Target Table:** `communications`  
-**Sync Interval:** 120 seconds (2 minutes)  
-**Lookback:** 90 days  
+**Source:** Gmail via `gog gmail` CLI
+**Target Table:** `communications`
+**Sync Interval:** 120 seconds (2 minutes)
+**Lookback:** 90 days
 **Max Results:** 500
 
 ### Fields Produced
@@ -197,9 +197,9 @@ Body processing:
 
 ## 5. AsanaCollector (Asana)
 
-**Source:** Asana API via `engine/asana_client.py`  
-**Target Tables:** `tasks`, `projects`  
-**Sync Interval:** 300 seconds (5 minutes)  
+**Source:** Asana API via `engine/asana_client.py`
+**Target Tables:** `tasks`, `projects`
+**Sync Interval:** 300 seconds (5 minutes)
 **Workspace:** hrmny (GID: 1148006162435561)
 
 ### Fields Produced (tasks)
@@ -249,8 +249,8 @@ The `asana_sync.py` collector also syncs:
 
 ## 6. XeroCollector (Xero)
 
-**Source:** Xero API via `collectors/xero_ops.py`  
-**Target Tables:** `invoices`, `clients`  
+**Source:** Xero API via `collectors/xero_ops.py`
+**Target Tables:** `invoices`, `clients`
 **Sync Interval:** 300 seconds (5 minutes)
 
 ### Fields Produced (invoices)
@@ -301,8 +301,8 @@ contact, number, amount_due, due_date, is_overdue, days_overdue, currency
 
 ## 7. TeamCalendarCollector
 
-**Source:** Google Calendar (multiple team accounts)  
-**Target Tables:** `team_events`, `team_capacity`  
+**Source:** Google Calendar (multiple team accounts)
+**Target Tables:** `team_events`, `team_capacity`
 **Status:** AVAILABLE (not always enabled)
 
 ### Fields Produced (team_events)
@@ -357,7 +357,7 @@ contact, number, amount_due, due_date, is_overdue, days_overdue, currency
 
 Current sync state query:
 ```sql
-SELECT source, last_sync, last_success, items_synced, error 
+SELECT source, last_sync, last_success, items_synced, error
 FROM sync_state ORDER BY last_sync DESC;
 ```
 

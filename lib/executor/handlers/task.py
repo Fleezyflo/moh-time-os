@@ -66,8 +66,7 @@ class TaskHandler:
         task_id = self.store.insert(
             "tasks",
             {
-                "id": data.get("id")
-                or f"task_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                "id": data.get("id") or f"task_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
                 "source": data.get("source", "time_os"),
                 "title": data["title"],
                 "status": "pending",

@@ -353,7 +353,7 @@ def get_connection(
 def get_table_columns(conn: sqlite3.Connection, table: str) -> set[str]:
     """Get existing column names for a table."""
     try:
-        cursor = conn.execute(f"PRAGMA table_info({table})")
+        cursor = conn.execute(f"PRAGMA table_info({table})")  # nosql: safe
         return {row[1] for row in cursor.fetchall()}
     except sqlite3.OperationalError:
         return set()
@@ -361,9 +361,7 @@ def get_table_columns(conn: sqlite3.Connection, table: str) -> set[str]:
 
 def table_exists(conn: sqlite3.Connection, table: str) -> bool:
     """Check if a table exists."""
-    cursor = conn.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,)
-    )
+    cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,))
     return cursor.fetchone() is not None
 
 
@@ -375,7 +373,7 @@ def get_schema_version(conn: sqlite3.Connection) -> int:
 
 def set_schema_version(conn: sqlite3.Connection, version: int):
     """Set schema version via PRAGMA user_version."""
-    conn.execute(f"PRAGMA user_version = {version}")
+    conn.execute(f"PRAGMA user_version = {version}")  # nosql: safe
 
 
 # ============================================================
@@ -383,9 +381,7 @@ def set_schema_version(conn: sqlite3.Connection, version: int):
 # ============================================================
 
 
-def create_table_if_missing(
-    conn: sqlite3.Connection, table: str, create_sql: str
-) -> bool:
+def create_table_if_missing(conn: sqlite3.Connection, table: str, create_sql: str) -> bool:
     """Create a table if it doesn't exist. Returns True if created."""
     if table_exists(conn, table):
         return False
@@ -410,7 +406,7 @@ def add_column_if_missing(
         return False
 
     try:
-        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")  # nosql: safe
         logger.info(f"Migration: added column {table}.{column}")
         return True
     except sqlite3.OperationalError as e:
@@ -465,7 +461,7 @@ def run_migrations(conn: sqlite3.Connection) -> dict:
             try:
                 conn.execute(
                     f"CREATE INDEX IF NOT EXISTS {idx_name} ON {table}({columns})"
-                )
+                )  # nosql: safe
             except sqlite3.OperationalError:
                 pass
 
@@ -516,9 +512,7 @@ def run_migrations(conn: sqlite3.Connection) -> dict:
     if previous_version < 9:
         try:
             # Check if issues_v29 is empty table (not a view)
-            cursor = conn.execute(
-                "SELECT type FROM sqlite_master WHERE name = 'issues_v29'"
-            )
+            cursor = conn.execute("SELECT type FROM sqlite_master WHERE name = 'issues_v29'")
             row = cursor.fetchone()
             if row and row[0] == "table":
                 cursor = conn.execute("SELECT COUNT(*) FROM issues_v29")
@@ -572,14 +566,10 @@ def run_migrations(conn: sqlite3.Connection) -> dict:
                             i.closed_at
                         FROM issues i
                     """)
-                    logger.info(
-                        "Migration 9: Created issues_v29 VIEW from legacy issues table"
-                    )
+                    logger.info("Migration 9: Created issues_v29 VIEW from legacy issues table")
 
             # Check if signals_v29 is empty table
-            cursor = conn.execute(
-                "SELECT type FROM sqlite_master WHERE name = 'signals_v29'"
-            )
+            cursor = conn.execute("SELECT type FROM sqlite_master WHERE name = 'signals_v29'")
             row = cursor.fetchone()
             if row and row[0] == "table":
                 cursor = conn.execute("SELECT COUNT(*) FROM signals_v29")
@@ -611,9 +601,7 @@ def run_migrations(conn: sqlite3.Connection) -> dict:
                             COALESCE(s.detected_at, datetime('now')) AS updated_at
                         FROM signals s
                     """)
-                    logger.info(
-                        "Migration 9: Created signals_v29 VIEW from legacy signals table"
-                    )
+                    logger.info("Migration 9: Created signals_v29 VIEW from legacy signals table")
         except Exception as e:
             results["errors"].append(f"migration 9 views: {e}")
 

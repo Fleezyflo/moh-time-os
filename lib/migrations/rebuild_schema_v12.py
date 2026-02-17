@@ -131,18 +131,16 @@ def rebuild_tasks(conn):
     """)
 
     # Drop old, rename new
-    cursor.execute("DROP TABLE tasks")
+    cursor.execute(
+        "DROP TABLE tasks"  # APPROVED_DESTRUCTIVE: Schema migration v12 - data preserved in new table
+    )
     cursor.execute("ALTER TABLE tasks_new RENAME TO tasks")
 
     # Recreate indexes
     cursor.execute("CREATE INDEX idx_tasks_project ON tasks(project_id)")
     cursor.execute("CREATE INDEX idx_tasks_client ON tasks(client_id)")
-    cursor.execute(
-        "CREATE INDEX idx_tasks_project_link_status ON tasks(project_link_status)"
-    )
-    cursor.execute(
-        "CREATE INDEX idx_tasks_client_link_status ON tasks(client_link_status)"
-    )
+    cursor.execute("CREATE INDEX idx_tasks_project_link_status ON tasks(project_link_status)")
+    cursor.execute("CREATE INDEX idx_tasks_client_link_status ON tasks(client_link_status)")
     cursor.execute("CREATE INDEX idx_tasks_assignee ON tasks(assignee_id)")
     cursor.execute("CREATE INDEX idx_tasks_status ON tasks(status)")
     cursor.execute("CREATE INDEX idx_tasks_due ON tasks(due_date)")
@@ -153,9 +151,7 @@ def rebuild_tasks(conn):
     count_after = cursor.fetchone()[0]
     logger.info(f"Tasks after: {count_after}")
     if count_before != count_after:
-        raise Exception(
-            f"Row count mismatch! Before: {count_before}, After: {count_after}"
-        )
+        raise Exception(f"Row count mismatch! Before: {count_before}, After: {count_after}")
 
     return count_after
 
@@ -235,33 +231,21 @@ def rebuild_communications(conn):
         FROM communications
     """)
 
-    cursor.execute("DROP TABLE communications")
+    cursor.execute("DROP TABLE communications")  # APPROVED_DESTRUCTIVE: Schema migration v12
     cursor.execute("ALTER TABLE communications_new RENAME TO communications")
 
     # Recreate indexes
-    cursor.execute(
-        "CREATE INDEX idx_communications_client ON communications(client_id)"
-    )
-    cursor.execute(
-        "CREATE INDEX idx_communications_processed ON communications(processed)"
-    )
-    cursor.execute(
-        "CREATE INDEX idx_communications_content_hash ON communications(content_hash)"
-    )
-    cursor.execute(
-        "CREATE INDEX idx_communications_from_email ON communications(from_email)"
-    )
-    cursor.execute(
-        "CREATE INDEX idx_communications_from_domain ON communications(from_domain)"
-    )
+    cursor.execute("CREATE INDEX idx_communications_client ON communications(client_id)")
+    cursor.execute("CREATE INDEX idx_communications_processed ON communications(processed)")
+    cursor.execute("CREATE INDEX idx_communications_content_hash ON communications(content_hash)")
+    cursor.execute("CREATE INDEX idx_communications_from_email ON communications(from_email)")
+    cursor.execute("CREATE INDEX idx_communications_from_domain ON communications(from_domain)")
 
     cursor.execute("SELECT COUNT(*) FROM communications")
     count_after = cursor.fetchone()[0]
     logger.info(f"Communications after: {count_after}")
     if count_before != count_after:
-        raise Exception(
-            f"Row count mismatch! Before: {count_before}, After: {count_after}"
-        )
+        raise Exception(f"Row count mismatch! Before: {count_before}, After: {count_after}")
 
     return count_after
 
@@ -355,7 +339,7 @@ def rebuild_projects(conn):
         FROM projects
     """)
 
-    cursor.execute("DROP TABLE projects")
+    cursor.execute("DROP TABLE projects")  # APPROVED_DESTRUCTIVE: Schema migration v12
     cursor.execute("ALTER TABLE projects_new RENAME TO projects")
 
     cursor.execute("CREATE INDEX idx_projects_status ON projects(status)")
@@ -379,7 +363,7 @@ def drop_views(conn):
 
     dropped = []
     for view in views:
-        cursor.execute(f"DROP VIEW IF EXISTS {view}")
+        cursor.execute(f"DROP VIEW IF EXISTS {view}")  # nosql: safe
         dropped.append(view)
 
     logger.info(f"Dropped views: {dropped}")

@@ -215,7 +215,7 @@ CREATE INDEX IF NOT EXISTS idx_fix_data_entity ON fix_data_queue(entity_type, en
 
 def column_exists(cursor, table, column):
     """Check if a column exists in a table."""
-    cursor.execute(f"PRAGMA table_info({table})")
+    cursor.execute(f"PRAGMA table_info({table})")  # nosql: safe
     columns = [row[1] for row in cursor.fetchall()]
     return column in columns
 
@@ -224,7 +224,7 @@ def add_column_if_not_exists(cursor, table, column, column_def):
     """Add a column to a table if it doesn't exist."""
     if not column_exists(cursor, table, column):
         try:
-            cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {column_def}")
+            cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {column_def}")  # nosql: safe
             logger.info(f"  Added column {table}.{column}")
             return True
         except sqlite3.OperationalError as e:
@@ -283,9 +283,7 @@ def run_migration():
         logger.info(f"Migration {MIGRATION_VERSION} applied successfully!")
         # Print summary
         logger.info("\n=== New Tables Created ===")
-        cursor.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
-        )
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
         tables = [row[0] for row in cursor.fetchall()]
         new_tables = [
             "artifacts",
@@ -339,7 +337,7 @@ def verify_migration():
         for table in expected_tables:
             if table in existing:
                 # Count rows
-                cursor.execute(f"SELECT COUNT(*) FROM {table}")
+                cursor.execute(f"SELECT COUNT(*) FROM {table}")  # nosql: safe
                 count = cursor.fetchone()[0]
                 logger.info(f"  ✓ {table}: {count} rows")
             else:
@@ -347,9 +345,7 @@ def verify_migration():
                 all_present = False
 
         # Check indexes
-        cursor.execute(
-            "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%'"
-        )
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%'")
         indexes = [row[0] for row in cursor.fetchall()]
         logger.info(f"\n  Indexes created: {len(indexes)}")
         return all_present

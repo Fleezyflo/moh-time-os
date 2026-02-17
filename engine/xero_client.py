@@ -7,12 +7,8 @@ from typing import Any
 
 import requests
 
-CONFIG_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "config", ".credentials.json"
-)
-TOKEN_CACHE_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "config", ".xero_token_cache.json"
-)
+CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", ".credentials.json")
+TOKEN_CACHE_PATH = os.path.join(os.path.dirname(__file__), "..", "config", ".xero_token_cache.json")
 
 XERO_TOKEN_URL = "https://identity.xero.com/connect/token"
 XERO_API_BASE = "https://api.xero.com/api.xro/2.0"
@@ -77,6 +73,7 @@ def refresh_access_token(creds: XeroCredentials) -> str:
             "client_secret": creds.client_secret,
         },
         headers={"Content-Type": "application/x-www-form-urlencoded"},
+        timeout=30,
     )
 
     if resp.status_code != 200:
@@ -111,6 +108,7 @@ def xero_get(endpoint: str) -> dict[str, Any]:
             "Xero-Tenant-Id": tenant_id,
             "Accept": "application/json",
         },
+        timeout=30,
     )
 
     if resp.status_code != 200:

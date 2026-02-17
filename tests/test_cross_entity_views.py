@@ -163,9 +163,7 @@ class TestCommunicationClientLinkView:
 
     def test_artifact_types_present(self, db_conn):
         """View contains expected artifact types."""
-        cursor = db_conn.execute(
-            "SELECT DISTINCT artifact_type FROM v_communication_client_link"
-        )
+        cursor = db_conn.execute("SELECT DISTINCT artifact_type FROM v_communication_client_link")
         types = {row["artifact_type"] for row in cursor.fetchall()}
         assert "message" in types, "No message artifacts linked to clients"
 
@@ -222,11 +220,15 @@ class TestCrossViewIntegration:
 
         for row in cursor.fetchall():
             # Verify against v_client_operational_profile
-            check = db_conn.execute("""
+            check = db_conn.execute(
+                """
                 SELECT total_tasks FROM v_client_operational_profile
                 WHERE client_id = ?
-            """, (row["client_id"],))
+            """,
+                (row["client_id"],),
+            )
             profile = check.fetchone()
             if profile:
-                assert profile["total_tasks"] == row["task_count"], \
+                assert profile["total_tasks"] == row["task_count"], (
                     f"Task count mismatch for client {row['client_id']}"
+                )

@@ -38,7 +38,8 @@ logger = logging.getLogger(__name__)
 PID_FILE = paths.data_dir() / "daemon.pid"
 STATE_FILE = paths.data_dir() / "daemon_state.json"
 LOG_FILE = paths.data_dir() / "daemon.log"
-VENV_PYTHON = paths.project_root() / ".venv" / "bin" / "python3"
+PROJECT_ROOT = paths.project_root()
+VENV_PYTHON = PROJECT_ROOT / ".venv" / "bin" / "python3"
 
 
 # Configure logging
@@ -158,17 +159,11 @@ class TimeOSDaemon:
                     if name in self.job_states:
                         state = self.job_states[name]
                         if state_data.get("last_run"):
-                            state.last_run = datetime.fromisoformat(
-                                state_data["last_run"]
-                            )
+                            state.last_run = datetime.fromisoformat(state_data["last_run"])
                         if state_data.get("last_success"):
-                            state.last_success = datetime.fromisoformat(
-                                state_data["last_success"]
-                            )
+                            state.last_success = datetime.fromisoformat(state_data["last_success"])
                         state.last_error = state_data.get("last_error")
-                        state.consecutive_failures = state_data.get(
-                            "consecutive_failures", 0
-                        )
+                        state.consecutive_failures = state_data.get("consecutive_failures", 0)
                         state.total_runs = state_data.get("total_runs", 0)
                         state.total_failures = state_data.get("total_failures", 0)
                 self.logger.info(f"Loaded state from {STATE_FILE}")
@@ -182,9 +177,7 @@ class TimeOSDaemon:
             for name, state in self.job_states.items():
                 data["jobs"][name] = {
                     "last_run": state.last_run.isoformat() if state.last_run else None,
-                    "last_success": state.last_success.isoformat()
-                    if state.last_success
-                    else None,
+                    "last_success": state.last_success.isoformat() if state.last_success else None,
                     "last_error": state.last_error,
                     "consecutive_failures": state.consecutive_failures,
                     "total_runs": state.total_runs,
@@ -257,9 +250,7 @@ class TimeOSDaemon:
                 self.logger.info(f"✓ {job_name} completed in {duration:.1f}s")
                 return True
             state.last_error = (
-                result.stderr[:500]
-                if result.stderr
-                else f"Exit code {result.returncode}"
+                result.stderr[:500] if result.stderr else f"Exit code {result.returncode}"
             )
             state.consecutive_failures += 1
             state.total_failures += 1
@@ -423,9 +414,7 @@ def main():
         choices=["start", "stop", "status", "run-once"],
         help="Action to perform",
     )
-    parser.add_argument(
-        "--bg", action="store_true", help="Run in background (start only)"
-    )
+    parser.add_argument("--bg", action="store_true", help="Run in background (start only)")
 
     args = parser.parse_args()
 
@@ -459,9 +448,7 @@ def main():
             logger.info(f"State updated: {status['state_updated']}")
         logger.info("\nJobs:")
         for name, job in status.get("jobs", {}).items():
-            last_run = (
-                job.get("last_run", "never")[:19] if job.get("last_run") else "never"
-            )
+            last_run = job.get("last_run", "never")[:19] if job.get("last_run") else "never"
             failures = job.get("consecutive_failures", 0)
             status_str = "✓" if failures == 0 else f"✗ ({failures} failures)"
             logger.info(f"  {name}: last run {last_run} {status_str}")

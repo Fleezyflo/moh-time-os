@@ -106,9 +106,7 @@ class NotificationEngine:
                 try:
                     target_channels = json.loads(channels_json)
                 except json.JSONDecodeError as e:
-                    logger.warning(
-                        f"Invalid channels JSON for notification {notif_id}: {e}"
-                    )
+                    logger.warning(f"Invalid channels JSON for notification {notif_id}: {e}")
                     target_channels = ["clawdbot"]
             else:
                 target_channels = ["clawdbot"]
@@ -213,9 +211,7 @@ class NotificationEngine:
                 try:
                     target_channels = json.loads(channels_json)
                 except json.JSONDecodeError as e:
-                    logger.warning(
-                        f"Invalid channels JSON for notification {notif_id}: {e}"
-                    )
+                    logger.warning(f"Invalid channels JSON for notification {notif_id}: {e}")
                     target_channels = ["clawdbot"]
             else:
                 target_channels = ["clawdbot"]
@@ -250,9 +246,7 @@ class NotificationEngine:
                                 "delivery_id": result.get("message_id"),
                             },
                         )
-                        results.append(
-                            {"id": notif_id, "channel": channel_name, "status": "sent"}
-                        )
+                        results.append({"id": notif_id, "channel": channel_name, "status": "sent"})
                     else:
                         results.append(
                             {

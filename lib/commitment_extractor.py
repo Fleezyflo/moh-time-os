@@ -139,7 +139,7 @@ def extract_commitments_from_text(text: str) -> list:
 def generate_commitment_id(source_id: str, text: str) -> str:
     """Generate deterministic ID for deduplication."""
     content = f"{source_id}:{text[:50]}"
-    return hashlib.md5(content.encode()).hexdigest()[:16]
+    return hashlib.md5(content.encode(), usedforsecurity=False).hexdigest()[:16]
 
 
 def extract_from_communications(limit: int = 100) -> dict:
@@ -241,9 +241,7 @@ def run():
     cursor.execute("SELECT COUNT(*) as cnt FROM commitments")
     after = cursor.fetchone()["cnt"]
 
-    logger.info(
-        f"\nCommitments: {before} → {after} (+{result['commitments_extracted']})"
-    )
+    logger.info(f"\nCommitments: {before} → {after} (+{result['commitments_extracted']})")
     logger.info(f"Communications scanned: {result['communications_scanned']}")
     logger.info(f"Skipped duplicates: {result['skipped_duplicates']}")
     # Show recent commitments

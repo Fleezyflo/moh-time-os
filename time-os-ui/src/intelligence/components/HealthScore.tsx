@@ -22,9 +22,9 @@ export function HealthScore({
     score >= 60 ? 'bg-green-500/10' : score >= 30 ? 'bg-amber-500/10' : 'bg-red-500/10';
 
   const sizeClasses = {
-    sm: 'text-2xl',
-    md: 'text-4xl',
-    lg: 'text-5xl',
+    sm: 'text-xl sm:text-2xl',
+    md: 'text-3xl sm:text-4xl',
+    lg: 'text-4xl sm:text-5xl',
   };
 
   const trendIcon = {
@@ -40,7 +40,7 @@ export function HealthScore({
   };
 
   return (
-    <div className={`${bgColor} rounded-lg p-6 text-center`}>
+    <div className={`${bgColor} rounded-lg p-4 sm:p-6 text-center`}>
       <div className="flex items-center justify-center gap-2">
         <span className={`${sizeClasses[size]} font-bold ${color}`}>{Math.round(score)}</span>
         {showTrend && <span className={`text-xl ${trendColor[trend]}`}>{trendIcon[trend]}</span>}

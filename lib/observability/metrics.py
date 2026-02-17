@@ -214,6 +214,7 @@ db_latency = REGISTRY.histogram("db_latency_seconds", "Database query latency")
 
 def timed(histogram: Histogram) -> Callable:
     """Decorator to time function execution."""
+
     def decorator(func: Callable) -> Callable:
         def wrapper(*args, **kwargs):
             start = time.perf_counter()
@@ -221,5 +222,7 @@ def timed(histogram: Histogram) -> Callable:
                 return func(*args, **kwargs)
             finally:
                 histogram.observe(time.perf_counter() - start)
+
         return wrapper
+
     return decorator

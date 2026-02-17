@@ -49,9 +49,7 @@ def check_ar_totals_match(snapshot: dict, normalized: NormalizedData) -> None:
         tiles_total = float(tiles_valid_ar or 0)
 
     # Path 2: sum of debtors
-    debtors_total = sum(
-        d.get("total_valid_ar", 0) for d in debtors if isinstance(d, dict)
-    )
+    debtors_total = sum(d.get("total_valid_ar", 0) for d in debtors if isinstance(d, dict))
 
     # Allow small floating point differences
     tolerance = 0.01
@@ -62,9 +60,7 @@ def check_ar_totals_match(snapshot: dict, normalized: NormalizedData) -> None:
         )
 
 
-def check_commitment_resolution_complete(
-    snapshot: dict, normalized: NormalizedData
-) -> None:
+def check_commitment_resolution_complete(snapshot: dict, normalized: NormalizedData) -> None:
     """
     INVARIANT: All commitments must be resolved OR explicitly marked unresolved with reason.
 
@@ -126,9 +122,7 @@ def check_people_count_consistency(snapshot: dict, normalized: NormalizedData) -
         )
 
 
-def check_heatstrip_subset_of_portfolio(
-    snapshot: dict, normalized: NormalizedData
-) -> None:
+def check_heatstrip_subset_of_portfolio(snapshot: dict, normalized: NormalizedData) -> None:
     """
     INVARIANT: Every project in heatstrip must exist in delivery_command.portfolio.
 
@@ -143,29 +137,21 @@ def check_heatstrip_subset_of_portfolio(
 
     # Build set of portfolio project IDs
     portfolio_ids = {
-        p.get("project_id")
-        for p in portfolio
-        if isinstance(p, dict) and p.get("project_id")
+        p.get("project_id") for p in portfolio if isinstance(p, dict) and p.get("project_id")
     }
 
     # Check heatstrip projects
     heatstrip_ids = {
-        p.get("project_id")
-        for p in heatstrip
-        if isinstance(p, dict) and p.get("project_id")
+        p.get("project_id") for p in heatstrip if isinstance(p, dict) and p.get("project_id")
     }
 
     # Find orphans
     orphans = heatstrip_ids - portfolio_ids
     if orphans:
-        raise InvariantViolation(
-            f"Heatstrip contains projects not in portfolio: {orphans}"
-        )
+        raise InvariantViolation(f"Heatstrip contains projects not in portfolio: {orphans}")
 
 
-def check_client360_at_risk_consistency(
-    snapshot: dict, normalized: NormalizedData
-) -> None:
+def check_client360_at_risk_consistency(snapshot: dict, normalized: NormalizedData) -> None:
     """
     INVARIANT: at_risk_count must match actual count of clients with at_risk=True.
 
@@ -207,9 +193,7 @@ def check_no_orphan_commitments(snapshot: dict, normalized: NormalizedData) -> N
 
         scope_type = c.get("scope_ref_type")
         if scope_type and scope_type not in VALID_SCOPE_TYPES:
-            unknown_types.append(
-                f"{c.get('commitment_id', 'unknown')}: type='{scope_type}'"
-            )
+            unknown_types.append(f"{c.get('commitment_id', 'unknown')}: type='{scope_type}'")
 
     if unknown_types:
         raise InvariantViolation(

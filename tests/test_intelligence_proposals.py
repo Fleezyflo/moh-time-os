@@ -8,48 +8,49 @@ Covers:
 - Full proposal generation
 """
 
-import pytest
 from pathlib import Path
 
+import pytest
+
 from lib.intelligence.proposals import (
+    PriorityScore,
+    Proposal,
     ProposalType,
     ProposalUrgency,
-    Proposal,
-    PriorityScore,
-    # Helper functions
-    _generate_proposal_id,
-    _format_evidence_item,
-    _format_evidence,
-    _generate_headline,
-    _generate_summary,
-    _generate_action,
-    _determine_urgency,
-    _determine_trend,
-    _determine_confidence,
     # Assembly functions
     _assemble_client_proposal,
-    _assemble_resource_proposal,
     _assemble_portfolio_proposal,
+    _assemble_resource_proposal,
+    _determine_confidence,
+    _determine_trend,
+    _determine_urgency,
+    _format_evidence,
+    _format_evidence_item,
+    _generate_action,
+    _generate_headline,
+    # Helper functions
+    _generate_proposal_id,
+    _generate_summary,
     _merge_proposals,
+    _score_confidence,
+    _score_impact,
+    _score_recency,
+    # Priority ranking
+    _score_urgency,
+    compute_priority_score,
+    generate_daily_briefing,
     # Main functions
     generate_proposals,
     generate_proposals_from_live_data,
-    # Priority ranking
-    _score_urgency,
-    _score_impact,
-    _score_recency,
-    _score_confidence,
-    compute_priority_score,
-    rank_proposals,
-    get_top_proposals,
     get_proposals_by_type,
-    generate_daily_briefing,
+    get_top_proposals,
+    rank_proposals,
 )
-
 
 # =============================================================================
 # HELPER FUNCTION TESTS
 # =============================================================================
+
 
 class TestHelperFunctions:
     """Tests for proposal helper functions."""
@@ -68,7 +69,7 @@ class TestHelperFunctions:
             source="signal",
             source_id="sig_test",
             description="Test signal detected",
-            data={"severity": "warning"}
+            data={"severity": "warning"},
         )
 
         assert item["source"] == "signal"
@@ -84,7 +85,7 @@ class TestHelperFunctions:
             "dimensions": {
                 "engagement": {"score": 30},
                 "delivery": {"score": 60},
-            }
+            },
         }
 
         evidence = _format_evidence(scorecard=scorecard)
@@ -95,7 +96,11 @@ class TestHelperFunctions:
     def test_format_evidence_with_signals(self):
         """Evidence formatting should include signal data."""
         signals = [
-            {"signal_id": "sig_1", "evidence_text": "Communication dropped 40%", "severity": "warning"},
+            {
+                "signal_id": "sig_1",
+                "evidence_text": "Communication dropped 40%",
+                "severity": "warning",
+            },
             {"signal_id": "sig_2", "evidence_text": "Payment overdue", "severity": "critical"},
         ]
 
@@ -109,7 +114,12 @@ class TestHelperFunctions:
         """Headlines should include entity name."""
         entity = {"type": "client", "id": "123", "name": "Acme Corp"}
         evidence = [
-            {"source": "score", "source_id": "composite", "description": "Score: 28/100", "data": {}}
+            {
+                "source": "score",
+                "source_id": "composite",
+                "description": "Score: 28/100",
+                "data": {},
+            }
         ]
 
         headline = _generate_headline(ProposalType.CLIENT_RISK, entity, evidence)
@@ -120,7 +130,12 @@ class TestHelperFunctions:
         """Headlines should not be generic placeholders."""
         entity = {"type": "client", "id": "123", "name": "Test Client"}
         evidence = [
-            {"source": "signal", "source_id": "sig_1", "description": "Revenue down 30%", "data": {}}
+            {
+                "source": "signal",
+                "source_id": "sig_1",
+                "description": "Revenue down 30%",
+                "data": {},
+            }
         ]
 
         headline = _generate_headline(ProposalType.CLIENT_RISK, entity, evidence)
@@ -136,37 +151,27 @@ class TestUrgencyDetermination:
 
     def test_critical_signal_is_immediate(self):
         """CRITICAL signals should trigger IMMEDIATE urgency."""
-        urgency = _determine_urgency(
-            signal_severities=["critical"]
-        )
+        urgency = _determine_urgency(signal_severities=["critical"])
         assert urgency == ProposalUrgency.IMMEDIATE
 
     def test_structural_pattern_is_immediate(self):
         """Structural patterns should trigger IMMEDIATE urgency."""
-        urgency = _determine_urgency(
-            pattern_severities=["structural"]
-        )
+        urgency = _determine_urgency(pattern_severities=["structural"])
         assert urgency == ProposalUrgency.IMMEDIATE
 
     def test_warning_signal_is_this_week(self):
         """WARNING signals should trigger THIS_WEEK urgency."""
-        urgency = _determine_urgency(
-            signal_severities=["warning"]
-        )
+        urgency = _determine_urgency(signal_severities=["warning"])
         assert urgency == ProposalUrgency.THIS_WEEK
 
     def test_at_risk_score_is_this_week(self):
         """AT_RISK classification should trigger THIS_WEEK urgency."""
-        urgency = _determine_urgency(
-            score_classification="at_risk"
-        )
+        urgency = _determine_urgency(score_classification="at_risk")
         assert urgency == ProposalUrgency.THIS_WEEK
 
     def test_watch_only_is_monitor(self):
         """Only WATCH signals should trigger MONITOR urgency."""
-        urgency = _determine_urgency(
-            signal_severities=["watch"]
-        )
+        urgency = _determine_urgency(signal_severities=["watch"])
         assert urgency == ProposalUrgency.MONITOR
 
     def test_no_signals_is_monitor(self):
@@ -218,15 +223,13 @@ class TestConfidenceDetermination:
         confidence = _determine_confidence(
             scorecard={"composite_score": 50},
             signals=[{"signal_id": "sig_1"}, {"signal_id": "sig_2"}],
-            patterns=[{"pattern_id": "pat_1"}]
+            patterns=[{"pattern_id": "pat_1"}],
         )
         assert confidence == "high"
 
     def test_single_evidence_medium_confidence(self):
         """Single evidence source should yield medium confidence."""
-        confidence = _determine_confidence(
-            signals=[{"signal_id": "sig_1"}]
-        )
+        confidence = _determine_confidence(signals=[{"signal_id": "sig_1"}])
         assert confidence == "medium"
 
     def test_no_evidence_low_confidence(self):
@@ -239,19 +242,16 @@ class TestConfidenceDetermination:
 # PROPOSAL ASSEMBLY TESTS
 # =============================================================================
 
+
 class TestProposalAssembly:
     """Tests for proposal assembly functions."""
 
     def test_client_proposal_has_required_fields(self):
         """Client proposals should have all required fields."""
-        signals = [
-            {"signal_id": "sig_1", "evidence_text": "Test signal", "severity": "warning"}
-        ]
+        signals = [{"signal_id": "sig_1", "evidence_text": "Test signal", "severity": "warning"}]
 
         prop = _assemble_client_proposal(
-            client_id="client_123",
-            client_name="Test Client",
-            signals=signals
+            client_id="client_123", client_name="Test Client", signals=signals
         )
 
         assert prop.id.startswith("prop_")
@@ -266,7 +266,7 @@ class TestProposalAssembly:
         prop = _assemble_resource_proposal(
             person_id="person_123",
             person_name="John Doe",
-            signals=[{"signal_id": "sig_1", "severity": "warning"}]
+            signals=[{"signal_id": "sig_1", "severity": "warning"}],
         )
 
         assert prop.type == ProposalType.RESOURCE_RISK
@@ -293,6 +293,7 @@ class TestProposalAssembly:
 # DEDUPLICATION TESTS
 # =============================================================================
 
+
 class TestDeduplication:
     """Tests for proposal merging and deduplication."""
 
@@ -305,7 +306,9 @@ class TestDeduplication:
             headline="Test 1",
             entity={"type": "client", "id": "123", "name": "Test"},
             summary="Summary 1",
-            evidence=[{"source": "signal", "source_id": "sig_1", "description": "Test 1", "data": {}}],
+            evidence=[
+                {"source": "signal", "source_id": "sig_1", "description": "Test 1", "data": {}}
+            ],
             implied_action="Action 1",
             active_signals=["sig_1"],
         )
@@ -317,7 +320,9 @@ class TestDeduplication:
             headline="Test 2",
             entity={"type": "client", "id": "123", "name": "Test"},
             summary="Summary 2",
-            evidence=[{"source": "signal", "source_id": "sig_2", "description": "Test 2", "data": {}}],
+            evidence=[
+                {"source": "signal", "source_id": "sig_2", "description": "Test 2", "data": {}}
+            ],
             implied_action="Action 2",
             active_signals=["sig_2"],
         )
@@ -365,6 +370,7 @@ class TestDeduplication:
 # =============================================================================
 # INTEGRATION TESTS
 # =============================================================================
+
 
 class TestProposalGeneration:
     """Integration tests for proposal generation."""
@@ -463,6 +469,7 @@ class TestProposalQuality:
 # =============================================================================
 # PRIORITY RANKING TESTS
 # =============================================================================
+
 
 class TestPriorityScoring:
     """Tests for priority scoring components."""
@@ -717,7 +724,9 @@ class TestDailyBriefing:
                 headline="Test",
                 entity={"type": "client", "id": "1", "name": "Test"},
                 summary="Test",
-                evidence=[{"source": "signal", "source_id": "sig_1", "description": "Test", "data": {}}],
+                evidence=[
+                    {"source": "signal", "source_id": "sig_1", "description": "Test", "data": {}}
+                ],
                 implied_action="Test",
             ),
         ]

@@ -1,7 +1,7 @@
 # MOH Time OS — Financial Pulse System Design
 
-> **Version:** 1.0  
-> **Status:** Design Complete  
+> **Version:** 1.0
+> **Status:** Design Complete
 > **Priority:** Layer 1 (build first)
 
 ---
@@ -294,31 +294,31 @@ def calculate_client_health(client_id: str) -> dict:
     Calculate financial health score for a client.
     Returns score 0-100 and risk level.
     """
-    
+
     # Get client's outstanding invoices
     invoices = get_outstanding_invoices(client_id)
-    
+
     if not invoices:
         return {"score": 100, "risk_level": "healthy", "reason": "No outstanding invoices"}
-    
+
     # Factors
     total_outstanding = sum(i.amount_due for i in invoices)
     oldest_days = max((today() - i.due_date).days for i in invoices)
-    
+
     # Get payment history
     payments = get_payments(client_id, months=12)
     if payments:
         avg_days_to_pay = average([p.days_from_invoice_to_payment for p in payments])
     else:
         avg_days_to_pay = 0
-    
+
     # Score calculation (100 = perfect)
     score = 100
-    
+
     # Deduct for overdue days
     if oldest_days > 0:
         score -= min(oldest_days * 0.5, 40)  # Max 40 point deduction
-    
+
     # Deduct for amount at risk
     amount_overdue = sum(i.amount_due for i in invoices if i.days_overdue > 0)
     if amount_overdue > 100000:
@@ -327,7 +327,7 @@ def calculate_client_health(client_id: str) -> dict:
         score -= 20
     elif amount_overdue > 20000:
         score -= 10
-    
+
     # Deduct for slow payment history
     if avg_days_to_pay > 60:
         score -= 15
@@ -335,9 +335,9 @@ def calculate_client_health(client_id: str) -> dict:
         score -= 10
     elif avg_days_to_pay > 30:
         score -= 5
-    
+
     score = max(0, score)
-    
+
     # Risk level
     if score >= 80:
         risk_level = "healthy"
@@ -347,7 +347,7 @@ def calculate_client_health(client_id: str) -> dict:
         risk_level = "at_risk"
     else:
         risk_level = "critical"
-    
+
     return {
         "score": score,
         "risk_level": risk_level,
@@ -384,14 +384,14 @@ def calculate_priority(alert) -> float:
     Higher = more urgent = show first.
     """
     score = 0
-    
+
     # Base by severity
     severity_base = {"info": 10, "warning": 40, "critical": 70}
     score += severity_base.get(alert.severity, 20)
-    
+
     if alert.type.startswith("invoice_overdue"):
         invoice = get_invoice(alert.entity_id)
-        
+
         # Amount factor
         if invoice.amount_due > 100000:
             score += 20
@@ -399,18 +399,18 @@ def calculate_priority(alert) -> float:
             score += 15
         elif invoice.amount_due > 20000:
             score += 10
-        
+
         # Time factor
         if invoice.days_overdue > 90:
             score += 15
         elif invoice.days_overdue > 60:
             score += 10
-        
+
         # Relationship factor
         client = get_client(invoice.client_id)
         if client.type == "retainer":
             score += 5  # Retainer relationships are more valuable
-    
+
     return min(score, 100)
 ```
 
@@ -543,13 +543,13 @@ def calculate_priority(alert) -> float:
 ```python
 class XeroSyncer:
     """Handles all Xero data synchronization."""
-    
+
     def sync_all(self):
         """Full sync - run hourly."""
         self.sync_invoices()
         self.sync_payments()
         self.sync_contacts()
-    
+
     def sync_invoices(self):
         """Sync invoices from Xero."""
         # Get all non-voided invoices modified in last 7 days
@@ -558,66 +558,66 @@ class XeroSyncer:
             modified_since=days_ago(7),
             statuses=["AUTHORISED", "SUBMITTED", "PAID"]
         )
-        
+
         for inv in invoices:
             self._upsert_invoice(inv)
-        
+
         self._update_sync_status("xero_invoices", len(invoices))
-    
+
     def sync_payments(self):
         """Sync payments from Xero."""
         payments = xero_client.get_payments(modified_since=days_ago(7))
-        
+
         for pmt in payments:
             self._upsert_payment(pmt)
             self._update_invoice_paid_amount(pmt.invoice_id)
-        
+
         self._update_sync_status("xero_payments", len(payments))
-    
+
     def sync_contacts(self):
         """Sync contacts, reconcile with clients."""
         contacts = xero_client.get_contacts(is_customer=True)
-        
+
         for contact in contacts:
             self._reconcile_client(contact)
-        
+
         self._update_sync_status("xero_contacts", len(contacts))
-    
+
     def sync_bills(self):
         """Sync bills/AP - run every 4 hours."""
         bills = xero_client.get_invoices(invoice_type="ACCPAY")
-        
+
         for bill in bills:
             self._upsert_bill(bill)
-        
+
         self._update_sync_status("xero_bills", len(bills))
 
 
 class SheetsSyncer:
     """Handles Forecast Sheet synchronization."""
-    
+
     def sync_all(self):
         """Full sync - run daily."""
         self.sync_revenue_forecast()
         self.sync_salaries()
-    
+
     def sync_revenue_forecast(self):
         """Pull revenue forecast from Forecast sheet."""
         data = gog_client.get_sheet_range(
-            FORECAST_SHEET_ID, 
+            FORECAST_SHEET_ID,
             "Forecast!A5:BK100"
         )
-        
+
         for row in self._parse_revenue_rows(data):
             self._upsert_forecast(row)
-    
+
     def sync_salaries(self):
         """Pull salary data from Forecast sheet."""
         data = gog_client.get_sheet_range(
             FORECAST_SHEET_ID,
             "Forecast!A225:BK350"
         )
-        
+
         current_month = get_current_month()
         for row in self._parse_salary_rows(data, current_month):
             self._upsert_salary(row)
@@ -642,7 +642,7 @@ class SheetsSyncer:
 ```python
 class SyncHealth:
     """Track health of each data source."""
-    
+
     STALE_THRESHOLDS = {
         "xero_invoices": timedelta(hours=2),
         "xero_payments": timedelta(hours=2),
@@ -651,40 +651,40 @@ class SyncHealth:
         "sheets_forecast": timedelta(days=2),
         "sheets_salaries": timedelta(days=2),
     }
-    
+
     def check_health(self) -> dict:
         """Return health status for all sources."""
         results = {}
-        
+
         for source, threshold in self.STALE_THRESHOLDS.items():
             status = get_sync_status(source)
-            
+
             is_stale = (
                 status.last_success_at is None or
                 now() - status.last_success_at > threshold
             )
-            
+
             results[source] = {
                 "status": "stale" if is_stale else "healthy",
                 "last_sync": status.last_success_at,
                 "error": status.error_message if status.status == "error" else None,
             }
-        
+
         return results
-    
+
     def get_dashboard_warning(self) -> str | None:
         """Return warning message if any source is unhealthy."""
         health = self.check_health()
-        
+
         stale = [s for s, h in health.items() if h["status"] == "stale"]
-        
+
         if not stale:
             return None
-        
+
         if "xero_invoices" in stale:
             return "⚠️ Financial data may be stale. Last sync: " + \
                    format_time_ago(health["xero_invoices"]["last_sync"])
-        
+
         return f"⚠️ Some data sources are stale: {', '.join(stale)}"
 ```
 
@@ -795,7 +795,7 @@ moh_time_os/
 │   └── knowledge_base.json    # Cached KB
 ├── engine/
 │   ├── xero_client.py         # Xero API client
-│   ├── asana_client.py        # Asana API client  
+│   ├── asana_client.py        # Asana API client
 │   ├── gogcli.py              # Google API wrapper
 │   ├── knowledge_base.py      # KB building
 │   ├── financial_pulse.py     # NEW: Core pulse logic

@@ -66,9 +66,7 @@ class DebtTracker:
         if not rows:
             return False, "Debt entry not found"
         now = datetime.now().isoformat()
-        self.store.query(
-            "UPDATE time_debt SET resolved_at = ? WHERE id = ?", [now, debt_id]
-        )
+        self.store.query("UPDATE time_debt SET resolved_at = ? WHERE id = ?", [now, debt_id])
         return True, "Debt resolved"
 
     def get_debt_report(self, lane: str | None = None) -> dict:
@@ -89,9 +87,7 @@ class DebtTracker:
         rows = self.store.query(q, params)
 
         total_open = sum(r["amount_min"] for r in rows if r["resolved_at"] is None)
-        total_resolved = sum(
-            r["amount_min"] for r in rows if r["resolved_at"] is not None
-        )
+        total_resolved = sum(r["amount_min"] for r in rows if r["resolved_at"] is not None)
 
         entries = []
         for r in rows:
@@ -121,9 +117,7 @@ if __name__ == "__main__":
     logger.info("Testing DebtTracker")
     logger.info("-" * 40)
     # Accrue debt
-    debt_id = tracker.accrue_debt(
-        "ops", 30, "Missed deadline", source_task_id="task_123"
-    )
+    debt_id = tracker.accrue_debt("ops", 30, "Missed deadline", source_task_id="task_123")
     logger.info(f"Accrued debt: {debt_id}")
     # Report
     report = tracker.get_debt_report("ops")

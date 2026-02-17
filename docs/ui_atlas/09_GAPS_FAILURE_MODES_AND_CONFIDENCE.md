@@ -226,19 +226,19 @@
 DELIVERY:
   blocking: [data_integrity]
   quality: [project_brand_required, project_client_populated]
-  
+
 CLIENTS:
   blocking: [data_integrity]
   quality: [client_coverage]
-  
+
 CASH:
   blocking: [data_integrity, finance_ar_clean]
   quality: [finance_ar_coverage]
-  
+
 COMMS:
   blocking: [data_integrity]
   quality: [commitment_ready]
-  
+
 CAPACITY:
   blocking: [data_integrity, capacity_baseline]
   quality: []

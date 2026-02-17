@@ -112,9 +112,7 @@ class DelegationHandler:
             return {"success": False, "error": "Task not found"}
 
         # Get escalation path from config
-        escalation_path = self.delegation_config.get("escalation", {}).get(
-            "default_path", []
-        )
+        escalation_path = self.delegation_config.get("escalation", {}).get("default_path", [])
 
         # Find next escalation target
         current_assignee = task.get("assignee")
@@ -134,9 +132,7 @@ class DelegationHandler:
             task_id,
             {
                 "assignee": next_target,
-                "priority": min(
-                    (task.get("priority") or 50) + 20, 100
-                ),  # Bump priority
+                "priority": min((task.get("priority") or 50) + 20, 100),  # Bump priority
                 "status": "escalated",
                 "updated_at": datetime.now().isoformat(),
                 "context": json.dumps(
@@ -221,14 +217,10 @@ class DelegationHandler:
 
         return {"success": True, "task_id": task_id, "recalled_from": previous_assignee}
 
-    def _create_handoff_notification(
-        self, task: dict, recipient: str, message: str = None
-    ):
+    def _create_handoff_notification(self, task: dict, recipient: str, message: str = None):
         """Create a handoff notification."""
         # Get recipient info
-        people = self.store.query(
-            "SELECT name, email FROM people WHERE email = ?", [recipient]
-        )
+        people = self.store.query("SELECT name, email FROM people WHERE email = ?", [recipient])
         recipient_name = people[0]["name"] if people else recipient
 
         body = f"Task: {task.get('title')}\n"

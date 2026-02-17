@@ -191,9 +191,7 @@ def enforce_predicates(normalized: NormalizedData, snapshot: dict) -> list[str]:
         actual = get_nested(snapshot, section_path)
 
         # Check if section is empty when it must exist
-        is_empty = actual is None or (
-            isinstance(actual, (list, dict)) and len(actual) == 0
-        )
+        is_empty = actual is None or (isinstance(actual, list | dict) and len(actual) == 0)
 
         if must_exist and is_empty:
             violations.append(

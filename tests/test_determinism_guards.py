@@ -10,8 +10,9 @@ Run with: pytest tests/test_determinism_guards.py -v
 """
 
 import sqlite3
-import pytest
 from pathlib import Path
+
+import pytest
 
 from tests.fixtures import create_fixture_db, guard_no_live_db
 
@@ -27,6 +28,7 @@ class TestLiveDBGuard:
     def test_absolute_live_db_path_blocked(self):
         """Absolute path to live DB is also blocked."""
         from tests.conftest import LIVE_DB_ABSOLUTE
+
         with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
             sqlite3.connect(str(LIVE_DB_ABSOLUTE))
 
@@ -112,12 +114,18 @@ class TestFixtureDB:
         """Fixture DB has all required tables."""
         conn = create_fixture_db(":memory:")
 
-        tables = conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table'"
-        ).fetchall()
+        tables = conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
         table_names = {t[0] for t in tables}
 
-        required = {"clients", "brands", "projects", "invoices", "people", "tasks", "communications"}
+        required = {
+            "clients",
+            "brands",
+            "projects",
+            "invoices",
+            "people",
+            "tasks",
+            "communications",
+        }
         assert required.issubset(table_names), f"Missing tables: {required - table_names}"
 
     def test_has_seeded_data(self):

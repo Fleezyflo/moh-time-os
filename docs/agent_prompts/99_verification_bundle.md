@@ -93,4 +93,3 @@ Define expected outcomes explicitly:
 - err!=none occurrences == 0
 - subject counts == 20 for gmail/calendar/chat/drive
 - chat_space_cursors >= spaces_with_messages
-

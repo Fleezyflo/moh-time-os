@@ -24,7 +24,7 @@ Joins tasks to clients via projects, using COALESCE to prefer direct client_id w
 
 ```sql
 CREATE VIEW v_task_with_client AS
-SELECT 
+SELECT
     t.id as task_id,
     t.title as task_title,
     t.status as task_status,
@@ -45,15 +45,15 @@ Aggregates operational metrics for each client using subqueries.
 
 ```sql
 CREATE VIEW v_client_operational_profile AS
-SELECT 
+SELECT
     c.id as client_id,
     c.name as client_name,
     c.tier as client_tier,
     c.relationship_health,
     (SELECT COUNT(*) FROM projects p WHERE p.client_id = c.id) as project_count,
-    (SELECT COUNT(*) FROM tasks t JOIN projects p ON t.project_id = p.id 
+    (SELECT COUNT(*) FROM tasks t JOIN projects p ON t.project_id = p.id
      WHERE p.client_id = c.id) as total_tasks,
-    (SELECT COUNT(*) FROM tasks t JOIN projects p ON t.project_id = p.id 
+    (SELECT COUNT(*) FROM tasks t JOIN projects p ON t.project_id = p.id
      WHERE p.client_id = c.id AND t.status NOT IN ('done', 'complete', 'completed')) as active_tasks,
     (SELECT COUNT(*) FROM invoices i WHERE i.client_id = c.id) as invoice_count,
     (SELECT COALESCE(SUM(i.amount), 0) FROM invoices i WHERE i.client_id = c.id) as total_invoiced,
@@ -71,26 +71,26 @@ Project with task metrics and computed completion rate.
 
 ```sql
 CREATE VIEW v_project_operational_state AS
-SELECT 
+SELECT
     p.id as project_id,
     p.name as project_name,
     p.status as project_status,
     p.client_id,
     c.name as client_name,
     (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id) as total_tasks,
-    (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id 
+    (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id
      AND t.status NOT IN ('done', 'complete', 'completed')) as open_tasks,
-    (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id 
+    (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id
      AND t.status IN ('done', 'complete', 'completed')) as completed_tasks,
-    (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id 
+    (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id
      AND t.due_date IS NOT NULL AND t.due_date < date('now')
      AND t.status NOT IN ('done', 'complete', 'completed')) as overdue_tasks,
-    (SELECT COUNT(DISTINCT t.assignee) FROM tasks t 
+    (SELECT COUNT(DISTINCT t.assignee) FROM tasks t
      WHERE t.project_id = p.id AND t.assignee IS NOT NULL) as assigned_people_count,
-    CASE 
+    CASE
         WHEN (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id) = 0 THEN 0
-        ELSE ROUND(100.0 * (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id 
-             AND t.status IN ('done', 'complete', 'completed')) / 
+        ELSE ROUND(100.0 * (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id
+             AND t.status IN ('done', 'complete', 'completed')) /
              (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id), 1)
     END as completion_rate_pct
 FROM projects p
@@ -102,17 +102,17 @@ Person with task load metrics, joining on name (since assignee_id is unpopulated
 
 ```sql
 CREATE VIEW v_person_load_profile AS
-SELECT 
+SELECT
     ppl.id as person_id,
     ppl.name as person_name,
     ppl.email as person_email,
     ppl.role,
     (SELECT COUNT(*) FROM tasks t WHERE LOWER(t.assignee) = LOWER(ppl.name)) as assigned_tasks,
-    (SELECT COUNT(*) FROM tasks t WHERE LOWER(t.assignee) = LOWER(ppl.name) 
+    (SELECT COUNT(*) FROM tasks t WHERE LOWER(t.assignee) = LOWER(ppl.name)
      AND t.status NOT IN ('done', 'complete', 'completed')) as active_tasks,
-    (SELECT COUNT(DISTINCT t.project_id) FROM tasks t 
+    (SELECT COUNT(DISTINCT t.project_id) FROM tasks t
      WHERE LOWER(t.assignee) = LOWER(ppl.name)) as project_count,
-    (SELECT COUNT(*) FROM entity_links el 
+    (SELECT COUNT(*) FROM entity_links el
      WHERE el.to_entity_type = 'person' AND el.to_entity_id = ppl.id) as communication_links
 FROM people ppl;
 ```
@@ -122,7 +122,7 @@ Links artifacts (messages, calendar events) to clients via entity_links.
 
 ```sql
 CREATE VIEW v_communication_client_link AS
-SELECT 
+SELECT
     a.artifact_id,
     a.type as artifact_type,
     a.source as source_system,
@@ -142,7 +142,7 @@ Invoice with client context and project/task counts.
 
 ```sql
 CREATE VIEW v_invoice_client_project AS
-SELECT 
+SELECT
     i.id as invoice_id,
     i.external_id,
     i.client_id,
@@ -154,8 +154,8 @@ SELECT
     i.due_date,
     i.aging_bucket,
     (SELECT COUNT(*) FROM projects p WHERE p.client_id = i.client_id) as client_project_count,
-    (SELECT COUNT(*) FROM tasks t JOIN projects p ON t.project_id = p.id 
-     WHERE p.client_id = i.client_id 
+    (SELECT COUNT(*) FROM tasks t JOIN projects p ON t.project_id = p.id
+     WHERE p.client_id = i.client_id
      AND t.status NOT IN ('done', 'complete', 'completed')) as client_active_tasks
 FROM invoices i
 LEFT JOIN clients c ON i.client_id = c.id;
@@ -179,7 +179,7 @@ LEFT JOIN clients c ON i.client_id = c.id;
 
 ### Get client operational overview
 ```sql
-SELECT 
+SELECT
     client_name,
     project_count,
     total_tasks,
@@ -194,7 +194,7 @@ LIMIT 10;
 
 ### Find overloaded team members
 ```sql
-SELECT 
+SELECT
     person_name,
     assigned_tasks,
     active_tasks,
@@ -206,7 +206,7 @@ ORDER BY active_tasks DESC;
 
 ### Client communication intensity
 ```sql
-SELECT 
+SELECT
     client_name,
     artifact_type,
     COUNT(*) as message_count
@@ -218,7 +218,7 @@ LIMIT 20;
 
 ### Projects at risk (high overdue ratio)
 ```sql
-SELECT 
+SELECT
     project_name,
     client_name,
     total_tasks,

@@ -97,10 +97,7 @@ class Conflict:
 
     @classmethod
     def from_dict(cls, data: dict) -> "Conflict":
-        claims = [
-            Claim.from_dict(c) if isinstance(c, dict) else c
-            for c in data.pop("claims", [])
-        ]
+        claims = [Claim.from_dict(c) if isinstance(c, dict) else c for c in data.pop("claims", [])]
         return cls(
             claims=claims,
             **{k: v for k, v in data.items() if k in cls.__dataclass_fields__},
@@ -256,10 +253,7 @@ def detect_duplicate_conflict(
     """
     # Check if any existing source has the same type but different ref
     for existing in existing_sources:
-        if (
-            existing.get("source_type") == source_type
-            and existing.get("source_ref") != source_ref
-        ):
+        if existing.get("source_type") == source_type and existing.get("source_ref") != source_ref:
             # Potential duplicate
             claims = [
                 Claim(
@@ -301,9 +295,7 @@ if __name__ == "__main__":
 
     if cmd == "list":
         for c in list_conflicts():
-            logger.info(
-                f"{c.id}: {c.conflict_type} ({c.status}) - {len(c.claims)} claims"
-            )
+            logger.info(f"{c.id}: {c.conflict_type} ({c.status}) - {len(c.claims)} claims")
     elif cmd == "open":
         for c in list_open_conflicts():
             logger.info(f"{c.id}: {c.conflict_type} - {len(c.claims)} claims")

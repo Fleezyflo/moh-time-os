@@ -16,9 +16,7 @@ from typing import Any
 from ..artifact_service import get_artifact_service
 from .base import BaseDetector
 
-DB_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "..", "..", "data", "moh_time_os.db"
-)
+DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "moh_time_os.db")
 
 
 class HealthDetector(BaseDetector):
@@ -81,11 +79,7 @@ class HealthDetector(BaseDetector):
                 client_id, name, tier, health, trend, last_interaction, ar_overdue = row
 
                 severity = (
-                    "critical"
-                    if health == "critical"
-                    else "high"
-                    if health == "poor"
-                    else "medium"
+                    "critical" if health == "critical" else "high" if health == "poor" else "medium"
                 )
 
                 # Create evidence excerpts for this client
@@ -168,9 +162,7 @@ class HealthDetector(BaseDetector):
 
             # Detect communication gaps
             # Only fire if we have ACTUAL last_interaction data - NULL means unknown, not "no contact"
-            gap_cutoff = (
-                today - timedelta(days=self.COMMUNICATION_GAP_DAYS)
-            ).isoformat()
+            gap_cutoff = (today - timedelta(days=self.COMMUNICATION_GAP_DAYS)).isoformat()
 
             cursor.execute(
                 """
@@ -186,9 +178,7 @@ class HealthDetector(BaseDetector):
             for row in cursor.fetchall():
                 client_id, name, tier, last_interaction = row
 
-                days_since = (
-                    today - datetime.fromisoformat(last_interaction[:10]).date()
-                ).days
+                days_since = (today - datetime.fromisoformat(last_interaction[:10]).date()).days
 
                 severity = "high" if tier == "A" else "medium"
 
@@ -232,11 +222,7 @@ class HealthDetector(BaseDetector):
                 ) = row
 
                 severity = (
-                    "critical"
-                    if ar_overdue > 50000
-                    else "high"
-                    if ar_overdue > 20000
-                    else "medium"
+                    "critical" if ar_overdue > 50000 else "high" if ar_overdue > 20000 else "medium"
                 )
 
                 signal = self.create_signal(
@@ -268,9 +254,7 @@ class HealthDetector(BaseDetector):
             """)
 
             for row in cursor.fetchall():
-                project_id, name, client_id, client_name, health, status, target_end = (
-                    row
-                )
+                project_id, name, client_id, client_name, health, status, target_end = row
 
                 severity = "high" if health == "off_track" else "medium"
 

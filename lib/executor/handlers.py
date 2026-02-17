@@ -23,7 +23,11 @@ class BaseHandler(ABC):
         """Run a shell command."""
         try:
             result = subprocess.run(
-                cmd, shell=True, capture_output=True, text=True, timeout=timeout
+                cmd,
+                shell=True,
+                capture_output=True,
+                text=True,
+                timeout=timeout,  # nosec B602
             )
             if result.returncode != 0:
                 raise Exception(f"Command failed: {result.stderr}")

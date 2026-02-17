@@ -8,6 +8,7 @@ Generates:
 """
 
 import logging
+import sys
 from datetime import datetime, timedelta
 
 from lib import paths
@@ -69,11 +70,7 @@ class BriefGenerator:
 
         # Anomalies
         if analysis["anomalies"]:
-            critical = [
-                a
-                for a in analysis["anomalies"]
-                if a["severity"] in ("critical", "high")
-            ]
+            critical = [a for a in analysis["anomalies"] if a["severity"] in ("critical", "high")]
             if critical:
                 lines.append(f"\n🚨 **{len(critical)} issues need attention**")
                 for a in critical[:3]:
@@ -141,9 +138,7 @@ class BriefGenerator:
             "tasks",
             where="status IN ('completed', 'done') AND updated_at >= date('now', 'start of day')",
         )
-        created = self.store.count(
-            "tasks", where="created_at >= date('now', 'start of day')"
-        )
+        created = self.store.count("tasks", where="created_at >= date('now', 'start of day')")
 
         lines.append(f"✅ Completed: {completed}")
         lines.append(f"📥 New: {created}")
@@ -159,9 +154,7 @@ class BriefGenerator:
             params=[tomorrow],
         )
 
-        lines.append(
-            f"\n📅 **Tomorrow:** {tomorrow_events} events, {tomorrow_due} tasks due"
-        )
+        lines.append(f"\n📅 **Tomorrow:** {tomorrow_events} events, {tomorrow_due} tasks due")
 
         # Reminders
         overdue = self.store.count(

@@ -71,9 +71,7 @@ class PolicyService:
         try:
             # Create default roles
             for role_name, config in self.DEFAULT_ROLES.items():
-                cursor.execute(
-                    "SELECT role_id FROM access_roles WHERE role_name = ?", (role_name,)
-                )
+                cursor.execute("SELECT role_id FROM access_roles WHERE role_name = ?", (role_name,))
                 if not cursor.fetchone():
                     role_id = self._generate_id("role")
                     cursor.execute(
@@ -136,9 +134,7 @@ class PolicyService:
 
         try:
             # Get role_id
-            cursor.execute(
-                "SELECT role_id FROM access_roles WHERE role_name = ?", (role_name,)
-            )
+            cursor.execute("SELECT role_id FROM access_roles WHERE role_name = ?", (role_name,))
             row = cursor.fetchone()
             if not row:
                 return {"status": "error", "error": f"Role {role_name} not found"}
@@ -240,9 +236,7 @@ class PolicyService:
         finally:
             conn.close()
 
-    def get_retention_for_source(
-        self, source: str, artifact_type: str = None
-    ) -> dict | None:
+    def get_retention_for_source(self, source: str, artifact_type: str = None) -> dict | None:
         """Get retention rule for a source/type combination."""
         conn = self._get_conn()
         cursor = conn.cursor()
@@ -420,9 +414,7 @@ class PolicyService:
         finally:
             conn.close()
 
-    def get_open_violations(
-        self, severity: str = None, limit: int = 50
-    ) -> list[dict[str, Any]]:
+    def get_open_violations(self, severity: str = None, limit: int = 50) -> list[dict[str, Any]]:
         """Get open protocol violations."""
         conn = self._get_conn()
         cursor = conn.cursor()
@@ -503,9 +495,7 @@ class PolicyService:
             cursor.execute("SELECT COUNT(*) FROM redaction_markers")
             redactions = cursor.fetchone()[0]
 
-            cursor.execute(
-                "SELECT status, COUNT(*) FROM protocol_violations GROUP BY status"
-            )
+            cursor.execute("SELECT status, COUNT(*) FROM protocol_violations GROUP BY status")
             violations = {r[0]: r[1] for r in cursor.fetchall()}
 
             return {
@@ -569,15 +559,11 @@ class PolicyService:
                     # Delete blob if exists
                     if payload_ref and payload_ref.startswith("blob:"):
                         blob_id = payload_ref.replace("blob:", "")
-                        cursor.execute(
-                            "DELETE FROM artifact_blobs WHERE blob_id = ?", (blob_id,)
-                        )
+                        cursor.execute("DELETE FROM artifact_blobs WHERE blob_id = ?", (blob_id,))
                         stats["blobs_deleted"] += 1
 
                     # Delete artifact
-                    cursor.execute(
-                        "DELETE FROM artifacts WHERE artifact_id = ?", (artifact_id,)
-                    )
+                    cursor.execute("DELETE FROM artifacts WHERE artifact_id = ?", (artifact_id,))
 
                 stats["purged"] += 1
 

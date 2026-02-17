@@ -146,20 +146,14 @@ class TeamCalendarCollector(BaseCollector):
             if start_str:
                 try:
                     if "T" in start_str:
-                        start_dt = datetime.fromisoformat(
-                            start_str.replace("Z", "+00:00")
-                        )
+                        start_dt = datetime.fromisoformat(start_str.replace("Z", "+00:00"))
                     else:
                         start_dt = datetime.fromisoformat(start_str)
 
                     # Remove timezone for comparison
                     start_dt = start_dt.replace(tzinfo=None)
 
-                    if (
-                        week_start.replace(tzinfo=None)
-                        <= start_dt
-                        <= week_end.replace(tzinfo=None)
-                    ):
+                    if week_start.replace(tzinfo=None) <= start_dt <= week_end.replace(tzinfo=None):
                         filtered.append(event)
                 except (ValueError, TypeError, AttributeError) as e:
                     logger.debug(f"Could not parse event start time: {e}")
@@ -191,9 +185,7 @@ class TeamCalendarCollector(BaseCollector):
         for event in events:
             attendees = event.get("attendees", [])
             has_external = any(
-                a.get("email", "").split("@")[-1] != "hrmny.co"
-                for a in attendees
-                if a.get("email")
+                a.get("email", "").split("@")[-1] != "hrmny.co" for a in attendees if a.get("email")
             )
 
             if has_external:
@@ -204,16 +196,12 @@ class TeamCalendarCollector(BaseCollector):
 
                 if start_str and end_str:
                     try:
-                        start_dt = datetime.fromisoformat(
-                            start_str.replace("Z", "+00:00")
-                        )
+                        start_dt = datetime.fromisoformat(start_str.replace("Z", "+00:00"))
                         end_dt = datetime.fromisoformat(end_str.replace("Z", "+00:00"))
                         hours = (end_dt - start_dt).total_seconds() / 3600
                         total += hours
                     except (ValueError, TypeError, AttributeError) as e:
-                        logger.debug(
-                            f"Could not parse event times for external hours: {e}"
-                        )
+                        logger.debug(f"Could not parse event times for external hours: {e}")
         return total
 
     def transform(self, raw_data: dict) -> list[dict]:
@@ -242,9 +230,7 @@ class TeamCalendarCollector(BaseCollector):
                     "title": event.get("summary", "No Title"),
                     "start_time": start.get("dateTime") or start.get("date"),
                     "end_time": end.get("dateTime") or end.get("date"),
-                    "attendees": json.dumps(
-                        [a.get("email") for a in event.get("attendees", [])]
-                    ),
+                    "attendees": json.dumps([a.get("email") for a in event.get("attendees", [])]),
                     "is_external": any(
                         a.get("email", "").split("@")[-1] != "hrmny.co"
                         for a in event.get("attendees", [])

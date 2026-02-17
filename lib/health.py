@@ -90,15 +90,11 @@ def health_check() -> tuple[HealthStatus, dict[str, Any]]:
     checks["last_backup"] = None
 
     if BACKUP_DIR.exists():
-        backups = sorted(
-            BACKUP_DIR.glob("*.db"), key=lambda p: p.stat().st_mtime, reverse=True
-        )
+        backups = sorted(BACKUP_DIR.glob("*.db"), key=lambda p: p.stat().st_mtime, reverse=True)
         if backups:
             last_backup_time = datetime.fromtimestamp(backups[0].stat().st_mtime)
             checks["last_backup"] = last_backup_time.isoformat()
-            checks["backup_age_hours"] = (
-                datetime.now() - last_backup_time
-            ).total_seconds() / 3600
+            checks["backup_age_hours"] = (datetime.now() - last_backup_time).total_seconds() / 3600
             checks["backup_recent"] = checks["backup_age_hours"] < 48
 
     if not checks["backup_recent"]:
@@ -171,9 +167,7 @@ def self_heal() -> list[str]:
 
     # Prune old backups (keep 7)
     if BACKUP_DIR.exists():
-        backups = sorted(
-            BACKUP_DIR.glob("*.db"), key=lambda p: p.stat().st_mtime, reverse=True
-        )
+        backups = sorted(BACKUP_DIR.glob("*.db"), key=lambda p: p.stat().st_mtime, reverse=True)
         for old_backup in backups[7:]:
             try:
                 old_backup.unlink()

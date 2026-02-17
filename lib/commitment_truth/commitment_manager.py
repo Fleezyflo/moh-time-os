@@ -146,9 +146,7 @@ class CommitmentManager:
 
         return Commitment(**data)
 
-    def link_commitment_to_task(
-        self, commitment_id: str, task_id: str
-    ) -> tuple[bool, str]:
+    def link_commitment_to_task(self, commitment_id: str, task_id: str) -> tuple[bool, str]:
         """
         Link a commitment to a task.
 
@@ -212,9 +210,7 @@ class CommitmentManager:
 
     def get_commitment(self, commitment_id: str) -> Commitment | None:
         """Get a single commitment by ID."""
-        rows = self.store.query(
-            "SELECT * FROM commitments WHERE id = ?", [commitment_id]
-        )
+        rows = self.store.query("SELECT * FROM commitments WHERE id = ?", [commitment_id])
         if not rows:
             return None
         return self._row_to_commitment(rows[0])
@@ -290,14 +286,10 @@ class CommitmentManager:
 
     def get_commitments_for_task(self, task_id: str) -> list[Commitment]:
         """Get all commitments linked to a task."""
-        rows = self.store.query(
-            "SELECT * FROM commitments WHERE task_id = ?", [task_id]
-        )
+        rows = self.store.query("SELECT * FROM commitments WHERE task_id = ?", [task_id])
         return [self._row_to_commitment(r) for r in rows]
 
-    def get_all_commitments(
-        self, status: str = None, limit: int = 100
-    ) -> list[Commitment]:
+    def get_all_commitments(self, status: str = None, limit: int = 100) -> list[Commitment]:
         """Get all commitments with optional status filter."""
         if status:
             rows = self.store.query(
@@ -333,15 +325,15 @@ class CommitmentManager:
         open_count = self.store.query(
             "SELECT COUNT(*) as c FROM commitments WHERE status = 'open'"
         )[0]["c"]
-        linked = self.store.query(
-            "SELECT COUNT(*) as c FROM commitments WHERE status = 'linked'"
-        )[0]["c"]
-        done = self.store.query(
-            "SELECT COUNT(*) as c FROM commitments WHERE status = 'done'"
-        )[0]["c"]
-        broken = self.store.query(
-            "SELECT COUNT(*) as c FROM commitments WHERE status = 'broken'"
-        )[0]["c"]
+        linked = self.store.query("SELECT COUNT(*) as c FROM commitments WHERE status = 'linked'")[
+            0
+        ]["c"]
+        done = self.store.query("SELECT COUNT(*) as c FROM commitments WHERE status = 'done'")[0][
+            "c"
+        ]
+        broken = self.store.query("SELECT COUNT(*) as c FROM commitments WHERE status = 'broken'")[
+            0
+        ]["c"]
 
         overdue = self.store.query("""
             SELECT COUNT(*) as c FROM commitments

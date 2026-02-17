@@ -23,15 +23,9 @@ def load_rules(path: str = DEFAULT_PATH) -> RuleOverrides:
     except Exception:
         data = {}
     return RuleOverrides(
-        archive_sender_substr=list(
-            dict.fromkeys(data.get("archive_sender_substr") or [])
-        ),
-        archive_subject_substr=list(
-            dict.fromkeys(data.get("archive_subject_substr") or [])
-        ),
-        delegate_krystie_substr=list(
-            dict.fromkeys(data.get("delegate_krystie_substr") or [])
-        ),
+        archive_sender_substr=list(dict.fromkeys(data.get("archive_sender_substr") or [])),
+        archive_subject_substr=list(dict.fromkeys(data.get("archive_subject_substr") or [])),
+        delegate_krystie_substr=list(dict.fromkeys(data.get("delegate_krystie_substr") or [])),
     )
 
 

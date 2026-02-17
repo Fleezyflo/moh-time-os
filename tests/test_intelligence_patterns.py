@@ -8,36 +8,37 @@ Covers:
 - Full pattern detection
 """
 
-import pytest
 from pathlib import Path
 
+import pytest
+
 from lib.intelligence.patterns import (
-    PatternType,
-    PatternSeverity,
+    PATTERN_LIBRARY,
     PatternDefinition,
     PatternEvidence,
-    PATTERN_LIBRARY,
-    get_pattern,
-    get_patterns_by_type,
-    get_patterns_by_severity,
-    get_structural_patterns,
-    validate_pattern_library,
-    get_library_summary,
+    PatternSeverity,
+    PatternType,
+    _compute_coefficient_of_variation,
+    _compute_correlation,
     # Helper functions
     _compute_herfindahl,
     _compute_top_n_share,
-    _compute_coefficient_of_variation,
-    _compute_correlation,
     _find_co_declining,
+    detect_all_patterns,
     # Detection functions
     detect_pattern,
-    detect_all_patterns,
+    get_library_summary,
+    get_pattern,
+    get_patterns_by_severity,
+    get_patterns_by_type,
+    get_structural_patterns,
+    validate_pattern_library,
 )
-
 
 # =============================================================================
 # HELPER COMPUTATION TESTS
 # =============================================================================
+
 
 class TestHelperComputations:
     """Tests for statistical helper functions."""
@@ -157,6 +158,7 @@ class TestHelperComputations:
 # PATTERN LIBRARY TESTS
 # =============================================================================
 
+
 class TestPatternLibrary:
     """Tests for pattern library structure."""
 
@@ -204,6 +206,7 @@ class TestPatternLibrary:
 # =============================================================================
 # PATTERN DETECTION TESTS
 # =============================================================================
+
 
 class TestPatternDetection:
     """Tests for pattern detection functions."""
@@ -277,6 +280,7 @@ class TestPatternDetection:
 # CONCENTRATION DETECTION TESTS
 # =============================================================================
 
+
 class TestConcentrationDetection:
     """Tests for concentration pattern detection."""
 
@@ -300,6 +304,7 @@ class TestConcentrationDetection:
 # =============================================================================
 # EVIDENCE ASSEMBLY TESTS
 # =============================================================================
+
 
 class TestEvidenceAssembly:
     """Tests for evidence structure and content."""

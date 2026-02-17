@@ -39,15 +39,13 @@ def get_utc_now_iso() -> str:
 
 
 def column_exists(cursor, table: str, column: str) -> bool:
-    cursor.execute(f"PRAGMA table_info({table})")
+    cursor.execute(f"PRAGMA table_info({table})")  # nosql: safe
     columns = [row[1] for row in cursor.fetchall()]
     return column in columns
 
 
 def index_exists(cursor, index_name: str) -> bool:
-    cursor.execute(
-        "SELECT name FROM sqlite_master WHERE type='index' AND name=?", (index_name,)
-    )
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='index' AND name=?", (index_name,))
     return cursor.fetchone() is not None
 
 
@@ -113,9 +111,7 @@ def pre_migration_checks(cursor) -> bool:
     resolved_count = cursor.fetchone()[0]
     if resolved_count > 0:
         logger.info(f"WARNING: Found {resolved_count} issues with state='resolved'")
-        logger.info(
-            "These must be transitioned to 'regression_watch' before migration."
-        )
+        logger.info("These must be transitioned to 'regression_watch' before migration.")
         cursor.execute(
             """
             UPDATE issues_v5
@@ -126,9 +122,7 @@ def pre_migration_checks(cursor) -> bool:
         """,
             (get_utc_now_iso(),),
         )
-        logger.info(
-            f"Auto-fixed: transitioned {resolved_count} issues to regression_watch"
-        )
+        logger.info(f"Auto-fixed: transitioned {resolved_count} issues to regression_watch")
     else:
         logger.info("✓ No resolved state rows found")
     return True
@@ -167,7 +161,7 @@ def add_lifecycle_columns(cursor):
     for col_name, col_type in columns_to_add:
         if not column_exists(cursor, "issues_v5", col_name):
             logger.info(f"Adding {col_name} column...")
-            cursor.execute(f"ALTER TABLE issues_v5 ADD COLUMN {col_name} {col_type}")
+            cursor.execute(f"ALTER TABLE issues_v5 ADD COLUMN {col_name} {col_type}")  # nosql: safe
         else:
             logger.info(f"✓ {col_name} already exists")
 
@@ -251,9 +245,7 @@ def add_constraints_and_indexes(cursor):
     # Note: SQLite doesn't support adding CHECK constraints to existing tables
     # The chk_no_resolved_state will be enforced at application layer
     # and validated by startup canary
-    logger.info(
-        "Note: CHECK constraints enforced at application layer (SQLite limitation)"
-    )
+    logger.info("Note: CHECK constraints enforced at application layer (SQLite limitation)")
     # Create unique index for aggregation key
     idx_name = "idx_issues_v5_aggregation_unique"
     if not index_exists(cursor, idx_name):

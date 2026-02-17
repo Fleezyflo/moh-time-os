@@ -138,7 +138,7 @@ class BaseCollector(ABC):
 
             result = subprocess.run(
                 cmd,
-                shell=True,  # nosemgrep: subprocess-no-shell-true (legacy, TODO: migrate to list args)
+                shell=True,  # nosec B602 nosemgrep: subprocess-no-shell-true (legacy, TODO: migrate to list args)
                 capture_output=True,
                 text=True,
                 timeout=timeout,

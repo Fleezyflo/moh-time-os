@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components -- Router config exports router instance */
 // Router configuration - route definitions only
 // Page components are in src/pages/
+import { useState } from 'react';
 import { createRouter, createRoute, createRootRoute, Outlet, Link } from '@tanstack/react-router';
 import { Snapshot, Issues, Team, TeamDetail, FixData, type ScopeSearch } from './pages';
 import Inbox from './pages/Inbox';
@@ -33,37 +34,105 @@ const NAV_ITEMS = [
   { to: '/fix-data', label: 'Fix' },
 ] as const;
 
-// NavLink component
-function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
+// NavLink component — responsive touch targets
+function NavLink({
+  to,
+  children,
+  onClick,
+}: {
+  to: string;
+  children: React.ReactNode;
+  onClick?: () => void;
+}) {
   return (
     <Link
       to={to}
-      className="px-3 py-2 text-sm rounded-md hover:bg-slate-700 transition-colors whitespace-nowrap [&.active]:bg-slate-700 [&.active]:text-white"
+      onClick={onClick}
+      className="px-3 py-2 min-h-[44px] flex items-center text-sm rounded-md hover:bg-slate-700 transition-colors whitespace-nowrap [&.active]:bg-slate-700 [&.active]:text-white"
     >
       {children}
     </Link>
   );
 }
 
-// Root layout with navigation
-const rootRoute = createRootRoute({
-  component: () => (
+// Hamburger icon
+function HamburgerIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      className="w-6 h-6"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      {open ? (
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M6 18L18 6M6 6l12 12"
+        />
+      ) : (
+        <path
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={2}
+          d="M4 6h16M4 12h16M4 18h16"
+        />
+      )}
+    </svg>
+  );
+}
+
+// Root layout with responsive navigation
+function RootLayout() {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const closeMobileMenu = () => setMobileMenuOpen(false);
+
+  return (
     <div className="min-h-screen bg-slate-900 text-slate-200">
       <nav className="sticky top-0 z-50 bg-slate-800/95 backdrop-blur border-b border-slate-700">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center justify-between h-14 sm:h-16">
-            <Link to="/" className="font-semibold text-lg">
+            <Link to="/" className="font-semibold text-lg" onClick={closeMobileMenu}>
               Time OS
             </Link>
-            <div className="flex gap-1 sm:gap-2 overflow-x-auto">
+
+            {/* Desktop nav */}
+            <div className="hidden sm:flex gap-1 sm:gap-2">
               {NAV_ITEMS.map((item) => (
                 <NavLink key={item.to} to={item.to}>
                   {item.label}
                 </NavLink>
               ))}
             </div>
+
+            {/* Mobile hamburger button */}
+            <button
+              type="button"
+              className="sm:hidden p-2 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-md hover:bg-slate-700 transition-colors"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-expanded={mobileMenuOpen}
+              aria-label="Toggle navigation"
+            >
+              <HamburgerIcon open={mobileMenuOpen} />
+            </button>
           </div>
         </div>
+
+        {/* Mobile nav menu */}
+        {mobileMenuOpen && (
+          <div className="sm:hidden border-t border-slate-700 bg-slate-800">
+            <div className="px-4 py-2 space-y-1">
+              {NAV_ITEMS.map((item) => (
+                <NavLink key={item.to} to={item.to} onClick={closeMobileMenu}>
+                  {item.label}
+                </NavLink>
+              ))}
+            </div>
+          </div>
+        )}
       </nav>
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
         <ErrorBoundary>
@@ -71,7 +140,11 @@ const rootRoute = createRootRoute({
         </ErrorBoundary>
       </main>
     </div>
-  ),
+  );
+}
+
+const rootRoute = createRootRoute({
+  component: RootLayout,
 });
 
 // Route definitions

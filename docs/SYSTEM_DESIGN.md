@@ -58,33 +58,33 @@ Companies/organizations we work with.
 Client:
   id: string
   name: string
-  
+
   # Classification
   tier: A | B | C              # Strategic importance
   type: agency_client | vendor | partner | other
-  
+
   # Financial State
   financial:
     annual_value: number       # Revenue from this client
     ar_outstanding: number     # Current AR
     ar_aging: string           # "Current" | "30 days" | "60+ days"
     payment_pattern: string    # "Reliable" | "Slow" | "Problematic"
-  
+
   # Relationship State
   relationship:
     health: excellent | good | fair | poor | critical
     trend: improving | stable | declining
     last_interaction: date
     notes: string              # Key relationship context
-  
+
   # Key Contacts (references to People)
   contacts:
     - person_id: reference
       role: string             # "Primary" | "Finance" | "Creative" | etc.
-  
+
   # Active Work (references to Projects)
   active_projects: [project_id]
-  
+
   # Metadata
   created_at: datetime
   updated_at: datetime
@@ -100,28 +100,28 @@ Person:
   name: string
   email: string
   phone: string | null
-  
+
   # Affiliation
   type: internal | external
   company: string | null       # For external
   client_id: reference | null  # If linked to a client
-  
+
   # Role & Relationship
   role: string                 # Job title or relationship role
   department: string | null
-  
+
   # Working Relationship
   relationship:
     trust_level: high | medium | low | unknown
     communication_style: string   # "Direct" | "Formal" | "Casual" | notes
     responsiveness: string        # "Fast" | "Normal" | "Slow"
     notes: string                 # Key things to know about this person
-  
+
   # For Internal Team
   reliability:
     commitments_kept_rate: number | null  # 0-100%
     typical_delivery: string              # "On time" | "Usually late" | etc.
-  
+
   # Metadata
   last_interaction: datetime
   created_at: datetime
@@ -137,36 +137,36 @@ Project:
   id: string
   name: string
   client_id: reference
-  
+
   # Status
   status: discovery | active | delivery | on_hold | completed | cancelled
   health: on_track | at_risk | blocked | late
-  
+
   # Timeline
   start_date: date
   target_end_date: date | null
-  
+
   # Stakes
   value: number | null         # Project value in AED
   stakes: string               # Why this matters, what's riding on it
-  
+
   # Key Info
   description: string
   key_milestones:
     - name: string
       due: date
       status: pending | done | late
-  
+
   blockers:
     - description: string
       since: date
       owner: string
-  
+
   # Team
   team:
     - person_id: reference
       role: string             # "Lead" | "Contributor" | etc.
-  
+
   # Metadata
   created_at: datetime
   updated_at: datetime
@@ -179,23 +179,23 @@ Things that need to happen — the core tracking unit.
 ```yaml
 Item:
   id: string
-  
+
   # Core
   what: string                 # What needs to happen
   status: open | waiting | done | cancelled
-  
+
   # Ownership
   owner: string                # Who's responsible ("me" or person name)
   owner_id: reference | null   # Link to Person if applicable
-  
+
   # Counterparty (who's on the other side)
   counterparty: string | null
   counterparty_id: reference | null  # Link to Person
-  
+
   # Timing
   due: date | null
   waiting_since: date | null   # If status=waiting
-  
+
   # Context (REQUIRED — this is what provides intelligence)
   context:
     client_id: reference | null
@@ -204,34 +204,34 @@ Item:
       tier: string
       health: string
       ar_status: string
-    
+
     project_id: reference | null
     project_snapshot:
       name: string
       status: string
       stakes: string
-    
+
     person_snapshot:           # The counterparty
       name: string
       role: string
       company: string
       relationship: string
-    
+
     stakes: string             # Why this specific item matters
     history: string            # What led to this, relevant background
-  
+
   # Source
   source:
     type: email | chat | meeting | call | conversation | manual
     ref: string | null         # Message ID, meeting ID, etc.
     captured_at: datetime
-  
+
   # Resolution
   resolution:
     outcome: completed | cancelled | transferred | superseded | null
     notes: string | null
     resolved_at: datetime | null
-  
+
   # History (append-only)
   history:
     - timestamp: datetime
@@ -239,7 +239,7 @@ Item:
       by: string
 ```
 
-**Key Design Decision:** Items have both references (client_id, person_id) AND snapshots (client_snapshot, person_snapshot). 
+**Key Design Decision:** Items have both references (client_id, person_id) AND snapshots (client_snapshot, person_snapshot).
 
 - References = for queries ("all items for this client")
 - Snapshots = for context at surfacing time (even if entity changes, Item retains context from when it was created)
@@ -255,20 +255,20 @@ CREATE TABLE clients (
     name TEXT NOT NULL,
     tier TEXT CHECK (tier IN ('A', 'B', 'C')),
     type TEXT,
-    
+
     financial_annual_value REAL,
     financial_ar_outstanding REAL,
     financial_ar_aging TEXT,
     financial_payment_pattern TEXT,
-    
+
     relationship_health TEXT,
     relationship_trend TEXT,
     relationship_last_interaction TEXT,
     relationship_notes TEXT,
-    
+
     contacts_json TEXT,        -- JSON array of {person_id, role}
     active_projects_json TEXT, -- JSON array of project_ids
-    
+
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
@@ -279,21 +279,21 @@ CREATE TABLE people (
     name TEXT NOT NULL,
     email TEXT,
     phone TEXT,
-    
+
     type TEXT CHECK (type IN ('internal', 'external')),
     company TEXT,
     client_id TEXT REFERENCES clients(id),
     role TEXT,
     department TEXT,
-    
+
     relationship_trust TEXT,
     relationship_style TEXT,
     relationship_responsiveness TEXT,
     relationship_notes TEXT,
-    
+
     reliability_rate REAL,
     reliability_notes TEXT,
-    
+
     last_interaction TEXT,
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
@@ -304,21 +304,21 @@ CREATE TABLE projects (
     id TEXT PRIMARY KEY,
     name TEXT NOT NULL,
     client_id TEXT REFERENCES clients(id),
-    
+
     status TEXT,
     health TEXT,
-    
+
     start_date TEXT,
     target_end_date TEXT,
-    
+
     value REAL,
     stakes TEXT,
     description TEXT,
-    
+
     milestones_json TEXT,      -- JSON array
     blockers_json TEXT,        -- JSON array
     team_json TEXT,            -- JSON array
-    
+
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );
@@ -328,29 +328,29 @@ CREATE TABLE items (
     id TEXT PRIMARY KEY,
     what TEXT NOT NULL,
     status TEXT NOT NULL CHECK (status IN ('open', 'waiting', 'done', 'cancelled')),
-    
+
     owner TEXT NOT NULL,
     owner_id TEXT REFERENCES people(id),
     counterparty TEXT,
     counterparty_id TEXT REFERENCES people(id),
-    
+
     due TEXT,
     waiting_since TEXT,
-    
+
     client_id TEXT REFERENCES clients(id),
     project_id TEXT REFERENCES projects(id),
     context_snapshot_json TEXT,  -- Full context snapshot
     stakes TEXT,
     history_context TEXT,
-    
+
     source_type TEXT,
     source_ref TEXT,
     captured_at TEXT NOT NULL,
-    
+
     resolution_outcome TEXT,
     resolution_notes TEXT,
     resolved_at TEXT,
-    
+
     created_at TEXT NOT NULL,
     updated_at TEXT NOT NULL
 );

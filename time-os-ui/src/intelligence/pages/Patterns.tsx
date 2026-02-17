@@ -46,7 +46,7 @@ function TypeBadge({ type }: { type: string }) {
 function PatternCard({ pattern }: { pattern: Pattern }) {
   return (
     <div
-      className={`rounded-lg p-4 border ${
+      className={`rounded-lg p-3 sm:p-4 border ${
         pattern.severity === 'structural'
           ? 'bg-red-500/5 border-red-500/30'
           : pattern.severity === 'operational'
@@ -116,7 +116,7 @@ export default function Patterns() {
 
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Detected Patterns</h1>
+        <h1 className="text-xl sm:text-2xl font-semibold">Detected Patterns</h1>
         <div className="text-sm text-slate-500">{data?.total_detected ?? 0} detected</div>
       </div>
 

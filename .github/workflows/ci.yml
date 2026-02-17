@@ -5,6 +5,7 @@ on:
     branches: [main, master, recover-wip]
   pull_request:
     branches: [main, master]
+  merge_group:
 
 env:
   PYTHON_VERSION: "3.11"
@@ -219,7 +220,7 @@ jobs:
         run: uv sync --all-extras
 
       - name: Check System Invariants
-        run: uv run python scripts/check_system_invariants.py || true
+        run: uv run python scripts/check_system_invariants.py
 
   # ==========================================
   # GOVERNANCE
@@ -309,8 +310,7 @@ jobs:
       - name: Python Dependency Audit (pip-audit)
         run: |
           uv pip install pip-audit
-          uv run pip-audit --require-hashes=false || true
-        continue-on-error: true
+          uv run pip-audit --require-hashes=false
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -322,14 +322,12 @@ jobs:
 
       - name: UI Dependency Audit (pnpm audit)
         working-directory: time-os-ui
-        run: pnpm audit --audit-level=high || true
-        continue-on-error: true
+        run: pnpm audit --audit-level=high
 
       - name: Gitleaks (secrets detection)
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        continue-on-error: true
 
       - name: Generate SBOM
         run: |
@@ -456,14 +454,7 @@ jobs:
         run: uv run pytest tests/cassettes/ -v --tb=short
 
       - name: Trace Correlation Smoke
-        run: |
-          uv run python -c "
-from lib.observability.tracing import SpanContext, get_trace_id
-with SpanContext('test_span') as ctx:
-    trace_id = get_trace_id()
-    assert trace_id is not None, 'Trace ID should be set'
-print('✅ Trace correlation working')
-"
+        run: uv run python -c "from lib.observability.tracing import SpanContext, get_trace_id; ctx = SpanContext('test_span').__enter__(); trace_id = get_trace_id(); assert trace_id is not None, 'Trace ID should be set'; print('✅ Trace correlation working'); ctx.__exit__(None, None, None)"
 
   # ==========================================
   # MINIMAL DB REHEARSAL
