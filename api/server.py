@@ -3972,8 +3972,7 @@ async def sync_xero():
 @app.post("/api/tasks/link")
 async def bulk_link_tasks():
     """Bulk link tasks to projects/clients."""
-    # TODO: Implement bulk linking
-    return {"success": True, "message": "Bulk link not implemented yet"}
+    raise HTTPException(status_code=501, detail="Bulk linking not implemented")
 
 
 @app.post("/api/projects/propose")

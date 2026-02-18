@@ -66,8 +66,7 @@ class TaskHandler:
         task_id = self.store.insert(
             "tasks",
             {
-                "id": data.get("id")
-                or f"task_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                "id": data.get("id") or f"task_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
                 "source": data.get("source", "time_os"),
                 "title": data["title"],
                 "status": "pending",
@@ -178,13 +177,11 @@ class TaskHandler:
 
     def _sync_to_asana(self, task_id: str, data: dict):
         """Sync task to Asana via CLI."""
-        # This would use the asana CLI or API
-        pass
+        raise NotImplementedError("Asana sync not implemented")
 
     def _complete_in_asana(self, asana_id: str):
         """Mark task complete in Asana."""
-        # This would use the asana CLI or API
-        pass
+        raise NotImplementedError("Asana complete not implemented")
 
     def _log_action(self, action: dict, result: dict):
         """Log action to database."""

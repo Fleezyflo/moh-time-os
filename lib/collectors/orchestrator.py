@@ -154,7 +154,8 @@ class CollectorOrchestrator:
         for name, collector in self.collectors.items():
             try:
                 results[name] = collector.health_check()
-            except Exception:
+            except Exception as e:
+                self.logger.warning(f"Health check failed for {name}: {e}")
                 results[name] = False
         return results
 
