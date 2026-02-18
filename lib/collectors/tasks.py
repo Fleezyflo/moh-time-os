@@ -46,8 +46,8 @@ class TasksCollector(BaseCollector):
             return {"tasks": all_tasks, "lists": task_lists}
 
         except Exception as e:
-            self.logger.warning(f"Tasks collection failed: {e}")
-            return {"tasks": [], "lists": []}
+            self.logger.exception(f"Tasks collection failed: {e}")
+            raise  # Propagate error to sync() which handles it properly
 
     def transform(self, raw_data: dict) -> list[dict]:
         """Transform Google Tasks to canonical format."""
