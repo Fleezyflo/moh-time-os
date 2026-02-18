@@ -21,8 +21,8 @@ class TasksCollector(BaseCollector):
         try:
             all_tasks = []
 
-            # Get all task lists
-            output = self._run_command("gog tasks lists --json 2>/dev/null")
+            # Get all task lists - command as list, no shell interpretation
+            output = self._run_command(["gog", "tasks", "lists", "--json"])
             lists_data = self._parse_json_output(output) if output.strip() else {}
             task_lists = lists_data.get("tasklists", [])
 
@@ -34,7 +34,13 @@ class TasksCollector(BaseCollector):
                 if not list_id:
                     continue
 
-                output = self._run_command(f"gog tasks list {list_id} --json 2>/dev/null")
+                # Validate list_id format (alphanumeric only) to prevent injection
+                if not list_id.replace("-", "").replace("_", "").isalnum():
+                    self.logger.warning(f"Skipping invalid list_id format: {list_id}")
+                    continue
+
+                # Command as list - list_id is a single argument, not shell-interpreted
+                output = self._run_command(["gog", "tasks", "list", list_id, "--json"])
                 tasks_data = self._parse_json_output(output) if output.strip() else {}
                 tasks = tasks_data.get("tasks", [])
 
@@ -96,7 +102,7 @@ class TasksCollector(BaseCollector):
             return "done"
         return "pending"
 
-    def _extract_due_date(self, task: dict) -> str:
+    def _extract_due_date(self, task: dict) -> str | None:
         """Extract due date from task."""
         due = task.get("due")
         if due:

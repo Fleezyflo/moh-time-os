@@ -13,6 +13,7 @@ Usage:
     intel = get_client_intelligence(client_id="client-123")
 """
 
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -23,13 +24,54 @@ logger = logging.getLogger(__name__)
 
 
 # =============================================================================
-# STAGE RUNNERS (with error isolation)
+# ERROR TRACKING - Errors are tracked, not swallowed
 # =============================================================================
 
-def _run_scoring_stage(db_path: Optional[Path] = None) -> dict:
+@dataclass
+class StageError:
+    """Represents an error that occurred during pipeline execution."""
+    stage: str
+    component: str
+    error_type: str
+    message: str
+    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
+    
+    def to_dict(self) -> dict:
+        return {
+            "stage": self.stage,
+            "component": self.component,
+            "error_type": self.error_type,
+            "message": self.message,
+            "timestamp": self.timestamp,
+        }
+
+
+@dataclass 
+class StageResult:
+    """Result of a pipeline stage with explicit success/failure tracking."""
+    success: bool
+    data: dict
+    errors: list[StageError] = field(default_factory=list)
+    partial: bool = False  # True if some components succeeded, others failed
+    
+    def to_dict(self) -> dict:
+        return {
+            "success": self.success,
+            "partial": self.partial,
+            "error_count": len(self.errors),
+            "errors": [e.to_dict() for e in self.errors],
+            "data": self.data,
+        }
+
+
+# =============================================================================
+# STAGE RUNNERS - Errors tracked explicitly, never swallowed
+# =============================================================================
+
+def _run_scoring_stage(db_path: Optional[Path] = None) -> StageResult:
     """
-    Run scoring. If any entity type fails, log the error and return partial results.
-    Never crash the pipeline for a scoring failure.
+    Run scoring. Errors are tracked per-component, not swallowed.
+    Returns StageResult with explicit success/failure and error details.
     """
     from lib.intelligence.scorecard import (
         score_all_clients,
@@ -38,7 +80,8 @@ def _run_scoring_stage(db_path: Optional[Path] = None) -> dict:
         score_portfolio,
     )
     
-    results = {
+    errors: list[StageError] = []
+    data = {
         "clients": [],
         "projects": [],
         "persons": [],
@@ -47,47 +90,72 @@ def _run_scoring_stage(db_path: Optional[Path] = None) -> dict:
     
     # Score clients
     try:
-        results["clients"] = score_all_clients(db_path)
+        data["clients"] = score_all_clients(db_path)
     except Exception as e:
-        logger.error(f"Scoring stage failed for clients: {e}")
-        results["clients"] = {"error": str(e)}
+        logger.error(f"Scoring stage failed for clients: {e}", exc_info=True)
+        errors.append(StageError(
+            stage="scoring",
+            component="clients", 
+            error_type=type(e).__name__,
+            message=str(e),
+        ))
     
     # Score projects
     try:
-        results["projects"] = score_all_projects(db_path)
+        data["projects"] = score_all_projects(db_path)
     except Exception as e:
-        logger.error(f"Scoring stage failed for projects: {e}")
-        results["projects"] = {"error": str(e)}
+        logger.error(f"Scoring stage failed for projects: {e}", exc_info=True)
+        errors.append(StageError(
+            stage="scoring",
+            component="projects",
+            error_type=type(e).__name__,
+            message=str(e),
+        ))
     
     # Score persons
     try:
-        results["persons"] = score_all_persons(db_path)
+        data["persons"] = score_all_persons(db_path)
     except Exception as e:
-        logger.error(f"Scoring stage failed for persons: {e}")
-        results["persons"] = {"error": str(e)}
+        logger.error(f"Scoring stage failed for persons: {e}", exc_info=True)
+        errors.append(StageError(
+            stage="scoring",
+            component="persons",
+            error_type=type(e).__name__,
+            message=str(e),
+        ))
     
     # Score portfolio
     try:
-        results["portfolio"] = score_portfolio(db_path)
+        data["portfolio"] = score_portfolio(db_path)
     except Exception as e:
-        logger.error(f"Scoring stage failed for portfolio: {e}")
-        results["portfolio"] = {"error": str(e)}
+        logger.error(f"Scoring stage failed for portfolio: {e}", exc_info=True)
+        errors.append(StageError(
+            stage="scoring",
+            component="portfolio",
+            error_type=type(e).__name__,
+            message=str(e),
+        ))
     
-    return results
+    return StageResult(
+        success=len(errors) == 0,
+        partial=0 < len(errors) < 4,
+        data=data,
+        errors=errors,
+    )
 
 
-def _run_signal_stage(db_path: Optional[Path] = None) -> dict:
+def _run_signal_stage(db_path: Optional[Path] = None) -> StageResult:
     """
-    Run signal detection and state update. Isolated from scoring failures.
+    Run signal detection and state update. Errors tracked explicitly.
     """
     from lib.intelligence.signals import (
         detect_all_signals,
         update_signal_state,
-        get_active_signals,
         get_signal_summary,
     )
     
-    results = {
+    errors: list[StageError] = []
+    data = {
         "total_active": 0,
         "new": [],
         "ongoing": [],
@@ -97,47 +165,77 @@ def _run_signal_stage(db_path: Optional[Path] = None) -> dict:
         "all_signals": [],
     }
     
+    # Detect signals
+    detected_signals = []
     try:
-        # Detect signals (quick mode for performance)
         detection = detect_all_signals(db_path, quick=True)
         detected_signals = detection.get("signals", [])
-        results["all_signals"] = detected_signals
-        
-        # Update state
-        state_update = update_signal_state(detected_signals, db_path)
-        results["new"] = state_update.get("new_signals", [])
-        results["ongoing"] = state_update.get("ongoing_signals", [])
-        results["escalated"] = state_update.get("escalated_signals", [])
-        results["cleared"] = state_update.get("cleared_signals", [])
-        
-        # Get summary
-        summary = get_signal_summary(db_path)
-        results["total_active"] = summary.get("total_active", 0)
+        data["all_signals"] = detected_signals
         
         # Organize by severity
         for sig in detected_signals:
             sev = sig.get("severity", "watch")
-            if sev in results["by_severity"]:
-                results["by_severity"][sev].append(sig)
-        
+            if sev in data["by_severity"]:
+                data["by_severity"][sev].append(sig)
     except Exception as e:
-        logger.error(f"Signal stage failed: {e}")
-        results["error"] = str(e)
+        logger.error(f"Signal detection failed: {e}", exc_info=True)
+        errors.append(StageError(
+            stage="signals",
+            component="detection",
+            error_type=type(e).__name__,
+            message=str(e),
+        ))
     
-    return results
+    # Update state (only if detection succeeded)
+    if detected_signals or not errors:
+        try:
+            state_update = update_signal_state(detected_signals, db_path)
+            data["new"] = state_update.get("new_signals", [])
+            data["ongoing"] = state_update.get("ongoing_signals", [])
+            data["escalated"] = state_update.get("escalated_signals", [])
+            data["cleared"] = state_update.get("cleared_signals", [])
+        except Exception as e:
+            logger.error(f"Signal state update failed: {e}", exc_info=True)
+            errors.append(StageError(
+                stage="signals",
+                component="state_update",
+                error_type=type(e).__name__,
+                message=str(e),
+            ))
+    
+    # Get summary
+    try:
+        summary = get_signal_summary(db_path)
+        data["total_active"] = summary.get("total_active", 0)
+    except Exception as e:
+        logger.error(f"Signal summary failed: {e}", exc_info=True)
+        errors.append(StageError(
+            stage="signals",
+            component="summary",
+            error_type=type(e).__name__,
+            message=str(e),
+        ))
+    
+    return StageResult(
+        success=len(errors) == 0,
+        partial=0 < len(errors) < 3,
+        data=data,
+        errors=errors,
+    )
 
 
 def _run_pattern_stage(
     db_path: Optional[Path] = None,
-    scores: dict = None,
-    signals: dict = None
-) -> dict:
+    scores: StageResult = None,
+    signals: StageResult = None
+) -> StageResult:
     """
-    Run pattern detection. Uses scores and signals as input.
+    Run pattern detection. Errors tracked explicitly.
     """
     from lib.intelligence.patterns import detect_all_patterns
     
-    results = {
+    errors: list[StageError] = []
+    data = {
         "total_detected": 0,
         "structural": [],
         "operational": [],
@@ -148,87 +246,127 @@ def _run_pattern_stage(
     try:
         detection = detect_all_patterns(db_path)
         patterns = detection.get("patterns", [])
-        results["all_patterns"] = patterns
-        results["total_detected"] = len(patterns)
+        data["all_patterns"] = patterns
+        data["total_detected"] = len(patterns)
         
         # Organize by severity
         for pat in patterns:
             sev = pat.get("severity", "informational")
             if sev == "structural":
-                results["structural"].append(pat)
+                data["structural"].append(pat)
             elif sev == "operational":
-                results["operational"].append(pat)
+                data["operational"].append(pat)
             else:
-                results["informational"].append(pat)
+                data["informational"].append(pat)
         
     except Exception as e:
-        logger.error(f"Pattern stage failed: {e}")
-        results["error"] = str(e)
+        logger.error(f"Pattern detection failed: {e}", exc_info=True)
+        errors.append(StageError(
+            stage="patterns",
+            component="detection",
+            error_type=type(e).__name__,
+            message=str(e),
+        ))
     
-    return results
+    return StageResult(
+        success=len(errors) == 0,
+        partial=False,
+        data=data,
+        errors=errors,
+    )
 
 
 def _run_proposal_stage(
     db_path: Optional[Path] = None,
-    scores: dict = None,
-    signals: dict = None,
-    patterns: dict = None
-) -> dict:
+    scores: StageResult = None,
+    signals: StageResult = None,
+    patterns: StageResult = None
+) -> StageResult:
     """
-    Generate and rank proposals. Uses all prior stages as input.
+    Generate and rank proposals. Errors tracked explicitly.
     """
     from lib.intelligence.proposals import (
         generate_proposals,
         rank_proposals,
         generate_daily_briefing,
-        Proposal,
-        ProposalType,
-        ProposalUrgency,
     )
     
-    results = {
+    errors: list[StageError] = []
+    data = {
         "total": 0,
         "ranked": [],
         "by_urgency": {"immediate": [], "this_week": [], "monitor": []},
         "briefing": {},
     }
     
+    # Build input from prior stages
+    signal_data = signals.data if signals else {}
+    pattern_data = patterns.data if patterns else {}
+    
+    signal_input = {
+        "signals": signal_data.get("all_signals", []),
+        "total_signals": len(signal_data.get("all_signals", [])),
+    }
+    pattern_input = {
+        "patterns": pattern_data.get("all_patterns", []),
+        "total_detected": len(pattern_data.get("all_patterns", [])),
+    }
+    
+    # Generate proposals
+    proposals = []
     try:
-        # Build input for proposal generation
-        signal_input = {
-            "signals": signals.get("all_signals", []) if signals else [],
-            "total_signals": len(signals.get("all_signals", [])) if signals else 0,
-        }
-        pattern_input = {
-            "patterns": patterns.get("all_patterns", []) if patterns else [],
-            "total_detected": len(patterns.get("all_patterns", [])) if patterns else 0,
-        }
-        
-        # Generate proposals
         proposals = generate_proposals(signal_input, pattern_input, db_path)
-        results["total"] = len(proposals)
-        
-        # Rank proposals
-        ranked = rank_proposals(proposals, db_path)
-        results["ranked"] = [
-            {**p.to_dict(), "priority_score": s.to_dict()}
-            for p, s in ranked
-        ]
+        data["total"] = len(proposals)
+    except Exception as e:
+        logger.error(f"Proposal generation failed: {e}", exc_info=True)
+        errors.append(StageError(
+            stage="proposals",
+            component="generation",
+            error_type=type(e).__name__,
+            message=str(e),
+        ))
+    
+    # Rank proposals (only if generation succeeded)
+    if proposals:
+        try:
+            ranked = rank_proposals(proposals, db_path)
+            data["ranked"] = [
+                {**p.to_dict(), "priority_score": s.to_dict()}
+                for p, s in ranked
+            ]
+        except Exception as e:
+            logger.error(f"Proposal ranking failed: {e}", exc_info=True)
+            errors.append(StageError(
+                stage="proposals",
+                component="ranking",
+                error_type=type(e).__name__,
+                message=str(e),
+            ))
         
         # Organize by urgency
         for prop in proposals:
             urgency = prop.urgency.value
-            if urgency in results["by_urgency"]:
-                results["by_urgency"][urgency].append(prop.to_dict())
+            if urgency in data["by_urgency"]:
+                data["by_urgency"][urgency].append(prop.to_dict())
         
         # Generate briefing
-        results["briefing"] = generate_daily_briefing(proposals, db_path)
-        
-    except Exception as e:
-        logger.error(f"Proposal stage failed: {e}")
-        results["error"] = str(e)
+        try:
+            data["briefing"] = generate_daily_briefing(proposals, db_path)
+        except Exception as e:
+            logger.error(f"Briefing generation failed: {e}", exc_info=True)
+            errors.append(StageError(
+                stage="proposals",
+                component="briefing",
+                error_type=type(e).__name__,
+                message=str(e),
+            ))
     
-    return results
+    return StageResult(
+        success=len(errors) == 0,
+        partial=0 < len(errors) < 3,
+        data=data,
+        errors=errors,
+    )
 
 
 # =============================================================================
@@ -298,61 +436,100 @@ def generate_intelligence_snapshot(db_path: Optional[Path] = None) -> dict:
     5. Generate proposals from scores + signals + patterns
     6. Rank proposals by priority
     7. Assemble daily briefing
-    8. Return complete snapshot
+    8. Return complete snapshot WITH ERROR TRACKING
+    
+    Errors are never swallowed. The response includes:
+    - pipeline_success: True only if ALL stages succeeded
+    - pipeline_errors: List of all errors from all stages
+    - Each stage has its own success/partial/error fields
     """
     start_time = time.time()
+    all_errors: list[StageError] = []
     
     # Stage 1: Scoring
     scores = _run_scoring_stage(db_path)
+    all_errors.extend(scores.errors)
     
     # Stage 2: Signal detection
     signals = _run_signal_stage(db_path)
+    all_errors.extend(signals.errors)
     
     # Stage 3: Pattern detection
     patterns = _run_pattern_stage(db_path, scores, signals)
+    all_errors.extend(patterns.errors)
     
     # Stage 4: Proposal generation
     proposals = _run_proposal_stage(db_path, scores, signals, patterns)
+    all_errors.extend(proposals.errors)
     
     # Compute metadata
     end_time = time.time()
     generation_time = end_time - start_time
     
+    # Pipeline health
+    pipeline_success = len(all_errors) == 0
+    stages_failed = sum([
+        not scores.success,
+        not signals.success,
+        not patterns.success,
+        not proposals.success,
+    ])
+    
     return {
         "generated_at": datetime.now().isoformat(),
         "generation_time_seconds": round(generation_time, 2),
         
-        "scores": scores,
+        # EXPLICIT PIPELINE HEALTH - Never hidden
+        "pipeline_success": pipeline_success,
+        "pipeline_partial": stages_failed > 0 and stages_failed < 4,
+        "pipeline_errors": [e.to_dict() for e in all_errors],
+        "stages_failed": stages_failed,
+        
+        "scores": {
+            "success": scores.success,
+            "partial": scores.partial,
+            "errors": [e.to_dict() for e in scores.errors],
+            **scores.data,
+        },
         
         "signals": {
-            "total_active": signals.get("total_active", 0),
-            "new": signals.get("new", []),
-            "ongoing": signals.get("ongoing", []),
-            "escalated": signals.get("escalated", []),
-            "cleared": signals.get("cleared", []),
-            "by_severity": signals.get("by_severity", {}),
+            "success": signals.success,
+            "partial": signals.partial,
+            "errors": [e.to_dict() for e in signals.errors],
+            "total_active": signals.data.get("total_active", 0),
+            "new": signals.data.get("new", []),
+            "ongoing": signals.data.get("ongoing", []),
+            "escalated": signals.data.get("escalated", []),
+            "cleared": signals.data.get("cleared", []),
+            "by_severity": signals.data.get("by_severity", {}),
         },
         
         "patterns": {
-            "total_detected": patterns.get("total_detected", 0),
-            "structural": patterns.get("structural", []),
-            "operational": patterns.get("operational", []),
-            "informational": patterns.get("informational", []),
+            "success": patterns.success,
+            "partial": patterns.partial,
+            "errors": [e.to_dict() for e in patterns.errors],
+            "total_detected": patterns.data.get("total_detected", 0),
+            "structural": patterns.data.get("structural", []),
+            "operational": patterns.data.get("operational", []),
+            "informational": patterns.data.get("informational", []),
         },
         
         "proposals": {
-            "total": proposals.get("total", 0),
-            "ranked": proposals.get("ranked", []),
-            "by_urgency": proposals.get("by_urgency", {}),
+            "success": proposals.success,
+            "partial": proposals.partial,
+            "errors": [e.to_dict() for e in proposals.errors],
+            "total": proposals.data.get("total", 0),
+            "ranked": proposals.data.get("ranked", []),
+            "by_urgency": proposals.data.get("by_urgency", {}),
         },
         
-        "briefing": proposals.get("briefing", {}),
+        "briefing": proposals.data.get("briefing", {}),
         
         "meta": {
-            "entities_scored": _count_entities(scores),
-            "signals_evaluated": len(signals.get("all_signals", [])),
-            "patterns_evaluated": patterns.get("total_detected", 0),
-            "data_completeness": _compute_data_completeness(scores),
+            "entities_scored": _count_entities(scores.data),
+            "signals_evaluated": len(signals.data.get("all_signals", [])),
+            "patterns_evaluated": patterns.data.get("total_detected", 0),
+            "data_completeness": _compute_data_completeness(scores.data),
         },
     }
 
@@ -366,29 +543,24 @@ def get_client_intelligence(
     db_path: Optional[Path] = None
 ) -> dict:
     """
-    Everything the system knows about one client:
-    - Current scorecard
-    - Active signals
-    - Patterns involving this client
-    - Open proposals
-    - Historical signal timeline
-    - Score trajectory
-    
-    This is the 'tell me everything about Client X' function.
+    Everything the system knows about one client.
+    Errors are tracked explicitly, not swallowed.
     """
     from lib.intelligence.scorecard import score_client
     from lib.intelligence.signals import (
-        detect_signals_for_entity,
         get_signal_history,
         get_active_signals,
     )
     from lib.query_engine import QueryEngine
     
     engine = QueryEngine(db_path) if db_path else QueryEngine()
+    errors: list[StageError] = []
     
     result = {
         "client_id": client_id,
         "generated_at": datetime.now().isoformat(),
+        "success": True,
+        "errors": [],
         "scorecard": {},
         "active_signals": [],
         "signal_history": [],
@@ -400,8 +572,13 @@ def get_client_intelligence(
     try:
         result["scorecard"] = score_client(client_id, db_path)
     except Exception as e:
-        logger.warning(f"Failed to score client {client_id}: {e}")
-        result["scorecard"] = {"error": str(e)}
+        logger.error(f"Failed to score client {client_id}: {e}", exc_info=True)
+        errors.append(StageError(
+            stage="client_intelligence",
+            component="scorecard",
+            error_type=type(e).__name__,
+            message=str(e),
+        ))
     
     # Get active signals
     try:
@@ -411,7 +588,13 @@ def get_client_intelligence(
             db_path=db_path
         )
     except Exception as e:
-        logger.warning(f"Failed to get signals for client {client_id}: {e}")
+        logger.error(f"Failed to get signals for client {client_id}: {e}", exc_info=True)
+        errors.append(StageError(
+            stage="client_intelligence",
+            component="active_signals",
+            error_type=type(e).__name__,
+            message=str(e),
+        ))
     
     # Get signal history
     try:
@@ -421,14 +604,28 @@ def get_client_intelligence(
             db_path=db_path
         )
     except Exception as e:
-        logger.warning(f"Failed to get signal history for client {client_id}: {e}")
+        logger.error(f"Failed to get signal history for client {client_id}: {e}", exc_info=True)
+        errors.append(StageError(
+            stage="client_intelligence",
+            component="signal_history",
+            error_type=type(e).__name__,
+            message=str(e),
+        ))
     
     # Get trajectory
     try:
         result["trajectory"] = engine.client_trajectory(client_id)
     except Exception as e:
-        logger.warning(f"Failed to get trajectory for client {client_id}: {e}")
+        logger.error(f"Failed to get trajectory for client {client_id}: {e}", exc_info=True)
+        errors.append(StageError(
+            stage="client_intelligence",
+            component="trajectory",
+            error_type=type(e).__name__,
+            message=str(e),
+        ))
     
+    result["success"] = len(errors) == 0
+    result["errors"] = [e.to_dict() for e in errors]
     return result
 
 
@@ -437,17 +634,20 @@ def get_person_intelligence(
     db_path: Optional[Path] = None
 ) -> dict:
     """
-    Everything about one person: load, signals, blast radius, trajectory.
+    Everything about one person. Errors tracked explicitly.
     """
     from lib.intelligence.scorecard import score_person
     from lib.intelligence.signals import get_active_signals, get_signal_history
     from lib.query_engine import QueryEngine
     
     engine = QueryEngine(db_path) if db_path else QueryEngine()
+    errors: list[StageError] = []
     
     result = {
         "person_id": person_id,
         "generated_at": datetime.now().isoformat(),
+        "success": True,
+        "errors": [],
         "scorecard": {},
         "active_signals": [],
         "signal_history": [],
@@ -458,8 +658,13 @@ def get_person_intelligence(
     try:
         result["scorecard"] = score_person(person_id, db_path)
     except Exception as e:
-        logger.warning(f"Failed to score person {person_id}: {e}")
-        result["scorecard"] = {"error": str(e)}
+        logger.error(f"Failed to score person {person_id}: {e}", exc_info=True)
+        errors.append(StageError(
+            stage="person_intelligence",
+            component="scorecard",
+            error_type=type(e).__name__,
+            message=str(e),
+        ))
     
     # Get active signals
     try:
@@ -469,7 +674,13 @@ def get_person_intelligence(
             db_path=db_path
         )
     except Exception as e:
-        logger.warning(f"Failed to get signals for person {person_id}: {e}")
+        logger.error(f"Failed to get signals for person {person_id}: {e}", exc_info=True)
+        errors.append(StageError(
+            stage="person_intelligence",
+            component="active_signals",
+            error_type=type(e).__name__,
+            message=str(e),
+        ))
     
     # Get signal history
     try:
@@ -479,21 +690,34 @@ def get_person_intelligence(
             db_path=db_path
         )
     except Exception as e:
-        logger.warning(f"Failed to get signal history for person {person_id}: {e}")
+        logger.error(f"Failed to get signal history for person {person_id}: {e}", exc_info=True)
+        errors.append(StageError(
+            stage="person_intelligence",
+            component="signal_history",
+            error_type=type(e).__name__,
+            message=str(e),
+        ))
     
     # Get profile
     try:
         result["profile"] = engine.person_operational_profile(person_id)
     except Exception as e:
-        logger.warning(f"Failed to get profile for person {person_id}: {e}")
+        logger.error(f"Failed to get profile for person {person_id}: {e}", exc_info=True)
+        errors.append(StageError(
+            stage="person_intelligence",
+            component="profile",
+            error_type=type(e).__name__,
+            message=str(e),
+        ))
     
+    result["success"] = len(errors) == 0
+    result["errors"] = [e.to_dict() for e in errors]
     return result
 
 
 def get_portfolio_intelligence(db_path: Optional[Path] = None) -> dict:
     """
-    Portfolio-level view: aggregate health, concentration metrics,
-    structural patterns, top proposals. Lighter than full snapshot.
+    Portfolio-level view. Errors tracked explicitly.
     """
     from lib.intelligence.scorecard import score_portfolio
     from lib.intelligence.patterns import detect_all_patterns
@@ -501,12 +725,15 @@ def get_portfolio_intelligence(db_path: Optional[Path] = None) -> dict:
     from lib.intelligence.proposals import (
         generate_proposals,
         rank_proposals,
-        ProposalUrgency,
     )
     from lib.intelligence.signals import detect_all_signals
     
+    errors: list[StageError] = []
+    
     result = {
         "generated_at": datetime.now().isoformat(),
+        "success": True,
+        "errors": [],
         "portfolio_score": {},
         "signal_summary": {},
         "structural_patterns": [],
@@ -517,14 +744,25 @@ def get_portfolio_intelligence(db_path: Optional[Path] = None) -> dict:
     try:
         result["portfolio_score"] = score_portfolio(db_path)
     except Exception as e:
-        logger.warning(f"Failed to score portfolio: {e}")
-        result["portfolio_score"] = {"error": str(e)}
+        logger.error(f"Failed to score portfolio: {e}", exc_info=True)
+        errors.append(StageError(
+            stage="portfolio_intelligence",
+            component="portfolio_score",
+            error_type=type(e).__name__,
+            message=str(e),
+        ))
     
     # Signal summary
     try:
         result["signal_summary"] = get_signal_summary(db_path)
     except Exception as e:
-        logger.warning(f"Failed to get signal summary: {e}")
+        logger.error(f"Failed to get signal summary: {e}", exc_info=True)
+        errors.append(StageError(
+            stage="portfolio_intelligence",
+            component="signal_summary",
+            error_type=type(e).__name__,
+            message=str(e),
+        ))
     
     # Structural patterns only
     try:
@@ -534,7 +772,13 @@ def get_portfolio_intelligence(db_path: Optional[Path] = None) -> dict:
             if p.get("severity") == "structural"
         ]
     except Exception as e:
-        logger.warning(f"Failed to detect patterns: {e}")
+        logger.error(f"Failed to detect patterns: {e}", exc_info=True)
+        errors.append(StageError(
+            stage="portfolio_intelligence",
+            component="patterns",
+            error_type=type(e).__name__,
+            message=str(e),
+        ))
     
     # Top 5 proposals
     try:
@@ -550,15 +794,23 @@ def get_portfolio_intelligence(db_path: Optional[Path] = None) -> dict:
             for p, s in ranked[:5]
         ]
     except Exception as e:
-        logger.warning(f"Failed to generate proposals: {e}")
+        logger.error(f"Failed to generate proposals: {e}", exc_info=True)
+        errors.append(StageError(
+            stage="portfolio_intelligence",
+            component="proposals",
+            error_type=type(e).__name__,
+            message=str(e),
+        ))
     
+    result["success"] = len(errors) == 0
+    result["errors"] = [e.to_dict() for e in errors]
     return result
 
 
-def get_critical_items(db_path: Optional[Path] = None) -> list[dict]:
+def get_critical_items(db_path: Optional[Path] = None) -> dict:
     """
-    Just the IMMEDIATE urgency proposals. The '30-second scan' view.
-    Runs full pipeline internally but only returns critical items.
+    Just the IMMEDIATE urgency proposals. Errors tracked explicitly.
+    Returns dict with success flag and items list, not bare list.
     """
     from lib.intelligence.signals import detect_all_signals
     from lib.intelligence.patterns import detect_all_patterns
@@ -567,6 +819,14 @@ def get_critical_items(db_path: Optional[Path] = None) -> list[dict]:
         rank_proposals,
         ProposalUrgency,
     )
+    
+    errors: list[StageError] = []
+    result = {
+        "success": True,
+        "errors": [],
+        "items": [],
+        "generated_at": datetime.now().isoformat(),
+    }
     
     try:
         # Run detection
@@ -581,7 +841,7 @@ def get_critical_items(db_path: Optional[Path] = None) -> list[dict]:
         ranked = rank_proposals(proposals, db_path)
         
         # Filter to IMMEDIATE only
-        critical = [
+        result["items"] = [
             {
                 "headline": p.headline,
                 "entity": p.entity,
@@ -593,8 +853,15 @@ def get_critical_items(db_path: Optional[Path] = None) -> list[dict]:
             if p.urgency == ProposalUrgency.IMMEDIATE
         ]
         
-        return critical
-        
     except Exception as e:
-        logger.error(f"Failed to get critical items: {e}")
-        return []
+        logger.error(f"Failed to get critical items: {e}", exc_info=True)
+        errors.append(StageError(
+            stage="critical_items",
+            component="pipeline",
+            error_type=type(e).__name__,
+            message=str(e),
+        ))
+    
+    result["success"] = len(errors) == 0
+    result["errors"] = [e.to_dict() for e in errors]
+    return result

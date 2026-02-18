@@ -13,6 +13,61 @@ Reference: data/signal_catalog_20260214.md
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Optional
+import threading
+
+
+# =============================================================================
+# ERROR TRACKING - Signal evaluation errors are tracked, not swallowed
+# =============================================================================
+
+@dataclass
+class SignalEvaluationError:
+    """Tracks an error that occurred during signal evaluation."""
+    signal_id: str
+    entity_type: str
+    entity_id: str
+    error_type: str
+    message: str
+    timestamp: str = ""
+    
+    def __post_init__(self):
+        if not self.timestamp:
+            from datetime import datetime
+            self.timestamp = datetime.now().isoformat()
+    
+    def to_dict(self) -> dict:
+        return {
+            "signal_id": self.signal_id,
+            "entity_type": self.entity_type,
+            "entity_id": self.entity_id,
+            "error_type": self.error_type,
+            "message": self.message,
+            "timestamp": self.timestamp,
+        }
+
+
+class EvaluationErrorCollector:
+    """Thread-safe collector for evaluation errors within a detection run."""
+    
+    def __init__(self):
+        self._errors: list[SignalEvaluationError] = []
+        self._lock = threading.Lock()
+    
+    def add(self, error: SignalEvaluationError):
+        with self._lock:
+            self._errors.append(error)
+    
+    def get_all(self) -> list[SignalEvaluationError]:
+        with self._lock:
+            return list(self._errors)
+    
+    def count(self) -> int:
+        with self._lock:
+            return len(self._errors)
+    
+    def clear(self):
+        with self._lock:
+            self._errors.clear()
 
 
 class SignalSeverity(Enum):
@@ -1248,7 +1303,8 @@ def evaluate_signal(
     entity_id: str,
     db_path: Optional[Path] = None,
     _evaluated: Optional[dict] = None,
-    cache: DetectionCache = None
+    cache: DetectionCache = None,
+    error_collector: Optional[EvaluationErrorCollector] = None
 ) -> Optional[dict]:
     """
     Evaluate a single signal definition for a specific entity.
@@ -1257,6 +1313,7 @@ def evaluate_signal(
     
     Args:
         cache: Optional DetectionCache for fast lookups (avoids O(n²) behavior)
+        error_collector: Optional collector for tracking evaluation errors
     """
     # Check entity type matches
     if signal_def.entity_type != entity_type:
@@ -1285,7 +1342,17 @@ def evaluate_signal(
         elif signal_def.category == SignalCategory.COMPOUND:
             evidence = _evaluate_compound(condition, entity_type, entity_id, db_path, _evaluated)
     except Exception as e:
-        logger.warning(f"Error evaluating signal {signal_def.id}: {e}")
+        # Log with full traceback for debugging
+        logger.warning(f"Error evaluating signal {signal_def.id}: {e}", exc_info=True)
+        # Track error explicitly if collector provided
+        if error_collector is not None:
+            error_collector.add(SignalEvaluationError(
+                signal_id=signal_def.id,
+                entity_type=entity_type,
+                entity_id=entity_id,
+                error_type=type(e).__name__,
+                message=str(e),
+            ))
         evidence = None
     
     if evidence is None:
@@ -1341,7 +1408,8 @@ def detect_signals_for_entity(
     db_path: Optional[Path] = None,
     categories: Optional[list[SignalCategory]] = None,
     cache: DetectionCache = None,
-    fast_only: bool = False
+    fast_only: bool = False,
+    error_collector: Optional[EvaluationErrorCollector] = None
 ) -> list[dict]:
     """
     Run signals applicable to this entity type.
@@ -1354,6 +1422,7 @@ def detect_signals_for_entity(
                    For fast scanning, use [SignalCategory.THRESHOLD]
         cache: Optional DetectionCache for fast lookups
         fast_only: If True, skip signals that require per-entity queries
+        error_collector: Optional collector for tracking evaluation errors
     
     Returns list of triggered signals, sorted by severity (CRITICAL first).
     """
@@ -1371,7 +1440,10 @@ def detect_signals_for_entity(
     _evaluated = {}
     
     for signal_def in signals:
-        result = evaluate_signal(signal_def, entity_type, entity_id, db_path, _evaluated, cache)
+        result = evaluate_signal(
+            signal_def, entity_type, entity_id, db_path, 
+            _evaluated, cache, error_collector
+        )
         if result:
             detected.append(result)
     
@@ -1415,7 +1487,8 @@ def detect_all_signals(
         quick: If True, only evaluate THRESHOLD signals (fast)
         categories: Optional list of categories to evaluate
     
-    Returns comprehensive detection results.
+    Returns comprehensive detection results INCLUDING ERRORS.
+    Errors are tracked, not swallowed.
     
     Performance: Uses DetectionCache to avoid O(n²) behavior.
     Data is loaded once and indexed for O(1) lookups.
@@ -1423,6 +1496,9 @@ def detect_all_signals(
     # Create cache for this detection run - loads data once
     cache = DetectionCache(db_path)
     all_detected = []
+    
+    # Error collector for this detection run
+    error_collector = EvaluationErrorCollector()
     
     # Determine which categories to evaluate
     if categories is not None:
@@ -1439,7 +1515,9 @@ def detect_all_signals(
     for client in cache.clients:
         client_id = client.get("client_id")
         if client_id:
-            detected = detect_signals_for_entity("client", client_id, db_path, cats, cache, fast_only)
+            detected = detect_signals_for_entity(
+                "client", client_id, db_path, cats, cache, fast_only, error_collector
+            )
             for d in detected:
                 d["entity_name"] = client.get("client_name", "Unknown")
             all_detected.extend(detected)
@@ -1448,7 +1526,9 @@ def detect_all_signals(
     for project in cache.projects:
         project_id = project.get("project_id")
         if project_id:
-            detected = detect_signals_for_entity("project", project_id, db_path, cats, cache, fast_only)
+            detected = detect_signals_for_entity(
+                "project", project_id, db_path, cats, cache, fast_only, error_collector
+            )
             for d in detected:
                 d["entity_name"] = project.get("project_name", "Unknown")
             all_detected.extend(detected)
@@ -1457,7 +1537,9 @@ def detect_all_signals(
     for person in cache.persons:
         person_id = person.get("person_id")
         if person_id:
-            detected = detect_signals_for_entity("person", person_id, db_path, cats, cache, fast_only)
+            detected = detect_signals_for_entity(
+                "person", person_id, db_path, cats, cache, fast_only, error_collector
+            )
             for d in detected:
                 d["entity_name"] = person.get("person_name", "Unknown")
             all_detected.extend(detected)
@@ -1470,7 +1552,10 @@ def detect_all_signals(
         portfolio_signals = [s for s in portfolio_signals if s.fast_eval]
     _evaluated = {}
     for signal_def in portfolio_signals:
-        result = evaluate_signal(signal_def, "portfolio", "portfolio", db_path, _evaluated, cache)
+        result = evaluate_signal(
+            signal_def, "portfolio", "portfolio", db_path, 
+            _evaluated, cache, error_collector
+        )
         if result:
             result["entity_name"] = "Portfolio"
             all_detected.append(result)
@@ -1488,9 +1573,15 @@ def detect_all_signals(
         if etype in by_entity_type:
             by_entity_type[etype].append(signal)
     
+    # Collect errors
+    errors = error_collector.get_all()
+    
     return {
         "detected_at": datetime.now().isoformat(),
+        "success": len(errors) == 0,
         "total_signals": len(all_detected),
+        "evaluation_errors": len(errors),
+        "errors": [e.to_dict() for e in errors],
         "by_severity": {k: len(v) for k, v in by_severity.items()},
         "by_entity_type": {k: len(v) for k, v in by_entity_type.items()},
         "signals": all_detected,

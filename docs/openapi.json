@@ -943,6 +943,12 @@
         "title": "ValidationError",
         "type": "object"
       }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "scheme": "bearer",
+        "type": "http"
+      }
     }
   },
   "info": {
@@ -7573,6 +7579,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Daily Briefing",
         "tags": [
           "Intelligence"
@@ -7593,6 +7604,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Detect Changes",
         "tags": [
           "Intelligence"
@@ -7669,6 +7685,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Clients Compare",
         "tags": [
           "Intelligence"
@@ -7746,6 +7767,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Client Communication",
         "tags": [
           "Intelligence"
@@ -7831,6 +7857,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Client Compare",
         "tags": [
           "Intelligence"
@@ -7872,6 +7903,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Client Profile",
         "tags": [
           "Intelligence"
@@ -7913,6 +7949,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Client Tasks",
         "tags": [
           "Intelligence"
@@ -7978,6 +8019,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Client Trajectory",
         "tags": [
           "Intelligence"
@@ -7998,6 +8044,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Critical Items",
         "tags": [
           "Intelligence"
@@ -8039,6 +8090,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Client Intelligence",
         "tags": [
           "Intelligence"
@@ -8080,6 +8136,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Person Intelligence",
         "tags": [
           "Intelligence"
@@ -8100,6 +8161,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Portfolio Intelligence",
         "tags": [
           "Intelligence"
@@ -8120,6 +8186,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Financial Aging",
         "tags": [
           "Intelligence"
@@ -8140,6 +8211,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Patterns",
         "tags": [
           "Intelligence"
@@ -8160,6 +8236,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Pattern Catalog",
         "tags": [
           "Intelligence"
@@ -8216,6 +8297,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Portfolio Overview",
         "tags": [
           "Intelligence"
@@ -8272,6 +8358,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Portfolio Risks",
         "tags": [
           "Intelligence"
@@ -8340,6 +8431,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Portfolio Trajectory",
         "tags": [
           "Intelligence"
@@ -8384,6 +8480,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Projects Health",
         "tags": [
           "Intelligence"
@@ -8425,6 +8526,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Project State",
         "tags": [
           "Intelligence"
@@ -8487,6 +8593,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Proposals",
         "tags": [
           "Intelligence"
@@ -8528,6 +8639,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Client Score",
         "tags": [
           "Intelligence"
@@ -8548,6 +8664,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Score History Summary",
         "tags": [
           "Intelligence"
@@ -8589,6 +8710,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Person Score",
         "tags": [
           "Intelligence"
@@ -8609,6 +8735,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Portfolio Score",
         "tags": [
           "Intelligence"
@@ -8650,6 +8781,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Project Score",
         "tags": [
           "Intelligence"
@@ -8670,6 +8806,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Record Scores",
         "tags": [
           "Intelligence"
@@ -8732,6 +8873,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Score History",
         "tags": [
           "Intelligence"
@@ -8776,6 +8922,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Signals",
         "tags": [
           "Intelligence"
@@ -8844,6 +8995,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Active Signals",
         "tags": [
           "Intelligence"
@@ -8864,6 +9020,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Export Signals",
         "tags": [
           "Intelligence"
@@ -8930,6 +9091,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Signal History",
         "tags": [
           "Intelligence"
@@ -8950,6 +9116,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Signals Summary",
         "tags": [
           "Intelligence"
@@ -8970,6 +9141,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Thresholds",
         "tags": [
           "Intelligence"
@@ -8990,6 +9166,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Intelligence Snapshot",
         "tags": [
           "Intelligence"
@@ -9010,6 +9191,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Team Capacity",
         "tags": [
           "Intelligence"
@@ -9030,6 +9216,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Team Distribution",
         "tags": [
           "Intelligence"
@@ -9071,6 +9262,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Team Person Profile",
         "tags": [
           "Intelligence"
@@ -9136,6 +9332,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Team Person Trajectory",
         "tags": [
           "Intelligence"
