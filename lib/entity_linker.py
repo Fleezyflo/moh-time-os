@@ -151,9 +151,7 @@ def load_client_ids(conn) -> dict[str, str]:
 
 def ensure_hrmny_client(conn) -> str:
     """Ensure hrmny internal client exists, return its ID."""
-    row = conn.execute(
-        "SELECT id FROM clients WHERE name = 'hrmny (Internal)'"
-    ).fetchone()
+    row = conn.execute("SELECT id FROM clients WHERE name = 'hrmny (Internal)'").fetchone()
 
     if row:
         return row["id"]
@@ -200,9 +198,7 @@ def ensure_brands(conn, client_ids: dict[str, str]) -> dict[str, str]:
 
         client_id = client_ids.get(client_name)
         if not client_id:
-            logger.info(
-                f"  Warning: Client '{client_name}' not found for brand '{brand_name}'"
-            )
+            logger.info(f"  Warning: Client '{client_name}' not found for brand '{brand_name}'")
             continue
 
         brand_id = str(uuid.uuid4())
@@ -286,10 +282,7 @@ def link_project(
         else:
             # 3. Try direct client name match
             for client_name, client_id in client_ids.items():
-                if (
-                    client_name.lower() in name.lower()
-                    or name.lower() in client_name.lower()
-                ):
+                if client_name.lower() in name.lower() or name.lower() in client_name.lower():
                     new_client_id = client_id
                     reason = f"client:{client_name}"
                     break

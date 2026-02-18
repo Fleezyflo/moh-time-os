@@ -14,7 +14,6 @@ Usage:
 
 import logging
 import os
-from typing import Optional
 
 from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer

@@ -16,6 +16,7 @@ import logging
 import shutil
 import sqlite3
 from datetime import datetime
+from pathlib import Path
 
 from lib import paths
 
@@ -167,12 +168,8 @@ def migrate_tasks(conn):
     # §12 indexes
     cursor.execute("CREATE INDEX idx_tasks_project ON tasks(project_id)")
     cursor.execute("CREATE INDEX idx_tasks_client ON tasks(client_id)")
-    cursor.execute(
-        "CREATE INDEX idx_tasks_project_link_status ON tasks(project_link_status)"
-    )
-    cursor.execute(
-        "CREATE INDEX idx_tasks_client_link_status ON tasks(client_link_status)"
-    )
+    cursor.execute("CREATE INDEX idx_tasks_project_link_status ON tasks(project_link_status)")
+    cursor.execute("CREATE INDEX idx_tasks_client_link_status ON tasks(client_link_status)")
     cursor.execute("CREATE INDEX idx_tasks_assignee ON tasks(assignee_id)")
 
     cursor.execute("SELECT COUNT(*) FROM tasks")
@@ -270,21 +267,11 @@ def migrate_communications(conn):
     cursor.execute("ALTER TABLE communications_v12 RENAME TO communications")
 
     # §12 indexes
-    cursor.execute(
-        "CREATE INDEX idx_communications_client ON communications(client_id)"
-    )
-    cursor.execute(
-        "CREATE INDEX idx_communications_processed ON communications(processed)"
-    )
-    cursor.execute(
-        "CREATE INDEX idx_communications_content_hash ON communications(content_hash)"
-    )
-    cursor.execute(
-        "CREATE INDEX idx_communications_from_email ON communications(from_email)"
-    )
-    cursor.execute(
-        "CREATE INDEX idx_communications_from_domain ON communications(from_domain)"
-    )
+    cursor.execute("CREATE INDEX idx_communications_client ON communications(client_id)")
+    cursor.execute("CREATE INDEX idx_communications_processed ON communications(processed)")
+    cursor.execute("CREATE INDEX idx_communications_content_hash ON communications(content_hash)")
+    cursor.execute("CREATE INDEX idx_communications_from_email ON communications(from_email)")
+    cursor.execute("CREATE INDEX idx_communications_from_domain ON communications(from_domain)")
 
     cursor.execute("SELECT COUNT(*) FROM communications")
     after = cursor.fetchone()[0]
@@ -683,9 +670,7 @@ def ensure_spec_tables(conn):
                 created_at TEXT NOT NULL DEFAULT (datetime('now'))
             )
         """)
-        cursor.execute(
-            "CREATE INDEX idx_pending_actions_status ON pending_actions(status)"
-        )
+        cursor.execute("CREATE INDEX idx_pending_actions_status ON pending_actions(status)")
         logger.info("✓ pending_actions: created")
     # asana_project_map
     cursor.execute("SELECT name FROM sqlite_master WHERE name='asana_project_map'")
@@ -778,9 +763,7 @@ def verify_schema(conn):
             "CHECK (project_link_status IN" in tasks_sql,
         )
     )
-    checks.append(
-        ("tasks.client_link_status CHECK", "CHECK (client_link_status IN" in tasks_sql)
-    )
+    checks.append(("tasks.client_link_status CHECK", "CHECK (client_link_status IN" in tasks_sql))
     checks.append(("tasks FK project_id", "FOREIGN KEY (project_id)" in tasks_sql))
     checks.append(("tasks FK client_id", "FOREIGN KEY (client_id)" in tasks_sql))
 
@@ -789,9 +772,7 @@ def verify_schema(conn):
     comms_sql = cursor.fetchone()[0]
     checks.append(("communications.from_email exists", "from_email TEXT" in comms_sql))
     checks.append(("communications.to_emails exists", "to_emails TEXT" in comms_sql))
-    checks.append(
-        ("communications.link_status CHECK", "CHECK (link_status IN" in comms_sql)
-    )
+    checks.append(("communications.link_status CHECK", "CHECK (link_status IN" in comms_sql))
 
     # projects checks
     cursor.execute("SELECT sql FROM sqlite_master WHERE name='projects'")

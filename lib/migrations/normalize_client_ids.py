@@ -84,14 +84,9 @@ def run_migration():
             # Try partial match
             matched = False
             for client_name, client_id in client_by_name_lower.items():
-                if (
-                    potential_name_lower in client_name
-                    or client_name in potential_name_lower
-                ):
+                if potential_name_lower in client_name or client_name in potential_name_lower:
                     results["mappings"][old_id] = client_id
-                    logger.info(
-                        f"  Mapped {old_id[:20]}... → {client_id} (partial match)"
-                    )
+                    logger.info(f"  Mapped {old_id[:20]}... → {client_id} (partial match)")
                     matched = True
                     break
 
@@ -131,9 +126,7 @@ def run_migration():
             cursor.execute("SELECT COUNT(*) FROM tasks WHERE client_id = ?", (old_id,))
             count = cursor.fetchone()[0]
 
-            cursor.execute(
-                "UPDATE tasks SET client_id = ? WHERE client_id = ?", (new_id, old_id)
-            )
+            cursor.execute("UPDATE tasks SET client_id = ? WHERE client_id = ?", (new_id, old_id))
             results["tasks_updated"] += count
             logger.info(f"  Updated {count} tasks: {old_id[:20]}... → {new_id}")
     conn.commit()
@@ -166,9 +159,7 @@ def populate_project_client_links():
 
     for project_id, project_name in projects:
         # Already linked?
-        cursor.execute(
-            "SELECT 1 FROM client_projects WHERE project_id = ?", (project_id,)
-        )
+        cursor.execute("SELECT 1 FROM client_projects WHERE project_id = ?", (project_id,))
         if cursor.fetchone():
             logger.info(f"  {project_id}: already linked")
             continue
@@ -282,24 +273,18 @@ def validate_integrity():
     cursor.execute("SELECT COUNT(*) FROM tasks")
     total_tasks = cursor.fetchone()[0]
 
-    cursor.execute(
-        "SELECT COUNT(*) FROM tasks WHERE client_id IS NOT NULL AND client_id != ''"
-    )
+    cursor.execute("SELECT COUNT(*) FROM tasks WHERE client_id IS NOT NULL AND client_id != ''")
     tasks_with_client = cursor.fetchone()[0]
 
     coverage = round(tasks_with_client / total_tasks * 100, 1) if total_tasks > 0 else 0
-    logger.info(
-        f"  Task-client coverage: {coverage}% ({tasks_with_client}/{total_tasks})"
-    )
+    logger.info(f"  Task-client coverage: {coverage}% ({tasks_with_client}/{total_tasks})")
     cursor.execute("SELECT COUNT(*) FROM projects")
     total_projects = cursor.fetchone()[0]
 
     cursor.execute("SELECT COUNT(DISTINCT project_id) FROM client_projects")
     linked_projects = cursor.fetchone()[0]
 
-    project_coverage = (
-        round(linked_projects / total_projects * 100, 1) if total_projects > 0 else 0
-    )
+    project_coverage = round(linked_projects / total_projects * 100, 1) if total_projects > 0 else 0
     logger.info(
         f"  Project-client coverage: {project_coverage}% ({linked_projects}/{total_projects})"
     )

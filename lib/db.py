@@ -361,9 +361,7 @@ def get_table_columns(conn: sqlite3.Connection, table: str) -> set[str]:
 
 def table_exists(conn: sqlite3.Connection, table: str) -> bool:
     """Check if a table exists."""
-    cursor = conn.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,)
-    )
+    cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,))
     return cursor.fetchone() is not None
 
 
@@ -383,9 +381,7 @@ def set_schema_version(conn: sqlite3.Connection, version: int):
 # ============================================================
 
 
-def create_table_if_missing(
-    conn: sqlite3.Connection, table: str, create_sql: str
-) -> bool:
+def create_table_if_missing(conn: sqlite3.Connection, table: str, create_sql: str) -> bool:
     """Create a table if it doesn't exist. Returns True if created."""
     if table_exists(conn, table):
         return False
@@ -463,9 +459,7 @@ def run_migrations(conn: sqlite3.Connection) -> dict:
     for idx_name, table, columns in indexes:
         if table_exists(conn, table):
             try:
-                conn.execute(
-                    f"CREATE INDEX IF NOT EXISTS {idx_name} ON {table}({columns})"
-                )
+                conn.execute(f"CREATE INDEX IF NOT EXISTS {idx_name} ON {table}({columns})")
             except sqlite3.OperationalError:
                 pass
 
@@ -516,9 +510,7 @@ def run_migrations(conn: sqlite3.Connection) -> dict:
     if previous_version < 9:
         try:
             # Check if issues_v29 is empty table (not a view)
-            cursor = conn.execute(
-                "SELECT type FROM sqlite_master WHERE name = 'issues_v29'"
-            )
+            cursor = conn.execute("SELECT type FROM sqlite_master WHERE name = 'issues_v29'")
             row = cursor.fetchone()
             if row and row[0] == "table":
                 cursor = conn.execute("SELECT COUNT(*) FROM issues_v29")
@@ -572,14 +564,10 @@ def run_migrations(conn: sqlite3.Connection) -> dict:
                             i.closed_at
                         FROM issues i
                     """)
-                    logger.info(
-                        "Migration 9: Created issues_v29 VIEW from legacy issues table"
-                    )
+                    logger.info("Migration 9: Created issues_v29 VIEW from legacy issues table")
 
             # Check if signals_v29 is empty table
-            cursor = conn.execute(
-                "SELECT type FROM sqlite_master WHERE name = 'signals_v29'"
-            )
+            cursor = conn.execute("SELECT type FROM sqlite_master WHERE name = 'signals_v29'")
             row = cursor.fetchone()
             if row and row[0] == "table":
                 cursor = conn.execute("SELECT COUNT(*) FROM signals_v29")
@@ -611,9 +599,7 @@ def run_migrations(conn: sqlite3.Connection) -> dict:
                             COALESCE(s.detected_at, datetime('now')) AS updated_at
                         FROM signals s
                     """)
-                    logger.info(
-                        "Migration 9: Created signals_v29 VIEW from legacy signals table"
-                    )
+                    logger.info("Migration 9: Created signals_v29 VIEW from legacy signals table")
         except Exception as e:
             results["errors"].append(f"migration 9 views: {e}")
 

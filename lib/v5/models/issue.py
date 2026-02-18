@@ -315,9 +315,7 @@ class Issue(BaseModel):
     # Lifecycle Methods
     # =========================================================================
 
-    def _record_state_change(
-        self, new_state: IssueState, by: str | None = None
-    ) -> None:
+    def _record_state_change(self, new_state: IssueState, by: str | None = None) -> None:
         """Record state change in history."""
         history = json_loads_safe(self.state_history) or []
         history.append({"state": new_state.value, "timestamp": now_iso(), "by": by})

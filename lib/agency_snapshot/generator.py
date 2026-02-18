@@ -208,11 +208,7 @@ class AgencySnapshotGenerator:
         # Commitments
         commitments_total = len(normalized.commitments)
         commitments_resolved = len(
-            [
-                c
-                for c in normalized.commitments
-                if c.get("resolved_client_id") is not None
-            ]
+            [c for c in normalized.commitments if c.get("resolved_client_id") is not None]
         )
 
         # Threads/communications
@@ -224,18 +220,12 @@ class AgencySnapshotGenerator:
         # Invoices
         invoices_total = len(normalized.invoices)
         invoices_valid = len(
-            [
-                inv
-                for inv in normalized.invoices
-                if inv.get("client_id") and inv.get("due_date")
-            ]
+            [inv for inv in normalized.invoices if inv.get("client_id") and inv.get("due_date")]
         )
 
         # People
         people_total = len(normalized.people)
-        people_with_hours = len(
-            [p for p in normalized.people if p.get("hours_assigned", 0) > 0]
-        )
+        people_with_hours = len([p for p in normalized.people if p.get("hours_assigned", 0) > 0])
 
         # Projects
         projects_total = len(normalized.projects)
@@ -285,7 +275,7 @@ class AgencySnapshotGenerator:
         self._trust = self.confidence_model.get_trust_state()
 
         # Check if blocked (metadata only - does NOT bypass gates)
-        is_blocked = self.confidence_model.is_blocked(self._trust)
+        self.confidence_model.is_blocked(self._trust)
 
         snapshot = {
             "meta": self._build_meta(started_at),
@@ -323,16 +313,12 @@ class AgencySnapshotGenerator:
         snapshot["delivery_command"] = self._build_delivery_command_minimal(normalized)
         snapshot["client_360"] = self._build_client_360_minimal(normalized)
         snapshot["cash_ar"] = self._build_cash_ar_minimal(normalized)
-        snapshot["comms_commitments"] = self._build_comms_commitments_minimal(
-            normalized
-        )
+        snapshot["comms_commitments"] = self._build_comms_commitments_minimal(normalized)
         snapshot["capacity_command"] = self._build_capacity_command_minimal(normalized)
         snapshot["drawers"] = self._drawers
 
         snapshot["meta"]["finished_at"] = datetime.now().isoformat()
-        snapshot["meta"]["duration_ms"] = (
-            datetime.now() - started_at
-        ).total_seconds() * 1000
+        snapshot["meta"]["duration_ms"] = (datetime.now() - started_at).total_seconds() * 1000
 
         # =========================================================
         # PATCHWORK_BOUNDARY: ASSEMBLY COMPLETE
@@ -439,9 +425,7 @@ class AgencySnapshotGenerator:
             "cash": self._build_cash_tile(partial_domains),
             "clients": self._build_clients_tile(partial_domains),
             "churn_x_money": self._build_churn_x_money_tile(partial_domains),
-            "delivery_x_capacity": self._build_delivery_x_capacity_tile(
-                partial_domains
-            ),
+            "delivery_x_capacity": self._build_delivery_x_capacity_tile(partial_domains),
         }
 
     def _build_delivery_tile(self, partial: dict) -> dict:
@@ -473,9 +457,7 @@ class AgencySnapshotGenerator:
         if "delivery" in partial:
             badge = "PARTIAL"
 
-        summary = (
-            f"{red_count} Red, {yellow_count} Yellow, {green_count} Green (top 25)"
-        )
+        summary = f"{red_count} Red, {yellow_count} Yellow, {green_count} Green (top 25)"
         if highest_risk:
             ttc = highest_risk.time_to_slip_hours
             ttc_str = f"{ttc:.0f}h" if ttc and ttc > 0 else "overdue"
@@ -603,8 +585,7 @@ class AgencySnapshotGenerator:
             "summary": summary,
             "cta": "Open Client 360",
             "top": [
-                {"id": c["id"], "name": c["name"], "overdue_ar": c["overdue_ar"]}
-                for c in clients
+                {"id": c["id"], "name": c["name"], "overdue_ar": c["overdue_ar"]} for c in clients
             ],
         }
 
@@ -638,9 +619,7 @@ class AgencySnapshotGenerator:
             "badge": badge,
             "summary": summary,
             "cta": "Open Delivery Command",
-            "top": [
-                {"project_id": p.project_id, "name": p.name} for p in impossible[:5]
-            ],
+            "top": [{"project_id": p.project_id, "name": p.name} for p in impossible[:5]],
         }
 
     def _build_heatstrip(self) -> list[dict]:
@@ -812,9 +791,7 @@ class AgencySnapshotGenerator:
         candidates.extend(self._get_blocked_items())
 
         # Rank
-        ranked = rank_items(
-            candidates, self.mode, self.horizon, max_items=self.MAX_EXCEPTIONS
-        )
+        ranked = rank_items(candidates, self.mode, self.horizon, max_items=self.MAX_EXCEPTIONS)
 
         exceptions = []
         for idx, item in enumerate(ranked):
@@ -824,9 +801,7 @@ class AgencySnapshotGenerator:
             # Add deterministic variation based on entity_id for tie-breaking (0.001-0.099)
             variation = (hash(item.entity_id) % 100 + 1) / 1000
             # Also factor in ranking position (higher ranked = slightly higher score)
-            position_boost = (len(ranked) - idx) / (
-                len(ranked) * 100
-            )  # 0.01-0.07 boost
+            position_boost = (len(ranked) - idx) / (len(ranked) * 100)  # 0.01-0.07 boost
             final_score = base_score + variation + position_boost
 
             exc = {
@@ -882,9 +857,7 @@ class AgencySnapshotGenerator:
                     "project_id": p.project_id,
                     "name": p.name,
                     "status": p.status.value,
-                    "slip_risk_score": p.slip_risk.slip_risk_score
-                    if p.slip_risk
-                    else 0.0,
+                    "slip_risk_score": p.slip_risk.slip_risk_score if p.slip_risk else 0.0,
                     "time_to_slip_hours": p.time_to_slip_hours,
                     "top_driver": p.top_driver.value,
                     "confidence": p.confidence.value,
@@ -907,14 +880,12 @@ class AgencySnapshotGenerator:
 
     def _build_selected_project(self, proj: ProjectDeliveryData) -> dict:
         """Build selected_project section for Page 1."""
-        breaks_next = self.delivery_engine.get_breaks_next(
-            proj.project_id, self.MAX_BREAKS_NEXT
-        )
+        breaks_next = self.delivery_engine.get_breaks_next(proj.project_id, self.MAX_BREAKS_NEXT)
         critical_chain = self.delivery_engine.get_critical_chain(proj.project_id)
 
         # Get comms threads - ONLY show comms that are actually related to this project/client
         # Don't show unrelated comms in project view
-        project_client_id = proj.client_id if hasattr(proj, "client_id") else None
+        proj.client_id if hasattr(proj, "client_id") else None
         project_name_search = proj.name[:20] if proj.name else ""
 
         comms = []
@@ -953,11 +924,7 @@ class AgencySnapshotGenerator:
                     "subject": c.get("subject", ""),
                     "age_hours": round(age_hours, 1),
                     "expected_response_by": c.get("expected_response_by"),
-                    "risk": "HIGH"
-                    if age_hours > 48
-                    else "MED"
-                    if age_hours > 24
-                    else "LOW",
+                    "risk": "HIGH" if age_hours > 48 else "MED" if age_hours > 24 else "LOW",
                 }
             )
 
@@ -974,9 +941,7 @@ class AgencySnapshotGenerator:
                 "is_internal": proj.is_internal,
             },
             "slip": {
-                "slip_risk_score": proj.slip_risk.slip_risk_score
-                if proj.slip_risk
-                else 0.0,
+                "slip_risk_score": proj.slip_risk.slip_risk_score if proj.slip_risk else 0.0,
                 "time_to_slip_hours": proj.time_to_slip_hours,
                 "top_drivers": proj.slip_risk.top_drivers if proj.slip_risk else [],
             },
@@ -1001,9 +966,7 @@ class AgencySnapshotGenerator:
                 ]
                 if critical_chain
                 else [],
-                "unlock_action": critical_chain.unlock_action
-                if critical_chain
-                else None,
+                "unlock_action": critical_chain.unlock_action if critical_chain else None,
             }
             if critical_chain
             else None,
@@ -1011,9 +974,7 @@ class AgencySnapshotGenerator:
                 "hours_needed": proj.hours_needed,
                 "hours_available": proj.hours_available,
                 "gap_hours": proj.hours_needed - proj.hours_available,
-                "top_constraint": {"type": "lane", "name": proj.lane}
-                if proj.lane
-                else None,
+                "top_constraint": {"type": "lane", "name": proj.lane} if proj.lane else None,
             },
             "comms_threads": comms_threads,
             "recent_change": recent_change[: self.MAX_RECENT_CHANGE],
@@ -1338,9 +1299,7 @@ class AgencySnapshotGenerator:
                     import json
 
                     blockers_list = json.loads(blocker_reason)
-                    blocker_reason = (
-                        blockers_list[0] if blockers_list else "Unknown blocker"
-                    )
+                    blocker_reason = blockers_list[0] if blockers_list else "Unknown blocker"
                 except (json.JSONDecodeError, TypeError, IndexError) as e:
                     logger.debug(f"Could not parse blockers JSON: {e}")
 
@@ -1658,9 +1617,7 @@ class AgencySnapshotGenerator:
             "people_overview": people_overview,
             "total_assigned": total_assigned,
             "total_capacity": total_capacity,
-            "utilization_rate": total_assigned / total_capacity
-            if total_capacity > 0
-            else 0,
+            "utilization_rate": total_assigned / total_capacity if total_capacity > 0 else 0,
             "drawer": {},
         }
 
@@ -1681,14 +1638,10 @@ class AgencySnapshotGenerator:
         return path
 
 
-def generate_snapshot(
-    mode: str = "Ops Head", horizon: str = "TODAY", scope: dict = None
-) -> dict:
+def generate_snapshot(mode: str = "Ops Head", horizon: str = "TODAY", scope: dict = None) -> dict:
     """Convenience function to generate snapshot."""
     mode_enum = Mode(mode) if mode in [m.value for m in Mode] else Mode.OPS_HEAD
-    horizon_enum = (
-        Horizon(horizon) if horizon in [h.value for h in Horizon] else Horizon.TODAY
-    )
+    horizon_enum = Horizon(horizon) if horizon in [h.value for h in Horizon] else Horizon.TODAY
 
     generator = AgencySnapshotGenerator(
         mode=mode_enum,

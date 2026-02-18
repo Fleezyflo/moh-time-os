@@ -70,9 +70,7 @@ def get_signal_hierarchy(signal: dict, cursor: sqlite3.Cursor) -> dict[str, Any]
             value = json.loads(value)
         except (json.JSONDecodeError, TypeError) as e:
             # Signal value is internal data - malformed indicates detector/storage bug
-            logger.warning(
-                f"Signal {signal.get('signal_id')} has invalid value JSON: {e}"
-            )
+            logger.warning(f"Signal {signal.get('signal_id')} has invalid value JSON: {e}")
             value = {}
 
     result = {
@@ -298,9 +296,7 @@ def group_signals_by_scope(
         conn.close()
 
 
-def determine_proposal_level(
-    client_id: str, grouped_signals: dict, db_path: str = None
-) -> str:
+def determine_proposal_level(client_id: str, grouped_signals: dict, db_path: str = None) -> str:
     """
     Determine whether to create client-level or project-level proposals.
 
@@ -497,15 +493,9 @@ def get_scope_info(
             first_hierarchy = signals[0].get("hierarchy", {})
             if scope_level == "project":
                 result["scope_name"] = first_hierarchy.get("project_name", scope_id)
-            result["client_id"] = result["client_id"] or first_hierarchy.get(
-                "client_id"
-            )
-            result["client_name"] = result["client_name"] or first_hierarchy.get(
-                "client_name"
-            )
-            result["client_tier"] = result["client_tier"] or first_hierarchy.get(
-                "client_tier"
-            )
+            result["client_id"] = result["client_id"] or first_hierarchy.get("client_id")
+            result["client_name"] = result["client_name"] or first_hierarchy.get("client_name")
+            result["client_tier"] = result["client_tier"] or first_hierarchy.get("client_tier")
 
         return result
 

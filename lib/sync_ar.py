@@ -45,9 +45,7 @@ def get_ar_by_contact() -> dict[str, dict[str, Any]]:
 
         if due_str:
             try:
-                due_date = datetime.fromisoformat(
-                    due_str.replace("T00:00:00", "")
-                ).date()
+                due_date = datetime.fromisoformat(due_str.replace("T00:00:00", "")).date()
                 days_overdue = (today - due_date).days
             except (ValueError, TypeError) as e:
                 logger.debug(f"Could not parse invoice due date: {e}")

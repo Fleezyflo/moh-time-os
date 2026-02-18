@@ -312,12 +312,10 @@ def extract_all(text: str) -> dict:
 
     return {
         "promises": [
-            {"text": p.text, "confidence": p.confidence, "deadline": p.deadline}
-            for p in promises
+            {"text": p.text, "confidence": p.confidence, "deadline": p.deadline} for p in promises
         ],
         "requests": [
-            {"text": r.text, "confidence": r.confidence, "deadline": r.deadline}
-            for r in requests
+            {"text": r.text, "confidence": r.confidence, "deadline": r.deadline} for r in requests
         ],
         "total": len(promises) + len(requests),
     }

@@ -12,15 +12,15 @@ Usage:
     # Full intelligence snapshot
     from lib.intelligence import generate_intelligence_snapshot
     snapshot = generate_intelligence_snapshot()
-    
+
     # Targeted intelligence
     from lib.intelligence import get_client_intelligence
     intel = get_client_intelligence(client_id="client-123")
-    
+
     # Critical items only
     from lib.intelligence import get_critical_items
     urgent = get_critical_items()
-    
+
     # Individual components
     from lib.intelligence import score_client, detect_all_signals
 """

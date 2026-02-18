@@ -92,9 +92,7 @@ class AnomalyDetector:
             def priority_score(p):
                 scores = {"critical": 100, "high": 80, "normal": 50, "low": 20}
                 return (
-                    scores.get(str(p).lower(), 50)
-                    if isinstance(p, str)
-                    else (int(p) if p else 50)
+                    scores.get(str(p).lower(), 50) if isinstance(p, str) else (int(p) if p else 50)
                 )
 
             critical = [t for t in overdue if priority_score(t.get("priority")) >= 80]
@@ -148,9 +146,7 @@ class AnomalyDetector:
         """Check for tasks at risk of missing deadline."""
         anomalies = []
         now = datetime.now()
-        lookahead = now + timedelta(
-            days=self.thresholds["deadline_miss_lookahead_days"]
-        )
+        lookahead = now + timedelta(days=self.thresholds["deadline_miss_lookahead_days"])
         today = now.strftime("%Y-%m-%d")
         lookahead_str = lookahead.strftime("%Y-%m-%d")
 
@@ -188,9 +184,7 @@ class AnomalyDetector:
         """Check for stale tasks and decisions."""
         anomalies = []
         now = datetime.now()
-        stale_cutoff = (
-            now - timedelta(days=self.thresholds["stale_task_days"])
-        ).isoformat()
+        stale_cutoff = (now - timedelta(days=self.thresholds["stale_task_days"])).isoformat()
 
         stale_tasks = self.store.query(
             """
@@ -210,9 +204,7 @@ class AnomalyDetector:
                     "severity": self.MEDIUM,
                     "message": f"{len(stale_tasks)} tasks haven't been updated in {self.thresholds['stale_task_days']}+ days",
                     "count": len(stale_tasks),
-                    "items": [
-                        {"id": t["id"], "title": t["title"]} for t in stale_tasks[:5]
-                    ],
+                    "items": [{"id": t["id"], "title": t["title"]} for t in stale_tasks[:5]],
                     "detected_at": now.isoformat(),
                 }
             )
@@ -249,9 +241,7 @@ class AnomalyDetector:
         """Check for SLA breaches on communications."""
         anomalies = []
         now = datetime.now()
-        sla_cutoff = (
-            now - timedelta(hours=self.thresholds["overdue_response_hours"])
-        ).isoformat()
+        sla_cutoff = (now - timedelta(hours=self.thresholds["overdue_response_hours"])).isoformat()
 
         overdue_comms = self.store.query(
             """
@@ -400,16 +390,13 @@ class AnomalyDetector:
             "communications", where="created_at >= ?", params=[today_start]
         )
 
-        week_count = self.store.count(
-            "communications", where="created_at >= ?", params=[week_ago]
-        )
+        week_count = self.store.count("communications", where="created_at >= ?", params=[week_ago])
 
         daily_avg = week_count / 7 if week_count > 0 else 0
 
         if (
             daily_avg > 0
-            and today_count
-            > daily_avg * self.thresholds["daily_email_spike_multiplier"]
+            and today_count > daily_avg * self.thresholds["daily_email_spike_multiplier"]
         ):
             anomalies.append(
                 {

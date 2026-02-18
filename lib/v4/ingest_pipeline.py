@@ -98,17 +98,13 @@ class IngestPipeline:
                 if pattern and pattern in text_lower:
                     # Higher confidence for exact match, lower for partial
                     conf = 0.9 if pattern == data["patterns"][0] else 0.75
-                    matches.append(
-                        ("client", client_id, conf, f"Name match: {pattern}")
-                    )
+                    matches.append(("client", client_id, conf, f"Name match: {pattern}"))
                     break
 
         # Check projects
         for project_id, data in self.project_patterns.items():
             if data["pattern"] and data["pattern"] in text_lower:
-                matches.append(
-                    ("project", project_id, 0.85, f"Project name: {data['pattern']}")
-                )
+                matches.append(("project", project_id, 0.85, f"Project name: {data['pattern']}"))
 
         return matches
 
@@ -177,9 +173,7 @@ class IngestPipeline:
             links_created.append(link)
 
         # Link to people (recipients)
-        all_recipients = (message_data.get("to", []) or []) + (
-            message_data.get("cc", []) or []
-        )
+        all_recipients = (message_data.get("to", []) or []) + (message_data.get("cc", []) or [])
         for email in all_recipients:
             if email:
                 profile = self.identity_svc.resolve_identity(
@@ -198,9 +192,7 @@ class IngestPipeline:
                     links_created.append(link)
 
         # Match entities in subject/body
-        searchable = (
-            f"{message_data.get('subject', '')} {message_data.get('snippet', '')}"
-        )
+        searchable = f"{message_data.get('subject', '')} {message_data.get('snippet', '')}"
         entity_matches = self._match_entity_in_text(searchable)
 
         for entity_type, entity_id, confidence, reason in entity_matches:
@@ -297,9 +289,7 @@ class IngestPipeline:
                     links_created.append(link)
 
         # Match entities in title/description
-        searchable = (
-            f"{event_data.get('summary', '')} {event_data.get('description', '')}"
-        )
+        searchable = f"{event_data.get('summary', '')} {event_data.get('description', '')}"
         entity_matches = self._match_entity_in_text(searchable)
 
         for entity_type, entity_id, confidence, reason in entity_matches:
@@ -468,9 +458,7 @@ class IngestPipeline:
             conn = self._get_conn()
             cursor = conn.cursor()
             try:
-                cursor.execute(
-                    "SELECT id FROM clients WHERE xero_contact_id = ?", (contact_id,)
-                )
+                cursor.execute("SELECT id FROM clients WHERE xero_contact_id = ?", (contact_id,))
                 row = cursor.fetchone()
                 if row:
                     link = self.link_svc.create_link(
@@ -565,9 +553,7 @@ class IngestPipeline:
                     else:
                         stats["unchanged"] += 1
 
-                    stats["by_surface"][surface] = (
-                        stats["by_surface"].get(surface, 0) + 1
-                    )
+                    stats["by_surface"][surface] = stats["by_surface"].get(surface, 0) + 1
 
                 except Exception as e:
                     stats["errors"] += 1

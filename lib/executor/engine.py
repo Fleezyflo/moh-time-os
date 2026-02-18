@@ -123,9 +123,7 @@ class ExecutorEngine:
 
             # Update with failure
             retry_count = action.get("retry_count", 0) + 1
-            self._update_action_status(
-                action_id, "failed", error=error, retry_count=retry_count
-            )
+            self._update_action_status(action_id, "failed", error=error, retry_count=retry_count)
 
             return {"id": action_id, "status": "failed", "error": error}
 
@@ -153,9 +151,7 @@ class ExecutorEngine:
 
         self.store.update("actions", action_id, update)
 
-    def queue_action(
-        self, action_type: str, payload: dict, requires_approval: bool = True
-    ) -> str:
+    def queue_action(self, action_type: str, payload: dict, requires_approval: bool = True) -> str:
         """Queue a new action for execution."""
         from uuid import uuid4
 
@@ -227,6 +223,4 @@ class ExecutorEngine:
 
     def get_action_history(self, limit: int = 50) -> list[dict]:
         """Get recent action history."""
-        return self.store.query(
-            "SELECT * FROM actions ORDER BY created_at DESC LIMIT ?", [limit]
-        )
+        return self.store.query("SELECT * FROM actions ORDER BY created_at DESC LIMIT ?", [limit])

@@ -15,7 +15,6 @@ Usage in server.py:
 
 import logging
 from datetime import datetime
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
@@ -735,7 +734,6 @@ def list_proposals(
             detect_all_signals,
             generate_proposals,
             get_top_proposals,
-            rank_proposals,
         )
 
         signals = detect_all_signals(quick=True)

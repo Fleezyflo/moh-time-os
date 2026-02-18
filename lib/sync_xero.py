@@ -156,13 +156,9 @@ def sync_xero_clients() -> tuple[int, int, int, list[str]]:
                 log.debug(f"Skipping contact due to data issue: {e}")
             except Exception as e:
                 errors.append(f"{contact.get('Name', 'Unknown')}: {e}")
-                log.error(
-                    f"Error syncing contact {contact.get('Name')}: {e}", exc_info=True
-                )
+                log.error(f"Error syncing contact {contact.get('Name')}: {e}", exc_info=True)
 
-        log.info(
-            f"Xero sync complete: {created} created, {updated} updated, {skipped} skipped"
-        )
+        log.info(f"Xero sync complete: {created} created, {updated} updated, {skipped} skipped")
 
     except ImportError as e:
         errors.append(f"Xero client not available: {e}")
@@ -177,14 +173,10 @@ def sync_xero_clients() -> tuple[int, int, int, list[str]]:
 def get_ar_summary() -> dict[str, Any]:
     """Get summary of AR status across all clients."""
     with get_connection() as conn:
-        total_ar = (
-            conn.execute("SELECT SUM(financial_ar_total) FROM clients").fetchone()[0]
-            or 0
-        )
+        total_ar = conn.execute("SELECT SUM(financial_ar_total) FROM clients").fetchone()[0] or 0
 
         overdue_ar = (
-            conn.execute("SELECT SUM(financial_ar_overdue) FROM clients").fetchone()[0]
-            or 0
+            conn.execute("SELECT SUM(financial_ar_overdue) FROM clients").fetchone()[0] or 0
         )
 
         clients_with_ar = conn.execute(

@@ -165,11 +165,7 @@ def assign_lane(task: dict, project: dict = None) -> str:
             return lane
 
         # Check keyword match in title
-        if (
-            "keywords" in rule
-            and rule["keywords"]
-            and keyword_match(title, rule["keywords"])
-        ):
+        if "keywords" in rule and rule["keywords"] and keyword_match(title, rule["keywords"]):
             return lane
 
         # Check tag match

@@ -105,9 +105,7 @@ class MovesEngine:
         6. Return top N
         """
         # Extract gate status
-        gates = {
-            g["name"]: g["passed"] for g in snapshot.get("gates", {}).get("items", [])
-        }
+        gates = {g["name"]: g["passed"] for g in snapshot.get("gates", {}).get("items", [])}
 
         candidates = []
 

@@ -4,7 +4,6 @@ Request context management with thread-local storage.
 
 import contextvars
 import uuid
-from typing import Optional
 
 # Thread-safe context variable for request ID
 _request_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar(

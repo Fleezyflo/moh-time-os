@@ -4,7 +4,6 @@ Structured JSON logging with request ID propagation.
 
 import json
 import logging
-import os
 import sys
 from datetime import UTC, datetime
 from typing import Any

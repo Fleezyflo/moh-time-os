@@ -81,9 +81,7 @@ class GovernanceEngine:
         with open(config_file, "w") as f:
             yaml.dump(self.config, f, default_flow_style=False)
 
-    def can_execute(
-        self, domain: str, action: str, context: dict = None
-    ) -> tuple[bool, str]:
+    def can_execute(self, domain: str, action: str, context: dict = None) -> tuple[bool, str]:
         """
         Check if action can be executed automatically.
         Returns (can_execute, reason).
@@ -122,11 +120,7 @@ class GovernanceEngine:
 
         # AUTO_LOW - check confidence threshold
         if mode == DomainMode.AUTO_LOW:
-            threshold = (
-                self.config.get("domains", {})
-                .get(domain, {})
-                .get("auto_threshold", 0.8)
-            )
+            threshold = self.config.get("domains", {}).get(domain, {}).get("auto_threshold", 0.8)
             confidence = context.get("confidence", 0)
 
             if confidence < threshold:
@@ -255,9 +249,7 @@ class GovernanceEngine:
             domain_counts = {}
             domains_config = self.config.get("domains", {})
             for mode in DomainMode:
-                count = sum(
-                    1 for d in domains_config.values() if d.get("mode") == mode.value
-                )
+                count = sum(1 for d in domains_config.values() if d.get("mode") == mode.value)
                 domain_counts[mode.value] = count
 
             return {
@@ -267,12 +259,8 @@ class GovernanceEngine:
                     "by_mode": domain_counts,
                     "actions_this_hour": sum(self._action_counts.values()),
                 },
-                "updated_at": self._last_reset.isoformat()
-                if self._last_reset
-                else None,
-                "notes": ["Emergency brake active"]
-                if self._emergency_brake_active
-                else [],
+                "updated_at": self._last_reset.isoformat() if self._last_reset else None,
+                "notes": ["Emergency brake active"] if self._emergency_brake_active else [],
             }
         except Exception:
             # Fallback if anything goes wrong - never raise

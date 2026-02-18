@@ -279,9 +279,7 @@ class DecisionMaker:
 
         payload = {
             "decision_id": decision["id"],
-            "action": selected.get("action")
-            if isinstance(selected, dict)
-            else selected,
+            "action": selected.get("action") if isinstance(selected, dict) else selected,
             "data": input_data,
         }
 

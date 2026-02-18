@@ -378,9 +378,7 @@ class StateStore:
                 conn.execute("SELECT type FROM people LIMIT 1")
             except sqlite3.OperationalError:
                 try:
-                    conn.execute(
-                        "ALTER TABLE people ADD COLUMN type TEXT DEFAULT 'external'"
-                    )
+                    conn.execute("ALTER TABLE people ADD COLUMN type TEXT DEFAULT 'external'")
                 except sqlite3.OperationalError:
                     pass  # Column may already exist or table doesn't exist
 
@@ -433,9 +431,7 @@ class StateStore:
                     conn.execute(f"SELECT {col_name} FROM proposals_v4 LIMIT 1")
                 except sqlite3.OperationalError:
                     try:
-                        conn.execute(
-                            f"ALTER TABLE proposals_v4 ADD COLUMN {col_name} {col_def}"
-                        )
+                        conn.execute(f"ALTER TABLE proposals_v4 ADD COLUMN {col_name} {col_def}")
                     except sqlite3.OperationalError:
                         pass  # Table may not exist or column exists
 
@@ -449,9 +445,7 @@ class StateStore:
                     conn.execute(f"SELECT {col_name} FROM signals LIMIT 1")
                 except sqlite3.OperationalError:
                     try:
-                        conn.execute(
-                            f"ALTER TABLE signals ADD COLUMN {col_name} {col_def}"
-                        )
+                        conn.execute(f"ALTER TABLE signals ADD COLUMN {col_name} {col_def}")
                     except sqlite3.OperationalError:
                         pass  # Table may not exist or column exists
 
@@ -472,9 +466,7 @@ class StateStore:
             # Migration: Add 'received_at' column to communications table
             self._add_column_if_missing(conn, "communications", "received_at", "TEXT")
 
-    def _add_column_if_missing(
-        self, conn, table: str, column: str, definition: str
-    ) -> bool:
+    def _add_column_if_missing(self, conn, table: str, column: str, definition: str) -> bool:
         """
         Add a column to a table if it doesn't exist.
         Uses PRAGMA table_info for detection, then ALTER TABLE ADD COLUMN.
@@ -516,9 +508,7 @@ class StateStore:
         """Insert a row. Returns ID."""
         columns = list(data.keys())
         placeholders = ["?" for _ in columns]
-        values = [
-            json.dumps(v) if isinstance(v, (dict, list)) else v for v in data.values()
-        ]
+        values = [json.dumps(v) if isinstance(v, (dict, list)) else v for v in data.values()]
 
         with self._get_conn() as conn:
             conn.execute(
@@ -539,8 +529,7 @@ class StateStore:
         with self._get_conn() as conn:
             for item in items:
                 values = [
-                    json.dumps(v) if isinstance(v, (dict, list)) else v
-                    for v in item.values()
+                    json.dumps(v) if isinstance(v, (dict, list)) else v for v in item.values()
                 ]
                 conn.execute(
                     f"INSERT OR REPLACE INTO {table} ({','.join(columns)}) VALUES ({','.join(placeholders)})",
@@ -561,15 +550,11 @@ class StateStore:
             return False
 
         sets = [f"{k} = ?" for k in data]
-        values = [
-            json.dumps(v) if isinstance(v, (dict, list)) else v for v in data.values()
-        ]
+        values = [json.dumps(v) if isinstance(v, (dict, list)) else v for v in data.values()]
         values.append(id)
 
         with self._get_conn() as conn:
-            result = conn.execute(
-                f"UPDATE {table} SET {','.join(sets)} WHERE id = ?", values
-            )
+            result = conn.execute(f"UPDATE {table} SET {','.join(sets)} WHERE id = ?", values)
             return result.rowcount > 0
 
     def delete(self, table: str, id: str) -> bool:
@@ -660,15 +645,11 @@ class StateStore:
 
     def get_pending_decisions(self) -> list[dict]:
         """Get decisions awaiting approval."""
-        return self.query(
-            "SELECT * FROM decisions WHERE approved IS NULL ORDER BY created_at DESC"
-        )
+        return self.query("SELECT * FROM decisions WHERE approved IS NULL ORDER BY created_at DESC")
 
     def get_pending_actions(self) -> list[dict]:
         """Get actions ready to execute."""
-        return self.query(
-            "SELECT * FROM actions WHERE status = 'approved' ORDER BY created_at"
-        )
+        return self.query("SELECT * FROM actions WHERE status = 'approved' ORDER BY created_at")
 
     def get_active_insights(self) -> list[dict]:
         """Get non-expired insights."""
@@ -678,9 +659,7 @@ class StateStore:
                ORDER BY created_at DESC"""
         )
 
-    def update_sync_state(
-        self, source: str, success: bool, items: int = 0, error: str = None
-    ):
+    def update_sync_state(self, source: str, success: bool, items: int = 0, error: str = None):
         """Update sync state for a source."""
         now = datetime.now().isoformat()
         with self._get_conn() as conn:

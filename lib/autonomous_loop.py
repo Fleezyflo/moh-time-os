@@ -8,6 +8,7 @@ import json
 import logging
 import sys
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from lib import paths
@@ -101,9 +102,7 @@ class AutonomousLoop:
                 for r in collect_results.values()
                 if isinstance(r, dict) and r.get("success")
             )
-            logger.info(
-                f"  Collected {collected_count} items from {len(collect_results)} sources"
-            )
+            logger.info(f"  Collected {collected_count} items from {len(collect_results)} sources")
 
             # ═══════════════════════════════════════
             # PHASE 1a2: DATA NORMALIZATION
@@ -152,9 +151,7 @@ class AutonomousLoop:
                 lane_results = run_assignment()
                 results["phases"]["lane_assignment"] = lane_results
                 if lane_results.get("changed", 0) > 0:
-                    logger.info(
-                        f"  Reassigned {lane_results['changed']} tasks to lanes"
-                    )
+                    logger.info(f"  Reassigned {lane_results['changed']} tasks to lanes")
             except Exception as e:
                 logger.error(f"Lane assignment error: {e}")
                 results["phases"]["lane_assignment"] = {"error": str(e)}
@@ -168,16 +165,8 @@ class AutonomousLoop:
             results["phases"]["gates"] = gate_results
 
             # Log gate status
-            passed = [
-                g
-                for g, v in gate_results.items()
-                if v is True and not g.endswith("_pct")
-            ]
-            failed = [
-                g
-                for g, v in gate_results.items()
-                if v is False and not g.endswith("_pct")
-            ]
+            passed = [g for g, v in gate_results.items() if v is True and not g.endswith("_pct")]
+            failed = [g for g, v in gate_results.items() if v is False and not g.endswith("_pct")]
             logger.info(f"  Gates: {len(passed)} passed, {len(failed)} failed")
             if failed:
                 logger.warning(f"  Failed gates: {', '.join(failed)}")
@@ -276,9 +265,7 @@ class AutonomousLoop:
             # SKIP if data_integrity fails
             # ═══════════════════════════════════════
             if not data_integrity_ok:
-                logger.warning(
-                    "  SKIPPING analyze/surface/reason/execute (data_integrity failed)"
-                )
+                logger.warning("  SKIPPING analyze/surface/reason/execute (data_integrity failed)")
                 results["phases"]["analyze"] = {
                     "skipped": True,
                     "reason": "data_integrity_failed",
@@ -301,9 +288,7 @@ class AutonomousLoop:
                 analyze_results = self.analyzers.analyze_all()
                 results["phases"]["analyze"] = analyze_results
 
-                priority_count = analyze_results.get("priority", {}).get(
-                    "total_items", 0
-                )
+                priority_count = analyze_results.get("priority", {}).get("total_items", 0)
                 anomaly_count = analyze_results.get("anomalies", {}).get("total", 0)
                 logger.info(f"  Priority queue: {priority_count} items")
                 logger.info(f"  Anomalies detected: {anomaly_count}")
@@ -312,9 +297,7 @@ class AutonomousLoop:
                 logger.info("▶ Phase 3: SURFACE")
                 surface_results = self._surface_critical_items(analyze_results)
                 results["phases"]["surface"] = surface_results
-                logger.info(
-                    f"  Created {surface_results.get('notifications', 0)} notifications"
-                )
+                logger.info(f"  Created {surface_results.get('notifications', 0)} notifications")
 
                 # PHASE 3b: SEND NOTIFICATIONS
                 logger.info("▶ Phase 3b: SEND NOTIFICATIONS")
@@ -335,9 +318,7 @@ class AutonomousLoop:
                 logger.info("▶ Phase 4: REASON")
                 reason_results = self.reasoner.process_cycle()
                 results["phases"]["reason"] = reason_results
-                logger.info(
-                    f"  Created {reason_results.get('decisions_created', 0)} decisions"
-                )
+                logger.info(f"  Created {reason_results.get('decisions_created', 0)} decisions")
 
             # ═══════════════════════════════════════
             # PHASE 5: EXECUTE
@@ -347,12 +328,8 @@ class AutonomousLoop:
             execute_results = self.executor.process_pending_actions()
             results["phases"]["execute"] = {
                 "processed": len(execute_results),
-                "succeeded": len(
-                    [r for r in execute_results if r.get("status") == "done"]
-                ),
-                "failed": len(
-                    [r for r in execute_results if r.get("status") == "failed"]
-                ),
+                "succeeded": len([r for r in execute_results if r.get("status") == "done"]),
+                "failed": len([r for r in execute_results if r.get("status") == "failed"]),
             }
             logger.info(f"  Executed {len(execute_results)} actions")
 
@@ -394,9 +371,7 @@ class AutonomousLoop:
         )
 
         logger.info("═══════════════════════════════════════")
-        logger.info(
-            f"  CYCLE {self.cycle_count} COMPLETE ({results['duration_ms']:.0f}ms)"
-        )
+        logger.info(f"  CYCLE {self.cycle_count} COMPLETE ({results['duration_ms']:.0f}ms)")
         logger.info("═══════════════════════════════════════\n")
 
         return results
@@ -564,9 +539,7 @@ class AutonomousLoop:
                 results["emails_processed"] += 1
 
                 # Mark email as processed
-                self.store.query(
-                    "UPDATE communications SET processed = 1 WHERE id = ?", [email_id]
-                )
+                self.store.query("UPDATE communications SET processed = 1 WHERE id = ?", [email_id])
 
             # Count untracked
             results["untracked"] = len(manager.get_untracked_commitments())
@@ -697,9 +670,7 @@ class AutonomousLoop:
                 self._create_notification(
                     title=anomaly.get("title", "Alert"),
                     body=anomaly.get("description", ""),
-                    priority="high"
-                    if anomaly.get("severity") == "critical"
-                    else "normal",
+                    priority="high" if anomaly.get("severity") == "critical" else "normal",
                     type="anomaly",
                     data=anomaly,
                 )
@@ -720,9 +691,7 @@ class AutonomousLoop:
 
         return {"notifications": notifications_created}
 
-    def _create_notification(
-        self, title: str, body: str, priority: str, type: str, data: dict
-    ):
+    def _create_notification(self, title: str, body: str, priority: str, type: str, data: dict):
         """Create a notification record."""
         from uuid import uuid4
 
@@ -810,9 +779,7 @@ class AutonomousLoop:
     def get_status(self) -> dict[str, Any]:
         """Get current system status."""
         # Get latest cycle
-        latest_cycle = self.store.query(
-            "SELECT * FROM cycle_logs ORDER BY created_at DESC LIMIT 1"
-        )
+        latest_cycle = self.store.query("SELECT * FROM cycle_logs ORDER BY created_at DESC LIMIT 1")
 
         # Get collector status
         collector_status = self.collectors.get_status()
@@ -822,9 +789,7 @@ class AutonomousLoop:
 
         # Get counts
         task_count = self.store.count("tasks", "status != 'done'")
-        email_count = self.store.count(
-            "communications", "requires_response = 1 AND processed = 0"
-        )
+        email_count = self.store.count("communications", "requires_response = 1 AND processed = 0")
         event_count = self.store.count(
             "events",
             "datetime(start_time) >= datetime('now') AND datetime(start_time) <= datetime('now', '+24 hours')",
@@ -855,9 +820,7 @@ def run_once():
 def main():
     """CLI entry point."""
     parser = argparse.ArgumentParser(description="MOH TIME OS Autonomous Loop")
-    parser.add_argument(
-        "command", choices=["run", "status", "sync"], help="Command to run"
-    )
+    parser.add_argument("command", choices=["run", "status", "sync"], help="Command to run")
     parser.add_argument("--source", help="Specific source to sync")
 
     args = parser.parse_args()
