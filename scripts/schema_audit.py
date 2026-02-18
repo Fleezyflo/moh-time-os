@@ -7,9 +7,9 @@ Task: SYSPREP 0.3 — Schema Audit
 import json
 import re
 import sqlite3
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from collections import defaultdict
 
 REPO_ROOT = Path(__file__).parent.parent
 DATA_DIR = REPO_ROOT / "data"
@@ -75,11 +75,11 @@ def find_table_references(table_name: str, py_content_index: dict) -> list:
     patterns = [
         rf'"{table_name}"',
         rf"'{table_name}'",
-        rf'FROM\s+{table_name}\b',
-        rf'INTO\s+{table_name}\b',
-        rf'UPDATE\s+{table_name}\b',
-        rf'JOIN\s+{table_name}\b',
-        rf'TABLE\s+{table_name}\b',
+        rf"FROM\s+{table_name}\b",
+        rf"INTO\s+{table_name}\b",
+        rf"UPDATE\s+{table_name}\b",
+        rf"JOIN\s+{table_name}\b",
+        rf"TABLE\s+{table_name}\b",
     ]
 
     combined_pattern = "|".join(patterns)
@@ -96,8 +96,7 @@ def get_view_definition(db_path: Path, view_name: str) -> str:
     try:
         conn = sqlite3.connect(str(db_path))
         cursor = conn.execute(
-            "SELECT sql FROM sqlite_master WHERE type='view' AND name=?",
-            (view_name,)
+            "SELECT sql FROM sqlite_master WHERE type='view' AND name=?", (view_name,)
         )
         row = cursor.fetchone()
         conn.close()
@@ -105,8 +104,8 @@ def get_view_definition(db_path: Path, view_name: str) -> str:
             # Extract the SELECT part
             sql = row[0]
             # Find what tables it selects from
-            from_match = re.findall(r'FROM\s+(\w+)', sql, re.IGNORECASE)
-            join_match = re.findall(r'JOIN\s+(\w+)', sql, re.IGNORECASE)
+            from_match = re.findall(r"FROM\s+(\w+)", sql, re.IGNORECASE)
+            join_match = re.findall(r"JOIN\s+(\w+)", sql, re.IGNORECASE)
             tables = list(set(from_match + join_match))
             return ", ".join(tables) if tables else "(complex)"
         return "(unknown)"
@@ -116,7 +115,7 @@ def get_view_definition(db_path: Path, view_name: str) -> str:
 
 def identify_version_pattern(table_name: str) -> tuple:
     """Check if table has version suffix and extract base name."""
-    match = re.match(r'^(.+?)_v(\d+)$', table_name)
+    match = re.match(r"^(.+?)_v(\d+)$", table_name)
     if match:
         return match.group(1), int(match.group(2))
     return None, None
@@ -157,7 +156,7 @@ def classify_tables(tables: list, py_content_index: dict) -> dict:
         "EMPTY-REFERENCED": [],
         "EMPTY-ORPHAN": [],
         "VIEW": [],
-        "LEGACY-VERSION": []
+        "LEGACY-VERSION": [],
     }
 
     # Track version patterns
@@ -176,10 +175,7 @@ def classify_tables(tables: list, py_content_index: dict) -> dict:
 
         if obj_type == "view":
             selects_from = get_view_definition(DB_PATH, name)
-            classifications["VIEW"].append({
-                **table,
-                "selects_from": selects_from
-            })
+            classifications["VIEW"].append({**table, "selects_from": selects_from})
             continue
 
         # Find code references
@@ -187,21 +183,15 @@ def classify_tables(tables: list, py_content_index: dict) -> dict:
 
         # Classify
         if row_count > 0 and references:
-            classifications["ACTIVE"].append({
-                **table,
-                "referenced_by": references,
-                "core_entity": guess_core_entity(name)
-            })
+            classifications["ACTIVE"].append(
+                {**table, "referenced_by": references, "core_entity": guess_core_entity(name)}
+            )
         elif row_count > 0 and not references:
-            classifications["POPULATED-ORPHAN"].append({
-                **table,
-                "possible_purpose": guess_core_entity(name) or "(unknown)"
-            })
+            classifications["POPULATED-ORPHAN"].append(
+                {**table, "possible_purpose": guess_core_entity(name) or "(unknown)"}
+            )
         elif row_count == 0 and references:
-            classifications["EMPTY-REFERENCED"].append({
-                **table,
-                "referenced_by": references
-            })
+            classifications["EMPTY-REFERENCED"].append({**table, "referenced_by": references})
         else:  # row_count == 0 and not references
             classifications["EMPTY-ORPHAN"].append(table)
 
@@ -213,19 +203,16 @@ def classify_tables(tables: list, py_content_index: dict) -> dict:
             current = sorted_versions[0]
             for name, ver, rows in sorted_versions[1:]:
                 # Mark older versions as legacy
-                classifications["LEGACY-VERSION"].append({
-                    "name": name,
-                    "version": ver,
-                    "row_count": rows,
-                    "current_version": current[0]
-                })
+                classifications["LEGACY-VERSION"].append(
+                    {"name": name, "version": ver, "row_count": rows, "current_version": current[0]}
+                )
 
     return classifications, version_groups
 
 
 def map_core_entities(active_tables: list) -> dict:
     """Map core entities to their canonical tables."""
-    entity_map = {entity: None for entity in CORE_ENTITIES}
+    entity_map = dict.fromkeys(CORE_ENTITIES)
 
     # Prioritize tables with _v29 suffix or most rows
     for table in sorted(active_tables, key=lambda t: (-t.get("row_count", 0), t["name"])):
@@ -242,13 +229,19 @@ def map_core_entities(active_tables: list) -> dict:
                 "table": table["name"],
                 "primary_key": pk_col or "(unknown)",
                 "row_count": table.get("row_count", 0),
-                "relationships": "(pending analysis)"
+                "relationships": "(pending analysis)",
             }
 
     return entity_map
 
 
-def generate_report(classifications: dict, version_groups: dict, entity_map: dict, total_tables: int, total_views: int) -> str:
+def generate_report(
+    classifications: dict,
+    version_groups: dict,
+    entity_map: dict,
+    total_tables: int,
+    total_views: int,
+) -> str:
     """Generate markdown report."""
     date_str = datetime.now().strftime("%Y-%m-%d")
 
@@ -278,18 +271,22 @@ def generate_report(classifications: dict, version_groups: dict, entity_map: dic
     for entity in CORE_ENTITIES:
         info = entity_map.get(entity)
         if info:
-            lines.append(f"| {entity} | `{info['table']}` | {info['primary_key']} | {info['row_count']:,} | {info['relationships']} |")
+            lines.append(
+                f"| {entity} | `{info['table']}` | {info['primary_key']} | {info['row_count']:,} | {info['relationships']} |"
+            )
         else:
             lines.append(f"| {entity} | _(not found)_ | — | — | — |")
 
-    lines.extend([
-        "",
-        "---",
-        "",
-        "## ACTIVE Tables",
-        "| Table | Rows | Referenced By |",
-        "|-------|------|--------------|",
-    ])
+    lines.extend(
+        [
+            "",
+            "---",
+            "",
+            "## ACTIVE Tables",
+            "| Table | Rows | Referenced By |",
+            "|-------|------|--------------|",
+        ]
+    )
 
     for t in sorted(classifications["ACTIVE"], key=lambda x: -x.get("row_count", 0)):
         refs = ", ".join(t.get("referenced_by", [])[:3])
@@ -297,85 +294,103 @@ def generate_report(classifications: dict, version_groups: dict, entity_map: dic
             refs += f" (+{len(t['referenced_by']) - 3} more)"
         lines.append(f"| `{t['name']}` | {t.get('row_count', 0):,} | {refs} |")
 
-    lines.extend([
-        "",
-        "---",
-        "",
-        "## POPULATED-ORPHAN Tables (have data, nothing reads them)",
-        "| Table | Rows | Sample Columns | Possible Purpose |",
-        "|-------|------|----------------|-----------------|",
-    ])
+    lines.extend(
+        [
+            "",
+            "---",
+            "",
+            "## POPULATED-ORPHAN Tables (have data, nothing reads them)",
+            "| Table | Rows | Sample Columns | Possible Purpose |",
+            "|-------|------|----------------|-----------------|",
+        ]
+    )
 
     for t in sorted(classifications["POPULATED-ORPHAN"], key=lambda x: -x.get("row_count", 0)):
         cols = [c["name"] for c in t.get("columns", [])[:4]]
         cols_str = ", ".join(cols)
         if len(t.get("columns", [])) > 4:
             cols_str += "..."
-        lines.append(f"| `{t['name']}` | {t.get('row_count', 0):,} | {cols_str} | {t.get('possible_purpose', '?')} |")
+        lines.append(
+            f"| `{t['name']}` | {t.get('row_count', 0):,} | {cols_str} | {t.get('possible_purpose', '?')} |"
+        )
 
-    lines.extend([
-        "",
-        "---",
-        "",
-        "## EMPTY-REFERENCED Tables",
-        "| Table | Referenced By |",
-        "|-------|--------------|",
-    ])
+    lines.extend(
+        [
+            "",
+            "---",
+            "",
+            "## EMPTY-REFERENCED Tables",
+            "| Table | Referenced By |",
+            "|-------|--------------|",
+        ]
+    )
 
     for t in sorted(classifications["EMPTY-REFERENCED"], key=lambda x: x["name"]):
         refs = ", ".join(t.get("referenced_by", [])[:3])
         lines.append(f"| `{t['name']}` | {refs} |")
 
-    lines.extend([
-        "",
-        "---",
-        "",
-        "## EMPTY-ORPHAN Tables (safe to drop)",
-        "| Table |",
-        "|-------|",
-    ])
+    lines.extend(
+        [
+            "",
+            "---",
+            "",
+            "## EMPTY-ORPHAN Tables (safe to drop)",
+            "| Table |",
+            "|-------|",
+        ]
+    )
 
     for t in sorted(classifications["EMPTY-ORPHAN"], key=lambda x: x["name"]):
         lines.append(f"| `{t['name']}` |")
 
-    lines.extend([
-        "",
-        "---",
-        "",
-        "## LEGACY-VERSION Tables",
-        "| Table | Version | Rows | Likely Current Version |",
-        "|-------|---------|------|----------------------|",
-    ])
+    lines.extend(
+        [
+            "",
+            "---",
+            "",
+            "## LEGACY-VERSION Tables",
+            "| Table | Version | Rows | Likely Current Version |",
+            "|-------|---------|------|----------------------|",
+        ]
+    )
 
     for t in sorted(classifications["LEGACY-VERSION"], key=lambda x: x["name"]):
-        lines.append(f"| `{t['name']}` | v{t.get('version', '?')} | {t.get('row_count', 0):,} | `{t.get('current_version', '?')}` |")
+        lines.append(
+            f"| `{t['name']}` | v{t.get('version', '?')} | {t.get('row_count', 0):,} | `{t.get('current_version', '?')}` |"
+        )
 
-    lines.extend([
-        "",
-        "---",
-        "",
-        "## Views",
-        "| View | Selects From | Purpose |",
-        "|------|-------------|---------|",
-    ])
+    lines.extend(
+        [
+            "",
+            "---",
+            "",
+            "## Views",
+            "| View | Selects From | Purpose |",
+            "|------|-------------|---------|",
+        ]
+    )
 
     for t in sorted(classifications["VIEW"], key=lambda x: x["name"]):
         selects = t.get("selects_from", "?")
         purpose = guess_core_entity(t["name"]) or "(utility)"
         lines.append(f"| `{t['name']}` | {selects} | {purpose} |")
 
-    lines.extend([
-        "",
-        "---",
-        "",
-        "## Version Lineage",
-        "",
-    ])
+    lines.extend(
+        [
+            "",
+            "---",
+            "",
+            "## Version Lineage",
+            "",
+        ]
+    )
 
     for base_name, versions in sorted(version_groups.items()):
         if len(versions) > 1:
             sorted_versions = sorted(versions, key=lambda x: x[1])
-            version_str = " → ".join([f"{name} ({rows:,} rows)" for name, ver, rows in sorted_versions])
+            version_str = " → ".join(
+                [f"{name} ({rows:,} rows)" for name, ver, rows in sorted_versions]
+            )
             lines.append(f"- **{base_name}**: {version_str}")
 
     if not any(len(v) > 1 for v in version_groups.values()):

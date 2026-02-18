@@ -96,9 +96,7 @@ class TestDetectorWriteTime:
         payload = evidence["payload"]
         assert payload["sender"] == "test@example.com"
         assert payload["subject"] == "Test Subject"
-        assert (
-            "body text" in payload["snippet"].lower()
-        ), "Snippet should be derived from body_text"
+        assert "body text" in payload["snippet"].lower(), "Snippet should be derived from body_text"
         assert payload["thread_id"] == "123"
         assert payload["received_at"] == "2026-02-10T10:00:00Z"
         assert "Priority 80" in payload["flagged_reason"]
@@ -285,9 +283,7 @@ class TestEndpointsSafeParseEvidence:
         """Valid JSON should parse normally."""
         from lib.ui_spec_v21.endpoints import safe_parse_evidence
 
-        result = safe_parse_evidence(
-            '{"payload": {"sender": "test@test.com"}}', "test_id"
-        )
+        result = safe_parse_evidence('{"payload": {"sender": "test@test.com"}}', "test_id")
         assert result["payload"]["sender"] == "test@test.com"
         assert "meta" not in result or result.get("meta", {}).get("trust", {}).get(
             "data_integrity", True
@@ -307,9 +303,7 @@ class TestEndpointsSafeParseEvidence:
 
         # Should have debug info
         assert "debug" in result["meta"]["trust"]
-        assert result["meta"]["trust"]["debug"]["raw_length"] == len(
-            "{invalid json here"
-        )
+        assert result["meta"]["trust"]["debug"]["raw_length"] == len("{invalid json here")
 
     def test_safe_parse_empty_string(self):
         """Empty string should return empty dict."""

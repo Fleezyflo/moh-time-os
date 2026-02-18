@@ -83,13 +83,13 @@ def get_module_docstring(file_path: Path) -> str:
                 in_docstring = True
                 # Check if single-line docstring
                 if stripped.count('"""') >= 2 or stripped.count("'''") >= 2:
-                    return stripped.strip('"\'').strip()
-                docstring_lines.append(stripped.lstrip('"\''))
+                    return stripped.strip("\"'").strip()
+                docstring_lines.append(stripped.lstrip("\"'"))
                 continue
 
             if in_docstring:
                 if '"""' in stripped or "'''" in stripped:
-                    docstring_lines.append(stripped.rstrip('"\''))
+                    docstring_lines.append(stripped.rstrip("\"'"))
                     break
                 docstring_lines.append(stripped)
 
@@ -120,7 +120,7 @@ def classify_modules(modules: list) -> dict:
         "TEST-ONLY": [],
         "ORPHANED": [],
         "ENTRY-POINT": [],
-        "UNCERTAIN": []
+        "UNCERTAIN": [],
     }
 
     # Build a set of all module paths for orphan chain detection
@@ -133,46 +133,44 @@ def classify_modules(modules: list) -> dict:
 
         # Check if it's an entry point
         if check_entry_point(file_path):
-            classifications["ENTRY-POINT"].append({
-                **module,
-                "purpose": get_module_docstring(file_path)
-            })
+            classifications["ENTRY-POINT"].append(
+                {**module, "purpose": get_module_docstring(file_path)}
+            )
             continue
 
         # Check if imported by production code
         prod_importers = [i for i in imported_by if is_production_path(i)]
         test_importers = [i for i in imported_by if is_test_path(i)]
-        other_importers = [i for i in imported_by if not is_production_path(i) and not is_test_path(i)]
+        other_importers = [
+            i for i in imported_by if not is_production_path(i) and not is_test_path(i)
+        ]
 
         if prod_importers:
-            classifications["ACTIVE"].append({
-                **module,
-                "production_importers": prod_importers
-            })
+            classifications["ACTIVE"].append({**module, "production_importers": prod_importers})
         elif test_importers and not other_importers:
-            classifications["TEST-ONLY"].append({
-                **module,
-                "test_importers": test_importers
-            })
+            classifications["TEST-ONLY"].append({**module, "test_importers": test_importers})
         elif not imported_by:
             # Truly orphaned - no imports at all
             # Do secondary check
             refs = secondary_grep_check(module["module_name"], path)
             if refs:
-                classifications["UNCERTAIN"].append({
-                    **module,
-                    "reason": f"Referenced in: {', '.join(refs[:3])}",
-                    "description": get_module_docstring(file_path)
-                })
+                classifications["UNCERTAIN"].append(
+                    {
+                        **module,
+                        "reason": f"Referenced in: {', '.join(refs[:3])}",
+                        "description": get_module_docstring(file_path),
+                    }
+                )
             else:
-                classifications["ORPHANED"].append({
-                    **module,
-                    "description": get_module_docstring(file_path)
-                })
+                classifications["ORPHANED"].append(
+                    {**module, "description": get_module_docstring(file_path)}
+                )
         else:
             # Imported by other modules (not tests, not production) - check if those are active
             # For now, mark as UNCERTAIN
-            non_test_non_prod = [i for i in imported_by if not is_test_path(i) and not is_production_path(i)]
+            non_test_non_prod = [
+                i for i in imported_by if not is_test_path(i) and not is_production_path(i)
+            ]
             if non_test_non_prod:
                 # Check if any of those importers are themselves active
                 active_chain = False
@@ -183,16 +181,17 @@ def classify_modules(modules: list) -> dict:
                         break
 
                 if active_chain:
-                    classifications["ACTIVE"].append({
-                        **module,
-                        "production_importers": non_test_non_prod
-                    })
+                    classifications["ACTIVE"].append(
+                        {**module, "production_importers": non_test_non_prod}
+                    )
                 else:
-                    classifications["UNCERTAIN"].append({
-                        **module,
-                        "reason": f"Imported by: {', '.join(non_test_non_prod[:3])}",
-                        "description": get_module_docstring(file_path)
-                    })
+                    classifications["UNCERTAIN"].append(
+                        {
+                            **module,
+                            "reason": f"Imported by: {', '.join(non_test_non_prod[:3])}",
+                            "description": get_module_docstring(file_path),
+                        }
+                    )
 
     return classifications
 
@@ -223,57 +222,69 @@ def generate_report(classifications: dict, total_modules: int) -> str:
         importers = m.get("production_importers", [])[:3]
         lines.append(f"| {m['module_name']} | `{m['path']}` | {', '.join(importers)} |")
 
-    lines.extend([
-        "",
-        "---",
-        "",
-        "## TEST-ONLY Modules",
-        "| Module | Path | Imported By (tests) |",
-        "|--------|------|---------------------|",
-    ])
+    lines.extend(
+        [
+            "",
+            "---",
+            "",
+            "## TEST-ONLY Modules",
+            "| Module | Path | Imported By (tests) |",
+            "|--------|------|---------------------|",
+        ]
+    )
 
     for m in sorted(classifications["TEST-ONLY"], key=lambda x: x["path"]):
         importers = m.get("test_importers", [])[:3]
         lines.append(f"| {m['module_name']} | `{m['path']}` | {', '.join(importers)} |")
 
-    lines.extend([
-        "",
-        "---",
-        "",
-        "## ORPHANED Modules (candidates for removal)",
-        "| Module | Path | Lines | Description |",
-        "|--------|------|-------|-------------|",
-    ])
+    lines.extend(
+        [
+            "",
+            "---",
+            "",
+            "## ORPHANED Modules (candidates for removal)",
+            "| Module | Path | Lines | Description |",
+            "|--------|------|-------|-------------|",
+        ]
+    )
 
     for m in sorted(classifications["ORPHANED"], key=lambda x: x["path"]):
         desc = m.get("description", "")[:80].replace("|", "\\|")
-        lines.append(f"| {m['module_name']} | `{m['path']}` | {m.get('line_count', '?')} | {desc} |")
+        lines.append(
+            f"| {m['module_name']} | `{m['path']}` | {m.get('line_count', '?')} | {desc} |"
+        )
 
-    lines.extend([
-        "",
-        "---",
-        "",
-        "## ENTRY-POINT Modules",
-        "| Module | Path | Purpose |",
-        "|--------|------|---------|",
-    ])
+    lines.extend(
+        [
+            "",
+            "---",
+            "",
+            "## ENTRY-POINT Modules",
+            "| Module | Path | Purpose |",
+            "|--------|------|---------|",
+        ]
+    )
 
     for m in sorted(classifications["ENTRY-POINT"], key=lambda x: x["path"]):
         purpose = m.get("purpose", "")[:80].replace("|", "\\|")
         lines.append(f"| {m['module_name']} | `{m['path']}` | {purpose} |")
 
-    lines.extend([
-        "",
-        "---",
-        "",
-        "## UNCERTAIN (needs manual review)",
-        "| Module | Path | Lines | Reason |",
-        "|--------|------|-------|--------|",
-    ])
+    lines.extend(
+        [
+            "",
+            "---",
+            "",
+            "## UNCERTAIN (needs manual review)",
+            "| Module | Path | Lines | Reason |",
+            "|--------|------|-------|--------|",
+        ]
+    )
 
     for m in sorted(classifications["UNCERTAIN"], key=lambda x: x["path"]):
         reason = m.get("reason", "")[:60].replace("|", "\\|")
-        lines.append(f"| {m['module_name']} | `{m['path']}` | {m.get('line_count', '?')} | {reason} |")
+        lines.append(
+            f"| {m['module_name']} | `{m['path']}` | {m.get('line_count', '?')} | {reason} |"
+        )
 
     return "\n".join(lines)
 

@@ -13,12 +13,12 @@ Usage:
     intel = get_client_intelligence(client_id="client-123")
 """
 
+import logging
+import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
-import logging
-import time
 
 logger = logging.getLogger(__name__)
 
@@ -72,15 +72,15 @@ class StageResult:
 # =============================================================================
 
 
-def _run_scoring_stage(db_path: Optional[Path] = None) -> StageResult:
+def _run_scoring_stage(db_path: Path | None = None) -> StageResult:
     """
     Run scoring. Errors are tracked per-component, not swallowed.
     Returns StageResult with explicit success/failure and error details.
     """
     from lib.intelligence.scorecard import (
         score_all_clients,
-        score_all_projects,
         score_all_persons,
+        score_all_projects,
         score_portfolio,
     )
 
@@ -156,14 +156,14 @@ def _run_scoring_stage(db_path: Optional[Path] = None) -> StageResult:
     )
 
 
-def _run_signal_stage(db_path: Optional[Path] = None) -> StageResult:
+def _run_signal_stage(db_path: Path | None = None) -> StageResult:
     """
     Run signal detection and state update. Errors tracked explicitly.
     """
     from lib.intelligence.signals import (
         detect_all_signals,
-        update_signal_state,
         get_signal_summary,
+        update_signal_state,
     )
 
     errors: list[StageError] = []
@@ -243,7 +243,7 @@ def _run_signal_stage(db_path: Optional[Path] = None) -> StageResult:
 
 
 def _run_pattern_stage(
-    db_path: Optional[Path] = None, scores: StageResult = None, signals: StageResult = None
+    db_path: Path | None = None, scores: StageResult = None, signals: StageResult = None
 ) -> StageResult:
     """
     Run pattern detection. Errors tracked explicitly.
@@ -295,7 +295,7 @@ def _run_pattern_stage(
 
 
 def _run_proposal_stage(
-    db_path: Optional[Path] = None,
+    db_path: Path | None = None,
     scores: StageResult = None,
     signals: StageResult = None,
     patterns: StageResult = None,
@@ -304,9 +304,9 @@ def _run_proposal_stage(
     Generate and rank proposals. Errors tracked explicitly.
     """
     from lib.intelligence.proposals import (
+        generate_daily_briefing,
         generate_proposals,
         rank_proposals,
-        generate_daily_briefing,
     )
 
     errors: list[StageError] = []
@@ -447,7 +447,7 @@ def _count_entities(scores: dict) -> dict:
 # =============================================================================
 
 
-def generate_intelligence_snapshot(db_path: Optional[Path] = None) -> dict:
+def generate_intelligence_snapshot(db_path: Path | None = None) -> dict:
     """
     Run the full intelligence pipeline.
 
@@ -557,15 +557,15 @@ def generate_intelligence_snapshot(db_path: Optional[Path] = None) -> dict:
 # =============================================================================
 
 
-def get_client_intelligence(client_id: str, db_path: Optional[Path] = None) -> dict:
+def get_client_intelligence(client_id: str, db_path: Path | None = None) -> dict:
     """
     Everything the system knows about one client.
     Errors are tracked explicitly, not swallowed.
     """
     from lib.intelligence.scorecard import score_client
     from lib.intelligence.signals import (
-        get_signal_history,
         get_active_signals,
+        get_signal_history,
     )
     from lib.query_engine import QueryEngine
 
@@ -649,7 +649,7 @@ def get_client_intelligence(client_id: str, db_path: Optional[Path] = None) -> d
     return result
 
 
-def get_person_intelligence(person_id: str, db_path: Optional[Path] = None) -> dict:
+def get_person_intelligence(person_id: str, db_path: Path | None = None) -> dict:
     """
     Everything about one person. Errors tracked explicitly.
     """
@@ -736,18 +736,17 @@ def get_person_intelligence(person_id: str, db_path: Optional[Path] = None) -> d
     return result
 
 
-def get_portfolio_intelligence(db_path: Optional[Path] = None) -> dict:
+def get_portfolio_intelligence(db_path: Path | None = None) -> dict:
     """
     Portfolio-level view. Errors tracked explicitly.
     """
-    from lib.intelligence.scorecard import score_portfolio
     from lib.intelligence.patterns import detect_all_patterns
-    from lib.intelligence.signals import get_signal_summary
     from lib.intelligence.proposals import (
         generate_proposals,
         rank_proposals,
     )
-    from lib.intelligence.signals import detect_all_signals
+    from lib.intelligence.scorecard import score_portfolio
+    from lib.intelligence.signals import detect_all_signals, get_signal_summary
 
     errors: list[StageError] = []
 
@@ -835,18 +834,18 @@ def get_portfolio_intelligence(db_path: Optional[Path] = None) -> dict:
     return result
 
 
-def get_critical_items(db_path: Optional[Path] = None) -> dict:
+def get_critical_items(db_path: Path | None = None) -> dict:
     """
     Just the IMMEDIATE urgency proposals. Errors tracked explicitly.
     Returns dict with success flag and items list, not bare list.
     """
-    from lib.intelligence.signals import detect_all_signals
     from lib.intelligence.patterns import detect_all_patterns
     from lib.intelligence.proposals import (
+        ProposalUrgency,
         generate_proposals,
         rank_proposals,
-        ProposalUrgency,
     )
+    from lib.intelligence.signals import detect_all_signals
 
     errors: list[StageError] = []
     result = {

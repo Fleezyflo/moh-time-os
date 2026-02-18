@@ -174,8 +174,8 @@ def check_api(api_url: str, token: str | None) -> list[str]:
     failures = []
 
     try:
-        import urllib.request
         import urllib.error
+        import urllib.request
 
         def check_endpoint(path: str, expected_status: int, use_auth: bool = False) -> bool:
             url = f"{api_url}{path}"
@@ -215,7 +215,9 @@ def check_api(api_url: str, token: str | None) -> list[str]:
 
             # Without token should fail
             if os.environ.get("INTEL_API_TOKEN"):
-                if not check_endpoint("/api/v2/intelligence/portfolio/overview", 401, use_auth=False):
+                if not check_endpoint(
+                    "/api/v2/intelligence/portfolio/overview", 401, use_auth=False
+                ):
                     warn("Auth not enforced for intelligence endpoints!")
 
         # Stub endpoint should return 501

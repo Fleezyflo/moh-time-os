@@ -74,9 +74,7 @@ class TestGoldenAR:
         conn = sqlite3.connect(db_path)
 
         # Count paid invoices
-        cursor = conn.execute(
-            "SELECT COUNT(*) FROM invoices WHERE payment_date IS NOT NULL"
-        )
+        cursor = conn.execute("SELECT COUNT(*) FROM invoices WHERE payment_date IS NOT NULL")
         paid_count = cursor.fetchone()[0]
 
         # Count unpaid invoices

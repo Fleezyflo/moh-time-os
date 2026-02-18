@@ -45,7 +45,7 @@ class QueryEngine:
         profile = engine.client_deep_profile("client-id-123")
     """
 
-    def __init__(self, db_path: Optional[Path] = None):
+    def __init__(self, db_path: Path | None = None):
         """Initialize query engine with database path."""
         self.db_path = db_path or DEFAULT_DB_PATH
         if not self.db_path.exists():
@@ -64,7 +64,7 @@ class QueryEngine:
             rows = cursor.fetchall()
             return [dict(row) for row in rows]
 
-    def _execute_one(self, sql: str, params: tuple = ()) -> Optional[dict]:
+    def _execute_one(self, sql: str, params: tuple = ()) -> dict | None:
         """Execute a query and return single dict or None."""
         results = self._execute(sql, params)
         return results[0] if results else None
@@ -286,7 +286,7 @@ class QueryEngine:
     # CLIENT-LEVEL QUERIES
     # =========================================================================
 
-    def client_deep_profile(self, client_id: str) -> Optional[dict]:
+    def client_deep_profile(self, client_id: str) -> dict | None:
         """
         Complete operational profile for a single client.
 
@@ -410,7 +410,7 @@ class QueryEngine:
     # RESOURCE QUERIES
     # =========================================================================
 
-    def person_operational_profile(self, person_id: str) -> Optional[dict]:
+    def person_operational_profile(self, person_id: str) -> dict | None:
         """
         Complete load profile for a person.
 
@@ -495,7 +495,7 @@ class QueryEngine:
     # PROJECT QUERIES
     # =========================================================================
 
-    def project_operational_state(self, project_id: str) -> Optional[dict]:
+    def project_operational_state(self, project_id: str) -> dict | None:
         """
         Current state of a project.
 
@@ -626,9 +626,9 @@ class QueryEngine:
 
     def tasks_in_period(
         self,
-        since: Optional[str] = None,
-        until: Optional[str] = None,
-        client_id: Optional[str] = None,
+        since: str | None = None,
+        until: str | None = None,
+        client_id: str | None = None,
     ) -> list[dict]:
         """
         Tasks created within a time period.
@@ -664,9 +664,9 @@ class QueryEngine:
 
     def invoices_in_period(
         self,
-        since: Optional[str] = None,
-        until: Optional[str] = None,
-        client_id: Optional[str] = None,
+        since: str | None = None,
+        until: str | None = None,
+        client_id: str | None = None,
     ) -> list[dict]:
         """
         Invoices issued within a time period.
@@ -700,9 +700,9 @@ class QueryEngine:
 
     def communications_in_period(
         self,
-        since: Optional[str] = None,
-        until: Optional[str] = None,
-        client_id: Optional[str] = None,
+        since: str | None = None,
+        until: str | None = None,
+        client_id: str | None = None,
     ) -> list[dict]:
         """
         Communications (via entity_links) within a time period.
@@ -1056,6 +1056,6 @@ def _compute_trend(values: list[float]) -> dict:
 
 
 # Convenience function for one-off queries
-def get_engine(db_path: Optional[Path] = None) -> QueryEngine:
+def get_engine(db_path: Path | None = None) -> QueryEngine:
     """Get a QueryEngine instance."""
     return QueryEngine(db_path)

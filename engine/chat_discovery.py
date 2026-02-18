@@ -6,16 +6,12 @@ from typing import Any
 from .gogcli import run_gog
 from .store import insert_raw_event
 
-URGENT_RE = re.compile(
-    r"\b(urgent|asap|today|eod|deadline|pls|please|need|required)\b", re.I
-)
+URGENT_RE = re.compile(r"\b(urgent|asap|today|eod|deadline|pls|please|need|required)\b", re.I)
 SENSITIVITY_RE = re.compile(
     r"\b(confidential|private|sensitive|do not share|internal only|nda|salary|termination|legal|hr|complaint|fired|disciplinary)\b",
     re.I,
 )
-MENTION_RE = re.compile(
-    r"@([A-Za-z][A-Za-z0-9 ]+?)(?=[\s,.:;!?]|$)"
-)  # Captures @Name patterns
+MENTION_RE = re.compile(r"@([A-Za-z][A-Za-z0-9 ]+?)(?=[\s,.:;!?]|$)")  # Captures @Name patterns
 
 
 def _extract_text(msg: dict) -> str:
@@ -40,9 +36,7 @@ def _author(msg: dict) -> str:
 
 
 def _msg_time(msg: dict) -> str:
-    return (
-        msg.get("createTime") or msg.get("create_time") or msg.get("updateTime") or ""
-    )
+    return msg.get("createTime") or msg.get("create_time") or msg.get("updateTime") or ""
 
 
 def list_spaces(account: str) -> tuple[list[dict], list[str]]:
@@ -236,10 +230,7 @@ def summarize_chat(
         "sensitiveMessageRate": round((sensitive / total), 4) if total else 0,
         "spacesSampled": len(messages_by_space),
         "messagesPerSpace": sorted(
-            [
-                {"space": s, "name": _label(s), "count": c}
-                for s, c in by_space_count.items()
-            ],
+            [{"space": s, "name": _label(s), "count": c} for s, c in by_space_count.items()],
             key=lambda x: -x["count"],
         )[:20],
         "topAuthors": top_authors,
@@ -249,11 +240,7 @@ def summarize_chat(
             "topMentioned": top_mentioned,
         },
         "signals": {
-            "urgencyLevel": "high"
-            if urgent > 50
-            else "moderate"
-            if urgent > 10
-            else "low",
+            "urgencyLevel": "high" if urgent > 50 else "moderate" if urgent > 10 else "low",
             "sensitivityFlag": sensitive > 0,
         },
     }

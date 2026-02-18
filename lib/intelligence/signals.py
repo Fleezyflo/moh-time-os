@@ -10,11 +10,10 @@ This module contains DEFINITIONS ONLY. Detection logic is in signal_detector.py 
 Reference: data/signal_catalog_20260214.md
 """
 
+import threading
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
-import threading
-
 
 # =============================================================================
 # ERROR TRACKING - Signal evaluation errors are tracked, not swallowed
@@ -110,7 +109,7 @@ class SignalDefinition:
     evidence_template: str  # Template for describing evidence
     cooldown_hours: int = 24  # Don't re-fire within this window
     escalation_after_days: int = 0  # Escalate severity after N days (0 = no escalation)
-    escalation_to: Optional[SignalSeverity] = None  # Target severity for escalation
+    escalation_to: SignalSeverity | None = None  # Target severity for escalation
     fast_eval: bool = True  # Can be evaluated quickly (no per-entity queries)
 
 
@@ -131,7 +130,7 @@ class DetectedSignal:
     evidence_text: str  # Human-readable evidence description
     implied_action: str
     detected_at: str  # ISO timestamp
-    first_detected_at: Optional[str] = None  # For tracking duration
+    first_detected_at: str | None = None  # For tracking duration
     escalated: bool = False
 
 
@@ -633,7 +632,7 @@ SIGNAL_CATALOG: dict[str, SignalDefinition] = {
 # =============================================================================
 
 
-def get_signal(signal_id: str) -> Optional[SignalDefinition]:
+def get_signal(signal_id: str) -> SignalDefinition | None:
     """Get a signal definition by ID."""
     return SIGNAL_CATALOG.get(signal_id)
 
@@ -700,8 +699,9 @@ if _validation_errors:
 # THRESHOLD CONFIGURATION - Load from thresholds.yaml
 # =============================================================================
 
-import yaml
 from pathlib import Path as _ThresholdPath
+
+import yaml
 
 THRESHOLDS_PATH = _ThresholdPath(__file__).parent / "thresholds.yaml"
 
@@ -847,7 +847,7 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
-def _get_engine(db_path: Optional[Path] = None):
+def _get_engine(db_path: Path | None = None):
     """Get query engine instance."""
     from lib.query_engine import QueryEngine
 
@@ -867,7 +867,7 @@ class DetectionCache:
     Create one instance per detect_all_signals() call.
     """
 
-    def __init__(self, db_path: Optional[Path] = None):
+    def __init__(self, db_path: Path | None = None):
         self.engine = _get_engine(db_path)
         self.db_path = db_path
         self._clients = None
@@ -927,6 +927,7 @@ class DetectionCache:
     def _load_overdue_counts(self):
         """Batch load overdue task counts for all clients in one query."""
         import sqlite3
+
         from lib import paths
 
         db = self.db_path or paths.db_path()
@@ -957,9 +958,9 @@ def _evaluate_threshold(
     condition: dict,
     entity_type: str,
     entity_id: str,
-    db_path: Optional[Path] = None,
+    db_path: Path | None = None,
     cache: DetectionCache = None,
-) -> Optional[dict]:
+) -> dict | None:
     """
     Evaluate a threshold condition.
 
@@ -1105,8 +1106,8 @@ def _evaluate_threshold(
 
 
 def _evaluate_trend(
-    condition: dict, entity_type: str, entity_id: str, db_path: Optional[Path] = None
-) -> Optional[dict]:
+    condition: dict, entity_type: str, entity_id: str, db_path: Path | None = None
+) -> dict | None:
     """
     Evaluate a trend condition using trajectory functions.
 
@@ -1171,8 +1172,8 @@ def _evaluate_trend(
 
 
 def _evaluate_anomaly(
-    condition: dict, entity_type: str, entity_id: str, db_path: Optional[Path] = None
-) -> Optional[dict]:
+    condition: dict, entity_type: str, entity_id: str, db_path: Path | None = None
+) -> dict | None:
     """
     Evaluate an anomaly condition.
 
@@ -1250,9 +1251,9 @@ def _evaluate_compound(
     condition: dict,
     entity_type: str,
     entity_id: str,
-    db_path: Optional[Path] = None,
-    _evaluated: Optional[dict] = None,
-) -> Optional[dict]:
+    db_path: Path | None = None,
+    _evaluated: dict | None = None,
+) -> dict | None:
     """
     Evaluate a compound condition by checking sub-conditions.
 
@@ -1332,11 +1333,11 @@ def evaluate_signal(
     signal_def: SignalDefinition,
     entity_type: str,
     entity_id: str,
-    db_path: Optional[Path] = None,
-    _evaluated: Optional[dict] = None,
+    db_path: Path | None = None,
+    _evaluated: dict | None = None,
     cache: DetectionCache = None,
-    error_collector: Optional[EvaluationErrorCollector] = None,
-) -> Optional[dict]:
+    error_collector: EvaluationErrorCollector | None = None,
+) -> dict | None:
     """
     Evaluate a single signal definition for a specific entity.
 
@@ -1438,11 +1439,11 @@ def _format_evidence(signal_def: SignalDefinition, evidence: dict) -> str:
 def detect_signals_for_entity(
     entity_type: str,
     entity_id: str,
-    db_path: Optional[Path] = None,
-    categories: Optional[list[SignalCategory]] = None,
+    db_path: Path | None = None,
+    categories: list[SignalCategory] | None = None,
     cache: DetectionCache = None,
     fast_only: bool = False,
-    error_collector: Optional[EvaluationErrorCollector] = None,
+    error_collector: EvaluationErrorCollector | None = None,
 ) -> list[dict]:
     """
     Run signals applicable to this entity type.
@@ -1487,7 +1488,7 @@ def detect_signals_for_entity(
 
 
 def detect_all_client_signals(
-    db_path: Optional[Path] = None, categories: Optional[list[SignalCategory]] = None
+    db_path: Path | None = None, categories: list[SignalCategory] | None = None
 ) -> list[dict]:
     """Run client signals against all clients."""
     # Use cache for efficient batch processing
@@ -1506,9 +1507,9 @@ def detect_all_client_signals(
 
 
 def detect_all_signals(
-    db_path: Optional[Path] = None,
+    db_path: Path | None = None,
     quick: bool = False,
-    categories: Optional[list[SignalCategory]] = None,
+    categories: list[SignalCategory] | None = None,
 ) -> dict:
     """
     Run the signal catalog against the full database.
@@ -1622,11 +1623,11 @@ def detect_all_signals(
 # SIGNAL STATE TRACKING
 # =============================================================================
 
-import sqlite3
 import json
+import sqlite3
 
 
-def _get_db_path(db_path: Optional[Path] = None) -> Path:
+def _get_db_path(db_path: Path | None = None) -> Path:
     """Get resolved database path."""
     if db_path:
         return Path(db_path)
@@ -1635,7 +1636,7 @@ def _get_db_path(db_path: Optional[Path] = None) -> Path:
     return get_default_db()
 
 
-def _check_escalation(signal_record: dict, signal_def: SignalDefinition) -> Optional[str]:
+def _check_escalation(signal_record: dict, signal_def: SignalDefinition) -> str | None:
     """
     Check if a signal should escalate based on time active.
 
@@ -1671,7 +1672,7 @@ def _check_escalation(signal_record: dict, signal_def: SignalDefinition) -> Opti
     return None
 
 
-def update_signal_state(detected_signals: list[dict], db_path: Optional[Path] = None) -> dict:
+def update_signal_state(detected_signals: list[dict], db_path: Path | None = None) -> dict:
     """
     Compare newly detected signals against persisted state. Update accordingly.
 
@@ -1843,10 +1844,10 @@ def update_signal_state(detected_signals: list[dict], db_path: Optional[Path] = 
 
 
 def get_active_signals(
-    entity_type: Optional[str] = None,
-    entity_id: Optional[str] = None,
-    severity: Optional[str] = None,
-    db_path: Optional[Path] = None,
+    entity_type: str | None = None,
+    entity_id: str | None = None,
+    severity: str | None = None,
+    db_path: Path | None = None,
 ) -> list[dict]:
     """
     Query persisted signal state. Filter by entity and/or severity.
@@ -1882,7 +1883,7 @@ def get_active_signals(
 
 
 def get_signal_history(
-    entity_type: str, entity_id: str, since: Optional[str] = None, db_path: Optional[Path] = None
+    entity_type: str, entity_id: str, since: str | None = None, db_path: Path | None = None
 ) -> list[dict]:
     """
     Full signal history for an entity: all signals that ever fired, including cleared ones.
@@ -1910,7 +1911,7 @@ def get_signal_history(
         conn.close()
 
 
-def acknowledge_signal(signal_state_id: int, db_path: Optional[Path] = None) -> bool:
+def acknowledge_signal(signal_state_id: int, db_path: Path | None = None) -> bool:
     """
     Mark a signal as acknowledged (user has seen it and is aware).
 
@@ -1933,7 +1934,7 @@ def acknowledge_signal(signal_state_id: int, db_path: Optional[Path] = None) -> 
         conn.close()
 
 
-def get_signal_summary(db_path: Optional[Path] = None) -> dict:
+def get_signal_summary(db_path: Path | None = None) -> dict:
     """
     Dashboard-level summary of current signal state.
 
@@ -2001,7 +2002,7 @@ def get_signal_summary(db_path: Optional[Path] = None) -> dict:
         conn.close()
 
 
-def clear_all_signal_state(db_path: Optional[Path] = None) -> int:
+def clear_all_signal_state(db_path: Path | None = None) -> int:
     """
     Clear all signal state records. For testing/reset only.
 

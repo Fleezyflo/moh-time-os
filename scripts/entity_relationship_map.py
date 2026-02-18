@@ -19,7 +19,7 @@ CORE_ENTITIES = {
     "Task": "tasks",
     "Person": "people",
     "Gmail": None,  # Need to find the actual table
-    "Chat": None,   # Need to find the actual table
+    "Chat": None,  # Need to find the actual table
     "Calendar": "calendar_events",
     "Drive": None,  # Need to find the actual table
     "Invoice": "invoices",
@@ -34,12 +34,7 @@ def get_table_info(conn: sqlite3.Connection, table: str) -> dict:
     columns = []
     pk = None
     for row in cursor.fetchall():
-        col = {
-            "name": row[1],
-            "type": row[2],
-            "notnull": bool(row[3]),
-            "pk": bool(row[5])
-        }
+        col = {"name": row[1], "type": row[2], "notnull": bool(row[3]), "pk": bool(row[5])}
         columns.append(col)
         if col["pk"]:
             pk = col["name"]
@@ -48,11 +43,7 @@ def get_table_info(conn: sqlite3.Connection, table: str) -> dict:
     cursor = conn.execute(f'PRAGMA foreign_key_list("{table}")')
     fks = []
     for row in cursor.fetchall():
-        fks.append({
-            "from_col": row[3],
-            "to_table": row[2],
-            "to_col": row[4]
-        })
+        fks.append({"from_col": row[3], "to_table": row[2], "to_col": row[4]})
 
     # Get row count
     try:
@@ -66,7 +57,7 @@ def get_table_info(conn: sqlite3.Connection, table: str) -> dict:
         "columns": columns,
         "primary_key": pk,
         "foreign_keys": fks,
-        "row_count": row_count
+        "row_count": row_count,
     }
 
 
@@ -124,27 +115,21 @@ def find_implicit_relationships(table_info: dict, target_tables: list) -> list:
             base = name[:-3]
             for target in target_tables:
                 if base in target.lower():
-                    implicit.append({
-                        "column": col["name"],
-                        "target_table": target,
-                        "match_type": "id_column"
-                    })
+                    implicit.append(
+                        {"column": col["name"], "target_table": target, "match_type": "id_column"}
+                    )
 
         # Email columns
         if "email" in name:
-            implicit.append({
-                "column": col["name"],
-                "target_table": "people",
-                "match_type": "email_field"
-            })
+            implicit.append(
+                {"column": col["name"], "target_table": "people", "match_type": "email_field"}
+            )
 
         # Name columns might match people
         if name in ["owner", "assignee", "creator", "author"]:
-            implicit.append({
-                "column": col["name"],
-                "target_table": "people",
-                "match_type": "person_reference"
-            })
+            implicit.append(
+                {"column": col["name"], "target_table": "people", "match_type": "person_reference"}
+            )
 
     return implicit
 
@@ -175,7 +160,10 @@ def analyze_relationships(conn: sqlite3.Connection, entity_tables: dict) -> dict
                 continue
 
             if to_entity not in entity_tables or not entity_tables[to_entity]:
-                relationships[from_entity][to_entity] = {"type": "UNKNOWN", "path": "No table found"}
+                relationships[from_entity][to_entity] = {
+                    "type": "UNKNOWN",
+                    "path": "No table found",
+                }
                 continue
 
             to_table = entity_tables[to_entity]
@@ -190,7 +178,7 @@ def analyze_relationships(conn: sqlite3.Connection, entity_tables: dict) -> dict
             if direct_fk:
                 relationships[from_entity][to_entity] = {
                     "type": "DIRECT",
-                    "path": f'{entity_tables[from_entity]}.{direct_fk["from_col"]} = {to_table}.{direct_fk["to_col"]}'
+                    "path": f"{entity_tables[from_entity]}.{direct_fk['from_col']} = {to_table}.{direct_fk['to_col']}",
                 }
                 continue
 
@@ -199,7 +187,7 @@ def analyze_relationships(conn: sqlite3.Connection, entity_tables: dict) -> dict
             if implicit:
                 relationships[from_entity][to_entity] = {
                     "type": "IMPLICIT",
-                    "path": f'{entity_tables[from_entity]}.{implicit[0]["column"]} → {to_table} ({implicit[0]["match_type"]})'
+                    "path": f"{entity_tables[from_entity]}.{implicit[0]['column']} → {to_table} ({implicit[0]['match_type']})",
                 }
                 continue
 
@@ -210,17 +198,19 @@ def analyze_relationships(conn: sqlite3.Connection, entity_tables: dict) -> dict
                     if fk["to_table"] == entity_tables[from_entity]:
                         relationships[from_entity][to_entity] = {
                             "type": "REVERSE",
-                            "path": f'{to_table}.{fk["from_col"]} = {entity_tables[from_entity]}.{fk["to_col"]} (reverse)'
+                            "path": f"{to_table}.{fk['from_col']} = {entity_tables[from_entity]}.{fk['to_col']} (reverse)",
                         }
                         break
                 else:
                     # Check for common links through entity_links table
                     try:
-                        cursor = conn.execute("SELECT name FROM sqlite_master WHERE name='entity_links'")
+                        cursor = conn.execute(
+                            "SELECT name FROM sqlite_master WHERE name='entity_links'"
+                        )
                         if cursor.fetchone():
                             relationships[from_entity][to_entity] = {
                                 "type": "INDIRECT",
-                                "path": "Via entity_links table"
+                                "path": "Via entity_links table",
                             }
                         else:
                             relationships[from_entity][to_entity] = {"type": "MISSING", "path": ""}
@@ -247,17 +237,21 @@ def generate_report(entity_tables: dict, relationships: dict, table_info: dict) 
     for entity, table in sorted(entity_tables.items()):
         if table and entity in table_info:
             info = table_info[entity]
-            lines.append(f"| {entity} | `{table}` | {info['primary_key']} | {info['row_count']:,} |")
+            lines.append(
+                f"| {entity} | `{table}` | {info['primary_key']} | {info['row_count']:,} |"
+            )
         else:
             lines.append(f"| {entity} | _(not found)_ | — | — |")
 
-    lines.extend([
-        "",
-        "## Relationship Matrix",
-        "",
-        "Legend: DIRECT (FK), IMPLICIT (joinable field), REVERSE (FK from target), INDIRECT (via junction), MISSING (no path), UNKNOWN (table not found)",
-        "",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Relationship Matrix",
+            "",
+            "Legend: DIRECT (FK), IMPLICIT (joinable field), REVERSE (FK from target), INDIRECT (via junction), MISSING (no path), UNKNOWN (table not found)",
+            "",
+        ]
+    )
 
     # Build matrix header
     entities = list(entity_tables.keys())
@@ -286,11 +280,13 @@ def generate_report(entity_tables: dict, relationships: dict, table_info: dict) 
         lines.append(row)
 
     # Connection paths
-    lines.extend([
-        "",
-        "## Connection Paths (Documented)",
-        "",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Connection Paths (Documented)",
+            "",
+        ]
+    )
 
     for from_entity in sorted(relationships.keys()):
         for to_entity in sorted(relationships[from_entity].keys()):
@@ -299,12 +295,14 @@ def generate_report(entity_tables: dict, relationships: dict, table_info: dict) 
                 lines.append(f"- **{from_entity} → {to_entity}**: {rel['type']} — `{rel['path']}`")
 
     # Missing connections
-    lines.extend([
-        "",
-        "## Missing Connections",
-        "| From | To | Priority | Data Needed | Resolution Path |",
-        "|------|-----|----------|-------------|-----------------|",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Missing Connections",
+            "| From | To | Priority | Data Needed | Resolution Path |",
+            "|------|-----|----------|-------------|-----------------|",
+        ]
+    )
 
     priority_map = {
         ("Client", "Gmail"): "HIGH",
@@ -320,15 +318,19 @@ def generate_report(entity_tables: dict, relationships: dict, table_info: dict) 
             rel = relationships[from_entity][to_entity]
             if rel["type"] == "MISSING":
                 priority = priority_map.get((from_entity, to_entity), "LOW")
-                lines.append(f"| {from_entity} | {to_entity} | {priority} | FK or junction table | Create relationship in schema |")
+                lines.append(
+                    f"| {from_entity} | {to_entity} | {priority} | FK or junction table | Create relationship in schema |"
+                )
 
     # Key findings
-    lines.extend([
-        "",
-        "## Key Findings",
-        "",
-        "### What We Can Traverse",
-    ])
+    lines.extend(
+        [
+            "",
+            "## Key Findings",
+            "",
+            "### What We Can Traverse",
+        ]
+    )
 
     direct_count = 0
     implicit_count = 0
@@ -347,22 +349,24 @@ def generate_report(entity_tables: dict, relationships: dict, table_info: dict) 
             elif rel_type == "MISSING":
                 missing_count += 1
 
-    lines.extend([
-        f"- Direct FK relationships: {direct_count}",
-        f"- Implicit relationships: {implicit_count}",
-        f"- Indirect/reverse relationships: {indirect_count}",
-        f"- Missing relationships: {missing_count}",
-        "",
-        "### Critical Gaps",
-        "- Many entity pairs lack direct relationships",
-        "- The `entity_links` table may provide indirect connections",
-        "- Email-based matching can connect people to communications",
-        "",
-        "### Recommendations",
-        "1. Review `entity_links` table for existing junction relationships",
-        "2. Consider adding views that normalize implicit relationships",
-        "3. Prioritize HIGH-priority missing connections for Phase 2.3",
-    ])
+    lines.extend(
+        [
+            f"- Direct FK relationships: {direct_count}",
+            f"- Implicit relationships: {implicit_count}",
+            f"- Indirect/reverse relationships: {indirect_count}",
+            f"- Missing relationships: {missing_count}",
+            "",
+            "### Critical Gaps",
+            "- Many entity pairs lack direct relationships",
+            "- The `entity_links` table may provide indirect connections",
+            "- Email-based matching can connect people to communications",
+            "",
+            "### Recommendations",
+            "1. Review `entity_links` table for existing junction relationships",
+            "2. Consider adding views that normalize implicit relationships",
+            "3. Prioritize HIGH-priority missing connections for Phase 2.3",
+        ]
+    )
 
     return "\n".join(lines)
 
@@ -400,10 +404,30 @@ def main():
     print(f"\n✓ Report saved to: {output_file}")
 
     # Summary
-    direct = sum(1 for f in relationships for t in relationships[f] if relationships[f][t]["type"] == "DIRECT")
-    implicit = sum(1 for f in relationships for t in relationships[f] if relationships[f][t]["type"] == "IMPLICIT")
-    indirect = sum(1 for f in relationships for t in relationships[f] if relationships[f][t]["type"] in ["INDIRECT", "REVERSE"])
-    missing = sum(1 for f in relationships for t in relationships[f] if relationships[f][t]["type"] == "MISSING")
+    direct = sum(
+        1
+        for f in relationships
+        for t in relationships[f]
+        if relationships[f][t]["type"] == "DIRECT"
+    )
+    implicit = sum(
+        1
+        for f in relationships
+        for t in relationships[f]
+        if relationships[f][t]["type"] == "IMPLICIT"
+    )
+    indirect = sum(
+        1
+        for f in relationships
+        for t in relationships[f]
+        if relationships[f][t]["type"] in ["INDIRECT", "REVERSE"]
+    )
+    missing = sum(
+        1
+        for f in relationships
+        for t in relationships[f]
+        if relationships[f][t]["type"] == "MISSING"
+    )
 
     print("\n=== RELATIONSHIP SUMMARY ===")
     print(f"Entities mapped:  {len(entity_tables)}")

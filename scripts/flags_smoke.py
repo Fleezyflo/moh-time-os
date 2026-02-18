@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from lib.features import is_enabled, REGISTRY
+from lib.features import REGISTRY, is_enabled
 
 print("Registered flags:")
 for d in REGISTRY.get_definitions():

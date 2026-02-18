@@ -80,7 +80,7 @@ class EntityScore:
     dimension_scores: dict[str, float] = field(default_factory=dict)
     composite_score: float = 0.0
     score_range: ScoreRange = ScoreRange.STABLE
-    computed_at: Optional[str] = None
+    computed_at: str | None = None
 
     def get_range(self) -> ScoreRange:
         """Determine score range from composite."""
@@ -490,7 +490,7 @@ def normalize_relative(current: float, baseline: float) -> float:
 
 
 def score_dimension(
-    dimension: ScoringDimension, metrics: dict, context: Optional[dict] = None
+    dimension: ScoringDimension, metrics: dict, context: dict | None = None
 ) -> dict:
     """
     Compute score for a single dimension.

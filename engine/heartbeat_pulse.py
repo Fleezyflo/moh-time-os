@@ -107,9 +107,7 @@ def _check_tasks_overdue(account: str) -> list[Alert]:
             if not tlid:
                 continue
 
-            tasks_res = run_gog(
-                ["tasks", "list", tlid, "--max=50"], account=account, timeout=60
-            )
+            tasks_res = run_gog(["tasks", "list", tlid, "--max=50"], account=account, timeout=60)
             if not tasks_res.ok:
                 continue
 
@@ -184,9 +182,7 @@ def _check_chat_urgent(account: str, hours: int = 4) -> list[Alert]:
         cutoff = datetime.now(UTC) - timedelta(hours=hours)
 
         # Get spaces
-        spaces_res = run_gog(
-            ["chat", "spaces", "list", "--max=20"], account=account, timeout=60
-        )
+        spaces_res = run_gog(["chat", "spaces", "list", "--max=20"], account=account, timeout=60)
         if not spaces_res.ok:
             return alerts
 
@@ -408,9 +404,7 @@ def format_heartbeat_alerts(result: HeartbeatPulseResult) -> str:
     lines = [f"**Pulse Check** ({result.summary})\n"]
 
     for alert in result.alerts:
-        emoji = {"critical": "🔴", "warning": "🟡", "info": "ℹ️"}.get(
-            alert.severity, "•"
-        )
+        emoji = {"critical": "🔴", "warning": "🟡", "info": "ℹ️"}.get(alert.severity, "•")
         lines.append(f"{emoji} **{alert.title}**")
         if alert.detail:
             lines.append(f"   {alert.detail}")

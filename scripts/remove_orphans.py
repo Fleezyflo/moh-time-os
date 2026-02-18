@@ -41,7 +41,7 @@ def load_orphans() -> list:
             # Parse table row: | module | `path` | lines | description |
             parts = line.split("|")
             if len(parts) >= 5:
-                path_match = re.search(r'`([^`]+)`', parts[2])
+                path_match = re.search(r"`([^`]+)`", parts[2])
                 if path_match:
                     path = path_match.group(1)
                     try:
@@ -49,11 +49,7 @@ def load_orphans() -> list:
                     except:
                         lines = 0
                     desc = parts[4].strip() if len(parts) > 4 else ""
-                    orphans.append({
-                        "path": path,
-                        "lines": lines,
-                        "description": desc
-                    })
+                    orphans.append({"path": path, "lines": lines, "description": desc})
 
     return orphans
 
@@ -69,9 +65,18 @@ def grep_check(filename: str) -> list:
 
     try:
         result = subprocess.run(
-            ["grep", "-rl", stem, str(REPO_ROOT),
-             "--include=*.py", "--exclude-dir=.venv", "--exclude-dir=__pycache__"],
-            capture_output=True, text=True, timeout=30
+            [
+                "grep",
+                "-rl",
+                stem,
+                str(REPO_ROOT),
+                "--include=*.py",
+                "--exclude-dir=.venv",
+                "--exclude-dir=__pycache__",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=30,
         )
         for line in result.stdout.strip().split("\n"):
             if line and line != filename:
@@ -90,16 +95,16 @@ def run_tests() -> tuple:
             cwd=str(REPO_ROOT),
             capture_output=True,
             text=True,
-            timeout=120
+            timeout=120,
         )
 
         output = result.stdout + result.stderr
 
         # Parse output
-        match = re.search(r'(\d+)\s+passed', output)
+        match = re.search(r"(\d+)\s+passed", output)
         passed = int(match.group(1)) if match else 0
 
-        match = re.search(r'(\d+)\s+failed', output)
+        match = re.search(r"(\d+)\s+failed", output)
         failed = int(match.group(1)) if match else 0
 
         return (passed, failed, output)
@@ -133,7 +138,7 @@ def main():
         path = orphan["path"]
         full_path = REPO_ROOT / path
 
-        print(f"[{i+1}/{len(orphans)}] {path}")
+        print(f"[{i + 1}/{len(orphans)}] {path}")
 
         # Check if file exists
         if not full_path.exists():
@@ -201,16 +206,20 @@ def main():
 
     for r in removed:
         desc = r.get("description", "")[:40]
-        report_lines.append(f"| `{r['path']}` | {r.get('lines', 0)} | {desc} | ✅ {r.get('tests_after', 0)} |")
+        report_lines.append(
+            f"| `{r['path']}` | {r.get('lines', 0)} | {desc} | ✅ {r.get('tests_after', 0)} |"
+        )
 
-    report_lines.extend([
-        "",
-        "---",
-        "",
-        "## Skipped (could not safely remove)",
-        "| Path | Lines | Reason |",
-        "|------|-------|--------|",
-    ])
+    report_lines.extend(
+        [
+            "",
+            "---",
+            "",
+            "## Skipped (could not safely remove)",
+            "| Path | Lines | Reason |",
+            "|------|-------|--------|",
+        ]
+    )
 
     for s in skipped:
         reason = s.get("reason", "")[:50]

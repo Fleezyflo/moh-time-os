@@ -23,9 +23,7 @@ def run(cmd: list[str], timeout: int = 180) -> dict:
         cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, timeout=timeout
     )
     if p.returncode != 0:
-        raise RuntimeError(
-            f"Command failed ({p.returncode}): {' '.join(cmd)}\n{p.stderr.strip()}"
-        )
+        raise RuntimeError(f"Command failed ({p.returncode}): {' '.join(cmd)}\n{p.stderr.strip()}")
     out = p.stdout.strip()
     return json.loads(out) if out else {}
 
@@ -40,18 +38,12 @@ def gog_base(account: str, *, force: bool = False) -> list[str]:
 def list_tasklists(account: str) -> list[dict]:
     data = run(gog_base(account) + ["tasks", "lists", "list"])
     lists = (
-        data.get("tasklists")
-        or data.get("lists")
-        or data.get("items")
-        or data.get("data")
-        or []
+        data.get("tasklists") or data.get("lists") or data.get("items") or data.get("data") or []
     )
     return lists
 
 
-def list_tasks_paged(
-    account: str, tasklist_id: str, include_completed: bool = True
-) -> list[dict]:
+def list_tasks_paged(account: str, tasklist_id: str, include_completed: bool = True) -> list[dict]:
     tasks: list[dict] = []
     page = None
     while True:
@@ -84,9 +76,7 @@ def export_snapshot(account: str, out_path: str) -> None:
         if not tlid:
             continue
         tasks = list_tasks_paged(account, tlid, include_completed=True)
-        snapshot["tasklists"].append(
-            {"id": tlid, "title": title, "raw": tl, "tasks": tasks}
-        )
+        snapshot["tasklists"].append({"id": tlid, "title": title, "raw": tl, "tasks": tasks})
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     with open(out_path, "w", encoding="utf-8") as f:
         json.dump(snapshot, f, ensure_ascii=False, indent=2)
@@ -112,9 +102,7 @@ def wipe_all_tasks(account: str, throttle_ms: int = 120) -> dict:
                 deleted += 1
                 time.sleep(throttle_ms / 1000.0)
             except Exception as e:
-                errors.append(
-                    {"list": title, "tasklistId": tlid, "taskId": tid, "error": str(e)}
-                )
+                errors.append({"list": title, "tasklistId": tlid, "taskId": tid, "error": str(e)})
     return {"deleted": deleted, "errors": errors}
 
 

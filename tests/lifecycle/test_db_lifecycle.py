@@ -11,13 +11,13 @@ Tests the complete DB lifecycle:
 import os
 import shutil
 import sqlite3
+
+# Ensure we can import from the project
+import sys
 import tempfile
 from pathlib import Path
 
 import pytest
-
-# Ensure we can import from the project
-import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
@@ -45,9 +45,7 @@ class TestFreshDBBoot:
         run_migrations(conn)
 
         # Check required tables exist
-        cursor = conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
-        )
+        cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
         tables = {row[0] for row in cursor.fetchall()}
 
         # Core tables that must exist

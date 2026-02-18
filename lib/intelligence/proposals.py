@@ -11,12 +11,12 @@ needs a check-in call."
 Multiple signals + scores + patterns assembled into one actionable item.
 """
 
+import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Optional
 from pathlib import Path
-import logging
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -653,7 +653,7 @@ def _merge_proposals(proposals: list[Proposal]) -> list[Proposal]:
 
 
 def generate_proposals(
-    signals: dict = None, patterns: dict = None, db_path: Optional[Path] = None
+    signals: dict = None, patterns: dict = None, db_path: Path | None = None
 ) -> list[Proposal]:
     """
     Generate proposals from the current intelligence state.
@@ -747,15 +747,15 @@ def generate_proposals(
     return proposals
 
 
-def generate_proposals_from_live_data(db_path: Optional[Path] = None) -> dict:
+def generate_proposals_from_live_data(db_path: Path | None = None) -> dict:
     """
     Run full intelligence pipeline and generate proposals.
 
     Convenience function that runs signal detection, pattern detection,
     and proposal generation in one call.
     """
-    from lib.intelligence.signals import detect_all_signals
     from lib.intelligence.patterns import detect_all_patterns
+    from lib.intelligence.signals import detect_all_signals
 
     # Run detections
     signals = detect_all_signals(db_path, quick=True)  # Use quick mode for speed
@@ -855,7 +855,7 @@ def _score_urgency(proposal: Proposal) -> float:
     return score
 
 
-def _score_impact(proposal: Proposal, db_path: Optional[Path] = None) -> float:
+def _score_impact(proposal: Proposal, db_path: Path | None = None) -> float:
     """
     Score 0-100 based on business impact of the affected entity.
 
@@ -926,7 +926,7 @@ def _score_confidence(proposal: Proposal) -> float:
 
 
 def compute_priority_score(
-    proposal: Proposal, db_path: Optional[Path] = None, weights: dict = None
+    proposal: Proposal, db_path: Path | None = None, weights: dict = None
 ) -> PriorityScore:
     """
     Compute the priority score for a single proposal.
@@ -958,7 +958,7 @@ def compute_priority_score(
 
 
 def rank_proposals(
-    proposals: list[Proposal], db_path: Optional[Path] = None, weights: dict = None
+    proposals: list[Proposal], db_path: Path | None = None, weights: dict = None
 ) -> list[tuple[Proposal, PriorityScore]]:
     """
     Score and rank all proposals.
@@ -983,7 +983,7 @@ def rank_proposals(
 
 
 def get_top_proposals(
-    proposals: list[Proposal], n: int = 5, db_path: Optional[Path] = None, weights: dict = None
+    proposals: list[Proposal], n: int = 5, db_path: Path | None = None, weights: dict = None
 ) -> list[tuple[Proposal, PriorityScore]]:
     """
     Return the top N proposals by priority.
@@ -997,7 +997,7 @@ def get_top_proposals(
 def get_proposals_by_type(
     proposals: list[Proposal],
     proposal_type: ProposalType,
-    db_path: Optional[Path] = None,
+    db_path: Path | None = None,
     weights: dict = None,
 ) -> list[tuple[Proposal, PriorityScore]]:
     """
@@ -1011,7 +1011,7 @@ def get_proposals_for_entity(
     proposals: list[Proposal],
     entity_type: str,
     entity_id: str,
-    db_path: Optional[Path] = None,
+    db_path: Path | None = None,
     weights: dict = None,
 ) -> list[tuple[Proposal, PriorityScore]]:
     """
@@ -1037,7 +1037,7 @@ def get_proposals_for_entity(
 # =============================================================================
 
 
-def generate_daily_briefing(proposals: list[Proposal], db_path: Optional[Path] = None) -> dict:
+def generate_daily_briefing(proposals: list[Proposal], db_path: Path | None = None) -> dict:
     """
     Produce a structured daily briefing from ranked proposals.
 

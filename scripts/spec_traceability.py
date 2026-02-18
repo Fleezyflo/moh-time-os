@@ -296,9 +296,7 @@ def compare_spec_to_contract():
         )
     else:
         report.append("")
-        report.append(
-            "✓ SPEC COMPLIANCE: PASSED - All required fields present and correctly typed"
-        )
+        report.append("✓ SPEC COMPLIANCE: PASSED - All required fields present and correctly typed")
 
     return (
         "\n".join(report),

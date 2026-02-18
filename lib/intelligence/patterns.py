@@ -15,11 +15,10 @@ Pattern Types:
 This module contains DEFINITIONS only. Detection logic is in Task 2.2.
 """
 
+import threading
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
-import threading
-
 
 # =============================================================================
 # ERROR TRACKING - Pattern detection errors are tracked, not swallowed
@@ -596,7 +595,7 @@ PATTERN_LIBRARY: dict[str, PatternDefinition] = {
 # =============================================================================
 
 
-def get_pattern(pattern_id: str) -> Optional[PatternDefinition]:
+def get_pattern(pattern_id: str) -> PatternDefinition | None:
     """Get a pattern definition by ID."""
     return PATTERN_LIBRARY.get(pattern_id)
 
@@ -669,16 +668,16 @@ if _validation_errors:
 # PATTERN DETECTION - Helper Computations
 # =============================================================================
 
-import statistics
+import logging
 import math
+import statistics
 from datetime import datetime
 from pathlib import Path
-import logging
 
 logger = logging.getLogger(__name__)
 
 
-def _get_engine(db_path: Optional[Path] = None):
+def _get_engine(db_path: Path | None = None):
     """Get query engine instance."""
     from lib.query_engine import QueryEngine
 
@@ -727,7 +726,7 @@ def _compute_coefficient_of_variation(values: list[float]) -> float:
     return stddev / mean
 
 
-def _compute_correlation(series_a: list[float], series_b: list[float]) -> Optional[float]:
+def _compute_correlation(series_a: list[float], series_b: list[float]) -> float | None:
     """
     Pearson correlation coefficient between two series.
 
@@ -769,7 +768,7 @@ def _find_co_declining(
     score_key: str = "composite_score",
     min_entities: int = 3,
     decline_threshold: float = -0.1,
-) -> Optional[list[dict]]:
+) -> list[dict] | None:
     """
     Identify groups of entities whose scores are simultaneously declining.
 
@@ -834,8 +833,8 @@ class PatternEvidence:
 
 
 def _detect_concentration(
-    pattern_def: PatternDefinition, db_path: Optional[Path] = None
-) -> Optional[PatternEvidence]:
+    pattern_def: PatternDefinition, db_path: Path | None = None
+) -> PatternEvidence | None:
     """
     Detect concentration patterns.
 
@@ -1081,8 +1080,8 @@ def _detect_concentration(
 
 
 def _detect_cascade(
-    pattern_def: PatternDefinition, db_path: Optional[Path] = None
-) -> Optional[PatternEvidence]:
+    pattern_def: PatternDefinition, db_path: Path | None = None
+) -> PatternEvidence | None:
     """
     Detect cascade risk patterns.
 
@@ -1256,8 +1255,8 @@ def _detect_cascade(
 
 
 def _detect_degradation(
-    pattern_def: PatternDefinition, db_path: Optional[Path] = None
-) -> Optional[PatternEvidence]:
+    pattern_def: PatternDefinition, db_path: Path | None = None
+) -> PatternEvidence | None:
     """
     Detect coordinated decline patterns.
     """
@@ -1395,8 +1394,8 @@ def _detect_degradation(
 
 
 def _detect_drift(
-    pattern_def: PatternDefinition, db_path: Optional[Path] = None
-) -> Optional[PatternEvidence]:
+    pattern_def: PatternDefinition, db_path: Path | None = None
+) -> PatternEvidence | None:
     """
     Detect divergence from expected state.
     """
@@ -1492,8 +1491,8 @@ def _detect_drift(
 
 
 def _detect_correlation(
-    pattern_def: PatternDefinition, db_path: Optional[Path] = None
-) -> Optional[PatternEvidence]:
+    pattern_def: PatternDefinition, db_path: Path | None = None
+) -> PatternEvidence | None:
     """
     Detect co-movement between metrics.
     """
@@ -1593,8 +1592,8 @@ def _detect_correlation(
 
 
 def detect_pattern(
-    pattern_def: PatternDefinition, db_path: Optional[Path] = None
-) -> Optional[PatternEvidence]:
+    pattern_def: PatternDefinition, db_path: Path | None = None
+) -> PatternEvidence | None:
     """
     Evaluate a single pattern definition against the database.
 
@@ -1615,7 +1614,7 @@ def detect_pattern(
     return None
 
 
-def detect_all_patterns(db_path: Optional[Path] = None) -> dict:
+def detect_all_patterns(db_path: Path | None = None) -> dict:
     """
     Run the complete pattern library against the database.
 

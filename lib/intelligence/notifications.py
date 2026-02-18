@@ -12,9 +12,9 @@ Notification types:
 - PROPOSAL_GENERATED: New high-priority proposal created
 """
 
-import sqlite3
 import logging
-from dataclasses import dataclass, asdict
+import sqlite3
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
@@ -43,16 +43,16 @@ class NotificationPriority(Enum):
 class Notification:
     """A notification record."""
 
-    id: Optional[str]
+    id: str | None
     type: NotificationType
     priority: NotificationPriority
     title: str
     body: str
-    entity_type: Optional[str]
-    entity_id: Optional[str]
+    entity_type: str | None
+    entity_id: str | None
     data: dict
     created_at: str
-    delivered_at: Optional[str] = None
+    delivered_at: str | None = None
 
     def to_dict(self) -> dict:
         return {
@@ -66,14 +66,14 @@ class Notification:
 DEFAULT_DB = get_db_path_from_lib()
 
 
-def _get_db_path(db_path: Optional[Path] = None) -> Path:
+def _get_db_path(db_path: Path | None = None) -> Path:
     """Get database path."""
     if db_path:
         return Path(db_path)
     return DEFAULT_DB
 
 
-def ensure_notification_table(db_path: Optional[Path] = None) -> None:
+def ensure_notification_table(db_path: Path | None = None) -> None:
     """
     Create notification_queue table if it doesn't exist.
     """
@@ -123,7 +123,7 @@ def ensure_notification_table(db_path: Optional[Path] = None) -> None:
         conn.close()
 
 
-def queue_notification(notification: Notification, db_path: Optional[Path] = None) -> str:
+def queue_notification(notification: Notification, db_path: Path | None = None) -> str:
     """
     Add a notification to the queue.
 
@@ -166,9 +166,7 @@ def queue_notification(notification: Notification, db_path: Optional[Path] = Non
     return notification_id
 
 
-def get_pending_notifications(
-    limit: int = 50, db_path: Optional[Path] = None
-) -> list[Notification]:
+def get_pending_notifications(limit: int = 50, db_path: Path | None = None) -> list[Notification]:
     """
     Get notifications that haven't been delivered yet.
     """
@@ -220,7 +218,7 @@ def get_pending_notifications(
         conn.close()
 
 
-def mark_delivered(notification_id: str, db_path: Optional[Path] = None) -> None:
+def mark_delivered(notification_id: str, db_path: Path | None = None) -> None:
     """Mark a notification as delivered."""
     db = _get_db_path(db_path)
 
@@ -244,7 +242,7 @@ def mark_delivered(notification_id: str, db_path: Optional[Path] = None) -> None
 # =============================================================================
 
 
-def notify_critical_signal(signal: dict, db_path: Optional[Path] = None) -> str:
+def notify_critical_signal(signal: dict, db_path: Path | None = None) -> str:
     """Create notification for a critical signal."""
     notification = Notification(
         id=f"sig_{signal.get('signal_id', '')}_{datetime.now().strftime('%Y%m%d%H%M')}",
@@ -260,7 +258,7 @@ def notify_critical_signal(signal: dict, db_path: Optional[Path] = None) -> str:
     return queue_notification(notification, db_path)
 
 
-def notify_escalation(signal: dict, from_severity: str, db_path: Optional[Path] = None) -> str:
+def notify_escalation(signal: dict, from_severity: str, db_path: Path | None = None) -> str:
     """Create notification for a signal escalation."""
     notification = Notification(
         id=f"esc_{signal.get('signal_id', '')}_{datetime.now().strftime('%Y%m%d%H%M')}",
@@ -282,7 +280,7 @@ def notify_score_drop(
     entity_name: str,
     old_score: float,
     new_score: float,
-    db_path: Optional[Path] = None,
+    db_path: Path | None = None,
 ) -> str:
     """Create notification for a significant score drop."""
     delta = new_score - old_score
@@ -300,7 +298,7 @@ def notify_score_drop(
     return queue_notification(notification, db_path)
 
 
-def notify_pattern_detected(pattern: dict, db_path: Optional[Path] = None) -> str:
+def notify_pattern_detected(pattern: dict, db_path: Path | None = None) -> str:
     """Create notification for a new structural pattern."""
     severity = pattern.get("severity", "informational")
     priority = (
@@ -325,7 +323,7 @@ def notify_pattern_detected(pattern: dict, db_path: Optional[Path] = None) -> st
     return queue_notification(notification, db_path)
 
 
-def notify_proposal(proposal: dict, db_path: Optional[Path] = None) -> str:
+def notify_proposal(proposal: dict, db_path: Path | None = None) -> str:
     """Create notification for a high-priority proposal."""
     urgency = proposal.get("urgency", "monitor")
     priority = (
@@ -357,7 +355,7 @@ def notify_proposal(proposal: dict, db_path: Optional[Path] = None) -> str:
 
 
 def process_intelligence_for_notifications(
-    intel_data: dict, changes: dict, db_path: Optional[Path] = None
+    intel_data: dict, changes: dict, db_path: Path | None = None
 ) -> list[str]:
     """
     Process intelligence data and changes to generate notifications.

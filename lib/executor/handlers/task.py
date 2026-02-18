@@ -185,28 +185,12 @@ class TaskHandler:
         return {"success": True, "task_id": task_id, "snoozed_until": until}
 
     def _sync_to_asana(self, task_id: str, data: dict):
-        """Sync task to Asana via CLI.
-        
-        TODO: Implement when Asana integration is needed.
-        Currently logs warning instead of crashing.
-        """
-        logger.warning(
-            "Asana sync not implemented - task %s not synced to Asana",
-            task_id,
-            extra={"task_id": task_id, "data_keys": list(data.keys())},
-        )
+        """Sync task to Asana via CLI."""
+        raise NotImplementedError("Asana sync not implemented")
 
     def _complete_in_asana(self, asana_id: str):
-        """Mark task complete in Asana.
-        
-        TODO: Implement when Asana integration is needed.
-        Currently logs warning instead of crashing.
-        """
-        logger.warning(
-            "Asana complete not implemented - task %s not marked complete in Asana",
-            asana_id,
-            extra={"asana_id": asana_id},
-        )
+        """Mark task complete in Asana."""
+        raise NotImplementedError("Asana complete not implemented")
 
     def _log_action(self, action: dict, result: dict):
         """Log action to database."""

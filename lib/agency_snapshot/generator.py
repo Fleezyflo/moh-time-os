@@ -16,8 +16,8 @@ import logging
 import os
 import sqlite3
 from datetime import date, datetime
-
 from pathlib import Path
+
 from lib import paths
 
 # Contracts module - validation gates

@@ -11,7 +11,7 @@ Tracks deltas between intelligence runs to highlight:
 
 import json
 import logging
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -141,7 +141,7 @@ def _cleanup_old_snapshots():
             logger.warning(f"Failed to delete old snapshot {old.name}: {e}")
 
 
-def load_latest_snapshot() -> Optional[IntelligenceSnapshot]:
+def load_latest_snapshot() -> IntelligenceSnapshot | None:
     """Load the most recent snapshot."""
     _ensure_snapshot_dir()
 
@@ -200,7 +200,7 @@ def create_snapshot_from_intelligence(intel_data: dict) -> IntelligenceSnapshot:
 
 
 def detect_changes(
-    current: IntelligenceSnapshot, previous: Optional[IntelligenceSnapshot] = None
+    current: IntelligenceSnapshot, previous: IntelligenceSnapshot | None = None
 ) -> ChangeReport:
     """
     Detect changes between current state and previous snapshot.

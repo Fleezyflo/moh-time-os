@@ -26,10 +26,10 @@ import httpx
 
 # Timing budgets (seconds)
 BUDGETS = {
-    "startup": 10.0,      # Max time for server to start
-    "health": 0.5,        # Max time for /api/health
-    "typical_query": 2.0, # Max time for typical query
-    "db_cycle": 1.0,      # Max time for DB read/write
+    "startup": 10.0,  # Max time for server to start
+    "health": 0.5,  # Max time for /api/health
+    "typical_query": 2.0,  # Max time for typical query
+    "db_cycle": 1.0,  # Max time for DB read/write
 }
 
 # Test port (avoid conflicts)
@@ -75,11 +75,7 @@ def wait_for_server(port: int, budget: float) -> SmokeTestResult:
         duration, response, error = timed_request(url, timeout=1.0)
         if response and response.status_code == 200:
             return SmokeTestResult(
-                "startup",
-                True,
-                time.perf_counter() - start,
-                budget,
-                "Server healthy"
+                "startup", True, time.perf_counter() - start, budget, "Server healthy"
             )
         time.sleep(0.5)
 
@@ -88,7 +84,7 @@ def wait_for_server(port: int, budget: float) -> SmokeTestResult:
         False,
         time.perf_counter() - start,
         budget,
-        f"Server did not start: {error if error else 'timeout'}"
+        f"Server did not start: {error if error else 'timeout'}",
     )
 
 
@@ -107,7 +103,7 @@ def test_health(port: int) -> SmokeTestResult:
         False,
         duration,
         BUDGETS["health"],
-        error or f"Status: {response.status_code if response else 'no response'}"
+        error or f"Status: {response.status_code if response else 'no response'}",
     )
 
 
@@ -131,7 +127,7 @@ def test_typical_query(port: int) -> SmokeTestResult:
                 duration <= BUDGETS["typical_query"],
                 duration,
                 BUDGETS["typical_query"],
-                f"{endpoint} responded"
+                f"{endpoint} responded",
             )
 
     return SmokeTestResult(
@@ -139,7 +135,7 @@ def test_typical_query(port: int) -> SmokeTestResult:
         False,
         BUDGETS["typical_query"],
         BUDGETS["typical_query"],
-        "No endpoints responded"
+        "No endpoints responded",
     )
 
 
@@ -155,15 +151,11 @@ def test_db_cycle(port: int) -> SmokeTestResult:
             duration <= BUDGETS["db_cycle"],
             duration,
             BUDGETS["db_cycle"],
-            "DB health check passed"
+            "DB health check passed",
         )
 
     return SmokeTestResult(
-        "db_cycle",
-        False,
-        duration,
-        BUDGETS["db_cycle"],
-        error or "DB cycle failed"
+        "db_cycle", False, duration, BUDGETS["db_cycle"], error or "DB cycle failed"
     )
 
 

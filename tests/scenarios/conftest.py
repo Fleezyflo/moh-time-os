@@ -26,8 +26,8 @@ def temp_db():
     conn.row_factory = sqlite3.Row
 
     # Run safety migrations to set up schema
-    from lib.safety import run_safety_migrations
     from lib.db import run_migrations
+    from lib.safety import run_safety_migrations
 
     run_safety_migrations(conn)
     run_migrations(conn)

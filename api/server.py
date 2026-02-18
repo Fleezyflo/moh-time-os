@@ -3927,6 +3927,7 @@ async def propose_project(name: str, client_id: str | None = None, type: str = "
 # NOTE: /api/emails duplicate removed (version with actionable_only/unread_only filters above is better)
 # The endpoint below was simplified but less flexible
 
+
 async def _get_email_queue_old(limit: int = 20):
     """[UNUSED] Get email queue - replaced by get_emails above."""
     emails = store.query(

@@ -5,9 +5,10 @@ Verifies endpoints return 200 and include required top-level keys.
 Uses fixture DB to avoid live DB access (determinism guard).
 """
 
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
-from pathlib import Path
 
 import lib.paths
 from tests.fixtures.fixture_db import create_fixture_db, get_fixture_db_path
@@ -39,6 +40,7 @@ def client(fixture_db_path, monkeypatch_module):
 def monkeypatch_module():
     """Module-scoped monkeypatch for fixtures that need it."""
     from _pytest.monkeypatch import MonkeyPatch
+
     mp = MonkeyPatch()
     yield mp
     mp.undo()

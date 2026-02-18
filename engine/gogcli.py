@@ -12,9 +12,7 @@ class GogResult:
     command: list[str] | None = None
 
 
-def run_gog(
-    args: list[str], account: str | None = None, timeout: int = 120
-) -> GogResult:
+def run_gog(args: list[str], account: str | None = None, timeout: int = 120) -> GogResult:
     cmd = ["gog"]
     if account:
         cmd.append(f"--account={account}")
@@ -35,12 +33,8 @@ def run_gog(
         data = json.loads(out) if out else None
         return GogResult(ok=True, data=data, command=cmd)
     except subprocess.CalledProcessError as e:
-        return GogResult(
-            ok=False, error=(e.stderr or e.stdout or str(e)).strip(), command=cmd
-        )
+        return GogResult(ok=False, error=(e.stderr or e.stdout or str(e)).strip(), command=cmd)
     except subprocess.TimeoutExpired:
         return GogResult(ok=False, error=f"timeout after {timeout}s", command=cmd)
     except json.JSONDecodeError as e:
-        return GogResult(
-            ok=False, error=f"failed to parse JSON output: {e}", command=cmd
-        )
+        return GogResult(ok=False, error=f"failed to parse JSON output: {e}", command=cmd)

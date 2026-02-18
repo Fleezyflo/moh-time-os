@@ -5,9 +5,10 @@ Tests the intelligence layer functions that back the API endpoints.
 Uses fixture DB to avoid determinism violations.
 """
 
-import pytest
 import tempfile
 from pathlib import Path
+
+import pytest
 
 from tests.fixtures.fixture_db import create_fixture_db
 
@@ -34,6 +35,7 @@ def db_path():
 # PATTERN CATALOG TESTS (No DB needed)
 # =============================================================================
 
+
 class TestPatternCatalog:
     """Pattern catalog doesn't need DB."""
 
@@ -58,6 +60,7 @@ class TestPatternCatalog:
 # =============================================================================
 # SIGNAL CATALOG TESTS (No DB needed)
 # =============================================================================
+
 
 class TestSignalCatalog:
     """Signal catalog doesn't need DB."""
@@ -84,6 +87,7 @@ class TestSignalCatalog:
 # SCORING FUNCTION TESTS
 # =============================================================================
 
+
 class TestScoringFunctions:
     """Tests for scoring functions with fixture DB."""
 
@@ -107,6 +111,7 @@ class TestScoringFunctions:
 # =============================================================================
 # SIGNAL DETECTION TESTS
 # =============================================================================
+
 
 class TestSignalDetection:
     """Tests for signal detection with fixture DB."""
@@ -135,6 +140,7 @@ class TestSignalDetection:
 # PATTERN DETECTION TESTS
 # =============================================================================
 
+
 class TestPatternDetection:
     """Tests for pattern detection with fixture DB."""
 
@@ -152,12 +158,13 @@ class TestPatternDetection:
 # PROPOSAL GENERATION TESTS
 # =============================================================================
 
+
 class TestProposalGeneration:
     """Tests for proposal generation with fixture DB."""
 
     def test_generate_proposals_returns_list(self, db_path):
         """generate_proposals should return list."""
-        from lib.intelligence import detect_all_signals, detect_all_patterns, generate_proposals
+        from lib.intelligence import detect_all_patterns, detect_all_signals, generate_proposals
 
         signals = detect_all_signals(db_path, quick=True)
         patterns = detect_all_patterns(db_path)
@@ -172,10 +179,10 @@ class TestProposalGeneration:
     def test_generate_daily_briefing_structure(self, db_path):
         """generate_daily_briefing should return complete briefing."""
         from lib.intelligence import (
-            detect_all_signals,
             detect_all_patterns,
-            generate_proposals,
+            detect_all_signals,
             generate_daily_briefing,
+            generate_proposals,
         )
 
         signals = detect_all_signals(db_path, quick=True)
@@ -194,6 +201,7 @@ class TestProposalGeneration:
 # =============================================================================
 # ENGINE FUNCTION TESTS
 # =============================================================================
+
 
 class TestEngineFunctions:
     """Tests for engine functions with fixture DB."""
@@ -223,6 +231,7 @@ class TestEngineFunctions:
 # =============================================================================
 # API RESPONSE ENVELOPE TESTS (Mock-based)
 # =============================================================================
+
 
 class TestAPIResponseEnvelope:
     """Test API response envelope structure."""

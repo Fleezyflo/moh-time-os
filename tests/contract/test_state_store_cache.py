@@ -88,6 +88,6 @@ class TestStateStoreCacheContract:
 
         source = inspect.getsource(ss)
 
-        assert (
-            "from pathlib import Path" in source
-        ), "lib/state_store.py must import Path from pathlib"
+        assert "from pathlib import Path" in source, (
+            "lib/state_store.py must import Path from pathlib"
+        )

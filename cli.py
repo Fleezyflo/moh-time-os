@@ -248,9 +248,7 @@ def cmd_classify(args):
     results = run_auto_classification()
 
     t = results["tiers"]
-    print(
-        f"  Tier suggestions: {t['suggestions']} ({t['high_confidence']} high confidence)"
-    )
+    print(f"  Tier suggestions: {t['suggestions']} ({t['high_confidence']} high confidence)")
     print(f"  Applied: {t['applied']}")
 
     p = results["project_links"]
@@ -309,19 +307,13 @@ def cmd_quality(args):
 
     print("\n### Projects")
     print(f"  Total: {q['projects']['total']}")
-    print(
-        f"  Linked to client: {q['projects']['linked']} ({q['projects']['linked_pct']}%)"
-    )
+    print(f"  Linked to client: {q['projects']['linked']} ({q['projects']['linked_pct']}%)")
 
     print("\n### Items")
     print(f"  Total: {q['items']['total']}")
     print(f"  Open: {q['items']['open']}")
-    print(
-        f"  With client: {q['items']['with_client']} ({q['items']['with_client_pct']}%)"
-    )
-    print(
-        f"  With due date: {q['items']['with_due_date']} ({q['items']['due_date_pct']}%)"
-    )
+    print(f"  With client: {q['items']['with_client']} ({q['items']['with_client_pct']}%)")
+    print(f"  With due date: {q['items']['with_due_date']} ({q['items']['due_date_pct']}%)")
 
     return 0
 
@@ -386,12 +378,8 @@ def main():
 
     # cleanup
     p = subparsers.add_parser("cleanup", help="Run maintenance cleanup")
-    p.add_argument(
-        "--dry-run", action="store_true", default=True, help="Preview only (default)"
-    )
-    p.add_argument(
-        "--apply", dest="dry_run", action="store_false", help="Actually run cleanup"
-    )
+    p.add_argument("--dry-run", action="store_true", default=True, help="Preview only (default)")
+    p.add_argument("--apply", dest="dry_run", action="store_false", help="Actually run cleanup")
 
     # quality
     subparsers.add_parser("quality", help="Data quality report")

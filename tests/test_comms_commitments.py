@@ -113,9 +113,7 @@ def test_db():
 @pytest.fixture
 def engine(test_db):
     """Create engine with test database."""
-    return CommsCommitmentsEngine(
-        db_path=test_db, mode=Mode.OPS_HEAD, horizon=Horizon.TODAY
-    )
+    return CommsCommitmentsEngine(db_path=test_db, mode=Mode.OPS_HEAD, horizon=Horizon.TODAY)
 
 
 class TestResponseStatusDerivation:
@@ -126,9 +124,7 @@ class TestResponseStatusDerivation:
         conn = sqlite3.connect(test_db)
         past = (datetime.now() - timedelta(hours=5)).isoformat()
 
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'B')"
-        )
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'B')")
         conn.execute(f"""
             INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)
             VALUES ('comm1', 'thread1', 'test@example.com', 'Test', '{datetime.now().isoformat()}', 'c1', '{past}', 'linked')
@@ -148,9 +144,7 @@ class TestResponseStatusDerivation:
         # 2 hours from now (within TODAY horizon)
         future = (datetime.now() + timedelta(hours=2)).isoformat()
 
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'B')"
-        )
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'B')")
         conn.execute(f"""
             INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)
             VALUES ('comm1', 'thread1', 'test@example.com', 'Test', '{datetime.now().isoformat()}', 'c1', '{future}', 'linked')
@@ -176,9 +170,7 @@ class TestResponseStatusDerivation:
         # 48 hours from now (beyond NOW horizon)
         future = (datetime.now() + timedelta(hours=48)).isoformat()
 
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'C')"
-        )
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'C')")
         conn.execute(f"""
             INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)
             VALUES ('comm1', 'thread1', 'test@example.com', 'Test', '{datetime.now().isoformat()}', 'c1', '{future}', 'linked')
@@ -203,9 +195,7 @@ class TestExpectedResponseByDerivation:
         conn = sqlite3.connect(test_db)
         stored_deadline = (datetime.now() + timedelta(hours=5)).isoformat()
 
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'B')"
-        )
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'B')")
         conn.execute(f"""
             INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)
             VALUES ('comm1', 'thread1', 'test@example.com', 'Test', '{datetime.now().isoformat()}', 'c1', '{stored_deadline}', 'linked')
@@ -230,9 +220,7 @@ class TestExpectedResponseByDerivation:
         received = datetime.now()
 
         # Tier A = VIP
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c1', 'VIP Client', 'A')"
-        )
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'VIP Client', 'A')")
         conn.execute(f"""
             INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, link_status)
             VALUES ('comm1', 'thread1', 'vip@example.com', 'Test', '{received.isoformat()}', 'c1', 'linked')
@@ -248,9 +236,7 @@ class TestExpectedResponseByDerivation:
         # Should be approximately 6 hours from received
         expected = datetime.fromisoformat(thread["expected_response_by"])
         delta_hours = (expected - received).total_seconds() / 3600
-        assert (
-            5.9 <= delta_hours <= 6.1
-        ), f"VIP should get ~6h deadline, got {delta_hours:.1f}h"
+        assert 5.9 <= delta_hours <= 6.1, f"VIP should get ~6h deadline, got {delta_hours:.1f}h"
 
     def test_tier_b_gets_24_hours(self, test_db):
         """Priority 5: Tier B = last_inbound + 24 hours."""
@@ -262,9 +248,7 @@ class TestExpectedResponseByDerivation:
         conn = sqlite3.connect(test_db)
         received = datetime.now()
 
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c1', 'Regular Client', 'B')"
-        )
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Regular Client', 'B')")
         conn.execute(f"""
             INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, link_status)
             VALUES ('comm1', 'thread1', 'client@example.com', 'Test', '{received.isoformat()}', 'c1', 'linked')
@@ -279,9 +263,9 @@ class TestExpectedResponseByDerivation:
 
         expected = datetime.fromisoformat(thread["expected_response_by"])
         delta_hours = (expected - received).total_seconds() / 3600
-        assert (
-            23.9 <= delta_hours <= 24.1
-        ), f"Tier B should get ~24h deadline, got {delta_hours:.1f}h"
+        assert 23.9 <= delta_hours <= 24.1, (
+            f"Tier B should get ~24h deadline, got {delta_hours:.1f}h"
+        )
 
 
 class TestCommitmentBreachClassification:
@@ -292,9 +276,7 @@ class TestCommitmentBreachClassification:
         conn = sqlite3.connect(test_db)
         past = (datetime.now() - timedelta(days=1)).isoformat()
 
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'B')"
-        )
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'B')")
         conn.execute(f"""
             INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, link_status)
             VALUES ('comm1', 'thread1', 'test@example.com', 'Test', '{datetime.now().isoformat()}', 'c1', 'linked')
@@ -317,9 +299,7 @@ class TestCommitmentBreachClassification:
         # Deadline in 4 hours (within TODAY horizon)
         soon = (datetime.now() + timedelta(hours=4)).isoformat()
 
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'B')"
-        )
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'B')")
         conn.execute(f"""
             INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, link_status)
             VALUES ('comm1', 'thread1', 'test@example.com', 'Test', '{datetime.now().isoformat()}', 'c1', 'linked')
@@ -344,15 +324,9 @@ class TestHotListOrdering:
         conn = sqlite3.connect(test_db)
         now = datetime.now()
 
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client 1', 'B')"
-        )
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c2', 'Client 2', 'B')"
-        )
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c3', 'Client 3', 'B')"
-        )
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client 1', 'B')")
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c2', 'Client 2', 'B')")
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c3', 'Client 3', 'B')")
 
         # Thread 1: OK (far future deadline)
         conn.execute(f"""
@@ -379,9 +353,7 @@ class TestHotListOrdering:
         hot_list = result["hot_list"]
 
         # Filter to just our test threads
-        test_threads = [
-            t for t in hot_list if t["thread_id"] in ("thread1", "thread2", "thread3")
-        ]
+        test_threads = [t for t in hot_list if t["thread_id"] in ("thread1", "thread2", "thread3")]
 
         # OVERDUE should be first
         assert len(test_threads) >= 2
@@ -402,9 +374,7 @@ class TestHotListCaps:
 
         # Create 15 threads
         for i in range(15):
-            conn.execute(
-                f"INSERT INTO clients (id, name, tier) VALUES ('c{i}', 'Client {i}', 'B')"
-            )
+            conn.execute(f"INSERT INTO clients (id, name, tier) VALUES ('c{i}', 'Client {i}', 'B')")
             conn.execute(f"""
                 INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)
                 VALUES ('comm{i}', 'thread{i}', 't{i}@example.com', 'Thread {i}', '{now.isoformat()}', 'c{i}', '{(now - timedelta(hours=i + 1)).isoformat()}', 'linked')
@@ -415,9 +385,7 @@ class TestHotListCaps:
 
         result = engine.generate(expanded=False)
 
-        assert (
-            len(result["hot_list"]) <= 9
-        ), f"Default cap violated: {len(result['hot_list'])} > 9"
+        assert len(result["hot_list"]) <= 9, f"Default cap violated: {len(result['hot_list'])} > 9"
 
     def test_expanded_cap_25(self, test_db, engine):
         """Expanded hot list max 25 threads."""
@@ -426,9 +394,7 @@ class TestHotListCaps:
 
         # Create 30 threads
         for i in range(30):
-            conn.execute(
-                f"INSERT INTO clients (id, name, tier) VALUES ('c{i}', 'Client {i}', 'B')"
-            )
+            conn.execute(f"INSERT INTO clients (id, name, tier) VALUES ('c{i}', 'Client {i}', 'B')")
             conn.execute(f"""
                 INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)
                 VALUES ('comm{i}', 'thread{i}', 't{i}@example.com', 'Thread {i}', '{now.isoformat()}', 'c{i}', '{(now - timedelta(hours=i + 1)).isoformat()}', 'linked')
@@ -439,9 +405,9 @@ class TestHotListCaps:
 
         result = engine.generate(expanded=True)
 
-        assert (
-            len(result["hot_list"]) <= 25
-        ), f"Expanded cap violated: {len(result['hot_list'])} > 25"
+        assert len(result["hot_list"]) <= 25, (
+            f"Expanded cap violated: {len(result['hot_list'])} > 25"
+        )
 
 
 class TestSnippetsCap:
@@ -452,9 +418,7 @@ class TestSnippetsCap:
         conn = sqlite3.connect(test_db)
         now = datetime.now()
 
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'B')"
-        )
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'B')")
 
         # Create thread with 15 messages
         for i in range(15):
@@ -471,9 +435,9 @@ class TestSnippetsCap:
 
         selected = result.get("selected_thread")
         assert selected is not None
-        assert (
-            len(selected["snippets"]) <= 8
-        ), f"Snippets cap violated: {len(selected['snippets'])} > 8"
+        assert len(selected["snippets"]) <= 8, (
+            f"Snippets cap violated: {len(selected['snippets'])} > 8"
+        )
 
 
 class TestThreadRoomStructure:
@@ -484,9 +448,7 @@ class TestThreadRoomStructure:
         conn = sqlite3.connect(test_db)
         now = datetime.now()
 
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'B')"
-        )
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'B')")
         conn.execute(f"""
             INSERT INTO communications (id, thread_id, from_email, subject, snippet, received_at, client_id, response_deadline, link_status)
             VALUES ('comm1', 'thread1', 'test@example.com', 'Test', 'Test snippet', '{now.isoformat()}', 'c1', '{(now - timedelta(hours=2)).isoformat()}', 'linked')
@@ -566,9 +528,7 @@ class TestUnlinkedComms:
         result = engine.generate()
 
         # Check for fix action in global actions
-        fix_actions = [
-            a for a in result["global_actions"] if "unlinked" in a["label"].lower()
-        ]
+        fix_actions = [a for a in result["global_actions"] if "unlinked" in a["label"].lower()]
 
         # May or may not have fix actions depending on eligibility
         # But if unlinked thread is selected, it should have fix actions
@@ -580,8 +540,7 @@ class TestUnlinkedComms:
             fix_in_thread = [
                 a
                 for a in thread_actions
-                if "unlinked" in a["label"].lower()
-                or "resolution" in a["label"].lower()
+                if "unlinked" in a["label"].lower() or "resolution" in a["label"].lower()
             ]
             assert len(fix_in_thread) > 0, "Unlinked thread should have fix action"
 
@@ -594,9 +553,7 @@ class TestActionIdempotency:
         conn = sqlite3.connect(test_db)
         now = datetime.now()
 
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'B')"
-        )
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'B')")
         conn.execute(f"""
             INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)
             VALUES ('comm1', 'thread1', 'test@example.com', 'Test', '{now.isoformat()}', 'c1', '{(now - timedelta(hours=5)).isoformat()}', 'linked')
@@ -607,9 +564,7 @@ class TestActionIdempotency:
         result = engine.generate()
 
         for action in result["global_actions"]:
-            assert (
-                "idempotency_key" in action
-            ), f"Action missing idempotency_key: {action}"
+            assert "idempotency_key" in action, f"Action missing idempotency_key: {action}"
             assert action["idempotency_key"], "idempotency_key should not be empty"
 
     def test_idempotency_keys_unique(self, test_db, engine):
@@ -619,9 +574,7 @@ class TestActionIdempotency:
 
         # Create multiple threads
         for i in range(5):
-            conn.execute(
-                f"INSERT INTO clients (id, name, tier) VALUES ('c{i}', 'Client {i}', 'B')"
-            )
+            conn.execute(f"INSERT INTO clients (id, name, tier) VALUES ('c{i}', 'Client {i}', 'B')")
             conn.execute(f"""
                 INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)
                 VALUES ('comm{i}', 'thread{i}', 't{i}@example.com', 'Thread {i}', '{now.isoformat()}', 'c{i}', '{(now - timedelta(hours=i + 1)).isoformat()}', 'linked')
@@ -649,9 +602,7 @@ class TestVIPClassification:
         conn = sqlite3.connect(test_db)
         now = datetime.now()
 
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c1', 'VIP Client', 'A')"
-        )
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'VIP Client', 'A')")
         conn.execute(f"""
             INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, link_status)
             VALUES ('comm1', 'thread1', 'vip@example.com', 'Test', '{now.isoformat()}', 'c1', 'linked')
@@ -675,9 +626,7 @@ class TestVIPClassification:
         conn = sqlite3.connect(test_db)
         now = datetime.now()
 
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'C')"
-        )
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'C')")
         conn.execute(f"""
             INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, link_status, is_starred)
             VALUES ('comm1', 'thread1', 'test@example.com', 'Test', '{now.isoformat()}', 'c1', 'linked', 1)
@@ -700,9 +649,7 @@ class TestBaseScoreComputation:
         conn = sqlite3.connect(test_db)
         now = datetime.now()
 
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'B')"
-        )
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'B')")
         conn.execute(f"""
             INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)
             VALUES ('comm1', 'thread1', 'test@example.com', 'Overdue', '{now.isoformat()}', 'c1', '{(now - timedelta(hours=24)).isoformat()}', 'linked')

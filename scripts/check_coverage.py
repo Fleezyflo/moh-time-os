@@ -31,12 +31,15 @@ GLOBAL_MINIMUM = 40
 def run_coverage(html: bool = False) -> dict:
     """Run pytest with coverage and return report."""
     cmd = [
-        sys.executable, "-m", "pytest",
+        sys.executable,
+        "-m",
+        "pytest",
         "tests/",
         "--cov=lib",
         "--cov=api",
         "--cov-report=json:coverage.json",
-        "-v", "--tb=short",
+        "-v",
+        "--tb=short",
     ]
 
     if html:
@@ -80,9 +83,7 @@ def check_thresholds(coverage_data: dict) -> tuple[bool, list[str]]:
             if mc["total"] > 0:
                 pct = (mc["covered"] / mc["total"]) * 100
                 if pct < threshold:
-                    violations.append(
-                        f"{module}: {pct:.1f}% < {threshold}% threshold"
-                    )
+                    violations.append(f"{module}: {pct:.1f}% < {threshold}% threshold")
 
     # Check global coverage
     totals = coverage_data.get("totals", {})

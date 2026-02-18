@@ -49,7 +49,9 @@ def run_mypy(targets: list[str]) -> list[str]:
         return []
 
     cmd = [
-        sys.executable, "-m", "mypy",
+        sys.executable,
+        "-m",
+        "mypy",
         *targets,
         *MYPY_FLAGS,
     ]

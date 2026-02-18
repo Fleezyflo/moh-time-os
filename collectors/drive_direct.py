@@ -23,9 +23,7 @@ from googleapiclient.discovery import build
 
 from lib import paths
 
-SA_FILE = (
-    Path.home() / "Library/Application Support/gogcli/sa-bW9saGFtQGhybW55LmNv.json"
-)
+SA_FILE = Path.home() / "Library/Application Support/gogcli/sa-bW9saGFtQGhybW55LmNv.json"
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 DEFAULT_USER = "molham@hrmny.co"
 
@@ -34,9 +32,7 @@ OUT_DIR = paths.out_dir()
 
 def get_drive_service(user: str = DEFAULT_USER):
     """Get Drive API service using service account."""
-    creds = service_account.Credentials.from_service_account_file(
-        str(SA_FILE), scopes=SCOPES
-    )
+    creds = service_account.Credentials.from_service_account_file(str(SA_FILE), scopes=SCOPES)
     creds = creds.with_subject(user)
     return build("drive", "v3", credentials=creds)
 
@@ -139,12 +135,9 @@ def collect_drive_full(days: int = 60, user: str = DEFAULT_USER) -> dict:
                     "modifiedTime": f.get("modifiedTime"),
                     "createdTime": f.get("createdTime"),
                     "owners": [
-                        o.get("emailAddress", o.get("displayName", ""))
-                        for o in f.get("owners", [])
+                        o.get("emailAddress", o.get("displayName", "")) for o in f.get("owners", [])
                     ],
-                    "lastModifyingUser": f.get("lastModifyingUser", {}).get(
-                        "emailAddress", ""
-                    ),
+                    "lastModifyingUser": f.get("lastModifyingUser", {}).get("emailAddress", ""),
                     "webViewLink": f.get("webViewLink"),
                     "shared": f.get("shared", False),
                     "size": f.get("size", 0),

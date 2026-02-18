@@ -22,9 +22,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger(__name__)
 
 
-def derive_snippet(
-    body_text: str | None, snippet_raw: str | None, subject: str | None
-) -> str:
+def derive_snippet(body_text: str | None, snippet_raw: str | None, subject: str | None) -> str:
     """Derive best snippet from available data."""
     if body_text and len(body_text.strip()) >= 20:
         clean_body = re.sub(r"<[^>]*>", "", body_text, flags=re.DOTALL)
@@ -94,9 +92,7 @@ def backfill_inbox_items(
         comm = comm_cursor.fetchone()
 
         if not comm:
-            logger.warning(
-                f"No communication found for {inbox_id} (signal_id={signal_id})"
-            )
+            logger.warning(f"No communication found for {inbox_id} (signal_id={signal_id})")
             stats["skipped"] += 1
             continue
 
@@ -128,18 +124,11 @@ def backfill_inbox_items(
         # Update fields (only if missing)
         evidence["payload"]["sender"] = evidence["payload"].get("sender") or sender
         evidence["payload"]["subject"] = evidence["payload"].get("subject") or subject
-        evidence["payload"]["snippet"] = (
-            evidence["payload"].get("snippet") or derived_snippet
-        )
-        evidence["payload"]["thread_id"] = (
-            evidence["payload"].get("thread_id") or thread_id
-        )
-        evidence["payload"]["received_at"] = (
-            evidence["payload"].get("received_at") or received_at
-        )
+        evidence["payload"]["snippet"] = evidence["payload"].get("snippet") or derived_snippet
+        evidence["payload"]["thread_id"] = evidence["payload"].get("thread_id") or thread_id
+        evidence["payload"]["received_at"] = evidence["payload"].get("received_at") or received_at
         evidence["payload"]["flagged_reason"] = (
-            evidence["payload"].get("flagged_reason")
-            or f"Priority {priority} communication"
+            evidence["payload"].get("flagged_reason") or f"Priority {priority} communication"
         )
         evidence["url"] = evidence.get("url") or build_url(source, source_id)
 
@@ -168,9 +157,7 @@ def backfill_inbox_items(
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description="Backfill inbox evidence payload fields"
-    )
+    parser = argparse.ArgumentParser(description="Backfill inbox evidence payload fields")
     parser.add_argument("--dry-run", action="store_true", help="Don't write changes")
     parser.add_argument("--limit", type=int, help="Limit number of items to process")
     args = parser.parse_args()

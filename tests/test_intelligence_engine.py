@@ -8,27 +8,28 @@ Covers:
 - Data validation
 """
 
-import pytest
 from pathlib import Path
 
+import pytest
+
 from lib.intelligence.engine import (
-    generate_intelligence_snapshot,
-    get_client_intelligence,
-    get_person_intelligence,
-    get_portfolio_intelligence,
-    get_critical_items,
-    _run_scoring_stage,
-    _run_signal_stage,
-    _run_pattern_stage,
-    _run_proposal_stage,
     _compute_data_completeness,
     _count_entities,
+    _run_pattern_stage,
+    _run_proposal_stage,
+    _run_scoring_stage,
+    _run_signal_stage,
+    generate_intelligence_snapshot,
+    get_client_intelligence,
+    get_critical_items,
+    get_person_intelligence,
+    get_portfolio_intelligence,
 )
-
 
 # =============================================================================
 # PIPELINE TESTS
 # =============================================================================
+
 
 class TestIntelligencePipeline:
     """Tests for the full intelligence pipeline."""
@@ -37,7 +38,7 @@ class TestIntelligencePipeline:
     def db_path(self, tmp_path):
         """Create a fixture database for testing."""
         from tests.fixtures.fixture_db import create_fixture_db
-        
+
         db_file = tmp_path / "test_pipeline.db"
         conn = create_fixture_db(db_file)
         conn.close()
@@ -96,6 +97,7 @@ class TestIntelligencePipeline:
 # STAGE TESTS
 # =============================================================================
 
+
 class TestPipelineStages:
     """Tests for individual pipeline stages."""
 
@@ -103,7 +105,7 @@ class TestPipelineStages:
     def db_path(self, tmp_path):
         """Create a fixture database for testing."""
         from tests.fixtures.fixture_db import create_fixture_db
-        
+
         db_file = tmp_path / "test_pipeline.db"
         conn = create_fixture_db(db_file)
         conn.close()
@@ -114,8 +116,8 @@ class TestPipelineStages:
         result = _run_scoring_stage(db_path)
 
         # Result is StageResult with success, data, errors
-        assert hasattr(result, 'success')
-        assert hasattr(result, 'data')
+        assert hasattr(result, "success")
+        assert hasattr(result, "data")
         assert isinstance(result.data, dict)
         assert "clients" in result.data
         assert "projects" in result.data
@@ -126,8 +128,8 @@ class TestPipelineStages:
         """Signal stage should return StageResult with data dict."""
         result = _run_signal_stage(db_path)
 
-        assert hasattr(result, 'success')
-        assert hasattr(result, 'data')
+        assert hasattr(result, "success")
+        assert hasattr(result, "data")
         assert isinstance(result.data, dict)
         assert "total_active" in result.data
         assert "by_severity" in result.data
@@ -136,8 +138,8 @@ class TestPipelineStages:
         """Pattern stage should return StageResult with data dict."""
         result = _run_pattern_stage(db_path)
 
-        assert hasattr(result, 'success')
-        assert hasattr(result, 'data')
+        assert hasattr(result, "success")
+        assert hasattr(result, "data")
         assert isinstance(result.data, dict)
         assert "total_detected" in result.data
         assert "structural" in result.data
@@ -148,6 +150,7 @@ class TestPipelineStages:
 # ERROR ISOLATION TESTS
 # =============================================================================
 
+
 class TestErrorIsolation:
     """Tests for error isolation in the pipeline."""
 
@@ -156,30 +159,31 @@ class TestErrorIsolation:
         result = _run_scoring_stage(Path("/nonexistent/path.db"))
 
         # Should return StageResult, possibly with errors
-        assert hasattr(result, 'success')
-        assert hasattr(result, 'data')
-        assert hasattr(result, 'errors')
+        assert hasattr(result, "success")
+        assert hasattr(result, "data")
+        assert hasattr(result, "errors")
 
     def test_signal_stage_doesnt_crash_on_missing_db(self):
         """Signal stage should return StageResult with error, not crash."""
         result = _run_signal_stage(Path("/nonexistent/path.db"))
 
-        assert hasattr(result, 'success')
-        assert hasattr(result, 'data')
-        assert hasattr(result, 'errors')
+        assert hasattr(result, "success")
+        assert hasattr(result, "data")
+        assert hasattr(result, "errors")
 
     def test_pattern_stage_doesnt_crash_on_missing_db(self):
         """Pattern stage should return StageResult with error, not crash."""
         result = _run_pattern_stage(Path("/nonexistent/path.db"))
 
-        assert hasattr(result, 'success')
-        assert hasattr(result, 'data')
-        assert hasattr(result, 'errors')
+        assert hasattr(result, "success")
+        assert hasattr(result, "data")
+        assert hasattr(result, "errors")
 
 
 # =============================================================================
 # TARGETED INTELLIGENCE TESTS
 # =============================================================================
+
 
 class TestTargetedIntelligence:
     """Tests for targeted intelligence functions."""
@@ -188,7 +192,7 @@ class TestTargetedIntelligence:
     def db_path(self, tmp_path):
         """Create a fixture database for testing."""
         from tests.fixtures.fixture_db import create_fixture_db
-        
+
         db_file = tmp_path / "test_targeted.db"
         conn = create_fixture_db(db_file)
         conn.close()
@@ -197,6 +201,7 @@ class TestTargetedIntelligence:
     def test_client_intelligence_structure(self, db_path):
         """get_client_intelligence should return complete structure."""
         from lib.query_engine import QueryEngine
+
         engine = QueryEngine(db_path)
         clients = engine.client_portfolio_overview()
 
@@ -214,6 +219,7 @@ class TestTargetedIntelligence:
     def test_person_intelligence_structure(self, db_path):
         """get_person_intelligence should return complete structure."""
         from lib.query_engine import QueryEngine
+
         engine = QueryEngine(db_path)
         people = engine.resource_load_distribution()
 
@@ -256,6 +262,7 @@ class TestTargetedIntelligence:
 # DATA VALIDATION TESTS
 # =============================================================================
 
+
 class TestDataValidation:
     """Tests for data integrity and validation."""
 
@@ -263,7 +270,7 @@ class TestDataValidation:
     def db_path(self, tmp_path):
         """Create a fixture database for testing."""
         from tests.fixtures.fixture_db import create_fixture_db
-        
+
         db_file = tmp_path / "test_validation.db"
         conn = create_fixture_db(db_file)
         conn.close()
@@ -302,6 +309,7 @@ class TestDataValidation:
 # HELPER FUNCTION TESTS
 # =============================================================================
 
+
 class TestHelperFunctions:
     """Tests for engine helper functions."""
 
@@ -337,23 +345,24 @@ class TestHelperFunctions:
 # PUBLIC API TESTS
 # =============================================================================
 
+
 class TestPublicAPI:
     """Tests for the public API via __init__.py."""
 
     def test_imports_work(self):
         """All public API imports should work."""
         from lib.intelligence import (
+            detect_all_patterns,
+            detect_all_signals,
+            generate_daily_briefing,
             generate_intelligence_snapshot,
+            generate_proposals,
             get_client_intelligence,
+            get_critical_items,
             get_person_intelligence,
             get_portfolio_intelligence,
-            get_critical_items,
-            score_client,
-            detect_all_signals,
-            detect_all_patterns,
-            generate_proposals,
             rank_proposals,
-            generate_daily_briefing,
+            score_client,
         )
 
         # All should be callable

@@ -16,15 +16,15 @@ from pathlib import Path
 from typing import Optional
 
 from lib.intelligence.scoring import (
-    EntityType,
-    ScoringDimension,
     CLIENT_DIMENSIONS,
-    PROJECT_DIMENSIONS,
     PERSON_DIMENSIONS,
     PORTFOLIO_DIMENSIONS,
+    PROJECT_DIMENSIONS,
+    EntityType,
     NormMethod,
-    score_dimension,
+    ScoringDimension,
     classify_score,
+    score_dimension,
 )
 from lib.query_engine import QueryEngine
 
@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 # =============================================================================
 
 
-def score_client(client_id: str, db_path: Optional[Path] = None) -> dict:
+def score_client(client_id: str, db_path: Path | None = None) -> dict:
     """
     Compute full scorecard for a single client.
 
@@ -80,7 +80,7 @@ def score_client(client_id: str, db_path: Optional[Path] = None) -> dict:
     )
 
 
-def score_all_clients(db_path: Optional[Path] = None) -> list[dict]:
+def score_all_clients(db_path: Path | None = None) -> list[dict]:
     """
     Score every client efficiently.
 
@@ -213,7 +213,7 @@ def _score_client_from_metrics(
 # =============================================================================
 
 
-def score_project(project_id: str, db_path: Optional[Path] = None) -> dict:
+def score_project(project_id: str, db_path: Path | None = None) -> dict:
     """Compute full scorecard for a single project."""
     engine = QueryEngine(db_path) if db_path else QueryEngine()
 
@@ -225,7 +225,7 @@ def score_project(project_id: str, db_path: Optional[Path] = None) -> dict:
     return _score_project_from_data(project_data)
 
 
-def score_all_projects(db_path: Optional[Path] = None) -> list[dict]:
+def score_all_projects(db_path: Path | None = None) -> list[dict]:
     """
     Score every project efficiently.
 
@@ -279,7 +279,7 @@ def _score_project_from_data(project_data: dict) -> dict:
 # =============================================================================
 
 
-def score_person(person_id: str, db_path: Optional[Path] = None) -> dict:
+def score_person(person_id: str, db_path: Path | None = None) -> dict:
     """Compute full scorecard for a single person."""
     engine = QueryEngine(db_path) if db_path else QueryEngine()
 
@@ -297,7 +297,7 @@ def score_person(person_id: str, db_path: Optional[Path] = None) -> dict:
     return _score_person_from_data(person_data, all_dependency_scores)
 
 
-def score_all_persons(db_path: Optional[Path] = None) -> list[dict]:
+def score_all_persons(db_path: Path | None = None) -> list[dict]:
     """
     Score every person efficiently.
 
@@ -372,7 +372,7 @@ def _score_person_from_data(person_data: dict, all_dependency_scores: list[float
 # =============================================================================
 
 
-def score_portfolio(db_path: Optional[Path] = None) -> dict:
+def score_portfolio(db_path: Path | None = None) -> dict:
     """
     Compute full scorecard for the entire portfolio.
 
@@ -490,7 +490,7 @@ def _empty_scorecard(entity_type: EntityType, entity_id: str, entity_name: str) 
 
 
 def get_entities_by_classification(
-    entity_type: EntityType, classification: str, db_path: Optional[Path] = None
+    entity_type: EntityType, classification: str, db_path: Path | None = None
 ) -> list[dict]:
     """Get all entities of a type matching a classification."""
     if entity_type == EntityType.CLIENT:
@@ -510,7 +510,7 @@ def get_entities_by_classification(
     return [s for s in all_scores if s.get("composite_classification") == classification]
 
 
-def get_score_distribution(entity_type: EntityType, db_path: Optional[Path] = None) -> dict:
+def get_score_distribution(entity_type: EntityType, db_path: Path | None = None) -> dict:
     """Get distribution statistics for an entity type."""
     if entity_type == EntityType.CLIENT:
         all_scores = score_all_clients(db_path)
@@ -558,10 +558,11 @@ def get_score_distribution(entity_type: EntityType, db_path: Optional[Path] = No
 
 import json
 import sqlite3
+
 from lib import paths
 
 
-def record_score(scorecard: dict, db_path: Optional[Path] = None) -> bool:
+def record_score(scorecard: dict, db_path: Path | None = None) -> bool:
     """
     Record a scorecard to history for trend analysis.
 
@@ -612,7 +613,7 @@ def record_score(scorecard: dict, db_path: Optional[Path] = None) -> bool:
         return False
 
 
-def record_all_scores(db_path: Optional[Path] = None) -> dict:
+def record_all_scores(db_path: Path | None = None) -> dict:
     """
     Record scores for all entities.
 
@@ -663,7 +664,7 @@ def get_score_trend(
     entity_type: str,
     entity_id: str,
     days: int = 30,
-    db_path: Optional[Path] = None,
+    db_path: Path | None = None,
 ) -> dict:
     """
     Get score trend for an entity over time.
@@ -772,7 +773,7 @@ def get_score_trend(
         }
 
 
-def get_score_history_summary(db_path: Optional[Path] = None) -> dict:
+def get_score_history_summary(db_path: Path | None = None) -> dict:
     """
     Get summary of score history data.
 

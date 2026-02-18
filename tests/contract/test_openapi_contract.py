@@ -68,8 +68,9 @@ class TestResponseModels:
         proposals_path = paths.get("/api/control-room/proposals", {})
 
         assert "get" in proposals_path, "Proposals endpoint missing GET method"
-        assert "200" in proposals_path["get"].get("responses", {}), \
+        assert "200" in proposals_path["get"].get("responses", {}), (
             "Proposals endpoint missing 200 response"
+        )
 
 
 class TestSchemaStrictness:
@@ -108,9 +109,9 @@ class TestSchemaStrictness:
 
                         # Flag if schema is just {} or {type: object} with no properties
                         if schema == {} or (
-                            schema.get("type") == "object" and
-                            not schema.get("properties") and
-                            not schema.get("$ref")
+                            schema.get("type") == "object"
+                            and not schema.get("properties")
+                            and not schema.get("$ref")
                         ):
                             any_type_endpoints.append(f"{method.upper()} {path}")
 
@@ -137,8 +138,9 @@ class TestEndpointCount:
         min_expected = 100
         max_expected = 250
 
-        assert min_expected <= count <= max_expected, \
+        assert min_expected <= count <= max_expected, (
             f"Endpoint count {count} outside expected range [{min_expected}, {max_expected}]"
+        )
 
 
 class TestUiUsedEndpoints:
@@ -169,8 +171,7 @@ class TestUiUsedEndpoints:
 
         for endpoint in self.UI_USED_ENDPOINTS:
             if endpoint in paths:
-                assert "get" in paths[endpoint], \
-                    f"UI-used endpoint {endpoint} missing GET method"
+                assert "get" in paths[endpoint], f"UI-used endpoint {endpoint} missing GET method"
 
     def test_health_has_required_fields(self, openapi_schema):
         """Health endpoint response must have required fields."""
