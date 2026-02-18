@@ -33,7 +33,7 @@ from lib.ui_spec_v21.time_utils import now_iso
 
 # Import safety modules
 try:
-    from lib.safety import WriteContext, generate_request_id, get_git_sha
+    from lib.safety import WriteContext, generate_request_id
 
     SAFETY_ENABLED = True
 except ImportError:
