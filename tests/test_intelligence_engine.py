@@ -214,10 +214,13 @@ class TestTargetedIntelligence:
         assert "structural_patterns" in intel
         assert "top_proposals" in intel
 
-    def test_critical_items_returns_list(self, db_path):
-        """get_critical_items should return list."""
-        items = get_critical_items(db_path)
+    def test_critical_items_returns_dict_with_items(self, db_path):
+        """get_critical_items should return dict with items list."""
+        result = get_critical_items(db_path)
 
+        assert isinstance(result, dict)
+        assert "items" in result
+        items = result["items"]
         assert isinstance(items, list)
 
         # Items should have expected structure
