@@ -9,7 +9,10 @@ Handles:
 """
 
 import json
+import logging
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 
 class DelegationHandler:
@@ -57,6 +60,7 @@ class DelegationHandler:
             self._log_action(action, result)
             return result
         except Exception as e:
+            logger.error(f"Delegation action failed: {e}", exc_info=True)
             return {"success": False, "error": str(e)}
 
     def _delegate_task(self, action: dict) -> dict:

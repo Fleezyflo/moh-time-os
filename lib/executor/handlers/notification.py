@@ -8,7 +8,10 @@ Handles:
 """
 
 import json
+import logging
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 
 class NotificationHandler:
@@ -50,6 +53,7 @@ class NotificationHandler:
             self._log_action(action, result)
             return result
         except Exception as e:
+            logger.error(f"Notification action failed: {e}", exc_info=True)
             return {"success": False, "error": str(e)}
 
     def _create_notification(self, action: dict) -> dict:

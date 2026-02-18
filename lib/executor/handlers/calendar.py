@@ -3,7 +3,10 @@ Calendar Handler - Executes calendar-related actions.
 """
 
 import json
+import logging
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 
 class CalendarHandler:
@@ -31,6 +34,7 @@ class CalendarHandler:
         try:
             return handler(action)
         except Exception as e:
+            logger.error(f"Calendar action failed: {e}", exc_info=True)
             return {"success": False, "error": str(e)}
 
     def _create_event(self, action: dict) -> dict:

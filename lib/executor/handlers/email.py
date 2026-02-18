@@ -3,7 +3,10 @@ Email Handler - Executes email-related actions.
 """
 
 import json
+import logging
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 
 class EmailHandler:
@@ -30,6 +33,7 @@ class EmailHandler:
         try:
             return handler(action)
         except Exception as e:
+            logger.error(f"Email action failed: {e}", exc_info=True)
             return {"success": False, "error": str(e)}
 
     def _create_draft(self, action: dict) -> dict:

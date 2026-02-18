@@ -9,7 +9,10 @@ Handles:
 """
 
 import json
+import logging
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 
 class TaskHandler:
@@ -56,6 +59,7 @@ class TaskHandler:
 
             return result
         except Exception as e:
+            logger.error(f"Task action failed: {e}", exc_info=True)
             return {"success": False, "error": str(e)}
 
     def _create_task(self, action: dict) -> dict:
@@ -116,9 +120,14 @@ class TaskHandler:
             {"status": "completed", "updated_at": datetime.now().isoformat()},
         )
 
-        # Sync to external system
+        # Sync to external system (only if Asana sync is enabled)
         task = self.store.get("tasks", task_id)
-        if task and task.get("source") == "asana" and task.get("source_id"):
+        if (
+            task
+            and task.get("source") == "asana"
+            and task.get("source_id")
+            and self.config.get("asana_enabled")
+        ):
             self._complete_in_asana(task["source_id"])
 
         return {"success": True, "task_id": task_id}
