@@ -40,3 +40,4 @@ export {
   NoActiveSignals,
 } from './EmptyState';
 export { SuspenseWrapper, PageSuspense } from './SuspenseWrapper';
+export { DegradedModeBanner } from './DegradedModeBanner';

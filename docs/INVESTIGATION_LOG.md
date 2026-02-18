@@ -144,7 +144,7 @@ FastAPI uses the LAST definition, silently ignoring earlier ones.
 | lib/integrations/ | ✅ | 0 | 0 |
 | api/ | ✅ | 6 | 6 |
 | tests/ | ✅ | 1 | 1 |
-| time-os-ui/ | ✅ | 1 | 0 |
+| time-os-ui/ | ✅ | 1 | 1 |
 | scripts/ | ✅ | 3 | 3 |
 
 ---
@@ -152,8 +152,7 @@ FastAPI uses the LAST definition, silently ignoring earlier ones.
 ## Summary
 
 **Total Issues Found:** 34
-**Total Issues Fixed:** 33
-**Documented (kept):** 1
+**Total Issues Fixed:** 34
 **Remaining:** 0
 
 ### Issue #6: Unguarded NotImplementedError call path
@@ -195,11 +194,15 @@ FastAPI uses the LAST definition, silently ignoring earlier ones.
 **Location:** `time-os-ui/src/components/DegradedModeBanner.tsx`
 **Type:** Dead Code (unused feature)
 **Severity:** Low (not a bug, just unused)
-**Status:** 📝 DOCUMENTED (keep for future)
+**Status:** ✅ FIXED
 
 **Problem:** `DegradedModeBanner` component and its supporting `lib/offline.ts` module were built but never integrated into the app layout.
 
-**Decision:** Keep for future integration - this is a useful feature for offline/degraded mode UX.
+**Fix:**
+- Exported `DegradedModeBanner` from `components/index.ts`
+- Added to `main.tsx` above the router
+- Initialized `initOfflineListeners()` on app load
+- Now shows banner when offline or requests fail
 
 ---
 
