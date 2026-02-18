@@ -34,11 +34,14 @@ class TestIntelligencePipeline:
     """Tests for the full intelligence pipeline."""
 
     @pytest.fixture
-    def db_path(self):
-        path = Path(__file__).parent.parent / "data" / "moh_time_os.db"
-        if not path.exists():
-            pytest.skip("Live database not available")
-        return path
+    def db_path(self, tmp_path):
+        """Create a fixture database for testing."""
+        from tests.fixtures.fixture_db import create_fixture_db
+        
+        db_file = tmp_path / "test_pipeline.db"
+        conn = create_fixture_db(db_file)
+        conn.close()
+        return db_file
 
     def test_snapshot_has_required_keys(self, db_path):
         """Snapshot should contain all top-level keys."""
@@ -97,38 +100,48 @@ class TestPipelineStages:
     """Tests for individual pipeline stages."""
 
     @pytest.fixture
-    def db_path(self):
-        path = Path(__file__).parent.parent / "data" / "moh_time_os.db"
-        if not path.exists():
-            pytest.skip("Live database not available")
-        return path
+    def db_path(self, tmp_path):
+        """Create a fixture database for testing."""
+        from tests.fixtures.fixture_db import create_fixture_db
+        
+        db_file = tmp_path / "test_pipeline.db"
+        conn = create_fixture_db(db_file)
+        conn.close()
+        return db_file
 
-    def test_scoring_stage_returns_dict(self, db_path):
-        """Scoring stage should return dict with entity types."""
+    def test_scoring_stage_returns_stage_result(self, db_path):
+        """Scoring stage should return StageResult with data dict."""
         result = _run_scoring_stage(db_path)
 
-        assert isinstance(result, dict)
-        assert "clients" in result
-        assert "projects" in result
-        assert "persons" in result
-        assert "portfolio" in result
+        # Result is StageResult with success, data, errors
+        assert hasattr(result, 'success')
+        assert hasattr(result, 'data')
+        assert isinstance(result.data, dict)
+        assert "clients" in result.data
+        assert "projects" in result.data
+        assert "persons" in result.data
+        assert "portfolio" in result.data
 
-    def test_signal_stage_returns_dict(self, db_path):
-        """Signal stage should return structured dict."""
+    def test_signal_stage_returns_stage_result(self, db_path):
+        """Signal stage should return StageResult with data dict."""
         result = _run_signal_stage(db_path)
 
-        assert isinstance(result, dict)
-        assert "total_active" in result
-        assert "by_severity" in result
+        assert hasattr(result, 'success')
+        assert hasattr(result, 'data')
+        assert isinstance(result.data, dict)
+        assert "total_active" in result.data
+        assert "by_severity" in result.data
 
-    def test_pattern_stage_returns_dict(self, db_path):
-        """Pattern stage should return structured dict."""
+    def test_pattern_stage_returns_stage_result(self, db_path):
+        """Pattern stage should return StageResult with data dict."""
         result = _run_pattern_stage(db_path)
 
-        assert isinstance(result, dict)
-        assert "total_detected" in result
-        assert "structural" in result
-        assert "operational" in result
+        assert hasattr(result, 'success')
+        assert hasattr(result, 'data')
+        assert isinstance(result.data, dict)
+        assert "total_detected" in result.data
+        assert "structural" in result.data
+        assert "operational" in result.data
 
 
 # =============================================================================
@@ -139,23 +152,29 @@ class TestErrorIsolation:
     """Tests for error isolation in the pipeline."""
 
     def test_scoring_stage_doesnt_crash_on_missing_db(self):
-        """Scoring should return error dict, not crash."""
+        """Scoring should return StageResult with error, not crash."""
         result = _run_scoring_stage(Path("/nonexistent/path.db"))
 
-        # Should return dict with error indicators, not raise
-        assert isinstance(result, dict)
+        # Should return StageResult, possibly with errors
+        assert hasattr(result, 'success')
+        assert hasattr(result, 'data')
+        assert hasattr(result, 'errors')
 
     def test_signal_stage_doesnt_crash_on_missing_db(self):
-        """Signal stage should return error dict, not crash."""
+        """Signal stage should return StageResult with error, not crash."""
         result = _run_signal_stage(Path("/nonexistent/path.db"))
 
-        assert isinstance(result, dict)
+        assert hasattr(result, 'success')
+        assert hasattr(result, 'data')
+        assert hasattr(result, 'errors')
 
     def test_pattern_stage_doesnt_crash_on_missing_db(self):
-        """Pattern stage should return error dict, not crash."""
+        """Pattern stage should return StageResult with error, not crash."""
         result = _run_pattern_stage(Path("/nonexistent/path.db"))
 
-        assert isinstance(result, dict)
+        assert hasattr(result, 'success')
+        assert hasattr(result, 'data')
+        assert hasattr(result, 'errors')
 
 
 # =============================================================================
@@ -166,11 +185,14 @@ class TestTargetedIntelligence:
     """Tests for targeted intelligence functions."""
 
     @pytest.fixture
-    def db_path(self):
-        path = Path(__file__).parent.parent / "data" / "moh_time_os.db"
-        if not path.exists():
-            pytest.skip("Live database not available")
-        return path
+    def db_path(self, tmp_path):
+        """Create a fixture database for testing."""
+        from tests.fixtures.fixture_db import create_fixture_db
+        
+        db_file = tmp_path / "test_targeted.db"
+        conn = create_fixture_db(db_file)
+        conn.close()
+        return db_file
 
     def test_client_intelligence_structure(self, db_path):
         """get_client_intelligence should return complete structure."""
@@ -238,11 +260,14 @@ class TestDataValidation:
     """Tests for data integrity and validation."""
 
     @pytest.fixture
-    def db_path(self):
-        path = Path(__file__).parent.parent / "data" / "moh_time_os.db"
-        if not path.exists():
-            pytest.skip("Live database not available")
-        return path
+    def db_path(self, tmp_path):
+        """Create a fixture database for testing."""
+        from tests.fixtures.fixture_db import create_fixture_db
+        
+        db_file = tmp_path / "test_validation.db"
+        conn = create_fixture_db(db_file)
+        conn.close()
+        return db_file
 
     def test_proposals_are_ranked(self, db_path):
         """Proposals in snapshot should be sorted by priority."""
