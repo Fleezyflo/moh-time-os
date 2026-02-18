@@ -2,11 +2,14 @@
 Utility functions for safety module.
 """
 
+import logging
 import os
 import shutil
 import subprocess
 import uuid
 from datetime import UTC, datetime
+
+logger = logging.getLogger(__name__)
 
 
 def get_git_sha() -> str:
@@ -29,8 +32,8 @@ def get_git_sha() -> str:
         )
         if result.returncode == 0:
             return result.stdout.strip()
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"Could not get git SHA: {e}")
     return "unknown"
 
 

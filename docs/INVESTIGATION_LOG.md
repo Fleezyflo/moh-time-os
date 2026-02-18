@@ -124,25 +124,35 @@ FastAPI uses the LAST definition, silently ignoring earlier ones.
 | Area | Status | Issues | Fixed |
 |------|--------|--------|-------|
 | lib/collectors/ | ✅ | 1 | 1 |
-| lib/intelligence/ | 🔄 | 4 | 4 |
-| lib/executor/ | ✅ DONE | 6 | 6 |
-| lib/analyzers/ | ⬜ | - | - |
-| lib/v4/ | ⬜ | - | - |
-| lib/v5/ | ⬜ | - | - |
-| lib/agency_snapshot/ | 🔄 | 2 | 2 |
-| lib/migrations/ | 🔄 | 1 | 1 |
-| lib/notifier/ | 🔄 | 1 | 1 |
-| lib/*.py (root) | 🔄 | 6 | 6 |
-| api/ | 🔄 | 6 | 6 |
-| tests/ | 🔄 | 1 | 1 |
-| time-os-ui/ | ⬜ | - | - |
+| lib/intelligence/ | ✅ | 4 | 4 |
+| lib/executor/ | ✅ | 6 | 6 |
+| lib/analyzers/ | ✅ | 0 | 0 |
+| lib/v4/ | ✅ | 0 | 0 |
+| lib/v5/ | ✅ | 0 | 0 |
+| lib/agency_snapshot/ | ✅ | 2 | 2 |
+| lib/migrations/ | ✅ | 1 | 1 |
+| lib/notifier/ | ✅ | 1 | 1 |
+| lib/*.py (root) | ✅ | 6 | 6 |
+| lib/capacity_truth/ | ✅ | 0 | 0 |
+| lib/client_truth/ | ✅ | 0 | 0 |
+| lib/commitment_truth/ | ✅ | 0 | 0 |
+| lib/time_truth/ | ✅ | 0 | 0 |
+| lib/contracts/ | ✅ | 0 | 0 |
+| lib/reasoner/ | ✅ | 0 | 0 |
+| lib/observability/ | ✅ | 1 | 1 |
+| lib/safety/ | ✅ | 1 | 1 |
+| lib/integrations/ | ✅ | 0 | 0 |
+| api/ | ✅ | 6 | 6 |
+| tests/ | ✅ | 1 | 1 |
+| time-os-ui/ | 🔄 | - | - |
+| scripts/ | ⬜ | - | - |
 
 ---
 
 ## Summary
 
-**Total Issues Found:** 28
-**Total Issues Fixed:** 28
+**Total Issues Found:** 30
+**Total Issues Fixed:** 30
 **Remaining:** 0
 
 ### Issue #6: Unguarded NotImplementedError call path
@@ -174,6 +184,24 @@ FastAPI uses the LAST definition, silently ignoring earlier ones.
 | `email.py` | Added `logger.error()` with exc_info |
 | `calendar.py` | Added `logger.error()` with exc_info |
 | `notification.py` | Added `logger.error()` with exc_info |
+
+---
+
+## Next Areas to Investigate
+
+### Issue #8: Silent error handling in observability/safety
+
+**Location:** `lib/observability/tracing.py`, `lib/safety/utils.py`
+**Type:** Error Swallowing
+**Severity:** Low (non-critical utility functions)
+**Status:** ✅ FIXED
+
+**Problem:** Both files had `except Exception: pass` or `return 0` patterns that silently swallowed errors without any logging.
+
+| File | Function | Fix |
+|------|----------|-----|
+| `tracing.py` | `export_spans_otlp()` | Added `logger.debug()` before returning 0 |
+| `utils.py` | `get_git_sha()` | Added `logger.debug()` before returning "unknown" |
 
 ---
 

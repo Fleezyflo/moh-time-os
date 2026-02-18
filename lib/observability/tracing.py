@@ -9,10 +9,13 @@ Provides:
 """
 
 import contextvars
+import logging
 import secrets
 import time
 from dataclasses import dataclass
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 # Context variables for trace propagation
 _trace_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar("trace_id", default=None)
@@ -263,5 +266,6 @@ def export_spans_otlp(endpoint: str = "http://localhost:4318/v1/traces") -> int:
         with urllib.request.urlopen(req, timeout=5):  # noqa: S310
             clear_span_buffer()
             return len(spans)
-    except Exception:
+    except Exception as e:
+        logger.debug(f"Failed to flush traces to {endpoint}: {e}")
         return 0
