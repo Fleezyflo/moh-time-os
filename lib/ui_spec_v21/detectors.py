@@ -231,8 +231,8 @@ class DetectorRunner:
                     ),
                 )
                 result.flagged_signals_created += 1
-            except Exception:
-                # Already exists or constraint violation
+            except sqlite3.IntegrityError:
+                # Already exists or constraint violation - skip duplicate
                 pass
 
         return result

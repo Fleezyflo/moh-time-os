@@ -7,6 +7,7 @@ All timestamps stored as ISO 8601 UTC with Z suffix.
 
 import logging
 import re
+import sqlite3
 from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
@@ -568,7 +569,7 @@ def validate_timestamp_ordering(conn) -> list:
                     "resurfaced_before_proposed",
                 )
             )
-    except Exception:
+    except sqlite3.OperationalError:
         pass  # Table may not exist
 
     # All tables: updated_at >= created_at
@@ -580,7 +581,7 @@ def validate_timestamp_ordering(conn) -> list:
             """)  # nosec B608 - table is from hardcoded list above
             for row in cursor.fetchall():
                 violations.append((table, "updated_at", row[0], row[2], "updated_before_created"))
-        except Exception:
+        except sqlite3.OperationalError:
             pass  # Table may not exist
 
     # Issues: resolved_at >= created_at (if set)
@@ -591,8 +592,8 @@ def validate_timestamp_ordering(conn) -> list:
         """)
         for row in cursor.fetchall():
             violations.append(("issues", "resolved_at", row[0], row[2], "resolved_before_created"))
-    except Exception:
-        pass
+    except sqlite3.OperationalError:
+        pass  # Table may not exist
 
     return violations
 

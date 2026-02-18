@@ -312,7 +312,9 @@ class Client360Page10Engine:
         if domain == "commitments" and not self.commitment_ready:
             why_low.append(f"Commitment ready {self.commitment_ready_pct:.0f}% < 50%")
         if domain == "responsiveness":
-            # Check comms linking
+            # Responsiveness confidence is computed within compute_responsiveness_health
+            # based on whether comms data exists. No additional coverage check needed here
+            # since the domain score already accounts for missing data with MED confidence.
             pass
 
         if len(why_low) >= 2:
