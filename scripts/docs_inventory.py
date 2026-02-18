@@ -4,8 +4,6 @@ Documentation Inventory for MOH TIME OS.
 Task: SYSPREP 0.4 — Docs Inventory
 """
 
-import json
-import os
 import re
 from datetime import datetime
 from pathlib import Path

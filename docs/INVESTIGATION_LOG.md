@@ -144,15 +144,16 @@ FastAPI uses the LAST definition, silently ignoring earlier ones.
 | lib/integrations/ | ✅ | 0 | 0 |
 | api/ | ✅ | 6 | 6 |
 | tests/ | ✅ | 1 | 1 |
-| time-os-ui/ | 🔄 | - | - |
-| scripts/ | ⬜ | - | - |
+| time-os-ui/ | ✅ | 1 | 0 |
+| scripts/ | ✅ | 3 | 3 |
 
 ---
 
 ## Summary
 
-**Total Issues Found:** 30
-**Total Issues Fixed:** 30
+**Total Issues Found:** 34
+**Total Issues Fixed:** 33
+**Documented (kept):** 1
 **Remaining:** 0
 
 ### Issue #6: Unguarded NotImplementedError call path
@@ -189,7 +190,20 @@ FastAPI uses the LAST definition, silently ignoring earlier ones.
 
 ## Next Areas to Investigate
 
-### Issue #8: Silent error handling in observability/safety
+### Issue #8: Unused UI component (DegradedModeBanner)
+
+**Location:** `time-os-ui/src/components/DegradedModeBanner.tsx`
+**Type:** Dead Code (unused feature)
+**Severity:** Low (not a bug, just unused)
+**Status:** 📝 DOCUMENTED (keep for future)
+
+**Problem:** `DegradedModeBanner` component and its supporting `lib/offline.ts` module were built but never integrated into the app layout.
+
+**Decision:** Keep for future integration - this is a useful feature for offline/degraded mode UX.
+
+---
+
+### Issue #9: Silent error handling in observability/safety
 
 **Location:** `lib/observability/tracing.py`, `lib/safety/utils.py`
 **Type:** Error Swallowing
@@ -202,6 +216,46 @@ FastAPI uses the LAST definition, silently ignoring earlier ones.
 |------|----------|-----|
 | `tracing.py` | `export_spans_otlp()` | Added `logger.debug()` before returning 0 |
 | `utils.py` | `get_git_sha()` | Added `logger.debug()` before returning "unknown" |
+
+---
+
+### Issue #10: Unused variables and imports in scripts
+
+**Location:** `scripts/`
+**Type:** Dead Code
+**Severity:** Low
+**Status:** ✅ FIXED
+
+| File | Issue | Fix |
+|------|-------|-----|
+| `check_coverage.py` | Unused `result` variable | Removed assignment |
+| `dead_code_audit.py` | Unused `all_module_paths` | Removed by ruff |
+| `schema_audit.py` | Unused `columns` | Removed by ruff |
+| `verify_production.py` | Unused `json` import | Removed import |
+
+---
+
+## Investigation Complete
+
+All major areas audited. Summary:
+- **34 issues found**
+- **33 issues fixed**
+- **1 issue documented** (DegradedModeBanner kept for future use)
+
+### Key Fixes by Severity
+
+**HIGH (would crash/break):**
+- 10 missing imports causing NameError
+- 6 duplicate API routes silently overridden
+- 1 unguarded NotImplementedError call
+
+**MEDIUM (silent failures):**
+- 7 handlers with unlogged exceptions
+
+**LOW (code quality):**
+- 10+ unused variables
+- 1 test/implementation mismatch
+- Debug scripts in wrong location
 
 ---
 

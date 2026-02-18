@@ -42,7 +42,7 @@ def run_coverage(html: bool = False) -> dict:
     if html:
         cmd.append("--cov-report=html:htmlcov")
 
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    subprocess.run(cmd, capture_output=True, text=True, check=False)
 
     # Parse coverage report
     coverage_file = Path("coverage.json")

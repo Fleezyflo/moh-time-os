@@ -103,7 +103,7 @@ def parse_commits(commits: list[dict]) -> dict[str, list[dict]]:
 def format_changelog(grouped: dict[str, list[dict]], version: str = "Unreleased") -> str:
     """Format grouped commits as markdown."""
     lines = [
-        f"# Changelog\n",
+        "# Changelog\n",
         f"## [{version}] - {datetime.now().strftime('%Y-%m-%d')}\n",
     ]
 

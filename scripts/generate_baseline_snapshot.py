@@ -5,7 +5,6 @@ Task: SYSPREP 0.1 — Baseline Snapshot
 """
 
 import json
-import os
 import re
 import sqlite3
 import subprocess

@@ -176,7 +176,6 @@ def check_api(api_url: str, token: str | None) -> list[str]:
     try:
         import urllib.request
         import urllib.error
-        import json
 
         def check_endpoint(path: str, expected_status: int, use_auth: bool = False) -> bool:
             url = f"{api_url}{path}"
@@ -227,7 +226,7 @@ def check_api(api_url: str, token: str | None) -> list[str]:
             failures.append("stub_endpoint")
         except urllib.error.HTTPError as e:
             if e.code == 501:
-                ok(f"POST /api/tasks/link → 501 (correctly not implemented)")
+                ok("POST /api/tasks/link → 501 (correctly not implemented)")
             else:
                 fail(f"POST /api/tasks/link → {e.code} (expected 501)")
                 failures.append("stub_endpoint")

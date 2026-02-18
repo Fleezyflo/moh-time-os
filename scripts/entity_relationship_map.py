@@ -5,10 +5,8 @@ Task: SYSPREP 2.1 — Entity Relationship Map
 """
 
 import sqlite3
-import re
 from datetime import datetime
 from pathlib import Path
-from collections import defaultdict
 
 REPO_ROOT = Path(__file__).parent.parent
 DATA_DIR = REPO_ROOT / "data"
@@ -222,7 +220,7 @@ def analyze_relationships(conn: sqlite3.Connection, entity_tables: dict) -> dict
                         if cursor.fetchone():
                             relationships[from_entity][to_entity] = {
                                 "type": "INDIRECT",
-                                "path": f"Via entity_links table"
+                                "path": "Via entity_links table"
                             }
                         else:
                             relationships[from_entity][to_entity] = {"type": "MISSING", "path": ""}
@@ -407,7 +405,7 @@ def main():
     indirect = sum(1 for f in relationships for t in relationships[f] if relationships[f][t]["type"] in ["INDIRECT", "REVERSE"])
     missing = sum(1 for f in relationships for t in relationships[f] if relationships[f][t]["type"] == "MISSING")
 
-    print(f"\n=== RELATIONSHIP SUMMARY ===")
+    print("\n=== RELATIONSHIP SUMMARY ===")
     print(f"Entities mapped:  {len(entity_tables)}")
     print(f"Direct (FK):      {direct}")
     print(f"Implicit:         {implicit}")

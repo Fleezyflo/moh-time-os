@@ -6,9 +6,7 @@ Task: SYSPREP 1.1 — Remove Orphaned Modules
 GUARDRAILS: Document before delete. Every change observable.
 """
 
-import os
 import re
-import shutil
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -139,7 +137,7 @@ def main():
 
         # Check if file exists
         if not full_path.exists():
-            print(f"  ⚠️  File not found, skipping")
+            print("  ⚠️  File not found, skipping")
             skipped.append({**orphan, "reason": "File not found"})
             continue
 
@@ -161,7 +159,7 @@ def main():
         # Delete file
         try:
             full_path.unlink()
-            print(f"  Deleted. Running tests...")
+            print("  Deleted. Running tests...")
         except Exception as e:
             print(f"  ⚠️  Could not delete: {e}")
             skipped.append({**orphan, "reason": f"Delete error: {e}"})
@@ -172,9 +170,9 @@ def main():
 
         if failed > 0:
             # Revert!
-            print(f"  ❌ Tests failed! Reverting...")
+            print("  ❌ Tests failed! Reverting...")
             full_path.write_text(backup_content)
-            skipped.append({**orphan, "reason": f"Tests failed after removal"})
+            skipped.append({**orphan, "reason": "Tests failed after removal"})
             continue
 
         # Success
@@ -224,7 +222,7 @@ def main():
 
     print("\n" + "=" * 60)
     print(f"✓ Report saved to: {output_file}")
-    print(f"\n=== REMOVAL SUMMARY ===")
+    print("\n=== REMOVAL SUMMARY ===")
     print(f"Attempted:    {len(orphans)}")
     print(f"Removed:      {len(removed)}")
     print(f"Skipped:      {len(skipped)}")

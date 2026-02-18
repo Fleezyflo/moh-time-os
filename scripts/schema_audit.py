@@ -7,7 +7,6 @@ Task: SYSPREP 0.3 — Schema Audit
 import json
 import re
 import sqlite3
-import subprocess
 from datetime import datetime
 from pathlib import Path
 from collections import defaultdict
@@ -168,7 +167,7 @@ def classify_tables(tables: list, py_content_index: dict) -> dict:
         name = table["name"]
         obj_type = table["type"]
         row_count = table.get("row_count", 0)
-        columns = table.get("columns", [])
+        table.get("columns", [])
 
         # Check for version pattern
         base_name, version = identify_version_pattern(name)

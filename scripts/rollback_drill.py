@@ -17,7 +17,7 @@ from pathlib import Path
 # Add repo root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from lib.db import run_migrations, SCHEMA_VERSION
+from lib.db import run_migrations
 from lib.safety import run_safety_migrations
 
 
@@ -112,7 +112,7 @@ def run_drill() -> bool:
         print()
         print("Step 4: Restore from backup")
         shutil.copy(backup_path, db_path)
-        print(f"  ✅ Backup restored")
+        print("  ✅ Backup restored")
 
         # Step 5: Verify restored state
         print()

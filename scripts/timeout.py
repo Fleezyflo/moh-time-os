@@ -18,7 +18,6 @@ Self-test:
 """
 
 import argparse
-import signal
 import subprocess
 import sys
 import time
@@ -44,10 +43,10 @@ def run_with_timeout(seconds: float, command: list[str]) -> int:
             text=True,
             bufsize=1,  # Line buffered
         )
-    except FileNotFoundError as e:
+    except FileNotFoundError:
         print(f"timeout: {command[0]}: command not found", file=sys.stderr)
         return 127
-    except PermissionError as e:
+    except PermissionError:
         print(f"timeout: {command[0]}: permission denied", file=sys.stderr)
         return 126
 

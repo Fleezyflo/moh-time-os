@@ -5,9 +5,6 @@ Task: SYSPREP 0.2 — Dead Code Audit
 """
 
 import json
-import os
-import re
-import subprocess
 from datetime import datetime
 from pathlib import Path
 
@@ -127,7 +124,7 @@ def classify_modules(modules: list) -> dict:
     }
 
     # Build a set of all module paths for orphan chain detection
-    all_module_paths = {m["path"] for m in modules}
+    {m["path"] for m in modules}
 
     for module in modules:
         path = module["path"]
