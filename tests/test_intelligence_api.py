@@ -198,13 +198,16 @@ class TestProposalGeneration:
 class TestEngineFunctions:
     """Tests for engine functions with fixture DB."""
 
-    def test_get_critical_items_returns_list(self, db_path):
-        """get_critical_items should return list."""
+    def test_get_critical_items_returns_dict_with_items(self, db_path):
+        """get_critical_items should return dict with items list."""
         from lib.intelligence import get_critical_items
 
+        # get_critical_items returns {success, errors, items, generated_at}
         result = get_critical_items(db_path)
 
-        assert isinstance(result, list)
+        assert isinstance(result, dict), "Expected dict with items key"
+        assert "items" in result
+        assert isinstance(result["items"], list)
 
     def test_get_portfolio_intelligence_structure(self, db_path):
         """get_portfolio_intelligence should return complete structure."""
