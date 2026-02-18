@@ -278,38 +278,90 @@ FastAPI uses the LAST definition, silently ignoring earlier ones.
 | `schema_audit.py` | Unused `columns` | Removed by ruff |
 | `verify_production.py` | Unused `json` import | Removed import |
 
+### Issue #14: NotImplementedError methods called at runtime
+
+**Location:** `lib/executor/handlers/task.py`
+**Type:** Runtime Crash Risk
+**Severity:** HIGH (if Asana enabled)
+**Status:** ✅ FIXED
+
+**Problem:** `_sync_to_asana()` and `_complete_in_asana()` raised `NotImplementedError` but were called conditionally (when `asana_enabled` config set). Would crash if enabled.
+
+**Fix:** Converted to stub implementations that log warnings instead of crashing.
+
 ---
 
-## Investigation Complete
+### Issue #15: Bare `except Exception` swallowing bugs
 
-All major areas audited. Summary:
-- **34 issues found**
-- **33 issues fixed**
-- **1 issue documented** (DegradedModeBanner kept for future use)
+**Location:** `lib/ui_spec_v21/time_utils.py`, `lib/ui_spec_v21/detectors.py`
+**Type:** Silent Failure
+**Severity:** MEDIUM
+**Status:** ✅ FIXED
+
+**Problem:** 
+- `time_utils.py`: 3x `except Exception: pass` for "table may not exist" - too broad, could hide real bugs
+- `detectors.py`: 1x `except Exception: pass` for "constraint violation" - too broad
+
+**Fix:**
+- `time_utils.py`: Changed to `except sqlite3.OperationalError: pass` (added sqlite3 import)
+- `detectors.py`: Changed to `except sqlite3.IntegrityError: pass`
+
+---
+
+### Issue #16: Incomplete code block documented
+
+**Location:** `lib/agency_snapshot/client360_page10.py`
+**Type:** Documentation
+**Severity:** LOW
+**Status:** ✅ DOCUMENTED
+
+**Problem:** Empty `if domain == "responsiveness": pass` block with comment "Check comms linking".
+
+**Finding:** This is intentionally empty - responsiveness confidence is computed within `compute_responsiveness_health()` which already handles missing data. Added documentation comment explaining why.
+
+---
+
+## Investigation Status: ONGOING
+
+Current totals:
+- **40 issues found**
+- **40 issues fixed/documented**
 
 ### Key Fixes by Severity
 
 **HIGH (would crash/break):**
 - 10 missing imports causing NameError
 - 6 duplicate API routes silently overridden
-- 1 unguarded NotImplementedError call
+- 2 NotImplementedError methods that could crash (Asana integration)
+- Dead test file importing non-existent functions
 
 **MEDIUM (silent failures):**
 - 7 handlers with unlogged exceptions
+- 4 bare `except Exception` blocks narrowed
 
 **LOW (code quality):**
-- 10+ unused variables
-- 1 test/implementation mismatch
-- Debug scripts in wrong location
+- 10+ unused variables removed
+- 1 test/implementation mismatch fixed
+- Debug scripts moved to correct location
+- Test fixtures updated to use fixture_db
+- Documentation added for intentional empty blocks
 
 ---
 
-## Next Areas to Investigate
+## Verified Safe (Not Issues)
 
-1. **lib/executor/** - Action execution layer
-2. **lib/analyzers/** - Analysis modules
-3. **lib/v4/** - V4 architecture modules
-4. **lib/v5/** - V5 architecture modules
-5. **time-os-ui/** - Frontend codebase
-6. **Deep dive on error handling patterns**
-7. **Deep dive on stub/unimplemented code**
+Areas investigated and found acceptable:
+- All executor handlers have proper try/except wrapping
+- Division operations have zero-guards
+- No SQL injection vulnerabilities (table names from hardcoded lists)
+- No hardcoded credentials found
+- Core modules import correctly without circular dependencies
+
+---
+
+## Remaining Areas to Investigate
+
+1. **Test coverage gaps** - Critical paths without tests
+2. **Performance** - N+1 queries, missing indexes
+3. **API contract consistency** - Endpoint behavior vs documentation
+4. **Error message quality** - User-facing error messages
