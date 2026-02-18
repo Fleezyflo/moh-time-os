@@ -151,8 +151,8 @@ FastAPI uses the LAST definition, silently ignoring earlier ones.
 
 ## Summary
 
-**Total Issues Found:** 36
-**Total Issues Fixed:** 36
+**Total Issues Found:** 37
+**Total Issues Fixed:** 37
 **Remaining:** 0
 
 ### Issue #6: Unguarded NotImplementedError call path
@@ -248,7 +248,23 @@ FastAPI uses the LAST definition, silently ignoring earlier ones.
 
 ---
 
-### Issue #12: Unused variables and imports in scripts
+### Issue #12: Tests using live DB instead of fixture
+
+**Location:** `tests/test_intelligence_engine.py`
+**Type:** Test Configuration
+**Severity:** Medium (breaks CI)
+**Status:** ✅ FIXED
+
+**Problem:** 4 test classes were using live database path instead of fixture DB, causing tests to fail with "DETERMINISM VIOLATION" when conftest guards kicked in.
+
+**Fix:**
+- Updated all `db_path` fixtures to use `create_fixture_db` from `tests/fixtures/fixture_db.py`
+- Updated tests that expected `dict` returns to handle `StageResult` objects
+- Now all 20 tests pass (1 skipped)
+
+---
+
+### Issue #13: Unused variables and imports in scripts
 
 **Location:** `scripts/`
 **Type:** Dead Code
