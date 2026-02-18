@@ -66,29 +66,33 @@ class TestStubEndpoints:
 class TestStubHandlers:
     """Tests for stub handlers raising NotImplementedError."""
 
-    def test_sync_to_asana_raises_not_implemented(self):
-        """_sync_to_asana should raise NotImplementedError."""
+    def test_sync_to_asana_logs_warning(self, caplog):
+        """_sync_to_asana should log warning (stub implementation)."""
         from lib.executor.handlers.task import TaskHandler
+        import logging
 
         mock_store = MagicMock()
         handler = TaskHandler(mock_store)
 
-        with pytest.raises(NotImplementedError) as exc_info:
+        with caplog.at_level(logging.WARNING):
             handler._sync_to_asana("task_123", {"title": "Test"})
 
-        assert "not implemented" in str(exc_info.value).lower()
+        # Should log a warning about not being implemented
+        assert any("not implemented" in r.message.lower() for r in caplog.records)
 
-    def test_complete_in_asana_raises_not_implemented(self):
-        """_complete_in_asana should raise NotImplementedError."""
+    def test_complete_in_asana_logs_warning(self, caplog):
+        """_complete_in_asana should log warning (stub implementation)."""
         from lib.executor.handlers.task import TaskHandler
+        import logging
 
         mock_store = MagicMock()
         handler = TaskHandler(mock_store)
 
-        with pytest.raises(NotImplementedError) as exc_info:
+        with caplog.at_level(logging.WARNING):
             handler._complete_in_asana("asana_456")
 
-        assert "not implemented" in str(exc_info.value).lower()
+        # Should log a warning about not being implemented
+        assert any("not implemented" in r.message.lower() for r in caplog.records)
 
 
 class TestErrorPropagation:
