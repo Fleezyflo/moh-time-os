@@ -102,6 +102,28 @@ Removed all unused variable assignments using ruff --unsafe-fixes.
 **Fix:**
 Updated test to check for dict with `items` key instead of bare list.
 
+### Issue #5: Duplicate API route definitions
+
+**Location:** `api/server.py`
+**Type:** Duplicate Routes
+**Severity:** HIGH (later definition overrides earlier)
+**Status:** ✅ FIXED
+
+**Problem:**
+6 duplicate route definitions found:
+- `POST /api/priorities/{item_id}/snooze` (lines 1998 & 2484)
+- `POST /api/priorities/{item_id}/delegate` (lines 2022 & 2508)
+- `POST /api/priorities/{item_id}/complete` (lines 1973 & 2456)
+- `GET /api/emails` (lines 2920 & 4001)
+- `GET /api/delegations` (lines ~3100 & ~4100)
+- `GET /api/insights` (lines ~3200 & ~4200)
+
+FastAPI uses the LAST definition, silently ignoring earlier ones.
+The earlier versions often had better implementations (bundles, audit trails).
+
+**Fix:**
+Removed duplicate definitions, keeping the more complete implementations.
+
 ---
 
 ## Investigation Progress
@@ -111,7 +133,7 @@ Updated test to check for dict with `items` key instead of bare list.
 | lib/collectors/ | 🔄 | 1 | 1 |
 | lib/intelligence/ | 🔄 | 4 | 4 |
 | lib/executor/ | ⬜ | 0 | 0 |
-| api/ | ⬜ | 0 | 0 |
+| api/ | 🔄 | 6 | 6 |
 | lib/*.py (root) | 🔄 | 10 | 10 |
 | tests/ | 🔄 | 1 | 1 |
 | time-os-ui/ | ⬜ | 0 | 0 |
@@ -120,6 +142,6 @@ Updated test to check for dict with `items` key instead of bare list.
 
 ## Summary
 
-**Total Issues Found:** 16
-**Total Issues Fixed:** 16
+**Total Issues Found:** 22
+**Total Issues Fixed:** 22
 **Remaining:** 0
