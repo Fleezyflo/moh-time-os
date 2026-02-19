@@ -285,15 +285,12 @@ class TestDimensionValidation:
 # =============================================================================
 
 class TestScorecardIntegration:
-    """Integration tests for scorecard computation against live database."""
+    """Integration tests for scorecard computation using fixture database."""
 
     @pytest.fixture
-    def db_path(self):
-        """Get path to live database."""
-        path = Path(__file__).parent.parent / "data" / "moh_time_os.db"
-        if not path.exists():
-            pytest.skip("Live database not available")
-        return path
+    def db_path(self, fixture_db_path):
+        """Use fixture DB for deterministic testing."""
+        return fixture_db_path
 
     def test_score_client_returns_valid_structure(self, db_path):
         """score_client returns valid scorecard structure."""
@@ -396,12 +393,9 @@ class TestEdgeCases:
     """Edge case tests."""
 
     @pytest.fixture
-    def db_path(self):
-        """Get path to live database."""
-        path = Path(__file__).parent.parent / "data" / "moh_time_os.db"
-        if not path.exists():
-            pytest.skip("Live database not available")
-        return path
+    def db_path(self, fixture_db_path):
+        """Use fixture DB for deterministic testing."""
+        return fixture_db_path
 
     def test_score_nonexistent_client(self, db_path):
         """Scoring non-existent client returns empty scorecard."""

@@ -122,3 +122,21 @@ def validated_cassettes():
             "\n".join(f"  - {issue}" for issue in issues)
         )
     return True
+
+
+# =============================================================================
+# FIXTURE DB FOR INTEGRATION TESTS
+# =============================================================================
+
+@pytest.fixture(scope="session")
+def fixture_db_path(tmp_path_factory):
+    """
+    Session-scoped fixture DB path for tests that need database access.
+    Creates once per test session, reused across all tests.
+    """
+    from tests.fixtures.fixture_db import create_fixture_db
+
+    db_path = tmp_path_factory.mktemp("db") / "fixture_test.db"
+    conn = create_fixture_db(db_path)
+    conn.close()
+    return db_path
