@@ -24,21 +24,34 @@ if str(REPO_ROOT) not in sys.path:
 
 LIVE_DB_PATH = Path("data/moh_time_os.db")
 LIVE_DB_ABSOLUTE = (REPO_ROOT / LIVE_DB_PATH).resolve()
+HOME_DB_ABSOLUTE = (Path.home() / ".moh_time_os" / "data" / "moh_time_os.db").resolve()
+
+
+def _extract_path_from_uri(database: str) -> str:
+    """Extract filesystem path from SQLite URI format (file:/path?mode=ro)."""
+    if not database.startswith("file:"):
+        return database
+    path = database[5:]
+    if "?" in path:
+        path = path.split("?")[0]
+    return path
 
 
 def _guarded_sqlite_connect(database, *args, **kwargs):
     """Intercept sqlite3.connect to block live DB access."""
-    db_path = Path(database) if isinstance(database, str) else database
+    db_str = str(database) if not isinstance(database, str) else database
+    actual_path = _extract_path_from_uri(db_str)
+    db_path = Path(actual_path)
 
     # Resolve to absolute path for comparison
-    if db_path != ":memory:":
+    if actual_path != ":memory:":
         try:
             abs_path = db_path.resolve()
         except (OSError, ValueError):
             abs_path = db_path
 
-        # Block live DB
-        if abs_path == LIVE_DB_ABSOLUTE or str(db_path) == str(LIVE_DB_PATH):
+        # Block live DB (repo path or HOME path)
+        if abs_path == LIVE_DB_ABSOLUTE or abs_path == HOME_DB_ABSOLUTE or str(db_path) == str(LIVE_DB_PATH):
             raise RuntimeError(
                 f"DETERMINISM VIOLATION: Test attempted to access live DB at {database}.\n"
                 "Tests must use fixture_db from tests/fixtures/fixture_db.py.\n"
