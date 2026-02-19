@@ -11,6 +11,7 @@ import-time filesystem probes to live DB paths.
 import os
 import sqlite3
 import sys
+import threading
 from pathlib import Path
 from unittest.mock import patch
 
@@ -50,8 +51,6 @@ _FORBIDDEN_DB_PATTERNS = [
 _DB_WATCH_LOG = Path(os.environ.get("DB_WATCH_LOG", str(REPO_ROOT / ".db_watch.log")))
 _DB_PATTERNS_FOR_AUDIT = ["moh_time_os.db"]
 
-
-import threading
 _log_recursion_guard = threading.local()
 
 
@@ -66,7 +65,7 @@ def _log_db_probe(operation: str, path_str: str):
     guards work; those entries are expected when running the full suite.
     """
     # Prevent recursion during logging (open() can trigger our guards)
-    if getattr(_log_recursion_guard, 'active', False):
+    if getattr(_log_recursion_guard, "active", False):
         return
 
     _log_recursion_guard.active = True
@@ -104,7 +103,7 @@ def _normalize_path_string(path_str: str) -> str:
     # Strip SQLite sibling suffixes to catch -wal, -shm, -journal
     for suffix in ("-wal", "-shm", "-journal"):
         if absolute.endswith(suffix):
-            absolute = absolute[:-len(suffix)]
+            absolute = absolute[: -len(suffix)]
             break
 
     return absolute
@@ -254,6 +253,7 @@ def _debug_traced_connect(database, *args, **kwargs):
     Only enabled when MOH_DB_GUARD_DEBUG=1 is set.
     """
     import traceback
+
     db_str = str(database)
     if "moh_time_os.db" in db_str:  # Only trace DB-related connects
         print(f"\n=== SQLITE CONNECT: {db_str} ===", file=sys.stderr)
@@ -291,6 +291,7 @@ def guard_live_db_access(monkeypatch):
 # CASSETTE VALIDATION
 # =============================================================================
 
+
 def validate_all_cassettes():
     """
     Validate all cassettes for determinism requirements:
@@ -298,12 +299,13 @@ def validate_all_cassettes():
     - No secrets (redaction markers present where expected)
     - Sorted keys for deterministic JSON
     """
-    from lib.collectors.recorder import validate_cassettes, CASSETTES_DIR
+    from lib.collectors.recorder import CASSETTES_DIR, validate_cassettes
 
     issues = validate_cassettes()
 
     # Additional checks: ensure cassettes use sorted keys
     import json
+
     for path in CASSETTES_DIR.glob("*.json"):
         try:
             text = path.read_text()
@@ -317,9 +319,9 @@ def validate_all_cassettes():
                 issues.append(f"{path.name}: Keys not sorted (non-deterministic)")
 
             # Check for unredacted secrets
-            if '"access_token":' in text and '[REDACTED]' not in text:
+            if '"access_token":' in text and "[REDACTED]" not in text:
                 issues.append(f"{path.name}: Contains unredacted access_token")
-            if '"api_key":' in text and '[REDACTED]' not in text:
+            if '"api_key":' in text and "[REDACTED]" not in text:
                 issues.append(f"{path.name}: Contains unredacted api_key")
 
         except json.JSONDecodeError as e:
@@ -333,16 +335,14 @@ def validated_cassettes():
     """Session-scoped fixture that validates all cassettes once."""
     issues = validate_all_cassettes()
     if issues:
-        pytest.fail(
-            "Cassette validation failed:\n" +
-            "\n".join(f"  - {issue}" for issue in issues)
-        )
+        pytest.fail("Cassette validation failed:\n" + "\n".join(f"  - {issue}" for issue in issues))
     return True
 
 
 # =============================================================================
 # FIXTURE DB FOR INTEGRATION TESTS
 # =============================================================================
+
 
 @pytest.fixture(scope="session")
 def fixture_db_path(tmp_path_factory):

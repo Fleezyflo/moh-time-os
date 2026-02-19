@@ -10,8 +10,9 @@ Run with: pytest tests/test_determinism_guards.py -v
 """
 
 import sqlite3
-import pytest
 from pathlib import Path
+
+import pytest
 
 from tests.fixtures import create_fixture_db, guard_no_live_db
 
@@ -27,6 +28,7 @@ class TestLiveDBGuard:
     def test_absolute_live_db_path_blocked(self):
         """Absolute path to live DB is also blocked."""
         from tests.conftest import LIVE_DB_ABSOLUTE
+
         with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
             sqlite3.connect(str(LIVE_DB_ABSOLUTE))
 
@@ -54,6 +56,7 @@ class TestLiveDBGuard:
     def test_uri_format_live_db_blocked(self):
         """SQLite URI format (file:/path?mode=ro) to live DB is blocked."""
         from tests.conftest import LIVE_DB_ABSOLUTE
+
         uri = f"file:{LIVE_DB_ABSOLUTE}?mode=ro"
         with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
             sqlite3.connect(uri, uri=True)
@@ -61,6 +64,7 @@ class TestLiveDBGuard:
     def test_home_db_path_blocked(self):
         """HOME path (~/.moh_time_os/data/moh_time_os.db) is blocked."""
         from tests.conftest import HOME_DB_ABSOLUTE
+
         with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
             sqlite3.connect(str(HOME_DB_ABSOLUTE))
 
@@ -91,12 +95,14 @@ class TestSQLiteSiblingFilesBlocked:
     def test_absolute_wal_file_blocked(self):
         """Absolute path to WAL file is blocked."""
         from tests.conftest import LIVE_DB_ABSOLUTE
+
         with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
             sqlite3.connect(f"{LIVE_DB_ABSOLUTE}-wal")
 
     def test_home_wal_file_blocked(self):
         """HOME WAL file is blocked."""
         from tests.conftest import HOME_DB_ABSOLUTE
+
         with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
             sqlite3.connect(f"{HOME_DB_ABSOLUTE}-wal")
 
@@ -116,6 +122,7 @@ class TestURIFormatBlocked:
     def test_uri_absolute_path_blocked(self):
         """URI with absolute path is blocked."""
         from tests.conftest import LIVE_DB_ABSOLUTE
+
         with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
             sqlite3.connect(f"file:{LIVE_DB_ABSOLUTE}", uri=True)
 
@@ -151,6 +158,7 @@ class TestDbapi2BypassClosed:
     def test_dbapi2_absolute_path_blocked(self):
         """sqlite3.dbapi2.connect with absolute path is blocked."""
         from tests.conftest import LIVE_DB_ABSOLUTE
+
         with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
             sqlite3.dbapi2.connect(str(LIVE_DB_ABSOLUTE))
 
@@ -210,38 +218,46 @@ class TestFilesystemProbeGuard:
     def test_path_exists_on_live_db_blocked(self):
         """Path.exists() on live DB path raises RuntimeError."""
         from tests.conftest import LIVE_DB_ABSOLUTE
+
         with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION.*live DB path probed"):
             LIVE_DB_ABSOLUTE.exists()
 
     def test_path_exists_on_home_db_blocked(self):
         """Path.exists() on home DB path raises RuntimeError."""
         from tests.conftest import HOME_DB_ABSOLUTE
+
         with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION.*live DB path probed"):
             HOME_DB_ABSOLUTE.exists()
 
     def test_os_stat_on_live_db_blocked(self):
         """os.stat() on live DB path raises RuntimeError."""
         import os
+
         from tests.conftest import LIVE_DB_ABSOLUTE
+
         with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION.*live DB path probed"):
             os.stat(str(LIVE_DB_ABSOLUTE))
 
     def test_os_lstat_on_live_db_blocked(self):
         """os.lstat() on live DB path raises RuntimeError."""
         import os
+
         from tests.conftest import LIVE_DB_ABSOLUTE
+
         with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION.*live DB path probed"):
             os.lstat(str(LIVE_DB_ABSOLUTE))
 
     def test_path_stat_on_live_db_blocked(self):
         """Path.stat() on live DB path raises RuntimeError."""
         from tests.conftest import LIVE_DB_ABSOLUTE
+
         with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION.*live DB path probed"):
             LIVE_DB_ABSOLUTE.stat()
 
     def test_temp_path_operations_allowed(self, tmp_path):
         """Filesystem operations on temp paths are allowed."""
         import os
+
         test_file = tmp_path / "test.db"
         test_file.touch()  # Create the file
 
@@ -315,12 +331,18 @@ class TestFixtureDB:
         """Fixture DB has all required tables."""
         conn = create_fixture_db(":memory:")
 
-        tables = conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table'"
-        ).fetchall()
+        tables = conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
         table_names = {t[0] for t in tables}
 
-        required = {"clients", "brands", "projects", "invoices", "people", "tasks", "communications"}
+        required = {
+            "clients",
+            "brands",
+            "projects",
+            "invoices",
+            "people",
+            "tasks",
+            "communications",
+        }
         assert required.issubset(table_names), f"Missing tables: {required - table_names}"
 
     def test_has_seeded_data(self):
