@@ -19,15 +19,23 @@ REPO_ROOT = Path(__file__).parent.parent.parent
 SEED_PATH = Path(__file__).parent / "golden_seed.json"
 
 # Guard: Block access to live DB path
+# Use string to avoid triggering Path.resolve() which calls os.lstat
 LIVE_DB_PATH = REPO_ROOT / "data" / "moh_time_os.db"
+_LIVE_DB_STR = str(LIVE_DB_PATH)
 
 
 def guard_no_live_db(db_path: str | Path) -> None:
     """Fail loudly if tests try to access the live database."""
-    resolved = Path(db_path).resolve()
-    if resolved == LIVE_DB_PATH.resolve():
+    # Compare as strings to avoid Path.resolve() which triggers os.lstat
+    path_str = str(db_path)
+    # Match various forms of live DB path
+    if (
+        "data/moh_time_os.db" in path_str
+        or ".moh_time_os/data/moh_time_os.db" in path_str
+        or path_str == _LIVE_DB_STR
+    ):
         raise RuntimeError(
-            f"DETERMINISM VIOLATION: Test attempted to access live DB at {LIVE_DB_PATH}.\n"
+            f"DETERMINISM VIOLATION: Test attempted to access live DB at {db_path}.\n"
             "Golden tests must use fixture DB only. See tests/fixtures/fixture_db.py."
         )
 
@@ -519,6 +527,12 @@ def create_fixture_db(db_path: str | Path = ":memory:") -> sqlite3.Connection:
 def _seed_tables(conn: sqlite3.Connection, seed: dict[str, Any]) -> None:
     """Insert seed data into tables."""
 
+    # Build person ID -> name lookup for task assignee resolution
+    person_id_to_name = {
+        person["id"]: person["name"]
+        for person in seed.get("people", [])
+    }
+
     # Clients
     for client in seed.get("clients", []):
         conn.execute(
@@ -618,7 +632,11 @@ def _seed_tables(conn: sqlite3.Connection, seed: dict[str, Any]) -> None:
         )
 
     # Tasks
+    # Note: assignee column stores the person's NAME (for v_person_load_profile view
+    # which matches LOWER(t.assignee) = LOWER(ppl.name)), while assignee_id stores the ID
     for task in seed.get("tasks", []):
+        assignee_id = task.get("assignee_id")
+        assignee_name = person_id_to_name.get(assignee_id) if assignee_id else None
         conn.execute(
             """
             INSERT INTO tasks (id, title, status, assignee, assignee_id, project_id, client_id, due_date)
@@ -628,8 +646,8 @@ def _seed_tables(conn: sqlite3.Connection, seed: dict[str, Any]) -> None:
                 task["id"],
                 task["title"],
                 task.get("status", "pending"),
-                task.get("assignee_id"),  # assignee column stores the ID
-                task.get("assignee_id"),
+                assignee_name,  # assignee column stores the NAME for view matching
+                assignee_id,
                 task.get("project_id"),
                 task.get("client_id"),
                 task.get("due_date")
@@ -647,6 +665,37 @@ def _seed_tables(conn: sqlite3.Connection, seed: dict[str, Any]) -> None:
                 comm["id"],
                 comm.get("subject", ""),
                 comm.get("received_at")
+            )
+        )
+
+    # Artifacts (for communication-client links)
+    for artifact in seed.get("artifacts", []):
+        conn.execute(
+            """
+            INSERT INTO artifacts (artifact_id, type, source, occurred_at)
+            VALUES (?, ?, ?, ?)
+            """,
+            (
+                artifact["artifact_id"],
+                artifact["type"],
+                artifact.get("source"),
+                artifact.get("occurred_at")
+            )
+        )
+
+    # Entity Links (for cross-entity relationships)
+    for link in seed.get("entity_links", []):
+        conn.execute(
+            """
+            INSERT INTO entity_links (from_artifact_id, to_entity_type, to_entity_id, confidence, method)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                link["from_artifact_id"],
+                link["to_entity_type"],
+                link["to_entity_id"],
+                link.get("confidence", 1.0),
+                link.get("method", "fixture")
             )
         )
 

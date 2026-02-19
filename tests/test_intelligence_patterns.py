@@ -209,11 +209,9 @@ class TestPatternDetection:
     """Tests for pattern detection functions."""
 
     @pytest.fixture
-    def db_path(self):
-        path = Path(__file__).parent.parent / "data" / "moh_time_os.db"
-        if not path.exists():
-            pytest.skip("Live database not available")
-        return path
+    def db_path(self, fixture_db_path):
+        """Use fixture DB for deterministic testing."""
+        return fixture_db_path
 
     def test_detect_all_patterns_structure(self, db_path):
         """detect_all_patterns should return valid structure."""
@@ -281,11 +279,9 @@ class TestConcentrationDetection:
     """Tests for concentration pattern detection."""
 
     @pytest.fixture
-    def db_path(self):
-        path = Path(__file__).parent.parent / "data" / "moh_time_os.db"
-        if not path.exists():
-            pytest.skip("Live database not available")
-        return path
+    def db_path(self, fixture_db_path):
+        """Use fixture DB for deterministic testing."""
+        return fixture_db_path
 
     def test_revenue_concentration_detection(self, db_path):
         """Revenue concentration should detect or not based on data."""
@@ -305,11 +301,9 @@ class TestEvidenceAssembly:
     """Tests for evidence structure and content."""
 
     @pytest.fixture
-    def db_path(self):
-        path = Path(__file__).parent.parent / "data" / "moh_time_os.db"
-        if not path.exists():
-            pytest.skip("Live database not available")
-        return path
+    def db_path(self, fixture_db_path):
+        """Use fixture DB for deterministic testing."""
+        return fixture_db_path
 
     def test_evidence_has_entities(self, db_path):
         """Detected patterns should list involved entities."""

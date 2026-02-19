@@ -58,5 +58,19 @@
     {"id": "comm-003", "client_id": "client-002", "channel": "email", "direction": "inbound", "subject": "Feedback request", "received_at": "2026-02-03T09:00:00"},
     {"id": "comm-004", "client_id": "client-003", "channel": "slack", "direction": "inbound", "subject": "Quick question", "received_at": "2026-02-04T11:00:00"},
     {"id": "comm-005", "client_id": "client-002", "channel": "email", "direction": "outbound", "subject": "Status update", "received_at": "2026-02-05T16:00:00"}
+  ],
+  "artifacts": [
+    {"artifact_id": "art-001", "type": "message", "source": "email", "occurred_at": "2026-02-01T10:00:00"},
+    {"artifact_id": "art-002", "type": "message", "source": "email", "occurred_at": "2026-02-02T14:00:00"},
+    {"artifact_id": "art-003", "type": "message", "source": "email", "occurred_at": "2026-02-03T09:00:00"},
+    {"artifact_id": "art-004", "type": "message", "source": "slack", "occurred_at": "2026-02-04T11:00:00"},
+    {"artifact_id": "art-005", "type": "message", "source": "email", "occurred_at": "2026-02-05T16:00:00"}
+  ],
+  "entity_links": [
+    {"from_artifact_id": "art-001", "to_entity_type": "client", "to_entity_id": "client-001", "confidence": 0.95, "method": "fixture"},
+    {"from_artifact_id": "art-002", "to_entity_type": "client", "to_entity_id": "client-001", "confidence": 0.90, "method": "fixture"},
+    {"from_artifact_id": "art-003", "to_entity_type": "client", "to_entity_id": "client-002", "confidence": 0.85, "method": "fixture"},
+    {"from_artifact_id": "art-004", "to_entity_type": "client", "to_entity_id": "client-003", "confidence": 0.80, "method": "fixture"},
+    {"from_artifact_id": "art-005", "to_entity_type": "client", "to_entity_id": "client-002", "confidence": 0.92, "method": "fixture"}
   ]
 }

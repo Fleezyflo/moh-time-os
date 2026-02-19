@@ -2,6 +2,7 @@
 Cross-Entity Views Tests — Task 2.3
 
 Tests for the cross-entity SQL views created to enable operational intelligence queries.
+Uses fixture DB for deterministic testing.
 """
 
 import sqlite3
@@ -9,13 +10,11 @@ from pathlib import Path
 
 import pytest
 
-DB_PATH = Path(__file__).parent.parent / "data" / "moh_time_os.db"
-
 
 @pytest.fixture
-def db_conn():
-    """Get a read-only database connection."""
-    conn = sqlite3.connect(f"file:{DB_PATH}?mode=ro", uri=True)
+def db_conn(fixture_db_path):
+    """Get a read-only database connection to the fixture DB."""
+    conn = sqlite3.connect(f"file:{fixture_db_path}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
     yield conn
     conn.close()
