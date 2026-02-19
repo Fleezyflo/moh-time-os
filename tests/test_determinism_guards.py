@@ -79,6 +79,77 @@ class TestGuardNoLiveDbFunction:
         guard_no_live_db(str(fixture_path))  # Should not raise
 
 
+class TestFilesystemProbeGuard:
+    """
+    Regression tests for filesystem probe guards.
+    
+    These catch stat/lstat/exists calls on live DB paths, not just sqlite3.connect.
+    This is critical because module import can trigger path resolution that probes
+    for default DB locations.
+    """
+
+    def test_path_exists_on_live_db_blocked(self):
+        """Path.exists() on live DB path raises RuntimeError."""
+        from tests.conftest import LIVE_DB_ABSOLUTE
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION.*live DB path probed"):
+            LIVE_DB_ABSOLUTE.exists()
+
+    def test_path_exists_on_home_db_blocked(self):
+        """Path.exists() on home DB path raises RuntimeError."""
+        from tests.conftest import HOME_DB_ABSOLUTE
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION.*live DB path probed"):
+            HOME_DB_ABSOLUTE.exists()
+
+    def test_os_stat_on_live_db_blocked(self):
+        """os.stat() on live DB path raises RuntimeError."""
+        import os
+        from tests.conftest import LIVE_DB_ABSOLUTE
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION.*live DB path probed"):
+            os.stat(str(LIVE_DB_ABSOLUTE))
+
+    def test_os_lstat_on_live_db_blocked(self):
+        """os.lstat() on live DB path raises RuntimeError."""
+        import os
+        from tests.conftest import LIVE_DB_ABSOLUTE
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION.*live DB path probed"):
+            os.lstat(str(LIVE_DB_ABSOLUTE))
+
+    def test_path_stat_on_live_db_blocked(self):
+        """Path.stat() on live DB path raises RuntimeError."""
+        from tests.conftest import LIVE_DB_ABSOLUTE
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION.*live DB path probed"):
+            LIVE_DB_ABSOLUTE.stat()
+
+    def test_temp_path_operations_allowed(self, tmp_path):
+        """Filesystem operations on temp paths are allowed."""
+        import os
+        test_file = tmp_path / "test.db"
+        test_file.touch()  # Create the file
+        
+        # These should all work without raising
+        assert test_file.exists()
+        os.stat(str(test_file))
+        os.lstat(str(test_file))
+        test_file.stat()
+
+    def test_query_engine_import_does_not_probe(self):
+        """
+        QueryEngine can be imported without probing live DB paths.
+        
+        This is a regression test for the import-time DEFAULT_DB_PATH issue.
+        The module should use lazy initialization to avoid filesystem probes.
+        """
+        # If we got here without error, the guard didn't fire during import
+        from lib.query_engine import QueryEngine, get_default_db_path
+        
+        # QueryEngine class should be importable
+        assert QueryEngine is not None
+        
+        # get_default_db_path should exist but NOT have been called yet
+        # (we can't easily test this without more mocking, but the import succeeded
+        # which means no probes happened)
+
+
 class TestCassetteValidation:
     """Test cassette infrastructure."""
 

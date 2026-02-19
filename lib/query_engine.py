@@ -17,7 +17,12 @@ logger = logging.getLogger(__name__)
 
 
 def _resolve_db_path() -> Path:
-    """Resolve database path, preferring paths.db_path() but falling back to project data."""
+    """
+    Resolve database path, preferring paths.db_path() but falling back to project data.
+    
+    NOTE: This function probes the filesystem. Do NOT call at module import time
+    to avoid determinism violations in tests.
+    """
     # Try canonical path first
     canonical = paths.db_path()
     if canonical.exists():
@@ -32,7 +37,17 @@ def _resolve_db_path() -> Path:
     return canonical
 
 
-DEFAULT_DB_PATH = _resolve_db_path()
+# Lazy-initialized default path. Do NOT resolve at import time to avoid
+# filesystem probes that break test determinism.
+_default_db_path: Optional[Path] = None
+
+
+def get_default_db_path() -> Path:
+    """Get the default database path, resolving lazily on first call."""
+    global _default_db_path
+    if _default_db_path is None:
+        _default_db_path = _resolve_db_path()
+    return _default_db_path
 
 
 class QueryEngine:
@@ -40,14 +55,14 @@ class QueryEngine:
     Cross-entity query interface for operational intelligence.
     
     Usage:
-        engine = QueryEngine()
+        engine = QueryEngine(db_path)  # Explicit path required in tests
         clients = engine.client_portfolio_overview()
         profile = engine.client_deep_profile("client-id-123")
     """
     
     def __init__(self, db_path: Optional[Path] = None):
         """Initialize query engine with database path."""
-        self.db_path = db_path or DEFAULT_DB_PATH
+        self.db_path = db_path if db_path is not None else get_default_db_path()
         if not self.db_path.exists():
             raise FileNotFoundError(f"Database not found: {self.db_path}")
     

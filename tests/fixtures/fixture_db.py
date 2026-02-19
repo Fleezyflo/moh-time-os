@@ -19,15 +19,23 @@ REPO_ROOT = Path(__file__).parent.parent.parent
 SEED_PATH = Path(__file__).parent / "golden_seed.json"
 
 # Guard: Block access to live DB path
+# Use string to avoid triggering Path.resolve() which calls os.lstat
 LIVE_DB_PATH = REPO_ROOT / "data" / "moh_time_os.db"
+_LIVE_DB_STR = str(LIVE_DB_PATH)
 
 
 def guard_no_live_db(db_path: str | Path) -> None:
     """Fail loudly if tests try to access the live database."""
-    resolved = Path(db_path).resolve()
-    if resolved == LIVE_DB_PATH.resolve():
+    # Compare as strings to avoid Path.resolve() which triggers os.lstat
+    path_str = str(db_path)
+    # Match various forms of live DB path
+    if (
+        "data/moh_time_os.db" in path_str
+        or ".moh_time_os/data/moh_time_os.db" in path_str
+        or path_str == _LIVE_DB_STR
+    ):
         raise RuntimeError(
-            f"DETERMINISM VIOLATION: Test attempted to access live DB at {LIVE_DB_PATH}.\n"
+            f"DETERMINISM VIOLATION: Test attempted to access live DB at {db_path}.\n"
             "Golden tests must use fixture DB only. See tests/fixtures/fixture_db.py."
         )
 
