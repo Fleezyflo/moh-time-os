@@ -65,6 +65,125 @@ class TestLiveDBGuard:
             sqlite3.connect(str(HOME_DB_ABSOLUTE))
 
 
+class TestSQLiteSiblingFilesBlocked:
+    """
+    Regression tests for SQLite sibling files (-wal, -shm, -journal).
+
+    SQLite creates these files alongside the main .db file. Any access to them
+    also indicates live DB usage and must be blocked.
+    """
+
+    def test_wal_file_blocked(self):
+        """WAL file access is blocked."""
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
+            sqlite3.connect("data/moh_time_os.db-wal")
+
+    def test_shm_file_blocked(self):
+        """SHM file access is blocked."""
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
+            sqlite3.connect("data/moh_time_os.db-shm")
+
+    def test_journal_file_blocked(self):
+        """Journal file access is blocked."""
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
+            sqlite3.connect("data/moh_time_os.db-journal")
+
+    def test_absolute_wal_file_blocked(self):
+        """Absolute path to WAL file is blocked."""
+        from tests.conftest import LIVE_DB_ABSOLUTE
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
+            sqlite3.connect(f"{LIVE_DB_ABSOLUTE}-wal")
+
+    def test_home_wal_file_blocked(self):
+        """HOME WAL file is blocked."""
+        from tests.conftest import HOME_DB_ABSOLUTE
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
+            sqlite3.connect(f"{HOME_DB_ABSOLUTE}-wal")
+
+
+class TestURIFormatBlocked:
+    """
+    Regression tests for SQLite URI format variations.
+
+    SQLite accepts file: URIs with query params. All variations must be blocked.
+    """
+
+    def test_uri_relative_path_blocked(self):
+        """URI with relative path is blocked."""
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
+            sqlite3.connect("file:data/moh_time_os.db", uri=True)
+
+    def test_uri_absolute_path_blocked(self):
+        """URI with absolute path is blocked."""
+        from tests.conftest import LIVE_DB_ABSOLUTE
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
+            sqlite3.connect(f"file:{LIVE_DB_ABSOLUTE}", uri=True)
+
+    def test_uri_with_mode_ro_blocked(self):
+        """URI with ?mode=ro query param is blocked."""
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
+            sqlite3.connect("file:data/moh_time_os.db?mode=ro", uri=True)
+
+    def test_uri_with_cache_shared_blocked(self):
+        """URI with ?cache=shared query param is blocked."""
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
+            sqlite3.connect("file:data/moh_time_os.db?cache=shared", uri=True)
+
+    def test_uri_with_multiple_params_blocked(self):
+        """URI with multiple query params is blocked."""
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
+            sqlite3.connect("file:data/moh_time_os.db?mode=ro&cache=shared", uri=True)
+
+
+class TestDbapi2BypassClosed:
+    """
+    Regression tests for sqlite3.dbapi2.connect bypass.
+
+    This was a critical bypass where code could use sqlite3.dbapi2.connect
+    instead of sqlite3.connect to avoid the guard.
+    """
+
+    def test_dbapi2_connect_blocked(self):
+        """sqlite3.dbapi2.connect is also guarded."""
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
+            sqlite3.dbapi2.connect("data/moh_time_os.db")
+
+    def test_dbapi2_absolute_path_blocked(self):
+        """sqlite3.dbapi2.connect with absolute path is blocked."""
+        from tests.conftest import LIVE_DB_ABSOLUTE
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
+            sqlite3.dbapi2.connect(str(LIVE_DB_ABSOLUTE))
+
+    def test_dbapi2_uri_blocked(self):
+        """sqlite3.dbapi2.connect with URI is blocked."""
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
+            sqlite3.dbapi2.connect("file:data/moh_time_os.db?mode=ro", uri=True)
+
+    def test_dbapi2_memory_allowed(self):
+        """sqlite3.dbapi2.connect to :memory: is allowed."""
+        conn = sqlite3.dbapi2.connect(":memory:")
+        conn.execute("SELECT 1")
+        conn.close()
+
+
+class TestTildeExpansionBlocked:
+    """
+    Regression tests for tilde expansion in paths.
+
+    Paths like ~/.moh_time_os/data/moh_time_os.db must be blocked.
+    """
+
+    def test_tilde_home_db_blocked(self):
+        """Tilde path to HOME DB is blocked."""
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
+            sqlite3.connect("~/.moh_time_os/data/moh_time_os.db")
+
+    def test_tilde_home_wal_blocked(self):
+        """Tilde path to HOME WAL file is blocked."""
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
+            sqlite3.connect("~/.moh_time_os/data/moh_time_os.db-wal")
+
+
 class TestGuardNoLiveDbFunction:
     """Test the guard_no_live_db helper function."""
 
@@ -82,7 +201,7 @@ class TestGuardNoLiveDbFunction:
 class TestFilesystemProbeGuard:
     """
     Regression tests for filesystem probe guards.
-    
+
     These catch stat/lstat/exists calls on live DB paths, not just sqlite3.connect.
     This is critical because module import can trigger path resolution that probes
     for default DB locations.
@@ -125,7 +244,7 @@ class TestFilesystemProbeGuard:
         import os
         test_file = tmp_path / "test.db"
         test_file.touch()  # Create the file
-        
+
         # These should all work without raising
         assert test_file.exists()
         os.stat(str(test_file))
@@ -135,16 +254,16 @@ class TestFilesystemProbeGuard:
     def test_query_engine_import_does_not_probe(self):
         """
         QueryEngine can be imported without probing live DB paths.
-        
+
         This is a regression test for the import-time DEFAULT_DB_PATH issue.
         The module should use lazy initialization to avoid filesystem probes.
         """
         # If we got here without error, the guard didn't fire during import
         from lib.query_engine import QueryEngine, get_default_db_path
-        
+
         # QueryEngine class should be importable
         assert QueryEngine is not None
-        
+
         # get_default_db_path should exist but NOT have been called yet
         # (we can't easily test this without more mocking, but the import succeeded
         # which means no probes happened)

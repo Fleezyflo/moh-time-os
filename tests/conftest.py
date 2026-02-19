@@ -83,13 +83,60 @@ def _log_db_probe(operation: str, path_str: str):
         _log_recursion_guard.active = False
 
 
+def _normalize_path_string(path_str: str) -> str:
+    """
+    Normalize a path string WITHOUT filesystem access.
+
+    Handles:
+    - Tilde expansion (~)
+    - Relative path resolution via os.path.abspath (uses CWD, no stat)
+    - WAL/SHM/journal suffix stripping
+    """
+    if not path_str or path_str == ":memory:":
+        return path_str
+
+    # Expand ~ to home directory (no filesystem access)
+    expanded = os.path.expanduser(path_str)
+
+    # Normalize to absolute path (uses CWD, no stat calls)
+    absolute = os.path.abspath(expanded)
+
+    # Strip SQLite sibling suffixes to catch -wal, -shm, -journal
+    for suffix in ("-wal", "-shm", "-journal"):
+        if absolute.endswith(suffix):
+            absolute = absolute[:-len(suffix)]
+            break
+
+    return absolute
+
+
 def _is_forbidden_path(path_str: str) -> bool:
-    """Check if a path string matches any forbidden live DB pattern."""
-    if not path_str:
+    """
+    Check if a path string matches any forbidden live DB pattern.
+
+    Uses path normalization to catch:
+    - Relative paths (data/moh_time_os.db)
+    - Absolute paths
+    - Tilde paths (~/.moh_time_os/...)
+    - SQLite siblings (-wal, -shm, -journal)
+    """
+    if not path_str or path_str == ":memory:":
         return False
+
+    normalized = _normalize_path_string(path_str)
+
+    # Check against the two canonical forbidden paths (normalized)
+    live_db_normalized = os.path.abspath(os.path.expanduser(str(LIVE_DB_ABSOLUTE)))
+    home_db_normalized = os.path.abspath(os.path.expanduser(str(HOME_DB_ABSOLUTE)))
+
+    if normalized == live_db_normalized or normalized == home_db_normalized:
+        return True
+
+    # Also check raw string patterns for belt-and-suspenders
     for pattern in _FORBIDDEN_DB_PATTERNS:
         if pattern in path_str:
             return True
+
     return False
 
 
@@ -191,14 +238,53 @@ def _guarded_sqlite_connect(database, *args, **kwargs):
     return _original_sqlite_connect(database, *args, **kwargs)
 
 
-# Store original and patch at import time
-_original_sqlite_connect = sqlite3.connect
+# Store originals BEFORE any patching - capture the real built-in
+_original_sqlite_connect = sqlite3.dbapi2.connect  # The REAL built-in, not the alias
+
+# =============================================================================
+# DEBUG INSTRUMENTATION (enabled via MOH_DB_GUARD_DEBUG=1)
+# =============================================================================
+
+_DEBUG_GUARD = os.environ.get("MOH_DB_GUARD_DEBUG") == "1"
+
+
+def _debug_traced_connect(database, *args, **kwargs):
+    """Debug wrapper that prints stack trace for ALL sqlite3.connect calls.
+
+    Only enabled when MOH_DB_GUARD_DEBUG=1 is set.
+    """
+    import traceback
+    db_str = str(database)
+    if "moh_time_os.db" in db_str:  # Only trace DB-related connects
+        print(f"\n=== SQLITE CONNECT: {db_str} ===", file=sys.stderr)
+        traceback.print_stack(file=sys.stderr, limit=20)
+        print("=== END STACK ===\n", file=sys.stderr)
+    return _guarded_sqlite_connect(database, *args, **kwargs)
+
+
+# =============================================================================
+# INSTALL GUARDS AT MODULE LOAD TIME (before any imports can cache references)
+# =============================================================================
+# CRITICAL: We must patch BOTH sqlite3.connect AND sqlite3.dbapi2.connect
+# because sqlite3.connect is just an alias, and code can bypass via dbapi2.
+
+if _DEBUG_GUARD:
+    sqlite3.connect = _debug_traced_connect
+    sqlite3.dbapi2.connect = _debug_traced_connect
+else:
+    sqlite3.connect = _guarded_sqlite_connect
+    sqlite3.dbapi2.connect = _guarded_sqlite_connect
 
 
 @pytest.fixture(autouse=True)
 def guard_live_db_access(monkeypatch):
-    """Automatically guard all tests against live DB access."""
-    monkeypatch.setattr(sqlite3, "connect", _guarded_sqlite_connect)
+    """Reinforce guards for each test (belt and suspenders)."""
+    if _DEBUG_GUARD:
+        monkeypatch.setattr(sqlite3, "connect", _debug_traced_connect)
+        monkeypatch.setattr(sqlite3.dbapi2, "connect", _debug_traced_connect)
+    else:
+        monkeypatch.setattr(sqlite3, "connect", _guarded_sqlite_connect)
+        monkeypatch.setattr(sqlite3.dbapi2, "connect", _guarded_sqlite_connect)
 
 
 # =============================================================================
