@@ -32,12 +32,55 @@ LIVE_DB_ABSOLUTE = REPO_ROOT / LIVE_DB_PATH
 HOME_DB_ABSOLUTE = Path.home() / ".moh_time_os" / "data" / "moh_time_os.db"
 
 # Precompute string patterns for fast matching (avoid Path operations)
+# Include all variants: absolute, relative, with/without repo prefix
 _FORBIDDEN_DB_PATTERNS = [
     str(LIVE_DB_ABSOLUTE),
     str(HOME_DB_ABSOLUTE),
     "moh_time_os/data/moh_time_os.db",
     ".moh_time_os/data/moh_time_os.db",
+    "data/moh_time_os.db",  # Relative path from repo root
 ]
+
+# =============================================================================
+# AUDIT LOG: Prove no live DB paths are ever probed during tests
+# =============================================================================
+
+# Default to repo-local .db_watch.log to avoid /tmp permission issues
+# Override with DB_WATCH_LOG env var if needed
+_DB_WATCH_LOG = Path(os.environ.get("DB_WATCH_LOG", str(REPO_ROOT / ".db_watch.log")))
+_DB_PATTERNS_FOR_AUDIT = ["moh_time_os.db"]
+
+
+import threading
+_log_recursion_guard = threading.local()
+
+
+def _log_db_probe(operation: str, path_str: str):
+    """Log any filesystem operation that touches a path matching DB patterns.
+
+    All probes are logged faithfully. To prove normal tests don't touch the
+    live DB, run: pytest -q tests -k "not determinism_guards"
+    and verify the log is empty.
+
+    test_determinism_guards.py intentionally probes forbidden paths to verify
+    guards work; those entries are expected when running the full suite.
+    """
+    # Prevent recursion during logging (open() can trigger our guards)
+    if getattr(_log_recursion_guard, 'active', False):
+        return
+
+    _log_recursion_guard.active = True
+    try:
+        for pattern in _DB_PATTERNS_FOR_AUDIT:
+            if pattern in path_str:
+                try:
+                    with open(_DB_WATCH_LOG, "a") as f:
+                        f.write(f"{operation}: {path_str}\n")
+                except (OSError, PermissionError):
+                    pass  # Ignore if can't write to log
+                break
+    finally:
+        _log_recursion_guard.active = False
 
 
 def _is_forbidden_path(path_str: str) -> bool:
@@ -73,6 +116,7 @@ _original_path_resolve = Path.resolve
 def _guarded_os_stat(path, *args, **kwargs):
     """Guard os.stat against live DB path probes."""
     path_str = str(path)
+    _log_db_probe("os.stat", path_str)
     if _is_forbidden_path(path_str):
         _raise_determinism_violation(path_str, "os.stat")
     return _original_os_stat(path, *args, **kwargs)
@@ -81,6 +125,7 @@ def _guarded_os_stat(path, *args, **kwargs):
 def _guarded_os_lstat(path, *args, **kwargs):
     """Guard os.lstat against live DB path probes."""
     path_str = str(path)
+    _log_db_probe("os.lstat", path_str)
     if _is_forbidden_path(path_str):
         _raise_determinism_violation(path_str, "os.lstat")
     return _original_os_lstat(path, *args, **kwargs)
@@ -89,6 +134,7 @@ def _guarded_os_lstat(path, *args, **kwargs):
 def _guarded_path_exists(self):
     """Guard Path.exists against live DB path probes."""
     path_str = str(self)
+    _log_db_probe("Path.exists", path_str)
     if _is_forbidden_path(path_str):
         _raise_determinism_violation(path_str, "Path.exists")
     return _original_path_exists(self)
@@ -97,6 +143,7 @@ def _guarded_path_exists(self):
 def _guarded_path_stat(self, *args, **kwargs):
     """Guard Path.stat against live DB path probes."""
     path_str = str(self)
+    _log_db_probe("Path.stat", path_str)
     if _is_forbidden_path(path_str):
         _raise_determinism_violation(path_str, "Path.stat")
     return _original_path_stat(self, *args, **kwargs)
@@ -121,25 +168,25 @@ def _extract_path_from_uri(database: str) -> str:
 
 
 def _guarded_sqlite_connect(database, *args, **kwargs):
-    """Intercept sqlite3.connect to block live DB access."""
+    """Intercept sqlite3.connect to block live DB access.
+
+    IMPORTANT: Does NOT use Path.resolve() or any filesystem probing.
+    Uses pure string normalization to avoid triggering os.stat/lstat on live paths.
+    """
     db_str = str(database) if not isinstance(database, str) else database
     actual_path = _extract_path_from_uri(db_str)
-    db_path = Path(actual_path)
 
-    # Resolve to absolute path for comparison
-    if actual_path != ":memory:":
-        try:
-            abs_path = db_path.resolve()
-        except (OSError, ValueError):
-            abs_path = db_path
+    # Log the connection attempt for audit
+    _log_db_probe("sqlite3.connect", actual_path)
 
-        # Block live DB (repo path or HOME path)
-        if abs_path == LIVE_DB_ABSOLUTE or abs_path == HOME_DB_ABSOLUTE or str(db_path) == str(LIVE_DB_PATH):
-            raise RuntimeError(
-                f"DETERMINISM VIOLATION: Test attempted to access live DB at {database}.\n"
-                "Tests must use fixture_db from tests/fixtures/fixture_db.py.\n"
-                "Use: from tests.fixtures import create_fixture_db"
-            )
+    # Check against forbidden patterns using pure string comparison
+    # No filesystem probes - use _is_forbidden_path which is string-only
+    if actual_path != ":memory:" and _is_forbidden_path(actual_path):
+        raise RuntimeError(
+            f"DETERMINISM VIOLATION: Test attempted to access live DB at {database}.\n"
+            "Tests must use fixture_db from tests/fixtures/fixture_db.py.\n"
+            "Use: from tests.fixtures import create_fixture_db"
+        )
 
     return _original_sqlite_connect(database, *args, **kwargs)
 
