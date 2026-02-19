@@ -26,12 +26,35 @@ LIVE_DB_PATH = Path("data/moh_time_os.db")
 LIVE_DB_ABSOLUTE = (REPO_ROOT / LIVE_DB_PATH).resolve()
 
 
+def _extract_path_from_uri(database: str) -> str:
+    """Extract filesystem path from SQLite URI format.
+    
+    SQLite URI: file:/path/to/db?mode=ro&cache=shared
+    Returns: /path/to/db
+    """
+    if not database.startswith("file:"):
+        return database
+    
+    # Strip 'file:' prefix
+    path_part = database[5:]
+    
+    # Remove query string if present
+    if "?" in path_part:
+        path_part = path_part.split("?")[0]
+    
+    return path_part
+
+
 def _guarded_sqlite_connect(database, *args, **kwargs):
     """Intercept sqlite3.connect to block live DB access."""
-    db_path = Path(database) if isinstance(database, str) else database
+    db_str = str(database) if not isinstance(database, str) else database
+    
+    # Handle SQLite URI format (file:/path?mode=ro)
+    actual_path = _extract_path_from_uri(db_str)
+    db_path = Path(actual_path)
 
     # Resolve to absolute path for comparison
-    if db_path != ":memory:":
+    if actual_path != ":memory:":
         try:
             abs_path = db_path.resolve()
         except (OSError, ValueError):
@@ -109,3 +132,30 @@ def validated_cassettes():
             "\n".join(f"  - {issue}" for issue in issues)
         )
     return True
+
+
+# =============================================================================
+# FIXTURE DB FOR INTEGRATION TESTS
+# =============================================================================
+
+@pytest.fixture(scope="session")
+def integration_db_path(tmp_path_factory):
+    """
+    Session-scoped fixture DB for tests that need real-like data.
+    
+    Use this instead of hardcoding live DB paths.
+    Creates a fixture DB once per test session.
+    """
+    from tests.fixtures.fixture_db import create_fixture_db
+    
+    db_path = tmp_path_factory.mktemp("db") / "integration_test.db"
+    conn = create_fixture_db(db_path)
+    conn.close()
+    return db_path
+
+
+@pytest.fixture
+def integration_engine(integration_db_path):
+    """QueryEngine using fixture DB for integration tests."""
+    from lib.query_engine import QueryEngine
+    return QueryEngine(integration_db_path)

@@ -51,6 +51,20 @@ class TestLiveDBGuard:
         assert count > 0, "Fixture DB should have seeded clients"
         conn.close()
 
+    def test_uri_format_blocked(self):
+        """SQLite URI format (file:/path?mode=ro) is also blocked."""
+        from tests.conftest import LIVE_DB_ABSOLUTE
+        uri_path = f"file:{LIVE_DB_ABSOLUTE}?mode=ro"
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
+            sqlite3.connect(uri_path, uri=True)
+
+    def test_uri_format_with_query_params_blocked(self):
+        """SQLite URI with multiple query params is blocked."""
+        from tests.conftest import LIVE_DB_ABSOLUTE
+        uri_path = f"file:{LIVE_DB_ABSOLUTE}?mode=ro&cache=shared"
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
+            sqlite3.connect(uri_path, uri=True)
+
 
 class TestGuardNoLiveDbFunction:
     """Test the guard_no_live_db helper function."""

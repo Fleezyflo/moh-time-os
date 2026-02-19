@@ -370,11 +370,9 @@ class TestProposalGeneration:
     """Integration tests for proposal generation."""
 
     @pytest.fixture
-    def db_path(self):
-        path = Path(__file__).parent.parent / "data" / "moh_time_os.db"
-        if not path.exists():
-            pytest.skip("Live database not available")
-        return path
+    def db_path(self, integration_db_path):
+        """Use fixture DB for deterministic testing."""
+        return integration_db_path
 
     def test_generate_proposals_structure(self, db_path):
         """generate_proposals_from_live_data should return valid structure."""
@@ -438,11 +436,9 @@ class TestProposalQuality:
     """Tests for proposal content quality."""
 
     @pytest.fixture
-    def db_path(self):
-        path = Path(__file__).parent.parent / "data" / "moh_time_os.db"
-        if not path.exists():
-            pytest.skip("Live database not available")
-        return path
+    def db_path(self, integration_db_path):
+        """Use fixture DB for deterministic testing."""
+        return integration_db_path
 
     def test_headlines_not_generic(self, db_path):
         """Headlines should not be generic placeholders."""

@@ -97,12 +97,9 @@ class TestThresholdEvaluator:
     """Tests for threshold condition evaluation."""
 
     @pytest.fixture
-    def db_path(self):
-        """Get path to live database."""
-        path = Path(__file__).parent.parent / "data" / "moh_time_os.db"
-        if not path.exists():
-            pytest.skip("Live database not available")
-        return path
+    def db_path(self, integration_db_path):
+        """Use fixture DB for deterministic testing."""
+        return integration_db_path
 
     def test_threshold_returns_none_for_nonexistent_entity(self, db_path):
         """Should return None for entity that doesn't exist."""
@@ -148,11 +145,9 @@ class TestTrendEvaluator:
     """Tests for trend condition evaluation."""
 
     @pytest.fixture
-    def db_path(self):
-        path = Path(__file__).parent.parent / "data" / "moh_time_os.db"
-        if not path.exists():
-            pytest.skip("Live database not available")
-        return path
+    def db_path(self, integration_db_path):
+        """Use fixture DB for deterministic testing."""
+        return integration_db_path
 
     def test_trend_returns_none_for_nonexistent_entity(self, db_path):
         """Should return None for entity that doesn't exist."""
@@ -174,11 +169,9 @@ class TestAnomalyEvaluator:
     """Tests for anomaly condition evaluation."""
 
     @pytest.fixture
-    def db_path(self):
-        path = Path(__file__).parent.parent / "data" / "moh_time_os.db"
-        if not path.exists():
-            pytest.skip("Live database not available")
-        return path
+    def db_path(self, integration_db_path):
+        """Use fixture DB for deterministic testing."""
+        return integration_db_path
 
     def test_anomaly_returns_none_for_nonexistent_entity(self, db_path):
         """Should return None for entity that doesn't exist."""
@@ -199,11 +192,9 @@ class TestCompoundEvaluator:
     """Tests for compound condition evaluation."""
 
     @pytest.fixture
-    def db_path(self):
-        path = Path(__file__).parent.parent / "data" / "moh_time_os.db"
-        if not path.exists():
-            pytest.skip("Live database not available")
-        return path
+    def db_path(self, integration_db_path):
+        """Use fixture DB for deterministic testing."""
+        return integration_db_path
 
     def test_compound_with_no_conditions(self, db_path):
         """Empty conditions should return None."""
@@ -224,11 +215,9 @@ class TestSignalDetection:
     """Tests for signal detection functions."""
 
     @pytest.fixture
-    def db_path(self):
-        path = Path(__file__).parent.parent / "data" / "moh_time_os.db"
-        if not path.exists():
-            pytest.skip("Live database not available")
-        return path
+    def db_path(self, integration_db_path):
+        """Use fixture DB for deterministic testing."""
+        return integration_db_path
 
     def test_evaluate_signal_wrong_entity_type(self, db_path):
         """Signal should not fire for wrong entity type."""
@@ -291,11 +280,9 @@ class TestFullDetection:
     """Tests for full database signal detection."""
 
     @pytest.fixture
-    def db_path(self):
-        path = Path(__file__).parent.parent / "data" / "moh_time_os.db"
-        if not path.exists():
-            pytest.skip("Live database not available")
-        return path
+    def db_path(self, integration_db_path):
+        """Use fixture DB for deterministic testing."""
+        return integration_db_path
 
     def test_detect_all_signals_structure(self, db_path):
         """detect_all_signals should return valid structure (quick mode)."""
@@ -354,11 +341,9 @@ class TestEvidenceFormatting:
     """Tests for evidence text formatting."""
 
     @pytest.fixture
-    def db_path(self):
-        path = Path(__file__).parent.parent / "data" / "moh_time_os.db"
-        if not path.exists():
-            pytest.skip("Live database not available")
-        return path
+    def db_path(self, integration_db_path):
+        """Use fixture DB for deterministic testing."""
+        return integration_db_path
 
     def test_detected_signal_has_evidence_text(self, db_path):
         """Detected signals should have formatted evidence text."""

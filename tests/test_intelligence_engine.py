@@ -34,11 +34,9 @@ class TestIntelligencePipeline:
     """Tests for the full intelligence pipeline."""
 
     @pytest.fixture
-    def db_path(self):
-        path = Path(__file__).parent.parent / "data" / "moh_time_os.db"
-        if not path.exists():
-            pytest.skip("Live database not available")
-        return path
+    def db_path(self, integration_db_path):
+        """Use fixture DB for deterministic testing."""
+        return integration_db_path
 
     def test_snapshot_has_required_keys(self, db_path):
         """Snapshot should contain all top-level keys."""
@@ -97,11 +95,9 @@ class TestPipelineStages:
     """Tests for individual pipeline stages."""
 
     @pytest.fixture
-    def db_path(self):
-        path = Path(__file__).parent.parent / "data" / "moh_time_os.db"
-        if not path.exists():
-            pytest.skip("Live database not available")
-        return path
+    def db_path(self, integration_db_path):
+        """Use fixture DB for deterministic testing."""
+        return integration_db_path
 
     def test_scoring_stage_returns_dict(self, db_path):
         """Scoring stage should return dict with entity types."""
@@ -166,11 +162,9 @@ class TestTargetedIntelligence:
     """Tests for targeted intelligence functions."""
 
     @pytest.fixture
-    def db_path(self):
-        path = Path(__file__).parent.parent / "data" / "moh_time_os.db"
-        if not path.exists():
-            pytest.skip("Live database not available")
-        return path
+    def db_path(self, integration_db_path):
+        """Use fixture DB for deterministic testing."""
+        return integration_db_path
 
     def test_client_intelligence_structure(self, db_path):
         """get_client_intelligence should return complete structure."""
@@ -235,11 +229,9 @@ class TestDataValidation:
     """Tests for data integrity and validation."""
 
     @pytest.fixture
-    def db_path(self):
-        path = Path(__file__).parent.parent / "data" / "moh_time_os.db"
-        if not path.exists():
-            pytest.skip("Live database not available")
-        return path
+    def db_path(self, integration_db_path):
+        """Use fixture DB for deterministic testing."""
+        return integration_db_path
 
     def test_proposals_are_ranked(self, db_path):
         """Proposals in snapshot should be sorted by priority."""

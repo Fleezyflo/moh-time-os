@@ -2,6 +2,7 @@
 Query Engine Tests — Task 3.1
 
 Tests for lib/query_engine.py cross-entity intelligence queries.
+Uses fixture DB (not live DB) for deterministic testing.
 """
 
 import pytest
@@ -9,31 +10,29 @@ from pathlib import Path
 
 from lib.query_engine import QueryEngine, get_engine
 
-DB_PATH = Path(__file__).parent.parent / "data" / "moh_time_os.db"
-
 
 @pytest.fixture
-def engine():
-    """Get a QueryEngine instance."""
-    return QueryEngine(DB_PATH)
+def engine(integration_db_path):
+    """Get a QueryEngine instance using fixture DB."""
+    return QueryEngine(integration_db_path)
 
 
 class TestQueryEngineInit:
     """Test QueryEngine initialization."""
 
-    def test_init_with_valid_path(self):
+    def test_init_with_valid_path(self, integration_db_path):
         """Engine initializes with valid database path."""
-        engine = QueryEngine(DB_PATH)
-        assert engine.db_path == DB_PATH
+        engine = QueryEngine(integration_db_path)
+        assert engine.db_path == integration_db_path
 
     def test_init_with_invalid_path(self):
         """Engine raises error with invalid path."""
         with pytest.raises(FileNotFoundError):
             QueryEngine(Path("/nonexistent/db.sqlite"))
 
-    def test_get_engine_convenience(self):
+    def test_get_engine_convenience(self, integration_db_path):
         """get_engine() convenience function works."""
-        engine = get_engine(DB_PATH)
+        engine = get_engine(integration_db_path)
         assert isinstance(engine, QueryEngine)
 
 
