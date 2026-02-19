@@ -8,21 +8,102 @@ DO NOT define collectors anywhere else.
 """
 
 import fcntl
+import logging
 import os
+import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from lib import paths
 
+logger = logging.getLogger(__name__)
+
 # ============================================================================
-# LOCKFILE GUARD — Prevents double execution
+# LOCKFILE GUARD — Prevents double execution with stale lock detection
 # ============================================================================
 LOCK_FILE = paths.data_dir() / ".collector.lock"
+
+# Default timeout for stale lock detection (20 minutes)
+DEFAULT_LOCK_TTL_SECONDS = int(os.environ.get("COLLECTOR_LOCK_TTL_SECONDS", "1200"))
+
+
+def _is_pid_running(pid: int) -> bool:
+    """Check if a process with given PID is running."""
+    if pid <= 0:
+        return False
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        # Process exists but we don't have permission to signal it
+        return True
+    except OSError:
+        return False
+
+
+def _read_lock_info(lock_path: Path) -> tuple[int | None, float | None]:
+    """
+    Read PID and mtime from lock file.
+
+    Returns (pid, mtime) or (None, None) if lock doesn't exist or can't be read.
+    """
+    try:
+        if not lock_path.exists():
+            return None, None
+        content = lock_path.read_text().strip()
+        pid = int(content) if content else None
+        mtime = lock_path.stat().st_mtime
+        return pid, mtime
+    except (ValueError, OSError, FileNotFoundError):
+        return None, None
+
+
+def _is_lock_stale(lock_path: Path, ttl_seconds: int = DEFAULT_LOCK_TTL_SECONDS) -> bool:
+    """
+    Determine if an existing lock is stale.
+
+    A lock is stale if:
+    1. The PID in the lock file is not running, OR
+    2. The lock file is older than ttl_seconds
+
+    Returns True if stale (safe to acquire), False if lock is valid.
+    """
+    pid, mtime = _read_lock_info(lock_path)
+
+    if pid is None or mtime is None:
+        # Can't read lock info, treat as stale
+        return True
+
+    # Check 1: Is the PID still running?
+    if not _is_pid_running(pid):
+        logger.warning(
+            f"Stale lock detected: PID {pid} is not running. Removing stale lock at {lock_path}"
+        )
+        return True
+
+    # Check 2: Is the lock older than TTL?
+    lock_age = time.time() - mtime
+    if lock_age > ttl_seconds:
+        logger.warning(
+            f"Stale lock detected: Lock age {lock_age:.0f}s exceeds TTL {ttl_seconds}s. "
+            f"PID {pid} may be hung. Removing stale lock at {lock_path}"
+        )
+        return True
+
+    return False
 
 
 class CollectorLock:
     """
-    Prevents concurrent collector runs.
+    Prevents concurrent collector runs with stale lock detection.
+
+    Features:
+    - File-based locking with fcntl.flock
+    - Stale lock detection via PID check and TTL
+    - Guaranteed release in __exit__ (even on exception)
 
     Usage:
         with CollectorLock() as lock:
@@ -30,30 +111,65 @@ class CollectorLock:
                 print("Another collector is running")
                 return
             # do collection
+
+    Environment variables:
+        COLLECTOR_LOCK_TTL_SECONDS: Max age of lock before considered stale (default: 1200)
     """
 
-    def __init__(self):
+    def __init__(self, ttl_seconds: int | None = None):
         self.lock_file = LOCK_FILE
         self.lock_fd = None
         self.acquired = False
+        self.ttl_seconds = ttl_seconds if ttl_seconds is not None else DEFAULT_LOCK_TTL_SECONDS
 
     def __enter__(self):
         self.lock_file.parent.mkdir(parents=True, exist_ok=True)
+
+        # Check for stale lock before attempting to acquire
+        if self.lock_file.exists() and _is_lock_stale(self.lock_file, self.ttl_seconds):
+            try:
+                self.lock_file.unlink()
+                logger.info(f"Removed stale lock file: {self.lock_file}")
+            except OSError as e:
+                logger.warning(f"Failed to remove stale lock: {e}")
+
         self.lock_fd = open(self.lock_file, "w")
         try:
             fcntl.flock(self.lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
             self.lock_fd.write(f"{os.getpid()}\n")
             self.lock_fd.flush()
             self.acquired = True
+            logger.debug(f"Acquired collector lock: PID {os.getpid()}")
         except BlockingIOError:
+            # Lock held by another process - check if it's stale
+            pid, _ = _read_lock_info(self.lock_file)
+            logger.info(f"Collector lock held by PID {pid}. Another collection is in progress.")
             self.acquired = False
         return self
 
-    def __exit__(self, *args):
+    def __exit__(self, exc_type, exc_val, exc_tb):
         if self.lock_fd:
-            if self.acquired:
-                fcntl.flock(self.lock_fd, fcntl.LOCK_UN)
-            self.lock_fd.close()
+            try:
+                if self.acquired:
+                    fcntl.flock(self.lock_fd, fcntl.LOCK_UN)
+                    logger.debug(f"Released collector lock: PID {os.getpid()}")
+            except OSError as e:
+                logger.warning(f"Error releasing lock: {e}")
+            finally:
+                try:
+                    self.lock_fd.close()
+                except OSError:
+                    pass
+
+                # Clean up lock file if we owned it
+                if self.acquired:
+                    try:
+                        self.lock_file.unlink(missing_ok=True)
+                    except OSError:
+                        pass
+
+        # Don't suppress exceptions - let them propagate
+        return False
 
 
 # ============================================================================
