@@ -40,7 +40,10 @@ jobs:
               echo "✅ $file"
             fi
           done < /tmp/enforcement/protected-files.txt
-          [ "$TAMPERED" -eq 1 ] && echo "⚠️ Protected files were restored to blessed versions"
+          if [ "$TAMPERED" -eq 1 ]; then
+            echo "❌ Protected files tampered. PR blocked."
+            exit 1
+          fi
           echo "✅ Integrity check complete"
 
   # ==========================================
