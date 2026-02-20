@@ -1,0 +1,50 @@
+# Sync Schedule Configuration
+#
+# Defines per-collector sync intervals and health thresholds.
+# Used by lib/sync_health.py for scheduling decisions and staleness detection.
+#
+# Each collector has:
+#   interval_minutes: How often to run
+#   enabled: Whether the collector should be scheduled
+#   health_multiplier: Alert if no run in N * interval_minutes (default: 2)
+
+schedules:
+  asana:
+    interval_minutes: 30
+    enabled: true
+    health_multiplier: 2
+
+  gmail:
+    interval_minutes: 15
+    enabled: true
+    health_multiplier: 2
+
+  calendar:
+    interval_minutes: 60
+    enabled: true
+    health_multiplier: 2
+
+  chat:
+    interval_minutes: 60
+    enabled: true
+    health_multiplier: 2
+
+  xero:
+    interval_minutes: 360
+    enabled: true
+    health_multiplier: 2
+
+  tasks:
+    interval_minutes: 60
+    enabled: true
+    health_multiplier: 2
+
+  drive:
+    interval_minutes: 720
+    enabled: false
+    health_multiplier: 2
+
+  contacts:
+    interval_minutes: 1440
+    enabled: false
+    health_multiplier: 2
