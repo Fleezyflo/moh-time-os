@@ -13,6 +13,7 @@ import json
 import logging
 import sqlite3
 from datetime import date, datetime, timedelta
+from pathlib import Path
 from uuid import uuid4
 
 from lib import paths
@@ -86,14 +87,10 @@ class MoveExecutor:
                     "error": f"Unknown action type: {action_type}",
                 }
         except sqlite3.Error as e:
-            logger.error(
-                f"Database error executing move {move.get('id')}: {e}", exc_info=True
-            )
+            logger.error(f"Database error executing move {move.get('id')}: {e}", exc_info=True)
             result = {"success": False, "error": f"Database error: {e}"}
         except Exception as e:
-            logger.error(
-                f"Unexpected error executing move {move.get('id')}: {e}", exc_info=True
-            )
+            logger.error(f"Unexpected error executing move {move.get('id')}: {e}", exc_info=True)
             result = {"success": False, "error": str(e)}
 
         self._log_decision(move.get("id", "unknown"), "execute", result)
