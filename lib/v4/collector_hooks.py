@@ -488,9 +488,7 @@ class CollectorHooks:
             conn = self._get_conn()
             cursor = conn.cursor()
             try:
-                cursor.execute(
-                    "SELECT id FROM clients WHERE xero_contact_id = ?", (contact_id,)
-                )
+                cursor.execute("SELECT id FROM clients WHERE xero_contact_id = ?", (contact_id,))
                 row = cursor.fetchone()
                 if row:
                     link = self.link_svc.create_link(
@@ -508,9 +506,7 @@ class CollectorHooks:
 
         # Create excerpt with invoice summary
         summary = f"Invoice {invoice_data.get('InvoiceNumber', 'N/A')}: {invoice_data.get('Total', 0)} ({invoice_data.get('Status', 'Unknown')})"
-        self.artifact_svc.create_excerpt(
-            artifact_id, summary, anchor_type="message_quote"
-        )
+        self.artifact_svc.create_excerpt(artifact_id, summary, anchor_type="message_quote")
 
         return {
             "artifact_id": artifact_id,
@@ -596,9 +592,7 @@ class CollectorHooks:
             links.append(link)
 
         # Link to recipients
-        all_recipients = (message_data.get("to", []) or []) + (
-            message_data.get("cc", []) or []
-        )
+        all_recipients = (message_data.get("to", []) or []) + (message_data.get("cc", []) or [])
         for email in all_recipients:
             if email:
                 profile = self.identity_svc.resolve_identity(
@@ -617,9 +611,7 @@ class CollectorHooks:
                     links.append(link)
 
         # Match clients in subject/body
-        searchable = (
-            f"{message_data.get('subject', '')} {message_data.get('snippet', '')}"
-        )
+        searchable = f"{message_data.get('subject', '')} {message_data.get('snippet', '')}"
         for client_id, conf, reason in self._match_client_in_text(searchable):
             link = self.link_svc.create_link(
                 artifact_id,
@@ -637,9 +629,7 @@ class CollectorHooks:
         # ========================================
 
         # Include body in searchable text for task matching
-        body_text = (
-            message_data.get("body", "") or message_data.get("body_text", "") or ""
-        )
+        body_text = message_data.get("body", "") or message_data.get("body_text", "") or ""
         full_searchable = f"{searchable} {body_text}"
 
         # Strategy 1: Extract Asana task GIDs from URLs in email
@@ -660,9 +650,7 @@ class CollectorHooks:
                 )
                 links.append(link)
                 linked_task_ids.add(task_id)
-                log.debug(
-                    f"Linked email {msg_id} to task {task_id} via Asana GID {gid}"
-                )
+                log.debug(f"Linked email {msg_id} to task {task_id} via Asana GID {gid}")
 
         # Strategy 2: Keyword/name matching for tasks
         for task_id, conf, reason in self._match_task_in_text(full_searchable):
@@ -723,9 +711,7 @@ class CollectorHooks:
                 actor_id = profile["profile_id"]
 
         start = event_data.get("start", {})
-        occurred_at = (
-            start.get("dateTime") or start.get("date") or datetime.now().isoformat()
-        )
+        occurred_at = start.get("dateTime") or start.get("date") or datetime.now().isoformat()
 
         result = self.artifact_svc.create_artifact(
             source="calendar",
@@ -762,9 +748,7 @@ class CollectorHooks:
                     links.append(link)
 
         # Match clients in event title/description
-        searchable = (
-            f"{event_data.get('summary', '')} {event_data.get('description', '')}"
-        )
+        searchable = f"{event_data.get('summary', '')} {event_data.get('description', '')}"
         for client_id, conf, reason in self._match_client_in_text(searchable):
             link = self.link_svc.create_link(
                 artifact_id,
@@ -1157,9 +1141,7 @@ class CollectorHooks:
                         stats["links_created"] += len(links)
 
                 except Exception as e:
-                    log.warning(
-                        f"Failed to repair links for artifact {artifact_id}: {e}"
-                    )
+                    log.warning(f"Failed to repair links for artifact {artifact_id}: {e}")
                     stats["errors"] += 1
 
             return stats
@@ -1257,9 +1239,7 @@ class CollectorHooks:
 
         # Reload task patterns to get latest
         self._load_entity_patterns()
-        log.info(
-            f"Relinking emails to tasks. {len(self.task_patterns)} task patterns loaded."
-        )
+        log.info(f"Relinking emails to tasks. {len(self.task_patterns)} task patterns loaded.")
 
         try:
             # Find email artifacts that don't have task links

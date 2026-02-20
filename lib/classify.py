@@ -219,25 +219,19 @@ def get_data_quality_report() -> dict:
         items_with_due = conn.execute(
             "SELECT COUNT(*) FROM items WHERE due IS NOT NULL AND status = 'open'"
         ).fetchone()[0]
-        open_items = conn.execute(
-            "SELECT COUNT(*) FROM items WHERE status = 'open'"
-        ).fetchone()[0]
+        open_items = conn.execute("SELECT COUNT(*) FROM items WHERE status = 'open'").fetchone()[0]
 
     return {
         "clients": {
             "total": total_clients,
             "tiered": tiered_clients,
-            "tiered_pct": round(100 * tiered_clients / total_clients, 1)
-            if total_clients
-            else 0,
+            "tiered_pct": round(100 * tiered_clients / total_clients, 1) if total_clients else 0,
             "with_health": clients_with_health,
         },
         "projects": {
             "total": total_projects,
             "linked": linked_projects,
-            "linked_pct": round(100 * linked_projects / total_projects, 1)
-            if total_projects
-            else 0,
+            "linked_pct": round(100 * linked_projects / total_projects, 1) if total_projects else 0,
         },
         "items": {
             "total": total_items,
@@ -247,9 +241,7 @@ def get_data_quality_report() -> dict:
             if total_items
             else 0,
             "with_due_date": items_with_due,
-            "due_date_pct": round(100 * items_with_due / open_items, 1)
-            if open_items
-            else 0,
+            "due_date_pct": round(100 * items_with_due / open_items, 1) if open_items else 0,
         },
     }
 

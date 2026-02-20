@@ -28,16 +28,12 @@ def column_exists(cursor, table: str, column: str) -> bool:
 
 
 def table_exists(cursor, table: str) -> bool:
-    cursor.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,)
-    )
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,))
     return cursor.fetchone() is not None
 
 
 def index_exists(cursor, index_name: str) -> bool:
-    cursor.execute(
-        "SELECT name FROM sqlite_master WHERE type='index' AND name=?", (index_name,)
-    )
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='index' AND name=?", (index_name,))
     return cursor.fetchone() is not None
 
 
@@ -59,17 +55,13 @@ def migrate_tasks(cursor):
     # Add project_link_status
     if not column_exists(cursor, "tasks", "project_link_status"):
         logger.info("Adding project_link_status column...")
-        cursor.execute(
-            "ALTER TABLE tasks ADD COLUMN project_link_status TEXT DEFAULT 'unlinked'"
-        )
+        cursor.execute("ALTER TABLE tasks ADD COLUMN project_link_status TEXT DEFAULT 'unlinked'")
     else:
         logger.info("project_link_status already exists")
     # Add client_link_status
     if not column_exists(cursor, "tasks", "client_link_status"):
         logger.info("Adding client_link_status column...")
-        cursor.execute(
-            "ALTER TABLE tasks ADD COLUMN client_link_status TEXT DEFAULT 'unlinked'"
-        )
+        cursor.execute("ALTER TABLE tasks ADD COLUMN client_link_status TEXT DEFAULT 'unlinked'")
     else:
         logger.info("client_link_status already exists")
     # Create indexes
@@ -115,17 +107,13 @@ def migrate_projects(cursor):
     # Add is_internal
     if not column_exists(cursor, "projects", "is_internal"):
         logger.info("Adding is_internal column...")
-        cursor.execute(
-            "ALTER TABLE projects ADD COLUMN is_internal INTEGER NOT NULL DEFAULT 0"
-        )
+        cursor.execute("ALTER TABLE projects ADD COLUMN is_internal INTEGER NOT NULL DEFAULT 0")
     else:
         logger.info("is_internal already exists")
     # Add type
     if not column_exists(cursor, "projects", "type"):
         logger.info("Adding type column...")
-        cursor.execute(
-            "ALTER TABLE projects ADD COLUMN type TEXT NOT NULL DEFAULT 'project'"
-        )
+        cursor.execute("ALTER TABLE projects ADD COLUMN type TEXT NOT NULL DEFAULT 'project'")
     else:
         logger.info("type already exists")
 
@@ -150,9 +138,7 @@ def migrate_communications(cursor):
         logger.info("from_domain already exists")
     if not column_exists(cursor, "communications", "link_status"):
         logger.info("Adding link_status column...")
-        cursor.execute(
-            "ALTER TABLE communications ADD COLUMN link_status TEXT DEFAULT 'unlinked'"
-        )
+        cursor.execute("ALTER TABLE communications ADD COLUMN link_status TEXT DEFAULT 'unlinked'")
     else:
         logger.info("link_status already exists")
     if not column_exists(cursor, "communications", "content_hash"):
@@ -278,9 +264,7 @@ def create_invoices_table(cursor):
             FOREIGN KEY (project_id) REFERENCES projects(id)
         )
     """)
-    cursor.execute(
-        "CREATE INDEX IF NOT EXISTS idx_invoices_client ON invoices(client_id)"
-    )
+    cursor.execute("CREATE INDEX IF NOT EXISTS idx_invoices_client ON invoices(client_id)")
     cursor.execute("CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status)")
     logger.info("invoices table created with indexes")
 

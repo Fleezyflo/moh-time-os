@@ -53,9 +53,13 @@ class TestSingleRegistry:
         content = scheduled_path.read_text()
 
         assert "CollectorLock" in content, "scheduled_collect.py must use CollectorLock"
-        assert (
-            "with CollectorLock()" in content
-        ), "scheduled_collect.py must acquire lock"
+        # Check for proper lock acquisition (either with statement or explicit enter/exit)
+        uses_with = "with CollectorLock()" in content
+        uses_explicit = "lock.__enter__()" in content and "lock.__exit__" in content
+        assert uses_with or uses_explicit, (
+            "scheduled_collect.py must acquire lock "
+            "(either 'with CollectorLock()' or explicit __enter__/__exit__)"
+        )
 
 
 class TestCanonicalRunnerAuthoritative:

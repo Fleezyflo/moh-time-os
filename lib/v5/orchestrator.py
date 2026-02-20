@@ -66,17 +66,16 @@ class TimeOSOrchestrator:
 
             if sql_file.exists():
                 sql = sql_file.read_text()
-                # Split by semicolons and execute each statement
-                for stmt in sql.split(";"):
-                    stmt = stmt.strip()
-                    if stmt and not stmt.startswith("--"):
-                        try:
-                            self.db.execute(stmt)
-                        except Exception as e:
-                            # Ignore "already exists" errors
-                            if "already exists" not in str(e):
-                                logger.warning(f"Migration statement warning: {e}")
-                logger.info("V5 schema created successfully")
+                # Use executescript to run the full migration as a single batch
+                # This ensures tables are created before indexes are added
+                conn = self.db.get_connection()
+                try:
+                    conn.executescript(sql)
+                    conn.commit()
+                    logger.info("V5 schema created successfully")
+                except Exception as e:
+                    logger.error(f"Migration failed: {e}")
+                    raise
             else:
                 logger.warning(f"Migration file not found: {sql_file}")
 
@@ -177,16 +176,12 @@ class TimeOSOrchestrator:
             try:
                 balanced = self.balance_service.process_new_signal(signal)
                 if balanced:
-                    stats["balanced"] += (
-                        len(balanced) if isinstance(balanced, list) else 1
-                    )
+                    stats["balanced"] += len(balanced) if isinstance(balanced, list) else 1
             except Exception as e:
                 logger.warning(f"Balancing error for signal {signal.get('id')}: {e}")
                 stats["errors"] += 1
 
-        logger.info(
-            f"Balancing: {stats['balanced']}/{stats['processed']} signals balanced"
-        )
+        logger.info(f"Balancing: {stats['balanced']}/{stats['processed']} signals balanced")
 
         return stats
 
@@ -329,12 +324,8 @@ def main():
     parser.add_argument("--full", action="store_true", help="Run full pipeline")
     parser.add_argument("--detect", action="store_true", help="Run detection only")
     parser.add_argument("--balance", action="store_true", help="Run balancing only")
-    parser.add_argument(
-        "--issues", action="store_true", help="Run issue formation only"
-    )
-    parser.add_argument(
-        "--resolve", action="store_true", help="Run resolution check only"
-    )
+    parser.add_argument("--issues", action="store_true", help="Run issue formation only")
+    parser.add_argument("--resolve", action="store_true", help="Run resolution check only")
     parser.add_argument("--status", action="store_true", help="Show system status")
 
     args = parser.parse_args()

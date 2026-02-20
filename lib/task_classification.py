@@ -74,9 +74,7 @@ def is_tracking_item(task: dict) -> bool:
             return True
 
     # Check title patterns
-    return any(
-        re.search(pattern, title, re.IGNORECASE) for pattern in TRACKING_PATTERNS
-    )
+    return any(re.search(pattern, title, re.IGNORECASE) for pattern in TRACKING_PATTERNS)
 
 
 def classify_tasks(tasks: list) -> tuple:

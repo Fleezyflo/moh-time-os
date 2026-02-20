@@ -1,7 +1,7 @@
 # MOH TIME OS - Canonical Cron Configuration
 #
-# This is the RECOMMENDED cron setup after collector cleanup.
-# Only TWO entries needed for collection.
+# IMPORTANT: This is the ONLY recommended cron setup.
+# Do NOT install overlapping entries from other scripts.
 #
 # To install:
 #   crontab -e
@@ -10,26 +10,43 @@
 # ============================================================
 # CANONICAL COLLECTION (every 15 minutes)
 # ============================================================
-# This is THE ONLY collection entry point.
+# This is THE ONLY periodic collection entry point.
 # Runs: calendar, gmail, tasks, chat, asana, xero, drive, contacts
 # Then: V4 ingest, entity linking, V5 detection, inbox enrichment
+#
+# Features:
+# - Stale lock detection (auto-removes hung locks after 20 min)
+# - Watchdog timeout (aborts if total runtime exceeds 10 min)
+# - Guaranteed lock release on any exit
+#
 */15 * * * * cd /Users/molhamhomsi/clawd/moh_time_os && /Users/molhamhomsi/clawd/moh_time_os/.venv/bin/python collectors/scheduled_collect.py >> /tmp/time-os-collect.log 2>&1
 
 # ============================================================
-# V4 PIPELINE CYCLE (every 30 minutes)
+# DEPRECATED / REMOVED
 # ============================================================
-# Runs coupling detection, issue lifecycle, proposal generation
-*/30 * * * * cd /Users/molhamhomsi/clawd/moh_time_os && /Users/molhamhomsi/clawd/moh_time_os/.venv/bin/python cli_v4.py cycle >> /tmp/time-os-v4.log 2>&1
-
-# ============================================================
-# DEPRECATED - DO NOT USE
-# ============================================================
-# These entries were REMOVED during collector cleanup (2025-02-10):
+# The following entries have been REMOVED to prevent lock contention:
 #
-# REMOVED: python -m lib.autonomous_loop run
-#   Reason: Uses CollectorOrchestrator which duplicates scheduled_collect.py
+# ❌ DO NOT USE: python -m lib.autonomous_loop run
+#   Reason: Duplicates scheduled_collect.py, causes lock contention
 #
-# REMOVED: python -m lib.collectors.orchestrator sync
-#   Reason: Duplicate of scheduled_collect.py, different target tables
+# ❌ DO NOT USE: python -m lib.collectors.orchestrator sync
+#   Reason: Duplicates scheduled_collect.py, causes lock contention
+#
+# ❌ DO NOT USE: cli_v4.py cycle (overlapping with scheduled_collect)
+#   Reason: V4/V5 pipelines are now integrated into scheduled_collect.py
 #
 # See COLLECTOR_AUDIT.md for full documentation.
+#
+# ============================================================
+# OPTIONAL: Briefs (if not using Clawdbot cron)
+# ============================================================
+# Uncomment these if you want system-generated briefs without Clawdbot:
+#
+# Daily brief - 9:00 AM Dubai (UTC+4 = 05:00 UTC)
+# 0 5 * * * cd /Users/molhamhomsi/clawd/moh_time_os && /Users/molhamhomsi/clawd/moh_time_os/.venv/bin/python -m lib.notifier.briefs daily >> /tmp/time-os-briefs.log 2>&1
+#
+# Midday pulse - 13:00 Dubai (UTC+4 = 09:00 UTC)
+# 0 9 * * * cd /Users/molhamhomsi/clawd/moh_time_os && /Users/molhamhomsi/clawd/moh_time_os/.venv/bin/python -m lib.notifier.briefs midday >> /tmp/time-os-briefs.log 2>&1
+#
+# End of day - 19:30 Dubai (UTC+4 = 15:30 UTC)
+# 30 15 * * * cd /Users/molhamhomsi/clawd/moh_time_os && /Users/molhamhomsi/clawd/moh_time_os/.venv/bin/python -m lib.notifier.briefs eod >> /tmp/time-os-briefs.log 2>&1

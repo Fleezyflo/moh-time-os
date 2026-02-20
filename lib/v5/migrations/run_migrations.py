@@ -69,9 +69,7 @@ class MigrationRunner:
         migration_files.sort(key=lambda x: x[0])
         return migration_files
 
-    def run_migration(
-        self, conn: sqlite3.Connection, migration_id: str, file_path: Path
-    ) -> None:
+    def run_migration(self, conn: sqlite3.Connection, migration_id: str, file_path: Path) -> None:
         """
         Run a single migration file.
 
@@ -155,9 +153,7 @@ class MigrationRunner:
         conn = self.get_connection()
 
         try:
-            cursor = conn.execute(
-                "DELETE FROM migrations WHERE id = ?", (migration_id,)
-            )
+            cursor = conn.execute("DELETE FROM migrations WHERE id = ?", (migration_id,))
 
             if cursor.rowcount > 0:
                 conn.commit()
@@ -186,9 +182,7 @@ class MigrationRunner:
                     "SELECT id, applied_at, description FROM migrations ORDER BY id"
                 )
                 for row in cursor.fetchall():
-                    logger.info(
-                        f"  ✓ {row['id']}: {row['description']} ({row['applied_at']})"
-                    )
+                    logger.info(f"  ✓ {row['id']}: {row['description']} ({row['applied_at']})")
             else:
                 logger.info("  (none)")
             {mid for mid, _ in pending}

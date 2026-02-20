@@ -66,9 +66,7 @@ def detect_task_prefixes(store, test_mode: bool = False) -> list[dict]:
 
     # Find prefixes that aren't already enrolled
     enrolled_names = set()
-    enrolled = store.query(
-        "SELECT name FROM projects WHERE enrollment_status = 'enrolled'"
-    )
+    enrolled = store.query("SELECT name FROM projects WHERE enrollment_status = 'enrolled'")
     for p in enrolled:
         enrolled_names.add(p["name"].lower().strip())
         # Also add the prefix without "Monthly"
@@ -221,9 +219,7 @@ def detect_xero_deposits(store) -> list[dict]:
 
         # Get enrolled project names to exclude
         enrolled_names = set()
-        enrolled = store.query(
-            "SELECT name FROM projects WHERE enrollment_status = 'enrolled'"
-        )
+        enrolled = store.query("SELECT name FROM projects WHERE enrollment_status = 'enrolled'")
         for p in enrolled:
             enrolled_names.add(p["name"].lower().strip())
 
@@ -237,9 +233,7 @@ def detect_xero_deposits(store) -> list[dict]:
                 continue
 
             # Check for recent invoices (might indicate new project)
-            recent = [
-                inv for inv in contact_invoices if inv.get("days_overdue", 999) < 30
-            ]
+            recent = [inv for inv in contact_invoices if inv.get("days_overdue", 999) < 30]
 
             if recent:
                 # Check invoice numbers/patterns for "deposit" indicators

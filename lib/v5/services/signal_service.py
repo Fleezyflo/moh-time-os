@@ -58,9 +58,7 @@ class SignalService:
         # Store
         signal_id = self.repo.insert(signal)
 
-        logger.debug(
-            f"Stored signal {signal_id}: {signal.signal_type} ({signal.valence})"
-        )
+        logger.debug(f"Stored signal {signal_id}: {signal.signal_type} ({signal.valence})")
 
         return signal_id
 
@@ -109,9 +107,7 @@ class SignalService:
 
             if row:
                 signal.scope_project_id = signal.scope_project_id or row["project_id"]
-                signal.scope_retainer_id = (
-                    signal.scope_retainer_id or row["retainer_cycle_id"]
-                )
+                signal.scope_retainer_id = signal.scope_retainer_id or row["retainer_cycle_id"]
                 signal.scope_brand_id = signal.scope_brand_id or row["brand_id"]
                 signal.scope_client_id = signal.scope_client_id or row["client_id"]
                 signal.scope_person_id = signal.scope_person_id or row["assignee_id"]
@@ -342,9 +338,7 @@ class SignalService:
     # Signal Summary
     # =========================================================================
 
-    def get_signal_summary(
-        self, client_id: str | None = None, days: int = 30
-    ) -> dict[str, Any]:
+    def get_signal_summary(self, client_id: str | None = None, days: int = 30) -> dict[str, Any]:
         """
         Get signal summary with counts by category and valence.
 
@@ -430,9 +424,7 @@ class SignalService:
         if signal.scope_client_id:
             data["client_name"] = self.get_entity_name("client", signal.scope_client_id)
         if signal.scope_project_id:
-            data["project_name"] = self.get_entity_name(
-                "project", signal.scope_project_id
-            )
+            data["project_name"] = self.get_entity_name("project", signal.scope_project_id)
         if signal.scope_brand_id:
             data["brand_name"] = self.get_entity_name("brand", signal.scope_brand_id)
 

@@ -15,6 +15,7 @@ import json
 import logging
 import sqlite3
 from datetime import date, datetime
+from pathlib import Path
 from typing import Any
 
 from lib import paths
@@ -98,9 +99,7 @@ class SnapshotAggregator:
         }
 
         snapshot["meta"]["finished_at"] = datetime.now().isoformat()
-        snapshot["meta"]["duration_seconds"] = (
-            datetime.now() - started_at
-        ).total_seconds()
+        snapshot["meta"]["duration_seconds"] = (datetime.now() - started_at).total_seconds()
 
         return snapshot
 
@@ -117,9 +116,7 @@ class SnapshotAggregator:
         if blocking_failed:
             confidence = "blocked"
         elif any(
-            not gates.get(g, True)
-            for domain in DOMAIN_GATES.values()
-            for g in domain["quality"]
+            not gates.get(g, True) for domain in DOMAIN_GATES.values() for g in domain["quality"]
         ):
             confidence = "degraded"
         else:
@@ -450,11 +447,7 @@ class SnapshotAggregator:
             )
         """)
 
-        if (
-            concentration
-            and concentration["top_share"]
-            and concentration["top_share"] > 30
-        ):
+        if concentration and concentration["top_share"] and concentration["top_share"] > 30:
             risks.append(
                 {
                     "type": "ar_concentration",
@@ -723,9 +716,7 @@ class SnapshotAggregator:
             driver = "Data integrity check failed"
         elif confidence == "degraded":
             status = "degraded"
-            driver = (
-                f"Commitment extraction at {gates.get('commitment_ready_pct', 0):.0f}%"
-            )
+            driver = f"Commitment extraction at {gates.get('commitment_ready_pct', 0):.0f}%"
         elif unprocessed > 10:
             status = "degraded"
             driver = f"{unprocessed} unprocessed communications"
@@ -828,12 +819,9 @@ class SnapshotAggregator:
 
         # Compute deltas
         if prev:
-            prev_gates = {
-                g["name"]: g["passed"] for g in prev.get("gates", {}).get("items", [])
-            }
+            prev_gates = {g["name"]: g["passed"] for g in prev.get("gates", {}).get("items", [])}
             curr_gates = {
-                g["name"]: g["passed"]
-                for g in snapshot.get("gates", {}).get("items", [])
+                g["name"]: g["passed"] for g in snapshot.get("gates", {}).get("items", [])
             }
 
             gate_flips = []
@@ -848,12 +836,8 @@ class SnapshotAggregator:
 
             snapshot["deltas"] = {
                 "gate_flips": gate_flips,
-                "queue_p1": self._delta(
-                    prev_queue.get("p1_count"), snapshot["queue"]["p1_count"]
-                ),
-                "queue_p2": self._delta(
-                    prev_queue.get("p2_count"), snapshot["queue"]["p2_count"]
-                ),
+                "queue_p1": self._delta(prev_queue.get("p1_count"), snapshot["queue"]["p1_count"]),
+                "queue_p2": self._delta(prev_queue.get("p2_count"), snapshot["queue"]["p2_count"]),
                 "ar_total": self._delta(
                     prev_domains.get("cash", {}).get("metrics", {}).get("ar_total"),
                     curr_domains.get("cash", {}).get("metrics", {}).get("ar_total"),
@@ -863,12 +847,8 @@ class SnapshotAggregator:
                     curr_domains.get("cash", {}).get("metrics", {}).get("ar_90_plus"),
                 ),
                 "overdue_count": self._delta(
-                    prev_domains.get("delivery", {})
-                    .get("metrics", {})
-                    .get("overdue_tasks"),
-                    curr_domains.get("delivery", {})
-                    .get("metrics", {})
-                    .get("overdue_tasks"),
+                    prev_domains.get("delivery", {}).get("metrics", {}).get("overdue_tasks"),
+                    curr_domains.get("delivery", {}).get("metrics", {}).get("overdue_tasks"),
                 ),
                 "first_run": False,
             }

@@ -149,9 +149,7 @@ def compute_impact_multiplier(hierarchy: dict[str, Any]) -> float:
     return min(2.0, max(0.8, combined))
 
 
-def compute_proposal_score(
-    signals: list[dict], hierarchy: dict[str, Any]
-) -> dict[str, Any]:
+def compute_proposal_score(signals: list[dict], hierarchy: dict[str, Any]) -> dict[str, Any]:
     """
     Compute full proposal score from signals and hierarchy context.
 
@@ -241,9 +239,7 @@ def get_worst_signal_text(signals: list[dict]) -> str:
 
     if signal_type == "deadline_overdue":
         days = value.get("days_overdue", 0)
-        text = (
-            f"{task_title}: {days}d overdue" if task_title else f"Task {days}d overdue"
-        )
+        text = f"{task_title}: {days}d overdue" if task_title else f"Task {days}d overdue"
         return f"{text} [{owner}]" if owner else text
 
     if signal_type == "deadline_approaching":
@@ -266,9 +262,7 @@ def get_worst_signal_text(signals: list[dict]) -> str:
         return f"Health: {status}, trend {trend}" + (f" ({client})" if client else "")
 
     if signal_type == "communication_gap":
-        days = value.get(
-            "days_since_contact", value.get("days_silent", value.get("days", 0))
-        )
+        days = value.get("days_since_contact", value.get("days_silent", value.get("days", 0)))
         client = value.get("client_name", "")
         return f"No contact: {days}d" + (f" ({client})" if client else "")
 

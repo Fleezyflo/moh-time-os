@@ -1,7 +1,11 @@
 #!/bin/bash
-# Install Time OS cron jobs (runs WITHOUT Clawdbot heartbeat)
+# Install Time OS cron jobs (canonical entry only)
+#
+# This script installs ONLY the canonical scheduled_collect.py entry.
+# It is IDEMPOTENT: running multiple times produces exactly one cron entry.
+# All previous time-os entries are removed before adding the canonical one.
 
-set -e
+set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
@@ -10,51 +14,59 @@ VENV_PYTHON="$PROJECT_DIR/.venv/bin/python"
 echo "Installing MOH TIME OS cron jobs..."
 echo "Project dir: $PROJECT_DIR"
 
-# Check venv exists
 if [ ! -f "$VENV_PYTHON" ]; then
     echo "Error: Python venv not found at $VENV_PYTHON"
     exit 1
 fi
 
-# Remove any existing Time OS cron jobs
-crontab -l 2>/dev/null | grep -v "moh_time_os" > /tmp/crontab_backup || true
+# Get current crontab (empty string if none)
+CURRENT_CRONTAB=$(crontab -l 2>/dev/null || true)
 
-# Add new cron jobs
-cat >> /tmp/crontab_backup << EOF
+# Show what will be removed
+echo ""
+echo "Removing existing time-os entries (if any):"
+if echo "$CURRENT_CRONTAB" | grep -qE "(moh_time_os|time-os|MOH TIME OS)"; then
+    echo "$CURRENT_CRONTAB" | grep -E "(moh_time_os|time-os|MOH TIME OS)" | while read -r line; do
+        echo "  - $line"
+    done
+else
+    echo "  (none found)"
+fi
+echo ""
 
-# ═══════════════════════════════════════════════════════════════
-# MOH TIME OS - Autonomous System (runs independently of Clawdbot)
-# ═══════════════════════════════════════════════════════════════
+# Remove ALL time-os related entries including:
+# - Lines containing moh_time_os or time-os
+# - Comment blocks with MOH TIME OS headers (═══ lines)
+# - Empty lines that result from removal
+# Use grep -v with multiple patterns, suppress errors for no matches
+CLEANED_CRONTAB=$(echo "$CURRENT_CRONTAB" | \
+    grep -v "moh_time_os" | \
+    grep -v "time-os" | \
+    grep -v "MOH TIME OS" | \
+    grep -v "═══" | \
+    grep -v "^# This is THE ONLY collection entry" | \
+    grep -v "^# Features: stale lock detection" | \
+    cat)  # cat prevents grep from failing on empty input
 
-# Autonomous Loop - every 15 minutes
-*/15 * * * * cd $PROJECT_DIR && $VENV_PYTHON -m lib.autonomous_loop run >> /tmp/time-os.log 2>&1
+# Remove multiple consecutive blank lines, leaving at most one
+CLEANED_CRONTAB=$(echo "$CLEANED_CRONTAB" | cat -s)
 
-# Full sync from external systems - every 5 minutes
-*/5 * * * * cd $PROJECT_DIR && $VENV_PYTHON -m lib.collectors.orchestrator sync >> /tmp/time-os-sync.log 2>&1
+# Trim trailing whitespace/newlines
+CLEANED_CRONTAB=$(echo "$CLEANED_CRONTAB" | sed -e :a -e '/^\s*$/d;N;ba' 2>/dev/null || echo "$CLEANED_CRONTAB")
 
-# Daily brief - 9:00 AM Dubai (UTC+4 = 05:00 UTC)
-0 5 * * * cd $PROJECT_DIR && $VENV_PYTHON -m lib.notifier.briefs daily >> /tmp/time-os-briefs.log 2>&1
-
-# Midday pulse - 13:00 Dubai (UTC+4 = 09:00 UTC)
-0 9 * * * cd $PROJECT_DIR && $VENV_PYTHON -m lib.notifier.briefs midday >> /tmp/time-os-briefs.log 2>&1
-
-# End of day - 19:30 Dubai (UTC+4 = 15:30 UTC)
-30 15 * * * cd $PROJECT_DIR && $VENV_PYTHON -m lib.notifier.briefs eod >> /tmp/time-os-briefs.log 2>&1
-
-# ═══════════════════════════════════════════════════════════════
-EOF
+# Build the new crontab with exactly one canonical block
+# Note: Using printf to avoid issues with echo and special characters
+NEW_CRONTAB=$(printf '%s\n\n# ═══════════════════════════════════════════════════════════════\n# MOH TIME OS - Canonical Periodic Collection\n# ═══════════════════════════════════════════════════════════════\n# This is THE ONLY collection entry. Do not add parallel schedulers.\n# Features: stale lock detection, watchdog timeout, guaranteed cleanup.\n*/15 * * * * cd %s && %s collectors/scheduled_collect.py >> /tmp/time-os-collect.log 2>&1\n' "$CLEANED_CRONTAB" "$PROJECT_DIR" "$VENV_PYTHON")
 
 # Install the new crontab
-crontab /tmp/crontab_backup
+echo "$NEW_CRONTAB" | crontab -
 
-echo ""
 echo "Cron jobs installed successfully!"
 echo ""
-echo "Installed jobs:"
-crontab -l | grep "moh_time_os" || echo "(none found - check installation)"
-
+echo "Installed entry:"
+crontab -l | grep "scheduled_collect" || echo "(check failed)"
 echo ""
-echo "Log files:"
-echo "  - /tmp/time-os.log (autonomous loop)"
-echo "  - /tmp/time-os-sync.log (sync)"
-echo "  - /tmp/time-os-briefs.log (briefs)"
+echo "Log file: /tmp/time-os-collect.log"
+echo ""
+echo "IMPORTANT: Only the canonical scheduled_collect.py entry is installed."
+echo "All overlapping entries have been removed."

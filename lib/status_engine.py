@@ -453,11 +453,7 @@ def detect_transitions(item: dict, signals: dict) -> list[TransitionProposal]:
         return proposals
 
     # Signal: Task normalized with next action → planned
-    if (
-        current_status == Status.NEW.value
-        and item.get("lane")
-        and item.get("recommended_action")
-    ):
+    if current_status == Status.NEW.value and item.get("lane") and item.get("recommended_action"):
         proposals.append(
             TransitionProposal(
                 item_id=item_id,
@@ -540,9 +536,7 @@ if __name__ == "__main__":
 
     if len(sys.argv) < 2:
         logger.info("Usage: status_engine.py <command> [args]")
-        logger.info(
-            "Commands: check <from> <to>, proposals, approve <index>, reject <index>"
-        )
+        logger.info("Commands: check <from> <to>, proposals, approve <index>, reject <index>")
         sys.exit(1)
 
     cmd = sys.argv[1]

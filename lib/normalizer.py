@@ -12,6 +12,7 @@ Per MASTER_SPEC.md §4:
 import logging
 import sqlite3
 from datetime import date
+from pathlib import Path
 
 from lib import paths
 
