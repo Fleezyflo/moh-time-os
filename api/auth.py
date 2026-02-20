@@ -12,12 +12,12 @@ Usage:
         ...
 """
 
-import os
 import logging
+import os
 from typing import Optional
 
-from fastapi import HTTPException, Request, Depends
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import Depends, HTTPException, Request
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 logger = logging.getLogger(__name__)
 
@@ -25,12 +25,12 @@ logger = logging.getLogger(__name__)
 security = HTTPBearer(auto_error=False)
 
 
-def _get_token_from_env() -> Optional[str]:
+def _get_token_from_env() -> str | None:
     """Get the expected token from environment."""
     return os.environ.get("INTEL_API_TOKEN")
 
 
-def _get_token_from_request(request: Request) -> Optional[str]:
+def _get_token_from_request(request: Request) -> str | None:
     """
     Extract token from request.
 
@@ -58,8 +58,7 @@ def _get_token_from_request(request: Request) -> Optional[str]:
 
 
 async def require_auth(
-    request: Request,
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+    request: Request, credentials: HTTPAuthorizationCredentials | None = Depends(security)
 ) -> str:
     """
     Dependency that requires valid authentication.
@@ -94,6 +93,7 @@ async def require_auth(
 
     # Constant-time comparison to prevent timing attacks
     import secrets
+
     if not secrets.compare_digest(provided_token, expected_token):
         logger.warning(f"Auth failed: invalid token for {request.url.path}")
         raise HTTPException(
@@ -106,9 +106,8 @@ async def require_auth(
 
 
 async def optional_auth(
-    request: Request,
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
-) -> Optional[str]:
+    request: Request, credentials: HTTPAuthorizationCredentials | None = Depends(security)
+) -> str | None:
     """
     Dependency that checks auth but doesn't require it.
 
@@ -129,6 +128,7 @@ async def optional_auth(
 
     # Token provided - must be valid
     import secrets
+
     if not secrets.compare_digest(provided_token, expected_token):
         raise HTTPException(
             status_code=401,
