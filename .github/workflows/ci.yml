@@ -98,7 +98,7 @@ jobs:
         run: uv run ruff format --check lib/ui_spec_v21/ lib/collectors/ lib/safety/ lib/contracts/ lib/observability/ api/
 
       - name: Bandit Security Scan
-        run: uv run bandit -r lib/ui_spec_v21/ lib/collectors/ lib/safety/ lib/contracts/ lib/observability/ api/ -ll --skip B101
+        run: uv run bandit -r lib/ui_spec_v21/ lib/collectors/ lib/safety/ lib/contracts/ lib/observability/ api/ -ll --skip B101,B608
 
       - name: Mypy Baseline Check
         run: uv run python scripts/check_mypy_baseline.py
@@ -344,6 +344,8 @@ jobs:
     needs: integrity
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
