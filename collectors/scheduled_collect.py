@@ -34,6 +34,9 @@ OUT_DIR = paths.out_dir()
 # Default total timeout for entire collection run (10 minutes)
 DEFAULT_TIMEOUT_SECONDS = int(os.environ.get("SCHEDULED_COLLECT_TIMEOUT_SECONDS", "600"))
 
+# V4 ingest is disabled by default (module may not exist)
+ENABLE_V4_INGEST = os.environ.get("ENABLE_V4_INGEST", "0").lower() in ("1", "true", "yes")
+
 
 class CollectionTimeoutError(Exception):
     """Raised when collection exceeds the watchdog timeout."""
@@ -412,7 +415,8 @@ def _collect_all_impl(sources: list = None, v4_ingest: bool = True) -> dict:
         print(f"⚠️  Errors in: {', '.join(errors)}")
     print(f"{'=' * 50}\n")
 
-    if v4_ingest:
+    # V4 ingest is optional - only runs if ENABLE_V4_INGEST=1 AND module exists
+    if v4_ingest and ENABLE_V4_INGEST:
         try:
             from v4_integration import ingest_from_collectors
 
@@ -421,9 +425,14 @@ def _collect_all_impl(sources: list = None, v4_ingest: bool = True) -> dict:
             print(f"{'=' * 50}\n")
             v4_results = ingest_from_collectors()
             results["v4_ingest"] = v4_results
+        except ImportError:
+            # Module doesn't exist - skip silently (expected in most deployments)
+            results["v4_ingest"] = {"status": "skipped", "reason": "module not found"}
         except Exception as e:
             print(f"  V4 ingest failed: {e}")
             results["v4_ingest"] = {"error": str(e)}
+    elif v4_ingest and not ENABLE_V4_INGEST:
+        results["v4_ingest"] = {"status": "disabled", "reason": "ENABLE_V4_INGEST not set"}
 
     try:
         from lib.entity_linker import run_linking
@@ -444,15 +453,28 @@ def _collect_all_impl(sources: list = None, v4_ingest: bool = True) -> dict:
         print("🔍 V5 Signal Detection")
         print(f"{'=' * 50}\n")
         db = get_db()
-        orch = TimeOSOrchestrator(db, auto_migrate=False)
+        # auto_migrate=True ensures signals_v5 table exists
+        orch = TimeOSOrchestrator(db, auto_migrate=True)
         v5_result = orch.run_full_pipeline()
-        print(f"  Signals: {v5_result['detection']['signals_detected']}")
-        print(f"  Issues: {v5_result['issue_formation']['created']}")
+
+        # Defensive access - handle partial/failed results
+        signals_detected = 0
+        issues_created = 0
+        if isinstance(v5_result, dict):
+            detection = v5_result.get("detection", {})
+            if isinstance(detection, dict):
+                signals_detected = detection.get("signals_detected", 0)
+            issue_formation = v5_result.get("issue_formation", {})
+            if isinstance(issue_formation, dict):
+                issues_created = issue_formation.get("created", 0)
+
+        print(f"  Signals: {signals_detected}")
+        print(f"  Issues: {issues_created}")
         results["v5_pipeline"] = v5_result
     except Exception as e:
         print(f"  V5 pipeline failed: {e}")
         traceback.print_exc()
-        results["v5_pipeline"] = {"error": str(e)}
+        results["v5_pipeline"] = {"status": "error", "error": str(e)}
 
     try:
         from lib.ui_spec_v21.inbox_enricher import run_enrichment_batch

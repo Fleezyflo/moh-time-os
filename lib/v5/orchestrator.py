@@ -66,17 +66,16 @@ class TimeOSOrchestrator:
 
             if sql_file.exists():
                 sql = sql_file.read_text()
-                # Split by semicolons and execute each statement
-                for stmt in sql.split(";"):
-                    stmt = stmt.strip()
-                    if stmt and not stmt.startswith("--"):
-                        try:
-                            self.db.execute(stmt)
-                        except Exception as e:
-                            # Ignore "already exists" errors
-                            if "already exists" not in str(e):
-                                logger.warning(f"Migration statement warning: {e}")
-                logger.info("V5 schema created successfully")
+                # Use executescript to run the full migration as a single batch
+                # This ensures tables are created before indexes are added
+                conn = self.db.get_connection()
+                try:
+                    conn.executescript(sql)
+                    conn.commit()
+                    logger.info("V5 schema created successfully")
+                except Exception as e:
+                    logger.error(f"Migration failed: {e}")
+                    raise
             else:
                 logger.warning(f"Migration file not found: {sql_file}")
 
