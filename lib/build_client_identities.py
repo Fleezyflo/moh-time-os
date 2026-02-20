@@ -68,9 +68,7 @@ def get_client_id_by_name(conn, name: str) -> str:
         return row["id"]
 
     # Try contains match
-    cursor.execute(
-        "SELECT id FROM clients WHERE LOWER(name) LIKE LOWER(?)", (f"%{name}%",)
-    )
+    cursor.execute("SELECT id FROM clients WHERE LOWER(name) LIKE LOWER(?)", (f"%{name}%",))
     row = cursor.fetchone()
     if row:
         return row["id"]
@@ -87,9 +85,7 @@ def build_from_known_mappings(conn) -> int:
     for domain, client_name in KNOWN_DOMAINS.items():
         client_id = get_client_id_by_name(conn, client_name)
         if not client_id:
-            logger.info(
-                f"  Warning: Client not found for domain {domain}: {client_name}"
-            )
+            logger.info(f"  Warning: Client not found for domain {domain}: {client_name}")
             continue
 
         # Check if already exists
@@ -220,11 +216,7 @@ def build_from_project_names(conn) -> int:
 
         # Extract key words from project name
         words = [w for w in project_name.lower().split() if len(w) >= 4]
-        words = [
-            w
-            for w in words
-            if w not in ("project", "monthly", "weekly", "daily", "retainer")
-        ]
+        words = [w for w in words if w not in ("project", "monthly", "weekly", "daily", "retainer")]
 
         if not words:
             continue

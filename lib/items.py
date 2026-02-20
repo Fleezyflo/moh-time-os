@@ -53,9 +53,7 @@ class ContextSnapshot:
 
     def has_context(self) -> bool:
         """Check if any context is present."""
-        return bool(
-            self.client or self.project or self.person or self.stakes or self.history
-        )
+        return bool(self.client or self.project or self.person or self.stakes or self.history)
 
 
 @dataclass
@@ -128,9 +126,7 @@ class Item:
 
         if self.due:
             if self.is_overdue():
-                lines.append(
-                    f"⚠️ OVERDUE by {self.days_overdue()} days (was due {self.due})"
-                )
+                lines.append(f"⚠️ OVERDUE by {self.days_overdue()} days (was due {self.due})")
             else:
                 lines.append(f"Due: {self.due}")
 
@@ -182,9 +178,7 @@ class Item:
             elif days_until == 1:
                 parts.append(f"**{self.what}** is due tomorrow.")
             elif days_until <= 7:
-                parts.append(
-                    f"**{self.what}** is due in {days_until} days ({self.due})."
-                )
+                parts.append(f"**{self.what}** is due in {days_until} days ({self.due}).")
             else:
                 parts.append(f"**{self.what}** is due {self.due}.")
         else:
@@ -455,9 +449,7 @@ def update_item(item_id: str, changed_by: str = "A", **changes) -> bool:
             return False
 
         # Record history
-        change_desc = ", ".join(
-            f"{k}→{v}" for k, v in changes.items() if k in valid_fields
-        )
+        change_desc = ", ".join(f"{k}→{v}" for k, v in changes.items() if k in valid_fields)
         conn.execute(
             """
             INSERT INTO item_history (id, item_id, timestamp, change, changed_by)

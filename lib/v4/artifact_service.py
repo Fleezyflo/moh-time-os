@@ -141,9 +141,7 @@ class ArtifactService:
         cursor = conn.cursor()
 
         try:
-            cursor.execute(
-                "SELECT payload FROM artifact_blobs WHERE blob_id = ?", (blob_id,)
-            )
+            cursor.execute("SELECT payload FROM artifact_blobs WHERE blob_id = ?", (blob_id,))
             row = cursor.fetchone()
             if not row:
                 return None
@@ -185,13 +183,9 @@ class ArtifactService:
             Created artifact record with artifact_id
         """
         if source not in self.VALID_SOURCES:
-            raise ValueError(
-                f"Invalid source: {source}. Must be one of {self.VALID_SOURCES}"
-            )
+            raise ValueError(f"Invalid source: {source}. Must be one of {self.VALID_SOURCES}")
         if artifact_type not in self.VALID_TYPES:
-            raise ValueError(
-                f"Invalid type: {artifact_type}. Must be one of {self.VALID_TYPES}"
-            )
+            raise ValueError(f"Invalid type: {artifact_type}. Must be one of {self.VALID_TYPES}")
 
         artifact_id = self._generate_id()
         payload_json = json.dumps(payload, sort_keys=True, default=str)
@@ -331,9 +325,7 @@ class ArtifactService:
                     # Convert full hash to blob_id format
                     blob_id = f"blob_{blob_ref[:16]}"
 
-                cursor.execute(
-                    "SELECT payload FROM artifact_blobs WHERE blob_id = ?", (blob_id,)
-                )
+                cursor.execute("SELECT payload FROM artifact_blobs WHERE blob_id = ?", (blob_id,))
                 blob_row = cursor.fetchone()
 
                 # Fallback: try content_hash lookup if blob_id didn't work

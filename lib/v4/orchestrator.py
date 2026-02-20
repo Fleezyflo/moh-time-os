@@ -237,9 +237,7 @@ class V4Orchestrator:
                 )
             except Exception as e:
                 log.error(f"Detector {detector.detector_id} failed: {e}")
-                detector_results.append(
-                    {"detector_id": detector.detector_id, "error": str(e)}
-                )
+                detector_results.append({"detector_id": detector.detector_id, "error": str(e)})
 
         stats["stages"]["detect"] = {
             "status": "completed",
@@ -321,9 +319,7 @@ class V4Orchestrator:
             "couplings": self.coupling_svc.get_stats(),
             "reports": self.report_svc.get_stats(),
             "policy": self.policy_svc.get_stats(),
-            "detectors": [
-                {"id": d.detector_id, "version": d.version} for d in self.detectors
-            ],
+            "detectors": [{"id": d.detector_id, "version": d.version} for d in self.detectors],
         }
 
     def get_executive_brief(self) -> dict[str, Any]:
@@ -342,9 +338,7 @@ class V4Orchestrator:
         critical_signals = self.signal_svc.find_signals(
             severity="critical", status="active", limit=5
         )
-        high_signals = self.signal_svc.find_signals(
-            severity="high", status="active", limit=5
-        )
+        high_signals = self.signal_svc.find_signals(severity="high", status="active", limit=5)
 
         # Summary stats
         signal_stats = self.signal_svc.get_stats()
@@ -356,12 +350,8 @@ class V4Orchestrator:
             "summary": {
                 "active_signals": sum(signal_stats.get("by_status", {}).values())
                 - signal_stats.get("by_status", {}).get("consumed", 0),
-                "critical_signals": signal_stats.get("active_by_severity", {}).get(
-                    "critical", 0
-                ),
-                "high_signals": signal_stats.get("active_by_severity", {}).get(
-                    "high", 0
-                ),
+                "critical_signals": signal_stats.get("active_by_severity", {}).get("critical", 0),
+                "high_signals": signal_stats.get("active_by_severity", {}).get("high", 0),
                 "open_proposals": sum(proposal_stats.get("by_status", {}).values())
                 - proposal_stats.get("by_status", {}).get("dismissed", 0),
                 "surfaceable_proposals": proposal_stats.get("open_by_exposure", {}).get(

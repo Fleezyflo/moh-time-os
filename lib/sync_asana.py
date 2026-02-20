@@ -292,9 +292,7 @@ def sync_overdue_tasks() -> tuple[int, int, list[str]]:
             except Exception as e:
                 errors.append(f"Project {proj.get('name', 'Unknown')}: {e}")
 
-        log.info(
-            f"Overdue tasks sync complete: {created} created, {skipped} already existed"
-        )
+        log.info(f"Overdue tasks sync complete: {created} created, {skipped} already existed")
 
     except Exception as e:
         errors.append(f"Sync failed: {e}")

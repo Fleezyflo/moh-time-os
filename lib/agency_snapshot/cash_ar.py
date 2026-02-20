@@ -158,9 +158,7 @@ class CashAREngine:
         finally:
             conn.close()
 
-    def generate(
-        self, selected_client_id: str | None = None, expanded: bool = False
-    ) -> dict:
+    def generate(self, selected_client_id: str | None = None, expanded: bool = False) -> dict:
         """
         Generate complete cash_ar section per §8 schema.
 
@@ -180,12 +178,8 @@ class CashAREngine:
         summary = self._build_summary(valid_invoices, invalid_invoices)
 
         # Build portfolio
-        portfolio_limit = (
-            self.MAX_PORTFOLIO_EXPANDED if expanded else self.MAX_PORTFOLIO_DEFAULT
-        )
-        portfolio = self._build_portfolio(
-            valid_invoices, invalid_invoices, portfolio_limit
-        )
+        portfolio_limit = self.MAX_PORTFOLIO_EXPANDED if expanded else self.MAX_PORTFOLIO_DEFAULT
+        portfolio = self._build_portfolio(valid_invoices, invalid_invoices, portfolio_limit)
 
         # Select client (default to highest risk)
         if not selected_client_id and portfolio:
@@ -198,9 +192,7 @@ class CashAREngine:
             )
 
         # Build global actions
-        global_actions = self._build_global_actions(
-            valid_invoices, invalid_invoices, portfolio
-        )
+        global_actions = self._build_global_actions(valid_invoices, invalid_invoices, portfolio)
 
         return {
             "meta": {
@@ -301,9 +293,7 @@ class CashAREngine:
             return "61-90"
         return "90+"
 
-    def _update_trust_metrics(
-        self, all_invoices: list[Invoice], invalid: list[Invoice]
-    ):
+    def _update_trust_metrics(self, all_invoices: list[Invoice], invalid: list[Invoice]):
         """Update trust metrics based on AR data."""
         total = len(all_invoices)
         valid = total - len(invalid)
@@ -339,9 +329,7 @@ class CashAREngine:
         risk_band = self._score_to_band(risk_score)
 
         # Top driver sentence
-        top_driver = self._compute_top_driver(
-            valid, bucket_totals, overdue_total, valid_ar_total
-        )
+        top_driver = self._compute_top_driver(valid, bucket_totals, overdue_total, valid_ar_total)
 
         return {
             "valid_ar_total": valid_ar_total,
@@ -430,17 +418,11 @@ class CashAREngine:
             return 0.0
 
         C = sum(i.amount for i in invoices if i.aging_bucket == "current")  # current
-        M = sum(
-            i.amount for i in invoices if i.aging_bucket in ("1-30", "31-60")
-        )  # moderate
-        S = sum(
-            i.amount for i in invoices if i.aging_bucket in ("61-90", "90+")
-        )  # severe
+        M = sum(i.amount for i in invoices if i.aging_bucket in ("1-30", "31-60"))  # moderate
+        S = sum(i.amount for i in invoices if i.aging_bucket in ("61-90", "90+"))  # severe
 
         # Oldest days overdue
-        oldest_days = max(
-            (i.days_overdue for i in invoices if i.days_overdue > 0), default=0
-        )
+        oldest_days = max((i.days_overdue for i in invoices if i.days_overdue > 0), default=0)
 
         severe_ratio = S / T
         moderate_ratio = M / T
@@ -480,18 +462,14 @@ class CashAREngine:
             return None
 
         # Weighted average days overdue
-        weighted_days = (
-            sum(i.amount * max(0, i.days_overdue) for i in invoices) / total_amount
-        )
+        weighted_days = sum(i.amount * max(0, i.days_overdue) for i in invoices) / total_amount
 
         # Convert to trend score: 0 days = 0, 90+ days = +50
         # This is a proxy for trend since we don't have historical data
         trend = min(50, weighted_days / 1.8)  # Scale: 90 days -> 50
 
         # If most invoices are current, trend is negative (improving)
-        current_pct = (
-            sum(i.amount for i in invoices if i.days_overdue <= 0) / total_amount
-        )
+        current_pct = sum(i.amount for i in invoices if i.days_overdue <= 0) / total_amount
 
         if current_pct > 0.7:
             trend = -10  # Healthy, improving
@@ -515,9 +493,7 @@ class CashAREngine:
         if overdue / total >= 0.5:
             return f"AR risk is MED because AED {overdue:,.0f} ({overdue / total * 100:.0f}%) is overdue."
         if buckets.get("90+", 0) > 0:
-            return (
-                f"AR risk is MED because AED {buckets['90+']:,.0f} is 90+ days overdue."
-            )
+            return f"AR risk is MED because AED {buckets['90+']:,.0f} is 90+ days overdue."
         current = buckets.get("current", 0)
         return f"AR risk is LOW — AED {current:,.0f} ({current / total * 100:.0f}%) is current."
 
@@ -618,9 +594,7 @@ class CashAREngine:
                 worst_bucket = bucket
 
         # Oldest days overdue
-        oldest_days = max(
-            (i.days_overdue for i in valid_invoices if i.days_overdue > 0), default=0
-        )
+        oldest_days = max((i.days_overdue for i in valid_invoices if i.days_overdue > 0), default=0)
 
         # Risk score + band
         risk_score = self._compute_client_risk_score(valid_invoices)
@@ -631,9 +605,7 @@ class CashAREngine:
         trend = self._compute_ar_trend(valid_invoices)
 
         # Confidence per §6 (locked)
-        confidence, why_low = self._compute_client_confidence(
-            valid_invoices, invalid_invoices
-        )
+        confidence, why_low = self._compute_client_confidence(valid_invoices, invalid_invoices)
 
         return ClientARData(
             client_id=client_id,
@@ -697,12 +669,8 @@ class CashAREngine:
         invalid_count = len(invalid)
         if invalid_count > 2:
             # Categorize invalids
-            missing_due = sum(
-                1 for i in invalid if i.invalid_reason == "missing_due_date"
-            )
-            missing_client = sum(
-                1 for i in invalid if i.invalid_reason == "missing_client_id"
-            )
+            missing_due = sum(1 for i in invalid if i.invalid_reason == "missing_due_date")
+            missing_client = sum(1 for i in invalid if i.invalid_reason == "missing_client_id")
 
             if missing_due > 0:
                 why_low.append(f"Invoices missing due dates ({missing_due})")
@@ -758,9 +726,7 @@ class CashAREngine:
             else client_id
         )
 
-        client = self._build_client_ar_data(
-            client_id, name, client_valid, client_invalid
-        )
+        client = self._build_client_ar_data(client_id, name, client_valid, client_invalid)
 
         # Sort invoices per §9.2 (locked)
         # 1. bucket severity: 90+ > 61-90 > 31-60 > 1-30 > current
@@ -790,9 +756,7 @@ class CashAREngine:
         client.comms_context = self._get_client_comms(client_id)[: self.MAX_COMMS]
 
         # Add recent change
-        client.recent_change = self._get_client_recent_change(client_id)[
-            : self.MAX_RECENT_CHANGE
-        ]
+        client.recent_change = self._get_client_recent_change(client_id)[: self.MAX_RECENT_CHANGE]
 
         return client
 
@@ -825,12 +789,8 @@ class CashAREngine:
             age_hours = 0
             if row.get("created_at"):
                 try:
-                    created = datetime.fromisoformat(
-                        row["created_at"].replace("Z", "+00:00")
-                    )
-                    age_hours = (
-                        self.now - created.replace(tzinfo=None)
-                    ).total_seconds() / 3600
+                    created = datetime.fromisoformat(row["created_at"].replace("Z", "+00:00"))
+                    age_hours = (self.now - created.replace(tzinfo=None)).total_seconds() / 3600
                 except (ValueError, TypeError, AttributeError) as e:
                     logger.debug(f"Could not parse created_at: {e}")
 
@@ -843,9 +803,7 @@ class CashAREngine:
                     )
                     if deadline.replace(tzinfo=None) < self.now:
                         risk = "HIGH"
-                    elif (
-                        deadline.replace(tzinfo=None) - self.now
-                    ).total_seconds() < 24 * 3600:
+                    elif (deadline.replace(tzinfo=None) - self.now).total_seconds() < 24 * 3600:
                         risk = "MED"
                 except (ValueError, TypeError, AttributeError) as e:
                     logger.debug(f"Could not parse expected_response_by: {e}")
@@ -891,9 +849,7 @@ class CashAREngine:
                     "status": row["status"],
                     "due_date": row["due_date"],
                     "updated_at": row["updated_at"],
-                    "change_type": "status_change"
-                    if row["status"] == "paid"
-                    else "update",
+                    "change_type": "status_change" if row["status"] == "paid" else "update",
                 }
             )
 
@@ -1025,9 +981,7 @@ class CashAREngine:
             )
 
         # Due soon nudge
-        due_soon = [
-            i for i in client.invoices if i.days_overdue <= 0 and i.days_overdue >= -7
-        ]
+        due_soon = [i for i in client.invoices if i.days_overdue <= 0 and i.days_overdue >= -7]
         if due_soon:
             actions.append(
                 ARAction(
@@ -1147,9 +1101,7 @@ def generate_cash_ar(
     from .scoring import Horizon, Mode
 
     mode_enum = Mode(mode) if mode in [m.value for m in Mode] else Mode.OPS_HEAD
-    horizon_enum = (
-        Horizon(horizon) if horizon in [h.value for h in Horizon] else Horizon.TODAY
-    )
+    horizon_enum = Horizon(horizon) if horizon in [h.value for h in Horizon] else Horizon.TODAY
 
     engine = CashAREngine(mode=mode_enum, horizon=horizon_enum)
     return engine.generate(selected_client_id=selected_client_id, expanded=expanded)

@@ -259,15 +259,9 @@ class AttendanceAnalyzer:
 
         # Calculate meeting-level metrics
         total_invited = len(attendee_analysis)
-        confirmed = sum(
-            1 for a in attendee_analysis if a["status"] == "confirmed_attended"
-        )
-        likely_attended = sum(
-            1 for a in attendee_analysis if a["adjusted_attendance_prob"] >= 0.7
-        )
-        likely_absent = sum(
-            1 for a in attendee_analysis if a["adjusted_attendance_prob"] < 0.5
-        )
+        confirmed = sum(1 for a in attendee_analysis if a["status"] == "confirmed_attended")
+        likely_attended = sum(1 for a in attendee_analysis if a["adjusted_attendance_prob"] >= 0.7)
+        likely_absent = sum(1 for a in attendee_analysis if a["adjusted_attendance_prob"] < 0.5)
 
         return {
             "meeting_id": meeting["id"],
@@ -279,16 +273,10 @@ class AttendanceAnalyzer:
             "confirmed_attended": confirmed,
             "likely_attended": likely_attended,
             "likely_absent": likely_absent,
-            "raw_attendance_rate": confirmed / total_invited
-            if total_invited > 0
-            else 0,
-            "adjusted_attendance_rate": likely_attended / total_invited
-            if total_invited > 0
-            else 0,
+            "raw_attendance_rate": confirmed / total_invited if total_invited > 0 else 0,
+            "adjusted_attendance_rate": likely_attended / total_invited if total_invited > 0 else 0,
             "attendees": attendee_analysis,
-            "no_shows": [
-                a for a in attendee_analysis if a["status"] == "likely_absent"
-            ],
+            "no_shows": [a for a in attendee_analysis if a["status"] == "likely_absent"],
         }
 
     def _find_actual_attendees(
@@ -345,9 +333,7 @@ class AttendanceAnalyzer:
 
         # Performance review - check if name is in title
         if meeting_type == "performance_review":
-            if name in title.lower() or any(
-                part in title.lower() for part in name.split(".")
-            ):
+            if name in title.lower() or any(part in title.lower() for part in name.split(".")):
                 return INSTRUMENTALITY_SCORES["subject_of_review"]
 
         # 1:1 meetings - both parties are critical
@@ -464,15 +450,9 @@ class AttendanceAnalyzer:
         for _email, data in stats.items():
             n = data["invited_count"]
             if n > 0:
-                data["avg_instrumentality"] = round(
-                    data["total_instrumentality"] / n, 1
-                )
-                data["raw_attendance_rate"] = round(
-                    data["confirmed_attended"] / n * 100, 1
-                )
-                data["adjusted_attendance_rate"] = round(
-                    data["likely_attended"] / n * 100, 1
-                )
+                data["avg_instrumentality"] = round(data["total_instrumentality"] / n, 1)
+                data["raw_attendance_rate"] = round(data["confirmed_attended"] / n * 100, 1)
+                data["adjusted_attendance_rate"] = round(data["likely_attended"] / n * 100, 1)
                 data["true_absence_rate"] = round(data["likely_absent"] / n * 100, 1)
 
         return dict(stats)
@@ -501,9 +481,7 @@ class AttendanceAnalyzer:
             "people_analyzed": len(person_stats),
         }
 
-    def _flag_issues(
-        self, person_stats: dict[str, dict], meetings: list[dict]
-    ) -> list[dict]:
+    def _flag_issues(self, person_stats: dict[str, dict], meetings: list[dict]) -> list[dict]:
         """Flag attendance issues requiring attention."""
         flags = []
 
@@ -513,9 +491,7 @@ class AttendanceAnalyzer:
                 flags.append(
                     {
                         "type": "high_absence_rate",
-                        "severity": "high"
-                        if stats["true_absence_rate"] > 50
-                        else "medium",
+                        "severity": "high" if stats["true_absence_rate"] > 50 else "medium",
                         "person": email,
                         "rate": stats["true_absence_rate"],
                         "count": stats["likely_absent"],
@@ -525,10 +501,7 @@ class AttendanceAnalyzer:
 
         # Flag meetings with low attendance
         for meeting in meetings:
-            if (
-                meeting["invited_count"] >= 3
-                and meeting["adjusted_attendance_rate"] < 0.5
-            ):
+            if meeting["invited_count"] >= 3 and meeting["adjusted_attendance_rate"] < 0.5:
                 flags.append(
                     {
                         "type": "low_meeting_attendance",
@@ -552,9 +525,7 @@ class AttendanceAnalyzer:
         logger.info("=" * 70)
         summary = analysis.get("team_summary", {})
         logger.info(f"\n📊 TEAM SUMMARY ({analysis.get('period_days', 30)} days)")
-        logger.info(
-            f"   Total meeting slots analyzed: {summary.get('total_meeting_slots', 0)}"
-        )
+        logger.info(f"   Total meeting slots analyzed: {summary.get('total_meeting_slots', 0)}")
         logger.info(
             f"   Raw attendance rate (joined call): {summary.get('raw_attendance_rate', 0)}%"
         )

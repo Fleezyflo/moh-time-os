@@ -179,16 +179,12 @@ class DeliveryEngine:
             if project.total_tasks > 0:
                 overdue_ratio = overdue_count / project.total_tasks
                 # If significant overdue, treat as deadline pressure
-                deadline_pressure = clamp01(
-                    overdue_ratio * 1.5
-                )  # Scale up overdue impact
+                deadline_pressure = clamp01(overdue_ratio * 1.5)  # Scale up overdue impact
             else:
                 deadline_pressure = 0.0
         else:
             # clamp01(1 - (days_to_deadline / 14))
-            deadline_pressure = clamp01(
-                1 - (project.days_to_deadline / self.DEADLINE_RUNWAY_DAYS)
-            )
+            deadline_pressure = clamp01(1 - (project.days_to_deadline / self.DEADLINE_RUNWAY_DAYS))
 
         # Remaining work ratio
         if project.planned_effort_hours > 0:
@@ -197,9 +193,7 @@ class DeliveryEngine:
             )
         elif project.total_tasks > 0:
             # Fallback: task count ratio
-            remaining_work_ratio = clamp01(
-                project.open_tasks / max(1, project.total_tasks)
-            )
+            remaining_work_ratio = clamp01(project.open_tasks / max(1, project.total_tasks))
         else:
             remaining_work_ratio = 0.0
 
@@ -401,9 +395,7 @@ class DeliveryEngine:
 
         # Exclude projects with past deadlines (more than 30 days ago)
         cutoff = (self.now - timedelta(days=30)).strftime("%Y-%m-%d")
-        where_clauses.append(
-            f"(p.target_end_date IS NULL OR p.target_end_date >= '{cutoff}')"
-        )
+        where_clauses.append(f"(p.target_end_date IS NULL OR p.target_end_date >= '{cutoff}')")
 
         where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
 
@@ -441,9 +433,7 @@ class DeliveryEngine:
 
         if project.get("deadline"):
             try:
-                deadline = datetime.fromisoformat(
-                    project["deadline"].replace("Z", "+00:00")
-                )
+                deadline = datetime.fromisoformat(project["deadline"].replace("Z", "+00:00"))
                 delta = deadline - self.now
                 days_to_deadline = delta.days + delta.seconds / 86400
                 time_to_slip_hours = delta.total_seconds() / 3600
@@ -510,15 +500,11 @@ class DeliveryEngine:
         data.top_driver = self.determine_top_driver(data)
 
         # Compute confidence
-        data.confidence, data.why_low = self._compute_project_confidence(
-            data, task_metrics
-        )
+        data.confidence, data.why_low = self._compute_project_confidence(data, task_metrics)
 
         return data
 
-    def _compute_project_confidence(
-        self, project: ProjectDeliveryData, metrics: dict
-    ) -> tuple:
+    def _compute_project_confidence(self, project: ProjectDeliveryData, metrics: dict) -> tuple:
         """Compute confidence for a project."""
         why_low = []
 
@@ -685,9 +671,7 @@ class DeliveryEngine:
         )
 
         # Milestone (project deadline)
-        project = self._query_one(
-            "SELECT deadline FROM projects WHERE id = ?", (project_id,)
-        )
+        project = self._query_one("SELECT deadline FROM projects WHERE id = ?", (project_id,))
         if project and project.get("deadline"):
             try:
                 deadline = datetime.fromisoformat(project["deadline"])
@@ -748,10 +732,7 @@ class DeliveryEngine:
 
                 # Combine factors for inferred urgency (scale 0-0.8, leaving 0.8-1.0 for actual overdue)
                 urgency = clamp01(
-                    0.3
-                    + (blocked_ratio * 0.2)
-                    + (critical_ratio * 0.15)
-                    + (work_ratio * 0.15)
+                    0.3 + (blocked_ratio * 0.2) + (critical_ratio * 0.15) + (work_ratio * 0.15)
                 )
 
                 # If project is RED with no deadline, assume moderate-high urgency
@@ -774,8 +755,7 @@ class DeliveryEngine:
             time_to_consequence_hours=project.time_to_slip_hours,
             dependency_breaker=project.dependency_breaker,
             critical_path=project.status == ProjectStatus.RED,
-            compounding_damage=project.status
-            in (ProjectStatus.RED, ProjectStatus.YELLOW),
+            compounding_damage=project.status in (ProjectStatus.RED, ProjectStatus.YELLOW),
             title=project.name,
             top_driver=project.top_driver.value,
             why_low=project.why_low,

@@ -104,9 +104,7 @@ class IssueFormationService:
 
         return stats
 
-    def _process_signal_group(
-        self, pattern: IssuePattern, signal_group: dict[str, Any]
-    ) -> str:
+    def _process_signal_group(self, pattern: IssuePattern, signal_group: dict[str, Any]) -> str:
         """
         Process a signal group and create/update issue.
 
@@ -121,9 +119,7 @@ class IssueFormationService:
         if not scope_id:
             return "unchanged"
 
-        signal_ids = (
-            signal_group["signal_ids"].split(",") if signal_group["signal_ids"] else []
-        )
+        signal_ids = signal_group["signal_ids"].split(",") if signal_group["signal_ids"] else []
 
         # Check for existing issue
         existing = self.db.fetch_one(
@@ -266,18 +262,14 @@ class IssueFormationService:
         # Check if severity changed
         if severity != existing["severity"]:
             # Severity changed, might need to re-surface
-            priority = self._calculate_priority(
-                severity, negative_mag, pattern.scope_level
-            )
+            priority = self._calculate_priority(severity, negative_mag, pattern.scope_level)
         else:
             priority = self._calculate_priority(
                 existing["severity"], negative_mag, pattern.scope_level
             )
 
         # Update signal IDs
-        new_signal_ids = (
-            signal_group["signal_ids"].split(",") if signal_group["signal_ids"] else []
-        )
+        new_signal_ids = signal_group["signal_ids"].split(",") if signal_group["signal_ids"] else []
 
         self.db.update(
             "issues_v5",
@@ -305,9 +297,7 @@ class IssueFormationService:
     # Helpers
     # =========================================================================
 
-    def _determine_severity(
-        self, pattern: IssuePattern, signal_group: dict[str, Any]
-    ) -> str:
+    def _determine_severity(self, pattern: IssuePattern, signal_group: dict[str, Any]) -> str:
         """Determine issue severity based on pattern rules."""
 
         magnitude = signal_group["negative_magnitude"] or 0
@@ -331,9 +321,7 @@ class IssueFormationService:
 
         return "medium"
 
-    def _calculate_priority(
-        self, severity: str, magnitude: float, scope_level: str
-    ) -> float:
+    def _calculate_priority(self, severity: str, magnitude: float, scope_level: str) -> float:
         """Calculate priority score."""
 
         severity_base = {
@@ -372,9 +360,7 @@ class IssueFormationService:
 
         table, name_col = table_map[scope_level]
 
-        row = self.db.fetch_one(
-            f"SELECT {name_col} as name FROM {table} WHERE id = ?", (scope_id,)
-        )
+        row = self.db.fetch_one(f"SELECT {name_col} as name FROM {table} WHERE id = ?", (scope_id,))
 
         return row["name"] if row else scope_id[:20]
 
@@ -391,13 +377,9 @@ class IssueFormationService:
 
         # Basic substitutions
         headline = headline.replace("{scope_name}", scope_name or "Unknown")
-        headline = headline.replace(
-            "{overdue_count}", str(signal_group.get("signal_count", 0))
-        )
+        headline = headline.replace("{overdue_count}", str(signal_group.get("signal_count", 0)))
         headline = headline.replace("{approaching_count}", "0")
-        headline = headline.replace(
-            "{version_count}", str(signal_group.get("signal_count", 0))
-        )
+        headline = headline.replace("{version_count}", str(signal_group.get("signal_count", 0)))
         headline = headline.replace("{gap_days}", "7")
         headline = headline.replace("{amount:,.0f}", amount_str)
         headline = headline.replace("{amount}", amount_str)

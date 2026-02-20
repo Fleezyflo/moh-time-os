@@ -119,9 +119,7 @@ class GoogleChatDetector(SignalDetector):
                     source_id=msg_id,
                     source_excerpt=text[:200],
                     value={
-                        "space": msg.get(
-                            "space_display_name", msg.get("space_name", "")
-                        ),
+                        "space": msg.get("space_display_name", msg.get("space_name", "")),
                         "sender": msg.get("sender", ""),
                         "keywords_matched": escalation_matches,
                     },
@@ -167,9 +165,7 @@ class GoogleChatDetector(SignalDetector):
                         source_id=msg_id,
                         source_excerpt=text[:200],
                         value={
-                            "space": msg.get(
-                                "space_display_name", msg.get("space_name", "")
-                            ),
+                            "space": msg.get("space_display_name", msg.get("space_name", "")),
                             "sender": msg.get("sender", ""),
                         },
                         occurred_at=self._parse_time(msg.get("create_time")),
@@ -180,9 +176,7 @@ class GoogleChatDetector(SignalDetector):
                     self.log_signal(signal)
 
             # Negative sentiment (has negative keywords, not already escalation)
-            elif (
-                negative_count == 1
-            ):  # Single negative indicator (escalations caught separately)
+            elif negative_count == 1:  # Single negative indicator (escalations caught separately)
                 if not self.signal_exists("sentiment_negative", msg_id):
                     signal = self.create_signal(
                         signal_type="sentiment_negative",
@@ -194,9 +188,7 @@ class GoogleChatDetector(SignalDetector):
                         source_id=msg_id,
                         source_excerpt=text[:200],
                         value={
-                            "space": msg.get(
-                                "space_display_name", msg.get("space_name", "")
-                            ),
+                            "space": msg.get("space_display_name", msg.get("space_name", "")),
                             "sender": msg.get("sender", ""),
                         },
                         occurred_at=self._parse_time(msg.get("create_time")),

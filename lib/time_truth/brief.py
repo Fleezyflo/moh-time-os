@@ -188,9 +188,7 @@ def _format_markdown(
     # Add events
     for event in events:
         start = event.get("start_time", "")
-        time_str = (
-            start.split("T")[1][:5] if "T" in start else start[:5] if start else "??:??"
-        )
+        time_str = start.split("T")[1][:5] if "T" in start else start[:5] if start else "??:??"
         all_items.append(
             {
                 "time": time_str,
@@ -270,11 +268,7 @@ def _format_markdown(
     if at_risk_clients:
         lines.append(f"*🚨 {len(at_risk_clients)} At-Risk Clients*")
         for client in at_risk_clients[:3]:
-            name = (
-                client.client_name
-                if hasattr(client, "client_name")
-                else str(client)[:20]
-            )
+            name = client.client_name if hasattr(client, "client_name") else str(client)[:20]
             score = client.health_score if hasattr(client, "health_score") else "?"
             lines.append(f"• {name}: {score}/100")
         if len(at_risk_clients) > 3:
@@ -323,16 +317,12 @@ def _format_plain(
     if events or scheduled:
         lines.append("TODAY'S BLOCKS")
         for event in events:
-            start = (
-                event.get("start_time", "")[:5] if event.get("start_time") else "??:??"
-            )
+            start = event.get("start_time", "")[:5] if event.get("start_time") else "??:??"
             lines.append(f"  {start} [MEETING] {event.get('title', '')}")
         for item in scheduled:
             block = item["block"]
             task = item["task"]
-            lines.append(
-                f"  {block.start_time} [{block.lane}] {task.get('title', '')[:40]}"
-            )
+            lines.append(f"  {block.start_time} [{block.lane}] {task.get('title', '')[:40]}")
         lines.append("")
 
     if unscheduled:

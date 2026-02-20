@@ -214,9 +214,7 @@ async def list_signals(
     return SignalListResponse(
         items=items,
         total=total or 0,
-        summary=SignalSummary(
-            total=total or 0, by_valence=by_valence, by_category=by_category
-        ),
+        summary=SignalSummary(total=total or 0, by_valence=by_valence, by_category=by_category),
         has_more=(offset + limit) < (total or 0),
     )
 

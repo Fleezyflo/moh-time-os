@@ -86,9 +86,7 @@ def mark_surfaced(source: str, items: list[dict], hash_keys: list[str] = None) -
     save_state(state)
 
 
-def filter_new_items(
-    source: str, items: list[dict], hash_keys: list[str] = None
-) -> list[dict]:
+def filter_new_items(source: str, items: list[dict], hash_keys: list[str] = None) -> list[dict]:
     """Filter to only items not previously surfaced."""
     state = load_state()
     seen = set(state.get("surfaced_hashes", {}).get(source, {}).keys())
@@ -138,8 +136,7 @@ def get_state_summary() -> dict:
         "last_collection": state.get("last_collection", {}),
         "last_surface": state.get("last_surface"),
         "surfaced_counts": {
-            source: len(hashes)
-            for source, hashes in state.get("surfaced_hashes", {}).items()
+            source: len(hashes) for source, hashes in state.get("surfaced_hashes", {}).items()
         },
         "pending_count": len(state.get("pending_items", [])),
         "acked_count": len(state.get("acked_items", [])),

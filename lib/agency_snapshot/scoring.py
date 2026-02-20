@@ -188,9 +188,7 @@ class ModeWeights:
     def compute(cls, item: ScoredItem, mode: Mode) -> float:
         """Compute mode-weighted score."""
         base_score = BaseScorer.compute(item)
-        domain_weight = MODE_WEIGHTS.get(mode, MODE_WEIGHTS[Mode.OPS_HEAD]).get(
-            item.domain, 0.1
-        )
+        domain_weight = MODE_WEIGHTS.get(mode, MODE_WEIGHTS[Mode.OPS_HEAD]).get(item.domain, 0.1)
         return base_score * domain_weight
 
     @classmethod
@@ -298,9 +296,7 @@ def rank_items(
         # Primary: score desc (negative for desc)
         # Tie-breaker 1: shortest TTC (ascending, None is worst)
         ttc = (
-            item.time_to_consequence_hours
-            if item.time_to_consequence_hours is not None
-            else 99999
+            item.time_to_consequence_hours if item.time_to_consequence_hours is not None else 99999
         )
         # Tie-breaker 2: highest controllability (desc)
         # Tie-breaker 3: highest confidence (desc)

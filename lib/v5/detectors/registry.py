@@ -47,9 +47,7 @@ class DetectorRegistry:
         detector_id = detector_class.detector_id
 
         if not detector_id:
-            raise ValueError(
-                f"Detector class {detector_class.__name__} has no detector_id"
-            )
+            raise ValueError(f"Detector class {detector_class.__name__} has no detector_id")
 
         self._detector_classes[detector_id] = detector_class
         logger.debug(f"Registered detector class: {detector_id}")

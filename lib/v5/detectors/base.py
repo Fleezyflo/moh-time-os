@@ -185,9 +185,7 @@ class SignalDetector(ABC):
         )
 
         # Create lookup keys
-        self._existing_signals = {
-            f"{row['signal_type']}:{row['entity_id']}" for row in rows
-        }
+        self._existing_signals = {f"{row['signal_type']}:{row['entity_id']}" for row in rows}
 
     def signal_exists(self, signal_type: str, entity_id: str) -> bool:
         """
@@ -206,9 +204,7 @@ class SignalDetector(ABC):
         key = f"{signal_type}:{entity_id}"
         return key in self._existing_signals
 
-    def has_recent_signal(
-        self, signal_type: str, entity_id: str, within_hours: int = 24
-    ) -> bool:
+    def has_recent_signal(self, signal_type: str, entity_id: str, within_hours: int = 24) -> bool:
         """
         Check if a signal was detected recently.
 
@@ -464,9 +460,7 @@ class SignalDetector(ABC):
 
     def log_detection_start(self) -> None:
         """Log start of detection."""
-        logger.info(
-            f"[{self.detector_id}] Starting detection (v{self.detector_version})"
-        )
+        logger.info(f"[{self.detector_id}] Starting detection (v{self.detector_version})")
 
     def log_detection_end(self, count: int) -> None:
         """Log end of detection with count."""

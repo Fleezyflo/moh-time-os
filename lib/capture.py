@@ -174,7 +174,9 @@ def capture_item(
     person_warning = None
     if context.person and context.person.type == "internal" and context.client:
         # Internal team member as counterparty for client work - flag this
-        person_warning = f"Note: {context.person.name} is internal team, not a contact at {context.client.name}"
+        person_warning = (
+            f"Note: {context.person.name} is internal team, not a contact at {context.client.name}"
+        )
 
     # Resolve owner to Person if it's a name
     owner_id = None
@@ -273,9 +275,7 @@ def quick_capture(text: str) -> tuple[str, str]:
 
     # Extract person (after "to", "with", "from")
     person = None
-    person_match = re.search(
-        r"\b(?:to|with|from)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b", text
-    )
+    person_match = re.search(r"\b(?:to|with|from)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b", text)
     if person_match:
         person = person_match.group(1)
 
@@ -313,9 +313,7 @@ def quick_capture(text: str) -> tuple[str, str]:
     what = text
     if due:
         what = re.sub(r"\s*by\s+\w+\s*", " ", what, flags=re.IGNORECASE)
-        what = re.sub(
-            r"\s*(tomorrow|today|next week)\s*", " ", what, flags=re.IGNORECASE
-        )
+        what = re.sub(r"\s*(tomorrow|today|next week)\s*", " ", what, flags=re.IGNORECASE)
     what = re.sub(r"\s+", " ", what).strip()
 
     return capture_item(

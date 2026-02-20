@@ -130,9 +130,7 @@ class Database:
         conn = self.get_connection()
         return conn.executemany(sql, params_list)
 
-    def fetch_one(
-        self, sql: str, params: tuple | dict | None = None
-    ) -> dict[str, Any] | None:
+    def fetch_one(self, sql: str, params: tuple | dict | None = None) -> dict[str, Any] | None:
         """
         Execute query and return first row as dict.
 
@@ -146,9 +144,7 @@ class Database:
         cursor = self.execute(sql, params)
         return cursor.fetchone()
 
-    def fetch_all(
-        self, sql: str, params: tuple | dict | None = None
-    ) -> list[dict[str, Any]]:
+    def fetch_all(self, sql: str, params: tuple | dict | None = None) -> list[dict[str, Any]]:
         """
         Execute query and return all rows as list of dicts.
 
@@ -288,9 +284,7 @@ class Database:
         result = self.fetch_one(sql, tuple(where_params))
         return result is not None
 
-    def count(
-        self, table: str, where: str = "1=1", where_params: tuple | list = ()
-    ) -> int:
+    def count(self, table: str, where: str = "1=1", where_params: tuple | list = ()) -> int:
         """
         Count rows matching condition.
 
@@ -310,9 +304,7 @@ class Database:
     # Batch Operations
     # =========================================================================
 
-    def insert_many(
-        self, table: str, rows: list[dict[str, Any]], or_replace: bool = False
-    ) -> int:
+    def insert_many(self, table: str, rows: list[dict[str, Any]], or_replace: bool = False) -> int:
         """
         Insert multiple rows efficiently.
 

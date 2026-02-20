@@ -283,9 +283,7 @@ def run_migration():
         logger.info(f"Migration {MIGRATION_VERSION} applied successfully!")
         # Print summary
         logger.info("\n=== New Tables Created ===")
-        cursor.execute(
-            "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
-        )
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
         tables = [row[0] for row in cursor.fetchall()]
         new_tables = [
             "artifacts",
@@ -347,9 +345,7 @@ def verify_migration():
                 all_present = False
 
         # Check indexes
-        cursor.execute(
-            "SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%'"
-        )
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%'")
         indexes = [row[0] for row in cursor.fetchall()]
         logger.info(f"\n  Indexes created: {len(indexes)}")
         return all_present

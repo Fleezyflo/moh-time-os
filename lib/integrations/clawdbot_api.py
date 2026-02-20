@@ -34,9 +34,7 @@ class ClawdbotAPI:
         self.token = token or ""
         self.headers = {"Authorization": f"Bearer {token}"} if token else {}
 
-    async def send_message(
-        self, channel: str, to: str, message: str, reply_to: str = None
-    ) -> dict:
+    async def send_message(self, channel: str, to: str, message: str, reply_to: str = None) -> dict:
         """
         Send a message to a channel.
 
@@ -77,9 +75,7 @@ class ClawdbotAPI:
 
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.get(
-                    f"{self.gateway_url}/api/status", headers=self.headers
-                )
+                response = await client.get(f"{self.gateway_url}/api/status", headers=self.headers)
 
                 if response.status_code == 200:
                     return {"success": True, **response.json()}
@@ -104,9 +100,7 @@ class ClawdbotAPI:
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    def send_message_sync(
-        self, channel: str, to: str, message: str, reply_to: str = None
-    ) -> dict:
+    def send_message_sync(self, channel: str, to: str, message: str, reply_to: str = None) -> dict:
         """Synchronous wrapper for send_message."""
         try:
             loop = asyncio.get_event_loop()
@@ -114,9 +108,7 @@ class ClawdbotAPI:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 
-        return loop.run_until_complete(
-            self.send_message(channel, to, message, reply_to)
-        )
+        return loop.run_until_complete(self.send_message(channel, to, message, reply_to))
 
     def get_status_sync(self) -> dict:
         """Synchronous wrapper for get_status."""

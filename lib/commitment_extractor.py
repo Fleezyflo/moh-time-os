@@ -241,9 +241,7 @@ def run():
     cursor.execute("SELECT COUNT(*) as cnt FROM commitments")
     after = cursor.fetchone()["cnt"]
 
-    logger.info(
-        f"\nCommitments: {before} → {after} (+{result['commitments_extracted']})"
-    )
+    logger.info(f"\nCommitments: {before} → {after} (+{result['commitments_extracted']})")
     logger.info(f"Communications scanned: {result['communications_scanned']}")
     logger.info(f"Skipped duplicates: {result['skipped_duplicates']}")
     # Show recent commitments

@@ -112,18 +112,12 @@ class SignalService:
                 )
             """)
 
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_signals_type ON signals(signal_type)"
-            )
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_signals_type ON signals(signal_type)")
             cursor.execute(
                 "CREATE INDEX IF NOT EXISTS idx_signals_entity ON signals(entity_ref_type, entity_ref_id)"
             )
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_signals_status ON signals(status)"
-            )
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_signals_severity ON signals(severity)"
-            )
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_signals_status ON signals(status)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_signals_severity ON signals(severity)")
             cursor.execute(
                 "CREATE INDEX IF NOT EXISTS idx_signals_detected ON signals(detected_at)"
             )
@@ -551,9 +545,7 @@ class SignalService:
         finally:
             conn.close()
 
-    def dismiss_signal(
-        self, signal_id: str, actor: str, note: str = None
-    ) -> dict[str, Any]:
+    def dismiss_signal(self, signal_id: str, actor: str, note: str = None) -> dict[str, Any]:
         """Dismiss a signal (user feedback)."""
         conn = self._get_conn()
         cursor = conn.cursor()
@@ -867,9 +859,7 @@ class SignalService:
                     stats["created"] += 1
 
                 except Exception as e:
-                    log.warning(
-                        f"Error persisting commitment from signal {signal_id}: {e}"
-                    )
+                    log.warning(f"Error persisting commitment from signal {signal_id}: {e}")
                     stats["errors"] += 1
 
             conn.commit()
