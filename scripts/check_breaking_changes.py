@@ -26,7 +26,6 @@ from pathlib import Path
 def get_current_schema() -> dict:
     """Get current OpenAPI schema from FastAPI app."""
     from api.server import app
-
     return app.openapi()
 
 
@@ -95,7 +94,6 @@ def main() -> int:
 
     # Try oasdiff first
     import tempfile
-
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
         json.dump(current, f)
         current_path = f.name

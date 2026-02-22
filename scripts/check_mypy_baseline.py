@@ -49,9 +49,7 @@ def run_mypy(targets: list[str]) -> list[str]:
         return []
 
     cmd = [
-        sys.executable,
-        "-m",
-        "mypy",
+        sys.executable, "-m", "mypy",
         *targets,
         *MYPY_FLAGS,
     ]
@@ -119,7 +117,7 @@ def main() -> int:
     current_errors = run_mypy(expanded_targets)
     strict_errors, legacy_errors = categorize_errors(current_errors)
 
-    print("\n📊 Mypy Summary:")
+    print(f"\n📊 Mypy Summary:")
     print(f"   Strict island errors: {len(strict_errors)}")
     print(f"   Legacy module errors: {len(legacy_errors)}")
 
