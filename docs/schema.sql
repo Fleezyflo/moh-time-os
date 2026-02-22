@@ -1,954 +1,864 @@
--- Time OS V5 Database Schema
--- Created: 2025-01-27
--- Description: Complete V5 schema with signals, issues, and integrations
+CREATE INDEX idx_actions_status ON actions(status)
 
--- ============================================================================
--- MIGRATION TRACKING
--- ============================================================================
+CREATE INDEX idx_asana_attachments_task ON asana_attachments(task_id)
 
-CREATE TABLE IF NOT EXISTS migrations (
+CREATE INDEX idx_asana_custom_fields_project ON asana_custom_fields(project_id)
+
+CREATE INDEX idx_asana_custom_fields_task ON asana_custom_fields(task_id)
+
+CREATE INDEX idx_asana_goals_owner ON asana_goals(owner_id)
+
+CREATE INDEX idx_asana_portfolios_owner ON asana_portfolios(owner_id)
+
+CREATE INDEX idx_asana_sections_project ON asana_sections(project_id)
+
+CREATE INDEX idx_asana_stories_task ON asana_stories(task_id)
+
+CREATE INDEX idx_asana_subtasks_parent_task ON asana_subtasks(parent_task_id)
+
+CREATE INDEX idx_asana_task_dependencies_task ON asana_task_dependencies(task_id)
+
+CREATE INDEX idx_calendar_attendees_event ON calendar_attendees(event_id)
+
+CREATE INDEX idx_calendar_recurrence_event ON calendar_recurrence_rules(event_id)
+
+CREATE INDEX idx_chat_attachments_message ON chat_attachments(message_id)
+
+CREATE INDEX idx_chat_reactions_message ON chat_reactions(message_id)
+
+CREATE INDEX idx_chat_space_members_space ON chat_space_members(space_id)
+
+CREATE INDEX idx_client_health_log_client ON client_health_log(client_id)
+
+CREATE INDEX idx_client_projects_client ON client_projects(client_id)
+
+CREATE INDEX idx_client_projects_project ON client_projects(project_id)
+
+CREATE INDEX idx_commitments_client ON commitments(client_id)
+
+CREATE INDEX idx_commitments_source ON commitments(source_id)
+
+CREATE INDEX idx_communications_content_hash ON communications(content_hash)
+
+CREATE INDEX idx_communications_priority ON communications(priority DESC)
+
+CREATE INDEX idx_cost_snap_entity
+ON cost_snapshots(entity_id, computed_at DESC)
+
+CREATE INDEX idx_cost_snap_time
+ON cost_snapshots(computed_at DESC)
+
+CREATE INDEX idx_cost_snap_type
+ON cost_snapshots(snapshot_type, computed_at DESC)
+
+CREATE INDEX idx_decisions_pending ON decisions(approved) WHERE approved IS NULL
+
+CREATE INDEX idx_digest_history_user_bucket ON digest_history(user_id, bucket)
+
+CREATE INDEX idx_digest_queue_user_bucket ON digest_queue(user_id, bucket, processed)
+
+CREATE INDEX idx_events_start ON events(start_time)
+
+CREATE INDEX idx_events_start_at ON events(start_at)
+
+CREATE INDEX idx_gmail_attachments_message ON gmail_attachments(message_id)
+
+CREATE INDEX idx_gmail_labels_message ON gmail_labels(message_id)
+
+CREATE INDEX idx_gmail_participants_message ON gmail_participants(message_id)
+
+CREATE INDEX idx_inbox_items_v29_client ON inbox_items_v29(client_id)
+
+CREATE INDEX idx_inbox_items_v29_state ON inbox_items_v29(state)
+
+CREATE INDEX idx_inbox_items_v29_type ON inbox_items_v29(type)
+
+CREATE INDEX idx_intel_events_entity
+ON intelligence_events(entity_type, entity_id, created_at DESC)
+
+CREATE INDEX idx_intel_events_type
+ON intelligence_events(event_type, created_at DESC)
+
+CREATE INDEX idx_intel_events_unconsumed
+ON intelligence_events(consumed_at, created_at DESC)
+WHERE consumed_at IS NULL
+
+CREATE INDEX idx_invoices_due_at ON invoices(due_at)
+
+CREATE INDEX idx_invoices_status ON invoices(status)
+
+CREATE INDEX idx_issue_transitions_v29_issue ON issue_transitions_v29(issue_id)
+
+CREATE INDEX idx_notifications_created ON notifications(created_at DESC)
+
+CREATE INDEX idx_pattern_snap_cycle
+ON pattern_snapshots(cycle_id)
+
+CREATE INDEX idx_pattern_snap_pattern
+ON pattern_snapshots(pattern_id, detected_at DESC)
+
+CREATE INDEX idx_pattern_snap_time
+ON pattern_snapshots(detected_at DESC)
+
+CREATE INDEX idx_suppression_v29_expires ON inbox_suppression_rules_v29(expires_at)
+
+CREATE INDEX idx_suppression_v29_key ON inbox_suppression_rules_v29(suppression_key)
+
+CREATE INDEX idx_tasks_due ON tasks(due_date)
+
+CREATE INDEX idx_tasks_priority ON tasks(priority DESC)
+
+CREATE INDEX idx_tasks_project_id ON tasks(project_id)
+
+CREATE INDEX idx_tasks_status ON tasks(status)
+
+CREATE INDEX idx_time_debt_lane ON time_debt(lane)
+
+CREATE INDEX idx_time_debt_unresolved ON time_debt(resolved_at) WHERE resolved_at IS NULL
+
+CREATE INDEX idx_xero_bank_transactions_contact ON xero_bank_transactions(contact_id)
+
+CREATE INDEX idx_xero_contacts_name ON xero_contacts(name)
+
+CREATE INDEX idx_xero_credit_notes_contact ON xero_credit_notes(contact_id)
+
+CREATE INDEX idx_xero_line_items_invoice ON xero_line_items(invoice_id)
+
+CREATE TABLE actions (
+                    id TEXT PRIMARY KEY,
+                    type TEXT NOT NULL,
+                    target_system TEXT,
+                    payload TEXT NOT NULL,
+                    status TEXT DEFAULT 'pending',
+                    requires_approval INTEGER DEFAULT 1,
+                    approved_by TEXT,
+                    approved_at TEXT,
+                    executed_at TEXT,
+                    result TEXT,
+                    error TEXT,
+                    retry_count INTEGER DEFAULT 0,
+                    created_at TEXT NOT NULL
+                )
+
+CREATE TABLE asana_attachments (
+            id TEXT PRIMARY KEY,
+            task_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            download_url TEXT,
+            host TEXT,
+            size_bytes INTEGER,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+
+CREATE TABLE asana_custom_fields (
+            id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL,
+            task_id TEXT,
+            field_name TEXT NOT NULL,
+            field_type TEXT NOT NULL,
+            text_value TEXT,
+            number_value REAL,
+            enum_value TEXT,
+            date_value TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+
+CREATE TABLE asana_goals (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            owner_id TEXT,
+            owner_name TEXT,
+            status TEXT,
+            due_on TEXT,
+            html_notes TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+
+CREATE TABLE asana_portfolios (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            owner_id TEXT,
+            owner_name TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+
+CREATE TABLE asana_sections (
+            id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            sort_order INTEGER,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+
+CREATE TABLE asana_stories (
+            id TEXT PRIMARY KEY,
+            task_id TEXT NOT NULL,
+            type TEXT NOT NULL,
+            text TEXT,
+            created_by TEXT,
+            created_at TEXT NOT NULL
+        )
+
+CREATE TABLE asana_subtasks (
+            id TEXT PRIMARY KEY,
+            parent_task_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            assignee_id TEXT,
+            assignee_name TEXT,
+            completed INTEGER DEFAULT 0,
+            due_on TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+
+CREATE TABLE asana_task_dependencies (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id TEXT NOT NULL,
+            depends_on_task_id TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            UNIQUE(task_id, depends_on_task_id)
+        )
+
+CREATE TABLE calendar_attendees (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_id TEXT NOT NULL,
+            email TEXT NOT NULL,
+            display_name TEXT,
+            response_status TEXT,
+            organizer INTEGER DEFAULT 0,
+            self INTEGER DEFAULT 0
+        )
+
+CREATE TABLE calendar_recurrence_rules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_id TEXT NOT NULL,
+            rrule TEXT NOT NULL
+        )
+
+CREATE TABLE capacity_lanes (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    display_name TEXT,
+                    owner TEXT,
+                    weekly_hours INTEGER DEFAULT 40,
+                    buffer_pct REAL DEFAULT 0.2,
+                    color TEXT DEFAULT '#6366f1',
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+
+CREATE TABLE chat_attachments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message_id TEXT NOT NULL,
+            name TEXT,
+            content_type TEXT,
+            source_uri TEXT,
+            thumbnail_uri TEXT
+        )
+
+CREATE TABLE chat_reactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message_id TEXT NOT NULL,
+            emoji TEXT NOT NULL,
+            user_id TEXT,
+            user_name TEXT
+        )
+
+CREATE TABLE chat_space_members (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            space_id TEXT NOT NULL,
+            member_id TEXT NOT NULL,
+            display_name TEXT,
+            email TEXT,
+            role TEXT,
+            UNIQUE(space_id, member_id)
+        )
+
+CREATE TABLE chat_space_metadata (
+            space_id TEXT PRIMARY KEY,
+            display_name TEXT,
+            space_type TEXT,
+            threaded INTEGER DEFAULT 0,
+            member_count INTEGER,
+            created_time TEXT,
+            last_synced TEXT
+        )
+
+CREATE TABLE client_health_log (
+                    id TEXT PRIMARY KEY,
+                    client_id TEXT NOT NULL,
+                    health_score INTEGER,
+                    factors TEXT,
+                    computed_at TEXT NOT NULL,
+                    FOREIGN KEY (client_id) REFERENCES clients(id)
+                )
+
+CREATE TABLE client_projects (
+                    client_id TEXT NOT NULL,
+                    project_id TEXT NOT NULL,
+                    linked_at TEXT NOT NULL,
+                    PRIMARY KEY (client_id, project_id),
+                    FOREIGN KEY (client_id) REFERENCES clients(id),
+                    FOREIGN KEY (project_id) REFERENCES projects(id)
+                )
+
+CREATE TABLE clients (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            tier TEXT CHECK (tier IN ('A', 'B', 'C')),
+            type TEXT,
+            financial_annual_value REAL,
+            financial_ar_outstanding REAL,
+            financial_ar_aging TEXT,
+            financial_payment_pattern TEXT,
+            relationship_health TEXT CHECK (relationship_health IN
+                ('excellent', 'good', 'fair', 'poor', 'critical')),
+            relationship_trend TEXT CHECK (relationship_trend IN
+                ('improving', 'stable', 'declining')),
+            relationship_last_interaction TEXT,
+            relationship_notes TEXT,
+            contacts_json TEXT,
+            active_projects_json TEXT,
+            xero_contact_id TEXT,
+            created_at TEXT NOT NULL DEFAULT '',
+            updated_at TEXT NOT NULL DEFAULT ''
+        )
+
+CREATE TABLE commitments (
+                    id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+                    source_type TEXT NOT NULL DEFAULT 'communication',
+                    source_id TEXT NOT NULL,
+                    text TEXT NOT NULL,
+                    type TEXT NOT NULL CHECK (type IN ('promise', 'request')),
+                    confidence REAL,
+                    deadline TEXT,
+                    speaker TEXT,
+                    target TEXT,
+                    client_id TEXT,
+                    task_id TEXT,
+                    status TEXT DEFAULT 'open' CHECK (status IN ('open', 'fulfilled', 'broken', 'cancelled')),
+                    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                    FOREIGN KEY (source_id) REFERENCES communications(id),
+                    FOREIGN KEY (client_id) REFERENCES clients(id),
+                    FOREIGN KEY (task_id) REFERENCES tasks(id)
+                )
+
+CREATE TABLE communications (
+                    id TEXT PRIMARY KEY,
+                    source TEXT NOT NULL,
+                    source_id TEXT,
+                    thread_id TEXT,
+                    from_email TEXT,
+                    to_emails TEXT,
+                    subject TEXT,
+                    snippet TEXT,
+                    priority INTEGER DEFAULT 50,
+                    requires_response INTEGER DEFAULT 0,
+                    response_deadline TEXT,
+                    sentiment TEXT,
+                    labels TEXT,
+                    processed INTEGER DEFAULT 0,
+                    created_at TEXT NOT NULL
+                , content_hash TEXT, body_text_source TEXT, body_text TEXT, received_at TEXT, sensitivity TEXT, stakeholder_tier TEXT, is_read INTEGER, is_starred INTEGER, importance TEXT, has_attachments INTEGER DEFAULT 0, attachment_count INTEGER DEFAULT 0, label_ids TEXT)
+
+CREATE TABLE cost_snapshots (
     id TEXT PRIMARY KEY,
-    applied_at TEXT NOT NULL DEFAULT (datetime('now')),
-    description TEXT
-);
+    computed_at TEXT NOT NULL,
+    snapshot_type TEXT NOT NULL,       -- 'client' | 'project' | 'portfolio'
+    entity_id TEXT,                    -- NULL for portfolio snapshots
+    effort_score REAL,
+    efficiency_ratio REAL,
+    profitability_band TEXT,
+    cost_drivers TEXT,                 -- JSON array of driver strings
+    data TEXT NOT NULL,                -- Full JSON of CostProfile.to_dict()
+    cycle_id TEXT
+)
 
--- ============================================================================
--- CORE ENTITIES
--- ============================================================================
+CREATE TABLE cycle_logs (
+                    id TEXT PRIMARY KEY,
+                    cycle_number INTEGER,
+                    phase TEXT,
+                    data TEXT,
+                    duration_ms REAL,
+                    created_at TEXT NOT NULL
+                )
 
--- ----------------------------------------------------------------------------
--- 1. PEOPLE (Team and Contacts)
--- ----------------------------------------------------------------------------
+CREATE TABLE decisions (
+                    id TEXT PRIMARY KEY,
+                    domain TEXT NOT NULL,
+                    decision_type TEXT NOT NULL,
+                    description TEXT,
+                    input_data TEXT,
+                    options TEXT,
+                    selected_option TEXT,
+                    rationale TEXT,
+                    confidence REAL DEFAULT 0.5,
+                    requires_approval INTEGER DEFAULT 1,
+                    approved INTEGER,
+                    approved_at TEXT,
+                    executed INTEGER DEFAULT 0,
+                    executed_at TEXT,
+                    outcome TEXT,
+                    created_at TEXT NOT NULL
+                )
 
-CREATE TABLE IF NOT EXISTS people (
+CREATE TABLE digest_history (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    bucket TEXT NOT NULL,
+                    digest_json TEXT NOT NULL,
+                    item_count INTEGER NOT NULL,
+                    sent_at TEXT NOT NULL
+                )
+
+CREATE TABLE digest_queue (
+                    id TEXT PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    notification_id TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    category TEXT NOT NULL,
+                    severity TEXT NOT NULL,
+                    bucket TEXT NOT NULL,
+                    processed INTEGER DEFAULT 0,
+                    created_at TEXT NOT NULL,
+                    processed_at TEXT
+                )
+
+CREATE TABLE events (
+                    id TEXT PRIMARY KEY,
+                    source TEXT NOT NULL,
+                    source_id TEXT,
+                    title TEXT NOT NULL,
+                    start_time TEXT NOT NULL,
+                    end_time TEXT,
+                    location TEXT,
+                    attendees TEXT,
+                    status TEXT DEFAULT 'confirmed',
+                    prep_required TEXT,
+                    context TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                , prep_notes TEXT, start_at TEXT, end_at TEXT, organizer_email TEXT, organizer_name TEXT, conference_url TEXT, conference_type TEXT, recurrence TEXT, event_type TEXT, calendar_id TEXT DEFAULT 'primary', attendee_count INTEGER DEFAULT 0, accepted_count INTEGER DEFAULT 0, declined_count INTEGER DEFAULT 0)
+
+CREATE TABLE feedback (
+                    id TEXT PRIMARY KEY,
+                    decision_id TEXT,
+                    insight_id TEXT,
+                    action_id TEXT,
+                    feedback_type TEXT,
+                    details TEXT,
+                    created_at TEXT NOT NULL
+                )
+
+CREATE TABLE gmail_attachments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message_id TEXT NOT NULL,
+            filename TEXT NOT NULL,
+            mime_type TEXT,
+            size_bytes INTEGER,
+            attachment_id TEXT
+        )
+
+CREATE TABLE gmail_labels (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message_id TEXT NOT NULL,
+            label_id TEXT NOT NULL,
+            label_name TEXT
+        )
+
+CREATE TABLE gmail_participants (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message_id TEXT NOT NULL,
+            role TEXT NOT NULL,
+            email TEXT NOT NULL,
+            name TEXT
+        )
+
+CREATE TABLE governance_audit_log (
+                    id TEXT PRIMARY KEY,
+                    timestamp TEXT NOT NULL,
+                    action TEXT NOT NULL,
+                    actor TEXT NOT NULL,
+                    subject_identifier TEXT NOT NULL,
+                    details TEXT NOT NULL,
+                    ip_address TEXT,
+                    created_at TEXT NOT NULL
+                )
+
+CREATE TABLE inbox_items_v29 (
     id TEXT PRIMARY KEY,
-
-    -- Identity
-    name TEXT NOT NULL,
-    email TEXT UNIQUE,
-    phone TEXT,
-
-    -- Type
-    person_type TEXT NOT NULL CHECK(person_type IN ('team', 'client_contact', 'vendor', 'other')) DEFAULT 'other',
-
-    -- Team-specific
-    role TEXT,
-    department TEXT,
-    is_active BOOLEAN DEFAULT TRUE,
-
-    -- Client contact specific
-    client_id TEXT,  -- FK added after clients table
-    is_primary_contact BOOLEAN DEFAULT FALSE,
-
-    -- Metadata
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    archived_at TEXT
-);
-
-CREATE INDEX IF NOT EXISTS idx_people_email ON people(email);
-CREATE INDEX IF NOT EXISTS idx_people_type ON people(person_type);
-CREATE INDEX IF NOT EXISTS idx_people_client ON people(client_id);
-
--- ----------------------------------------------------------------------------
--- 2. CLIENTS
--- ----------------------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS clients (
-    id TEXT PRIMARY KEY,
-
-    -- Identity
-    name TEXT NOT NULL,
-    legal_name TEXT,
-    xero_contact_id TEXT UNIQUE,
-
-    -- Classification
-    tier TEXT CHECK(tier IN ('A', 'B', 'C', 'unclassified')) DEFAULT 'unclassified',
-    tier_reason TEXT,
-    tier_updated_at TEXT,
-
-    -- Commercial
-    annual_revenue_target REAL DEFAULT 0,
-    lifetime_revenue REAL DEFAULT 0,
-
-    -- Relationship
-    relationship_start_date TEXT,
-    primary_contact_id TEXT REFERENCES people(id),
-    account_lead_id TEXT REFERENCES people(id),
-
-    -- Health (computed, cached)
-    health_status TEXT CHECK(health_status IN ('healthy', 'cooling', 'at_risk', 'critical')) DEFAULT 'healthy',
-    health_score REAL DEFAULT 100,
-    health_updated_at TEXT,
-
-    -- Metadata
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    archived_at TEXT
-);
-
-CREATE INDEX IF NOT EXISTS idx_clients_tier ON clients(tier);
-CREATE INDEX IF NOT EXISTS idx_clients_health ON clients(health_status);
-CREATE INDEX IF NOT EXISTS idx_clients_xero ON clients(xero_contact_id);
-
--- Add FK from people to clients
--- (SQLite doesn't support ALTER TABLE ADD CONSTRAINT, so this is enforced at app level)
-
--- ----------------------------------------------------------------------------
--- 3. BRANDS
--- ----------------------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS brands (
-    id TEXT PRIMARY KEY,
-    client_id TEXT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-
-    -- Identity
-    name TEXT NOT NULL,
-    description TEXT,
-
-    -- Health (computed, rolled up from projects/retainers)
-    health_status TEXT CHECK(health_status IN ('healthy', 'at_risk', 'critical')) DEFAULT 'healthy',
-    health_score REAL DEFAULT 100,
-    health_updated_at TEXT,
-
-    -- Metadata
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    archived_at TEXT,
-
-    UNIQUE(client_id, name)
-);
-
-CREATE INDEX IF NOT EXISTS idx_brands_client ON brands(client_id);
-CREATE INDEX IF NOT EXISTS idx_brands_health ON brands(health_status);
-
--- ----------------------------------------------------------------------------
--- 4. PROJECTS (Detected, Not Declared)
--- ----------------------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS projects_v5 (
-    id TEXT PRIMARY KEY,
-    brand_id TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
-    client_id TEXT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-
-    -- Identity
-    name TEXT NOT NULL,
-    description TEXT,
-
-    -- Detection evidence
-    detected_from TEXT CHECK(detected_from IN ('quote', 'invoice', 'tasks', 'manual')),
-    detection_confidence REAL DEFAULT 1.0,
-
-    -- Xero links
-    quote_id TEXT,
-    quote_number TEXT,
-    advance_invoice_id TEXT,
-    final_invoice_id TEXT,
-
-    -- Value
-    quoted_value REAL,
-    invoiced_value REAL DEFAULT 0,
-    paid_value REAL DEFAULT 0,
-
-    -- Lifecycle
-    phase TEXT CHECK(phase IN (
-        'opportunity',
-        'confirmed',
-        'kickoff',
-        'execution',
-        'delivery',
-        'closeout',
-        'complete',
-        'cancelled'
-    )) DEFAULT 'opportunity',
-
-    phase_changed_at TEXT,
-    phase_history TEXT,
-
-    -- Timeline
-    detected_at TEXT NOT NULL DEFAULT (datetime('now')),
-    expected_start_date TEXT,
-    expected_end_date TEXT,
-    actual_start_date TEXT,
-    actual_end_date TEXT,
-
-    -- Health
-    health_status TEXT CHECK(health_status IN ('on_track', 'at_risk', 'off_track')) DEFAULT 'on_track',
-    health_score REAL DEFAULT 100,
-    health_updated_at TEXT,
-
-    -- Metadata
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
-CREATE INDEX IF NOT EXISTS idx_projects_v5_brand ON projects_v5(brand_id);
-CREATE INDEX IF NOT EXISTS idx_projects_v5_client ON projects_v5(client_id);
-CREATE INDEX IF NOT EXISTS idx_projects_v5_phase ON projects_v5(phase);
-CREATE INDEX IF NOT EXISTS idx_projects_v5_quote ON projects_v5(quote_id);
-
--- ----------------------------------------------------------------------------
--- 5. RETAINERS
--- ----------------------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS retainers (
-    id TEXT PRIMARY KEY,
-    brand_id TEXT NOT NULL REFERENCES brands(id) ON DELETE CASCADE,
-    client_id TEXT NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
-
-    -- Identity
-    name TEXT NOT NULL,
-    description TEXT,
-    scope_definition TEXT,
-
-    -- Commercial
-    monthly_value REAL NOT NULL,
-    currency TEXT DEFAULT 'AED',
-
-    -- Timeline
-    start_date TEXT NOT NULL,
-    end_date TEXT,
-    renewal_date TEXT,
-
-    -- Status
-    status TEXT CHECK(status IN ('active', 'paused', 'churned', 'renewed')) DEFAULT 'active',
-    status_changed_at TEXT,
-    churn_reason TEXT,
-
-    -- Health
-    health_status TEXT CHECK(health_status IN ('healthy', 'at_risk', 'critical')) DEFAULT 'healthy',
-    health_score REAL DEFAULT 100,
-    health_updated_at TEXT,
-
-    -- Metadata
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
-CREATE INDEX IF NOT EXISTS idx_retainers_brand ON retainers(brand_id);
-CREATE INDEX IF NOT EXISTS idx_retainers_client ON retainers(client_id);
-CREATE INDEX IF NOT EXISTS idx_retainers_status ON retainers(status);
-
--- ----------------------------------------------------------------------------
--- 6. RETAINER CYCLES
--- ----------------------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS retainer_cycles (
-    id TEXT PRIMARY KEY,
-    retainer_id TEXT NOT NULL REFERENCES retainers(id) ON DELETE CASCADE,
-
-    -- Period
-    cycle_month TEXT NOT NULL,
-    start_date TEXT NOT NULL,
-    end_date TEXT NOT NULL,
-
-    -- Status
-    status TEXT CHECK(status IN (
-        'upcoming',
-        'planning',
-        'active',
-        'delivered',
-        'invoiced',
-        'paid',
-        'closed'
-    )) DEFAULT 'upcoming',
-
-    -- Financials
-    invoice_id TEXT,
-    invoice_amount REAL,
-    paid_amount REAL DEFAULT 0,
-    paid_at TEXT,
-
-    -- Metrics
-    tasks_planned INTEGER DEFAULT 0,
-    tasks_completed INTEGER DEFAULT 0,
-    tasks_overdue INTEGER DEFAULT 0,
-
-    -- Metadata
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-
-    UNIQUE(retainer_id, cycle_month)
-);
-
-CREATE INDEX IF NOT EXISTS idx_retainer_cycles_retainer ON retainer_cycles(retainer_id);
-CREATE INDEX IF NOT EXISTS idx_retainer_cycles_month ON retainer_cycles(cycle_month);
-CREATE INDEX IF NOT EXISTS idx_retainer_cycles_status ON retainer_cycles(status);
-
--- ----------------------------------------------------------------------------
--- 7. TASKS (Enhanced)
--- ----------------------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS tasks_v5 (
-    id TEXT PRIMARY KEY,
-
-    -- Asana link
-    asana_gid TEXT UNIQUE,
-    asana_project_gid TEXT,
-    asana_parent_gid TEXT,
-
-    -- Content
-    title TEXT NOT NULL,
-    description TEXT,
-
-    -- Assignment
-    assignee_id TEXT REFERENCES people(id),
-    assignee_name TEXT,
-    assignee_email TEXT,
-
-    -- Status
-    status TEXT CHECK(status IN (
-        'not_started',
-        'in_progress',
-        'waiting',
-        'review',
-        'done',
-        'cancelled'
-    )) DEFAULT 'not_started',
-
-    status_changed_at TEXT,
-    completed_at TEXT,
-
-    -- Timeline
-    due_date TEXT,
-    due_time TEXT,
-    start_date TEXT,
-
-    -- Hierarchy links
-    project_id TEXT REFERENCES projects_v5(id),
-    retainer_cycle_id TEXT REFERENCES retainer_cycles(id),
-    brand_id TEXT REFERENCES brands(id),
-    client_id TEXT REFERENCES clients(id),
-
-    -- Versioning
-    is_deliverable BOOLEAN DEFAULT FALSE,
-    current_version INTEGER DEFAULT 0,
-
-    -- Priority
-    priority TEXT CHECK(priority IN ('low', 'medium', 'high', 'urgent')) DEFAULT 'medium',
-    priority_score INTEGER DEFAULT 50,
-
-    -- Metadata
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    synced_at TEXT
-);
-
--- Generated columns for computed timing (SQLite 3.31+)
--- Note: These are computed in application layer if SQLite version doesn't support GENERATED
--- days_overdue: CASE WHEN due_date IS NOT NULL AND status NOT IN ('done', 'cancelled')
---                    AND date(due_date) < date('now')
---               THEN julianday('now') - julianday(due_date) ELSE 0 END
--- days_until_due: CASE WHEN due_date IS NOT NULL AND status NOT IN ('done', 'cancelled')
---                      AND date(due_date) >= date('now')
---                 THEN julianday(due_date) - julianday('now') ELSE NULL END
--- completed_on_time: CASE WHEN completed_at IS NOT NULL AND due_date IS NOT NULL
---                    THEN date(completed_at) <= date(due_date) ELSE NULL END
-
-CREATE INDEX IF NOT EXISTS idx_tasks_v5_asana ON tasks_v5(asana_gid);
-CREATE INDEX IF NOT EXISTS idx_tasks_v5_status ON tasks_v5(status);
-CREATE INDEX IF NOT EXISTS idx_tasks_v5_due ON tasks_v5(due_date);
-CREATE INDEX IF NOT EXISTS idx_tasks_v5_assignee ON tasks_v5(assignee_id);
-CREATE INDEX IF NOT EXISTS idx_tasks_v5_project ON tasks_v5(project_id);
-CREATE INDEX IF NOT EXISTS idx_tasks_v5_retainer ON tasks_v5(retainer_cycle_id);
-CREATE INDEX IF NOT EXISTS idx_tasks_v5_client ON tasks_v5(client_id);
-
--- Partial index for overdue tasks
-CREATE INDEX IF NOT EXISTS idx_tasks_v5_overdue ON tasks_v5(due_date)
-    WHERE status NOT IN ('done', 'cancelled') AND due_date IS NOT NULL;
-
--- ----------------------------------------------------------------------------
--- 8. TASK VERSIONS
--- ----------------------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS task_versions (
-    id TEXT PRIMARY KEY,
-    task_id TEXT NOT NULL REFERENCES tasks_v5(id) ON DELETE CASCADE,
-
-    -- Version info
-    version_number INTEGER NOT NULL,
-    version_label TEXT,
-
-    -- Asana link (subtask)
-    asana_subtask_gid TEXT UNIQUE,
-
-    -- Status
-    status TEXT CHECK(status IN ('draft', 'submitted', 'approved', 'rejected')) DEFAULT 'draft',
-    status_changed_at TEXT,
-
-    -- Timestamps
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    submitted_at TEXT,
-    reviewed_at TEXT,
-
-    -- Feedback
-    feedback_summary TEXT,
-    feedback_sentiment TEXT CHECK(feedback_sentiment IN ('positive', 'neutral', 'negative')),
-
-    UNIQUE(task_id, version_number)
-);
-
-CREATE INDEX IF NOT EXISTS idx_task_versions_task ON task_versions(task_id);
-CREATE INDEX IF NOT EXISTS idx_task_versions_status ON task_versions(status);
-
--- ============================================================================
--- SIGNALS & ISSUES
--- ============================================================================
-
--- ----------------------------------------------------------------------------
--- 9. SIGNALS (Core V5 Table)
--- ----------------------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS signals_v5 (
-    id TEXT PRIMARY KEY,
-
-    -- Classification
-    signal_type TEXT NOT NULL,
-    signal_category TEXT NOT NULL CHECK(signal_category IN (
-        'schedule',
-        'quality',
-        'financial',
-        'communication',
-        'relationship',
-        'process'
+    type TEXT NOT NULL CHECK (type IN ('issue', 'flagged_signal', 'orphan', 'ambiguous')),
+    state TEXT NOT NULL DEFAULT 'proposed' CHECK (state IN (
+        'proposed', 'snoozed', 'linked_to_issue', 'dismissed'
     )),
-
-    -- Valence (THE KEY FIELD)
-    valence INTEGER NOT NULL CHECK(valence IN (-1, 0, 1)),
-    magnitude REAL NOT NULL DEFAULT 0.5 CHECK(magnitude >= 0 AND magnitude <= 1),
-
-    -- Entity reference
-    entity_type TEXT NOT NULL,
-    entity_id TEXT NOT NULL,
-
-    -- Scope chain (for aggregation up the hierarchy)
-    scope_task_id TEXT,
-    scope_project_id TEXT,
-    scope_retainer_id TEXT,
-    scope_brand_id TEXT,
-    scope_client_id TEXT,
-    scope_person_id TEXT,
-
-    -- Source evidence
-    source_type TEXT NOT NULL CHECK(source_type IN (
-        'asana', 'xero', 'gchat', 'calendar', 'gmeet', 'email', 'manual'
-    )),
-    source_id TEXT,
-    source_url TEXT,
-    source_excerpt TEXT,
-
-    -- Payload (signal-specific data)
-    value_json TEXT NOT NULL,
-
-    -- Confidence
-    detection_confidence REAL DEFAULT 0.9 CHECK(detection_confidence >= 0 AND detection_confidence <= 1),
-    attribution_confidence REAL DEFAULT 0.9 CHECK(attribution_confidence >= 0 AND attribution_confidence <= 1),
-
-    -- Lifecycle
-    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN (
-        'active',
-        'consumed',
-        'balanced',
-        'expired',
-        'archived'
-    )),
-
-    balanced_by_signal_id TEXT REFERENCES signals_v5(id),
-    consumed_by_issue_id TEXT,
-
-    -- Timing
-    occurred_at TEXT NOT NULL,
-    detected_at TEXT NOT NULL DEFAULT (datetime('now')),
-    expires_at TEXT,
-    balanced_at TEXT,
-
-    -- Detector info
-    detector_id TEXT NOT NULL,
-    detector_version TEXT NOT NULL,
-
-    -- Metadata
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
--- Note: decay_multiplier and effective_magnitude are computed in application layer:
--- decay_multiplier = CASE
---     WHEN age_days > 365 THEN 0.1
---     WHEN age_days > 180 THEN 0.25
---     WHEN age_days > 90 THEN 0.5
---     WHEN age_days > 30 THEN 0.8
---     ELSE 1.0 END
--- effective_magnitude = magnitude * decay_multiplier
-
-CREATE INDEX IF NOT EXISTS idx_signals_v5_type ON signals_v5(signal_type);
-CREATE INDEX IF NOT EXISTS idx_signals_v5_category ON signals_v5(signal_category);
-CREATE INDEX IF NOT EXISTS idx_signals_v5_valence ON signals_v5(valence);
-CREATE INDEX IF NOT EXISTS idx_signals_v5_status ON signals_v5(status);
-CREATE INDEX IF NOT EXISTS idx_signals_v5_entity ON signals_v5(entity_type, entity_id);
-CREATE INDEX IF NOT EXISTS idx_signals_v5_client ON signals_v5(scope_client_id);
-CREATE INDEX IF NOT EXISTS idx_signals_v5_project ON signals_v5(scope_project_id);
-CREATE INDEX IF NOT EXISTS idx_signals_v5_brand ON signals_v5(scope_brand_id);
-CREATE INDEX IF NOT EXISTS idx_signals_v5_detected ON signals_v5(detected_at);
-CREATE INDEX IF NOT EXISTS idx_signals_v5_active ON signals_v5(status, valence) WHERE status = 'active';
-
--- ----------------------------------------------------------------------------
--- 10. ISSUES
--- ----------------------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS issues_v5 (
-    id TEXT PRIMARY KEY,
-
-    -- Classification
-    issue_type TEXT NOT NULL CHECK(issue_type IN (
-        'schedule_delivery',
-        'quality',
-        'financial',
-        'communication',
-        'relationship',
-        'process'
-    )),
-    issue_subtype TEXT NOT NULL,
-
-    -- Scope
-    scope_type TEXT NOT NULL CHECK(scope_type IN (
-        'task', 'project', 'retainer', 'brand', 'client'
-    )),
-    scope_id TEXT NOT NULL,
-
-    -- Scope chain (for context)
-    scope_task_ids TEXT,
-    scope_project_ids TEXT,
-    scope_retainer_id TEXT,
-    scope_brand_id TEXT,
-    scope_client_id TEXT,
-
-    -- Display
-    headline TEXT NOT NULL,
-    description TEXT,
-
-    -- Severity
-    severity TEXT NOT NULL CHECK(severity IN ('critical', 'high', 'medium', 'low')),
-    priority_score REAL NOT NULL DEFAULT 0,
-    trajectory TEXT CHECK(trajectory IN ('worsening', 'stable', 'improving')) DEFAULT 'stable',
-
-    -- Signal evidence
-    signal_ids TEXT NOT NULL,
-
-    -- Signal balance (cached for performance)
-    balance_negative_count INTEGER DEFAULT 0,
-    balance_negative_magnitude REAL DEFAULT 0,
-    balance_neutral_count INTEGER DEFAULT 0,
-    balance_positive_count INTEGER DEFAULT 0,
-    balance_positive_magnitude REAL DEFAULT 0,
-    balance_net_score REAL DEFAULT 0,
-
-    -- Recommended action
-    recommended_action TEXT,
-    recommended_owner_role TEXT,
-    recommended_urgency TEXT CHECK(recommended_urgency IN ('immediate', 'this_week', 'this_month')),
-
-    -- Lifecycle
-    state TEXT NOT NULL DEFAULT 'detected' CHECK(state IN (
-        'detected',
-        'surfaced',
-        'acknowledged',
-        'addressing',
-        'resolved',
-        'monitoring',
-        'closed'
-    )),
-
-    -- Timestamps
-    detected_at TEXT NOT NULL DEFAULT (datetime('now')),
-    surfaced_at TEXT,
-    acknowledged_at TEXT,
-    acknowledged_by TEXT,
-    addressing_started_at TEXT,
+    severity TEXT NOT NULL CHECK (severity IN ('critical', 'high', 'medium', 'low', 'info')),
+    proposed_at TEXT NOT NULL,
+    last_refreshed_at TEXT NOT NULL,
+    read_at TEXT,
+    resurfaced_at TEXT,
     resolved_at TEXT,
-    monitoring_until TEXT,
-    closed_at TEXT,
-
-    -- Resolution
-    resolution_method TEXT CHECK(resolution_method IN (
-        'signals_balanced',
-        'tasks_completed',
-        'manual',
-        'auto_expired',
-        'dismissed'
-    )),
-    resolution_notes TEXT,
-    resolved_by TEXT,
-
-    -- Regression
-    regression_count INTEGER DEFAULT 0,
-    last_regression_at TEXT,
-
-    -- History
-    state_history TEXT,
-    score_history TEXT,
-
-    -- Metadata
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
-CREATE INDEX IF NOT EXISTS idx_issues_v5_type ON issues_v5(issue_type);
-CREATE INDEX IF NOT EXISTS idx_issues_v5_subtype ON issues_v5(issue_subtype);
-CREATE INDEX IF NOT EXISTS idx_issues_v5_scope ON issues_v5(scope_type, scope_id);
-CREATE INDEX IF NOT EXISTS idx_issues_v5_client ON issues_v5(scope_client_id);
-CREATE INDEX IF NOT EXISTS idx_issues_v5_state ON issues_v5(state);
-CREATE INDEX IF NOT EXISTS idx_issues_v5_severity ON issues_v5(severity);
-CREATE INDEX IF NOT EXISTS idx_issues_v5_score ON issues_v5(priority_score DESC);
-CREATE INDEX IF NOT EXISTS idx_issues_v5_surfaced ON issues_v5(state, priority_score DESC) WHERE state = 'surfaced';
-
--- ============================================================================
--- INTEGRATION SYNC STATE
--- ============================================================================
-
--- ----------------------------------------------------------------------------
--- 11. XERO SYNC STATE
--- ----------------------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS xero_sync_state (
-    id TEXT PRIMARY KEY DEFAULT 'singleton',
-    last_sync_at TEXT,
-    last_modified_since TEXT,
-    contacts_synced INTEGER DEFAULT 0,
-    invoices_synced INTEGER DEFAULT 0,
-    quotes_synced INTEGER DEFAULT 0,
-    payments_synced INTEGER DEFAULT 0,
-    errors TEXT,
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
--- Insert singleton row
-INSERT OR IGNORE INTO xero_sync_state (id) VALUES ('singleton');
-
--- ----------------------------------------------------------------------------
--- 12. GOOGLE CHAT SYNC STATE
--- ----------------------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS gchat_sync_state (
-    space_id TEXT PRIMARY KEY,
-    space_name TEXT,
-    space_type TEXT,
-
-    -- Mapping
-    client_id TEXT REFERENCES clients(id),
-    brand_id TEXT REFERENCES brands(id),
-    project_id TEXT REFERENCES projects_v5(id),
-
-    -- Sync state
-    last_sync_at TEXT,
-    last_message_id TEXT,
-    last_message_at TEXT,
-
-    -- Metrics (cached)
-    message_count_30d INTEGER DEFAULT 0,
-    avg_response_time_hours REAL,
-
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
-CREATE INDEX IF NOT EXISTS idx_gchat_sync_client ON gchat_sync_state(client_id);
-
--- ----------------------------------------------------------------------------
--- 13. CALENDAR SYNC STATE
--- ----------------------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS calendar_sync_state (
-    calendar_id TEXT PRIMARY KEY,
-    calendar_name TEXT,
-
-    last_sync_at TEXT,
-    sync_token TEXT,
-
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
--- ============================================================================
--- XERO ENTITIES
--- ============================================================================
-
--- ----------------------------------------------------------------------------
--- 14. XERO INVOICES
--- ----------------------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS xero_invoices (
-    id TEXT PRIMARY KEY,
-    xero_invoice_id TEXT UNIQUE NOT NULL,
-
-    -- Invoice details
-    invoice_number TEXT,
-    reference TEXT,
-
-    contact_id TEXT,
-    client_id TEXT REFERENCES clients(id),
-
-    -- Type (detected)
-    invoice_type TEXT CHECK(invoice_type IN ('advance', 'progress', 'final', 'retainer', 'other')),
-    type_detection_method TEXT,
-
-    -- Link to our entities
-    project_id TEXT REFERENCES projects_v5(id),
-    retainer_cycle_id TEXT REFERENCES retainer_cycles(id),
-
-    -- Financials
-    subtotal REAL,
-    tax REAL,
-    total REAL NOT NULL,
-    currency TEXT DEFAULT 'AED',
-
-    amount_due REAL,
-    amount_paid REAL DEFAULT 0,
-
-    -- Dates
-    date_issued TEXT,
-    due_date TEXT,
-    fully_paid_date TEXT,
-
-    -- Status
-    status TEXT,
-
-    -- Metadata
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    synced_at TEXT
-);
-
--- Note: days_overdue and aging_bucket are computed in application layer:
--- days_overdue = julianday('now') - julianday(due_date) when overdue
--- aging_bucket = '1-30', '31-60', '61-90', '90+'
-
-CREATE INDEX IF NOT EXISTS idx_xero_invoices_client ON xero_invoices(client_id);
-CREATE INDEX IF NOT EXISTS idx_xero_invoices_project ON xero_invoices(project_id);
-CREATE INDEX IF NOT EXISTS idx_xero_invoices_status ON xero_invoices(status);
-CREATE INDEX IF NOT EXISTS idx_xero_invoices_due ON xero_invoices(due_date);
-
--- ----------------------------------------------------------------------------
--- 15. XERO PAYMENTS
--- ----------------------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS xero_payments (
-    id TEXT PRIMARY KEY,
-    xero_payment_id TEXT UNIQUE NOT NULL,
-
-    invoice_id TEXT REFERENCES xero_invoices(id),
-    xero_invoice_id TEXT,
-
-    amount REAL NOT NULL,
-    currency TEXT DEFAULT 'AED',
-
-    payment_date TEXT NOT NULL,
-
-    -- Timing
-    days_after_due INTEGER,
-
-    -- Metadata
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    synced_at TEXT
-);
-
-CREATE INDEX IF NOT EXISTS idx_xero_payments_invoice ON xero_payments(invoice_id);
-CREATE INDEX IF NOT EXISTS idx_xero_payments_date ON xero_payments(payment_date);
-
--- ============================================================================
--- GOOGLE CHAT ENTITIES
--- ============================================================================
-
--- ----------------------------------------------------------------------------
--- 16. GOOGLE CHAT MESSAGES
--- ----------------------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS gchat_messages (
-    id TEXT PRIMARY KEY,
-    space_id TEXT NOT NULL,
-
-    -- Message info
-    message_id TEXT UNIQUE NOT NULL,
-    thread_id TEXT,
-
-    sender_email TEXT,
-    sender_name TEXT,
-    sender_type TEXT CHECK(sender_type IN ('team', 'client', 'unknown')),
-
-    -- Content
-    text_snippet TEXT,
-    has_attachments BOOLEAN DEFAULT FALSE,
-
-    -- Timestamps
-    created_at TEXT NOT NULL,
-
-    -- Analysis
-    sentiment TEXT CHECK(sentiment IN ('positive', 'neutral', 'negative')),
-    sentiment_keywords TEXT,
-    is_escalation BOOLEAN DEFAULT FALSE,
-
-    -- Sync
-    synced_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
-CREATE INDEX IF NOT EXISTS idx_gchat_messages_space ON gchat_messages(space_id);
-CREATE INDEX IF NOT EXISTS idx_gchat_messages_sender ON gchat_messages(sender_type);
-CREATE INDEX IF NOT EXISTS idx_gchat_messages_created ON gchat_messages(created_at);
-CREATE INDEX IF NOT EXISTS idx_gchat_messages_sentiment ON gchat_messages(sentiment);
-
--- ============================================================================
--- CALENDAR & MEET ENTITIES
--- ============================================================================
-
--- ----------------------------------------------------------------------------
--- 17. CALENDAR EVENTS
--- ----------------------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS calendar_events (
-    id TEXT PRIMARY KEY,
-    google_event_id TEXT UNIQUE NOT NULL,
-    calendar_id TEXT,
-
-    -- Event details
+    snooze_until TEXT,
+    snoozed_by TEXT,
+    snoozed_at TEXT,
+    snooze_reason TEXT,
+    dismissed_by TEXT,
+    dismissed_at TEXT,
+    dismiss_reason TEXT,
+    suppression_key TEXT,
+    underlying_issue_id TEXT,
+    underlying_signal_id TEXT,
+    resolved_issue_id TEXT,
     title TEXT NOT NULL,
-    description TEXT,
+    client_id TEXT,
+    brand_id TEXT,
+    engagement_id TEXT,
+    evidence TEXT,
+    evidence_version TEXT DEFAULT 'v1',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL,
+    FOREIGN KEY (underlying_issue_id) REFERENCES issues_v29(id),
+    FOREIGN KEY (client_id) REFERENCES clients(id)
+)
 
-    -- Time
-    start_time TEXT NOT NULL,
-    end_time TEXT,
-    all_day BOOLEAN DEFAULT FALSE,
-
-    -- Attendees
-    attendees_json TEXT,
-    organizer_email TEXT,
-
-    -- Client/project link
-    client_id TEXT REFERENCES clients(id),
-    brand_id TEXT REFERENCES brands(id),
-    project_id TEXT REFERENCES projects_v5(id),
-
-    -- Analysis
-    title_category TEXT CHECK(title_category IN ('kickoff', 'review', 'sync', 'urgent', 'other')),
-
-    -- Status
-    status TEXT CHECK(status IN ('confirmed', 'tentative', 'cancelled')),
-
-    -- Meeting occurred?
-    meeting_occurred BOOLEAN,
-    gemini_notes_id TEXT,
-
-    -- Metadata
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    synced_at TEXT
-);
-
-CREATE INDEX IF NOT EXISTS idx_calendar_events_client ON calendar_events(client_id);
-CREATE INDEX IF NOT EXISTS idx_calendar_events_start ON calendar_events(start_time);
-CREATE INDEX IF NOT EXISTS idx_calendar_events_status ON calendar_events(status);
-CREATE INDEX IF NOT EXISTS idx_calendar_events_category ON calendar_events(title_category);
-
--- ----------------------------------------------------------------------------
--- 18. GEMINI MEETING NOTES
--- ----------------------------------------------------------------------------
-
-CREATE TABLE IF NOT EXISTS gemini_notes (
+CREATE TABLE inbox_suppression_rules_v29 (
     id TEXT PRIMARY KEY,
-    event_id TEXT REFERENCES calendar_events(id),
-    google_event_id TEXT,
+    suppression_key TEXT NOT NULL UNIQUE,
+    item_type TEXT NOT NULL,
+    scope_client_id TEXT,
+    scope_engagement_id TEXT,
+    scope_source TEXT,
+    scope_rule TEXT,
+    reason TEXT,
+    created_by TEXT,
+    created_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL
+)
 
-    -- Meeting metadata
-    meeting_title TEXT,
-    meeting_date TEXT,
-    duration_minutes INTEGER,
+CREATE TABLE insights (
+                    id TEXT PRIMARY KEY,
+                    type TEXT NOT NULL,
+                    domain TEXT NOT NULL,
+                    title TEXT NOT NULL,
+                    description TEXT,
+                    confidence REAL DEFAULT 0.5,
+                    data TEXT,
+                    actionable INTEGER DEFAULT 0,
+                    action_taken INTEGER DEFAULT 0,
+                    created_at TEXT NOT NULL,
+                    expires_at TEXT
+                )
 
-    -- Attendees
-    expected_attendees TEXT,
-    actual_attendees TEXT,
+CREATE TABLE intelligence_events (
+    id TEXT PRIMARY KEY,
+    event_type TEXT NOT NULL,          -- 'signal_fired' | 'signal_cleared' | 'signal_escalated'
+                                      -- 'pattern_detected' | 'pattern_resolved'
+                                      -- 'compound_risk_detected' | 'health_threshold_crossed'
+    severity TEXT NOT NULL,            -- 'critical' | 'warning' | 'watch' | 'info'
+    entity_type TEXT,                  -- 'client' | 'project' | 'person' | 'portfolio'
+    entity_id TEXT,
+    event_data TEXT NOT NULL,          -- JSON payload with event details
+    source_module TEXT,                -- 'signals' | 'patterns' | 'correlation' | 'cost'
+    created_at TEXT NOT NULL,
+    consumed_at TEXT,                  -- Set when a downstream consumer processes the event
+    consumer TEXT                      -- Which consumer processed it
+)
 
-    -- Extracted content
-    raw_summary TEXT,
+CREATE TABLE intelligence_events_archive (
+    id TEXT PRIMARY KEY,
+    event_type TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    entity_type TEXT,
+    entity_id TEXT,
+    event_data TEXT NOT NULL,
+    source_module TEXT,
+    created_at TEXT NOT NULL,
+    consumed_at TEXT,
+    consumer TEXT,
+    archived_at TEXT NOT NULL
+)
 
-    -- Parsed sections
-    decisions TEXT,
-    action_items TEXT,
-    concerns TEXT,
-    approvals TEXT,
-    blockers TEXT,
+CREATE TABLE invoices (
+            id TEXT PRIMARY KEY,
+            source_id TEXT,
+            client_id TEXT,
+            client_name TEXT,
+            status TEXT DEFAULT 'pending',
+            total REAL,
+            amount_due REAL,
+            currency TEXT DEFAULT 'AED',
+            issued_at TEXT,
+            due_at TEXT,
+            paid_at TEXT,
+            aging_bucket TEXT,
+            created_at TEXT,
+            updated_at TEXT
+        )
 
-    -- Analysis
-    overall_sentiment TEXT CHECK(overall_sentiment IN ('positive', 'neutral', 'negative', 'mixed')),
+CREATE TABLE issue_transitions_v29 (
+    id TEXT PRIMARY KEY,
+    issue_id TEXT NOT NULL,
+    from_state TEXT NOT NULL,
+    to_state TEXT NOT NULL,
+    action TEXT,
+    actor TEXT,
+    reason TEXT,
+    transitioned_at TEXT NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (issue_id) REFERENCES issues_v29(id)
+)
 
-    -- Metadata
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    processed_at TEXT
-);
+CREATE TABLE notifications (
+                    id TEXT PRIMARY KEY,
+                    type TEXT NOT NULL,
+                    priority TEXT NOT NULL DEFAULT 'normal',
+                    title TEXT NOT NULL,
+                    body TEXT,
+                    action_url TEXT,
+                    action_data TEXT,
+                    channels TEXT,
+                    sent_at TEXT,
+                    read_at TEXT,
+                    acted_on_at TEXT,
+                    created_at TEXT NOT NULL
+                )
 
-CREATE INDEX IF NOT EXISTS idx_gemini_notes_event ON gemini_notes(event_id);
-CREATE INDEX IF NOT EXISTS idx_gemini_notes_date ON gemini_notes(meeting_date);
+CREATE TABLE pattern_snapshots (
+    id TEXT PRIMARY KEY,
+    detected_at TEXT NOT NULL,
+    pattern_id TEXT NOT NULL,
+    pattern_name TEXT NOT NULL,
+    pattern_type TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    confidence TEXT NOT NULL DEFAULT 'medium',
+    entities_involved TEXT NOT NULL,   -- JSON array of {type, id, name, role_in_pattern}
+    evidence TEXT NOT NULL,            -- JSON: metrics, narrative, signals
+    cycle_id TEXT                      -- Links to specific daemon cycle run
+)
 
--- ============================================================================
--- VIEWS (Computed Columns)
--- ============================================================================
+CREATE TABLE patterns (
+                    id TEXT PRIMARY KEY,
+                    domain TEXT NOT NULL,
+                    pattern_type TEXT NOT NULL,
+                    description TEXT,
+                    data TEXT,
+                    confidence REAL DEFAULT 0.5,
+                    occurrences INTEGER DEFAULT 1,
+                    last_seen TEXT,
+                    created_at TEXT NOT NULL
+                )
 
--- View for tasks with computed overdue fields
-CREATE VIEW IF NOT EXISTS tasks_v5_computed AS
-SELECT
-    t.*,
-    CASE
-        WHEN t.due_date IS NOT NULL AND t.status NOT IN ('done', 'cancelled')
-             AND date(t.due_date) < date('now')
-        THEN CAST(julianday('now') - julianday(t.due_date) AS INTEGER)
-        ELSE 0
-    END as days_overdue,
-    CASE
-        WHEN t.due_date IS NOT NULL AND t.status NOT IN ('done', 'cancelled')
-             AND date(t.due_date) >= date('now')
-        THEN CAST(julianday(t.due_date) - julianday('now') AS INTEGER)
-        ELSE NULL
-    END as days_until_due,
-    CASE
-        WHEN t.completed_at IS NOT NULL AND t.due_date IS NOT NULL
-        THEN date(t.completed_at) <= date(t.due_date)
-        ELSE NULL
-    END as completed_on_time
-FROM tasks_v5 t;
+CREATE TABLE people (
+                    id TEXT PRIMARY KEY,
+                    name TEXT NOT NULL,
+                    email TEXT,
+                    phone TEXT,
+                    company TEXT,
+                    role TEXT,
+                    type TEXT DEFAULT 'external',  -- 'internal' or 'external'
+                    relationship TEXT,
+                    importance INTEGER DEFAULT 50,
+                    last_contact TEXT,
+                    contact_frequency_days INTEGER,
+                    notes TEXT,
+                    context TEXT
+                )
 
--- View for signals with decay
-CREATE VIEW IF NOT EXISTS signals_v5_computed AS
-SELECT
-    s.*,
-    CAST(julianday('now') - julianday(s.detected_at) AS INTEGER) as age_days,
-    CASE
-        WHEN julianday('now') - julianday(s.detected_at) > 365 THEN 0.1
-        WHEN julianday('now') - julianday(s.detected_at) > 180 THEN 0.25
-        WHEN julianday('now') - julianday(s.detected_at) > 90 THEN 0.5
-        WHEN julianday('now') - julianday(s.detected_at) > 30 THEN 0.8
-        ELSE 1.0
-    END as decay_multiplier,
-    s.magnitude * CASE
-        WHEN julianday('now') - julianday(s.detected_at) > 365 THEN 0.1
-        WHEN julianday('now') - julianday(s.detected_at) > 180 THEN 0.25
-        WHEN julianday('now') - julianday(s.detected_at) > 90 THEN 0.5
-        WHEN julianday('now') - julianday(s.detected_at) > 30 THEN 0.8
-        ELSE 1.0
-    END as effective_magnitude
-FROM signals_v5 s;
+CREATE TABLE projects (
+                    id TEXT PRIMARY KEY,
+                    source TEXT,
+                    source_id TEXT,
+                    name TEXT NOT NULL,
+                    status TEXT DEFAULT 'active',
+                    health TEXT DEFAULT 'green',
+                    enrollment_status TEXT DEFAULT 'enrolled',
+                    rule_bundles TEXT,
+                    owner TEXT,
+                    deadline TEXT,
+                    tasks_total INTEGER DEFAULT 0,
+                    tasks_done INTEGER DEFAULT 0,
+                    blockers TEXT,
+                    next_milestone TEXT,
+                    context TEXT
+                , brand_id TEXT)
 
--- View for invoices with aging
-CREATE VIEW IF NOT EXISTS xero_invoices_computed AS
-SELECT
-    i.*,
-    CASE
-        WHEN i.status NOT IN ('PAID', 'VOIDED') AND i.due_date IS NOT NULL
-             AND date(i.due_date) < date('now')
-        THEN CAST(julianday('now') - julianday(i.due_date) AS INTEGER)
-        ELSE 0
-    END as days_overdue,
-    CASE
-        WHEN i.status IN ('PAID', 'VOIDED') THEN 'paid'
-        WHEN i.due_date IS NULL THEN 'no_due_date'
-        WHEN date(i.due_date) >= date('now') THEN 'current'
-        WHEN julianday('now') - julianday(i.due_date) <= 30 THEN '1-30'
-        WHEN julianday('now') - julianday(i.due_date) <= 60 THEN '31-60'
-        WHEN julianday('now') - julianday(i.due_date) <= 90 THEN '61-90'
-        ELSE '90+'
-    END as aging_bucket
-FROM xero_invoices i;
+CREATE TABLE sqlite_sequence(name,seq)
+
+CREATE TABLE subject_access_requests (
+                    request_id TEXT PRIMARY KEY,
+                    subject_identifier TEXT NOT NULL,
+                    request_type TEXT NOT NULL,
+                    requested_at TEXT NOT NULL,
+                    fulfilled_at TEXT,
+                    status TEXT NOT NULL DEFAULT 'pending',
+                    requested_by TEXT NOT NULL DEFAULT 'system',
+                    reason TEXT,
+                    created_at TEXT NOT NULL
+                )
+
+CREATE TABLE sync_state (
+                    source TEXT PRIMARY KEY,
+                    last_sync TEXT,
+                    last_success TEXT,
+                    items_synced INTEGER DEFAULT 0,
+                    error TEXT
+                )
+
+CREATE TABLE tasks (
+                    id TEXT PRIMARY KEY,
+                    source TEXT NOT NULL,
+                    source_id TEXT,
+                    title TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'pending',
+                    priority INTEGER DEFAULT 50,
+                    due_date TEXT,
+                    due_time TEXT,
+                    assignee TEXT,
+                    project TEXT,
+                    tags TEXT,
+                    dependencies TEXT,
+                    blockers TEXT,
+                    context TEXT,
+                    created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL,
+                    synced_at TEXT
+                , description TEXT DEFAULT '', project_id TEXT, notes TEXT, completed_at TEXT, priority_reasons TEXT, section_id TEXT, section_name TEXT, subtask_count INTEGER DEFAULT 0, has_dependencies INTEGER DEFAULT 0, attachment_count INTEGER DEFAULT 0, story_count INTEGER DEFAULT 0, custom_fields_json TEXT)
+
+CREATE TABLE time_debt (
+                    id TEXT PRIMARY KEY,
+                    lane TEXT NOT NULL,
+                    amount_min INTEGER NOT NULL,
+                    reason TEXT,
+                    source_task_id TEXT,
+                    incurred_at TEXT NOT NULL,
+                    resolved_at TEXT,
+                    FOREIGN KEY (lane) REFERENCES capacity_lanes(id)
+                )
+
+CREATE TABLE xero_bank_transactions (
+            id TEXT PRIMARY KEY,
+            type TEXT,
+            contact_id TEXT,
+            date TEXT,
+            status TEXT,
+            total REAL,
+            currency_code TEXT,
+            reference TEXT,
+            last_synced TEXT
+        )
+
+CREATE TABLE xero_contacts (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            email TEXT,
+            phone TEXT,
+            account_number TEXT,
+            tax_number TEXT,
+            is_supplier INTEGER DEFAULT 0,
+            is_customer INTEGER DEFAULT 0,
+            default_currency TEXT,
+            outstanding_balance REAL,
+            overdue_balance REAL,
+            last_synced TEXT
+        )
+
+CREATE TABLE xero_credit_notes (
+            id TEXT PRIMARY KEY,
+            contact_id TEXT,
+            date TEXT,
+            status TEXT,
+            total REAL,
+            currency_code TEXT,
+            remaining_credit REAL,
+            allocated_amount REAL,
+            last_synced TEXT
+        )
+
+CREATE TABLE xero_line_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            invoice_id TEXT NOT NULL,
+            description TEXT,
+            quantity REAL,
+            unit_amount REAL,
+            line_amount REAL,
+            tax_type TEXT,
+            tax_amount REAL,
+            account_code TEXT,
+            tracking_category TEXT,
+            tracking_option TEXT
+        )
+
+CREATE TABLE xero_tax_rates (
+            name TEXT PRIMARY KEY,
+            tax_type TEXT,
+            effective_rate REAL,
+            status TEXT
+        )
+
+CREATE VIEW issues_v29 AS
+                        SELECT
+                            i.issue_id AS id,
+                            CASE
+                                WHEN lower(i.issue_type) LIKE '%ar%' OR lower(i.issue_type) LIKE '%payment%' OR lower(i.issue_type) LIKE '%invoice%' THEN 'financial'
+                                WHEN lower(i.issue_type) LIKE '%deadline%' OR lower(i.issue_type) LIKE '%overdue%' OR lower(i.issue_type) LIKE '%delay%' THEN 'schedule_delivery'
+                                WHEN lower(i.issue_type) LIKE '%communication%' OR lower(i.issue_type) LIKE '%response%' THEN 'communication'
+                                ELSE 'risk'
+                            END AS type,
+                            CASE i.state
+                                WHEN 'open' THEN 'surfaced'
+                                WHEN 'monitoring' THEN 'acknowledged'
+                                WHEN 'awaiting' THEN 'awaiting_resolution'
+                                WHEN 'blocked' THEN 'addressing'
+                                WHEN 'resolved' THEN 'closed'
+                                ELSE 'surfaced'
+                            END AS state,
+                            CASE
+                                WHEN i.priority >= 80 THEN 'critical'
+                                WHEN i.priority >= 60 THEN 'high'
+                                WHEN i.priority >= 40 THEN 'medium'
+                                WHEN i.priority >= 20 THEN 'low'
+                                ELSE 'info'
+                            END AS severity,
+                            COALESCE(
+                                CASE WHEN i.primary_ref_type = 'client' THEN i.primary_ref_id END,
+                                (SELECT t.client_id FROM tasks t WHERE t.id = i.primary_ref_id),
+                                'unknown'
+                            ) AS client_id,
+                            NULL AS brand_id,
+                            NULL AS engagement_id,
+                            i.headline AS title,
+                            COALESCE(i.scope_refs, '{}') AS evidence,
+                            'v1' AS evidence_version,
+                            i.issue_id AS aggregation_key,
+                            COALESCE(i.opened_at, datetime('now')) AS created_at,
+                            COALESCE(i.last_activity_at, datetime('now')) AS updated_at,
+                            NULL AS snoozed_until, NULL AS snoozed_by, NULL AS snoozed_at, NULL AS snooze_reason,
+                            NULL AS tagged_by_user_id, NULL AS tagged_at,
+                            NULL AS assigned_to, NULL AS assigned_at, NULL AS assigned_by,
+                            0 AS suppressed, NULL AS suppressed_at, NULL AS suppressed_by,
+                            0 AS escalated, NULL AS escalated_at, NULL AS escalated_by,
+                            NULL AS regression_watch_until,
+                            i.closed_at
+                        FROM issues i
+
+CREATE VIEW signals_v29 AS
+                        SELECT
+                            s.signal_id AS id,
+                            COALESCE(s.detector_id, 'unknown') AS source,
+                            s.signal_id AS source_id,
+                            CASE WHEN s.entity_ref_type = 'client' THEN s.entity_ref_id ELSE NULL END AS client_id,
+                            NULL AS engagement_id,
+                            CASE
+                                WHEN lower(s.signal_type) LIKE '%positive%' OR lower(s.signal_type) LIKE '%good%' THEN 'good'
+                                WHEN lower(s.signal_type) LIKE '%risk%' OR lower(s.signal_type) LIKE '%overdue%' OR lower(s.signal_type) LIKE '%negative%' THEN 'bad'
+                                ELSE 'neutral'
+                            END AS sentiment,
+                            s.signal_type,
+                            COALESCE(s.value, s.signal_type) AS summary,
+                            COALESCE(s.detected_at, datetime('now')) AS observed_at,
+                            COALESCE(s.detected_at, datetime('now')) AS ingested_at,
+                            '{}' AS evidence,
+                            s.resolved_at AS dismissed_at,
+                            NULL AS dismissed_by,
+                            NULL AS analysis_provider,
+                            COALESCE(s.created_at, datetime('now')) AS created_at,
+                            COALESCE(s.detected_at, datetime('now')) AS updated_at
+                        FROM signals s

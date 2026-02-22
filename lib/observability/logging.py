@@ -185,7 +185,7 @@ def configure_request_logging(app) -> None:
 
 
 def configure_log_rotation(
-    log_file: str = None,
+    log_file: str | None = None,
     max_bytes: int = 50 * 1024 * 1024,  # 50 MB
     backup_count: int = 5,
 ) -> None:

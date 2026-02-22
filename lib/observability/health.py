@@ -354,7 +354,7 @@ class HealthChecker:
 
             try:
                 store = get_store()
-                state = store.get("daemon_heartbeat")
+                state = store.get("daemon_heartbeat", "current")
 
                 if state:
                     try:
@@ -449,7 +449,7 @@ class HealthChecker:
                         except Exception:  # noqa: S110
                             pass
 
-                details = {
+                details: dict[str, object] = {
                     "pending_count": len(pending_bundles),
                     "stuck_count": len(stuck_bundles),
                 }
