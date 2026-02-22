@@ -19,9 +19,11 @@ from typing import Optional
 
 import yaml
 
+from lib.paths import db_path as canonical_db_path, project_root
+
 logger = logging.getLogger(__name__)
 
-SCHEDULE_PATH = Path(__file__).parent.parent / "config" / "sync_schedule.yaml"
+SCHEDULE_PATH = project_root() / "config" / "sync_schedule.yaml"
 
 
 def load_schedule(path: Optional[str] = None) -> dict:
@@ -156,7 +158,7 @@ def _get_last_run_times(db_path: Optional[str] = None) -> dict[str, datetime]:
     Checks cycle_logs table first, falls back to state_tracker.
     """
     if db_path is None:
-        db_path = str(Path(__file__).parent.parent / "data" / "moh_time_os.db")
+        db_path = str(canonical_db_path())
 
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row

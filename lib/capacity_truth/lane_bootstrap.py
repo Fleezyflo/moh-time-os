@@ -16,6 +16,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+from lib.paths import db_path as canonical_db_path
+
 logger = logging.getLogger(__name__)
 
 # Lane display names and config overrides
@@ -74,7 +76,7 @@ DEFAULT_LANE = {
 def _get_db_path(db_path: Optional[str] = None) -> str:
     if db_path:
         return str(db_path)
-    return str(Path(__file__).parent.parent.parent / "data" / "moh_time_os.db")
+    return str(canonical_db_path())
 
 
 def bootstrap_lanes(
