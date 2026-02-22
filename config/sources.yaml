@@ -39,6 +39,12 @@ sources:
     lookahead_days: 30  # Future 30 days
     prep_time_default: 15
 
+  chat:
+    enabled: true
+    sync_interval: 3600  # 60 minutes
+    max_spaces: 30
+    max_messages_per_space: 20
+
   xero:
     enabled: true
     sync_interval: 300  # 5 minutes

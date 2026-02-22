@@ -1,5 +1,5 @@
 # Signal Thresholds Configuration
-# 
+#
 # Adjust these values based on operational experience.
 # Changes take effect on next signal detection run.
 #
@@ -7,28 +7,34 @@
 #   value: absolute threshold
 #   threshold_ratio: relative to baseline
 #   operator: lt (less than), gt (greater than), eq, lte, gte
+#
+# Graduated severity rules (DF-3.1):
+#   deadline_overdue: critical >14d, high 7-14d, medium 1-7d
+#   ar_aging_risk: critical 90+, high 60d, medium 30d, low current
+#   data_quality_issue: max severity = medium
+#   hierarchy_violation: max severity = low
 
 signals:
   # === CLIENT SIGNALS ===
-  
+
   sig_client_overdue_tasks:
     # Number of overdue tasks to trigger warning
     value: 5
     operator: gt
     notes: "More than 5 overdue tasks = warning"
-  
+
   sig_client_invoice_aging:
     # Days outstanding before flagging
     value: 45
     operator: gt
     notes: "Invoice unpaid for 45+ days = warning"
-  
+
   sig_client_comm_drop:
     # Communication volume drop vs 90-day baseline
     threshold_ratio: 0.5
     operator: lt
     notes: "Below 50% of historical average = warning"
-  
+
   sig_client_score_critical:
     # Composite score below this = critical
     value: 30
@@ -36,13 +42,13 @@ signals:
     notes: "Score below 30 = critical health state"
 
   # === PROJECT SIGNALS ===
-  
+
   sig_project_stalled:
     # Days since any task was completed
     value: 14
     operator: gt
     notes: "No completions in 14 days = stalled"
-  
+
   sig_project_overloaded:
     # Tasks per assigned person
     value: 15
@@ -50,13 +56,13 @@ signals:
     notes: "More than 15 tasks/person = overloaded"
 
   # === PERSON SIGNALS ===
-  
+
   sig_person_overloaded:
     # Active tasks assigned to person
     value: 25
     operator: gt
     notes: "More than 25 active tasks = overloaded"
-  
+
   sig_person_concentration:
     # Number of projects where person is sole assignee
     value: 3
@@ -64,16 +70,43 @@ signals:
     notes: "Sole assignee on 3+ projects = single point of failure"
 
   # === PORTFOLIO SIGNALS ===
-  
+
   sig_portfolio_revenue_concentration:
     # Share of revenue from top N clients
     value: 0.40
     n: 3  # Top N clients
     operator: gt
     notes: "Top 3 clients > 40% of revenue = concentration risk"
-  
+
   sig_portfolio_capacity_ceiling:
     # Average team load score
     value: 80
     operator: gt
     notes: "Team avg load > 80 = capacity ceiling"
+
+# === SEVERITY RULES (applied by recalibrate.py) ===
+#
+# deadline_overdue:
+#   critical: days_overdue > 14
+#   high: days_overdue 7-14
+#   medium: days_overdue 1-7
+#   low: days_overdue = 0
+#
+# ar_aging_risk:
+#   critical: aging_bucket = 90+
+#   high: aging_bucket = 60
+#   medium: aging_bucket = 30
+#   low: aging_bucket = current
+#
+# data_quality_issue:
+#   max_severity: medium (housekeeping, not operational emergency)
+#
+# hierarchy_violation:
+#   max_severity: low (structural issue, not urgent)
+#
+# === PRIORITY WEIGHTS (stored in signal_definitions) ===
+#
+# deadline/commitment signals: 0.8
+# client health signals: 1.0
+# anomaly signals: 0.6
+# protocol/data quality: 0.3
