@@ -26,6 +26,8 @@ import sqlite3
 from pathlib import Path
 from typing import Optional
 
+from lib.paths import db_path as canonical_db_path
+
 logger = logging.getLogger(__name__)
 
 # Weight map by signal category
@@ -38,16 +40,14 @@ PRIORITY_WEIGHTS = {
 }
 
 
-def _get_db_path(db_path: str | None = None) -> str:
+def _get_db_path(db_path: Optional[str] = None) -> str:
     """Resolve database path."""
     if db_path:
         return str(db_path)
-    from lib import paths
-
-    return str(paths.db_path())
+    return str(canonical_db_path())
 
 
-def signal_distribution_report(db_path: str | None = None) -> dict:
+def signal_distribution_report(db_path: Optional[str] = None) -> dict:
     """
     Report severity distribution of active signals.
 
@@ -147,7 +147,7 @@ def _recalibrate_ar_aging(value_json: str) -> str:
 
 
 def recalibrate_active_signals(
-    db_path: str | None = None,
+    db_path: Optional[str] = None,
     dry_run: bool = False,
 ) -> dict:
     """
@@ -245,7 +245,7 @@ def recalibrate_active_signals(
 
 
 def update_priority_weights(
-    db_path: str | None = None,
+    db_path: Optional[str] = None,
     dry_run: bool = False,
 ) -> dict:
     """
@@ -268,14 +268,12 @@ def update_priority_weights(
         category = row["category"]
         new_weight = PRIORITY_WEIGHTS.get(category, old_weight)
 
-        updates.append(
-            {
-                "signal_type": row["signal_type"],
-                "category": category,
-                "old_weight": old_weight,
-                "new_weight": new_weight,
-            }
-        )
+        updates.append({
+            "signal_type": row["signal_type"],
+            "category": category,
+            "old_weight": old_weight,
+            "new_weight": new_weight,
+        })
 
     if not dry_run:
         for u in updates:
@@ -291,7 +289,7 @@ def update_priority_weights(
 
 
 def full_recalibration(
-    db_path: str | None = None,
+    db_path: Optional[str] = None,
     dry_run: bool = False,
 ) -> dict:
     """
@@ -334,7 +332,7 @@ if __name__ == "__main__":
             print(f"  {sev}: {cnt}")
         print(f"  Critical %: {sr['after']['critical_pct']}%")
 
-    print("\n--- Changes ---")
+    print(f"\n--- Changes ---")
     for k, v in sr["changes"].items():
         print(f"  {k}: {v}")
 

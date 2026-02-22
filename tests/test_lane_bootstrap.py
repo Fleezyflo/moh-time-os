@@ -128,9 +128,11 @@ class TestBootstrapLanes:
 
     def test_null_lanes_skipped(self, test_db):
         """Team members with NULL default_lane should not create lanes."""
-        bootstrap_lanes(test_db)
+        result = bootstrap_lanes(test_db)
         conn = sqlite3.connect(test_db)
-        row = conn.execute("SELECT COUNT(*) FROM capacity_lanes WHERE name IS NULL").fetchone()
+        row = conn.execute(
+            "SELECT COUNT(*) FROM capacity_lanes WHERE name IS NULL"
+        ).fetchone()
         conn.close()
         assert row[0] == 0
 
@@ -169,7 +171,9 @@ class TestAssignTasksToLanes:
         assign_tasks_to_lanes(test_db)
 
         conn = sqlite3.connect(test_db)
-        row = conn.execute("SELECT lane_id FROM tasks WHERE source_id = 't4'").fetchone()
+        row = conn.execute(
+            "SELECT lane_id FROM tasks WHERE source_id = 't4'"
+        ).fetchone()
         conn.close()
         assert row[0] == "lane_growth"
 
