@@ -13,7 +13,7 @@ from typing import Any
 try:
     from datetime import UTC
 except ImportError:
-    UTC = timezone.utc
+    UTC = timezone.utc  # noqa: UP017
 
 from .context import get_request_id
 
@@ -36,7 +36,7 @@ class JSONFormatter(logging.Formatter):
 
     def format(self, record: logging.LogRecord) -> str:
         log_obj: dict[str, Any] = {
-            "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
+            "timestamp": datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
@@ -161,7 +161,7 @@ class CorrelationIdMiddleware:
             if key.lower() == b"x-request-id":
                 try:
                     request_id = value.decode("utf-8")
-                except Exception:
+                except Exception:  # noqa: S110
                     pass
                 break
 

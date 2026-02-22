@@ -49,10 +49,10 @@ def request_data_export(
         # Validate format
         try:
             fmt = ExportFormat[format.upper()]
-        except KeyError:
+        except KeyError as e:
             raise HTTPException(
                 status_code=400, detail="Invalid format. Supported: json, csv, jsonl"
-            )
+            ) from e
 
         # Create exporter
         exporter = DataExporter(str(db_path))
@@ -85,7 +85,7 @@ def request_data_export(
         raise
     except Exception as e:
         logger.error(f"Error requesting export: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @export_router.get("/export/{request_id}")
@@ -116,7 +116,7 @@ def get_export_status(request_id: str) -> dict:
         raise
     except Exception as e:
         logger.error(f"Error getting export status: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @export_router.get("/exportable-tables")
@@ -135,7 +135,7 @@ def list_exportable_tables() -> dict:
         }
     except Exception as e:
         logger.error(f"Error listing tables: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @export_router.get("/export-schema/{table}")
@@ -158,4 +158,4 @@ def get_table_schema(table: str) -> dict:
         raise
     except Exception as e:
         logger.error(f"Error getting schema: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e

@@ -94,7 +94,7 @@ UI_DIR = paths.app_home() / "time-os-ui" / "dist"
 # These implement CLIENT-UI-SPEC-v2.9.md using lib/ui_spec_v21 modules
 from api.action_router import router as action_router  # noqa: E402
 from api.chat_webhook_router import router as chat_webhook_router  # noqa: E402
-from api.export_router import export_router
+from api.export_router import export_router  # noqa: E402
 from api.governance_router import governance_router  # noqa: E402, I001
 from api.intelligence_router import intelligence_router  # noqa: E402, I001
 from api.paginated_router import paginated_router  # noqa: E402
@@ -2035,7 +2035,7 @@ async def api_priority_snooze(item_id: str, days: int = 1):
         }
     except Exception as e:
         mark_failed(bundle["id"], str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/api/priorities/{item_id}/delegate")
@@ -2094,7 +2094,7 @@ async def api_priority_delegate(item_id: str, to: str):
         }
     except Exception as e:
         mark_failed(bundle["id"], str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/api/decisions/{decision_id}")
@@ -2300,7 +2300,7 @@ async def api_decision(decision_id: str, action: ApprovalAction):
 
     except Exception as e:
         mark_failed(bundle["id"], str(e))
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # ==== Bundles Endpoints ====
@@ -2402,9 +2402,9 @@ async def api_bundle_rollback(bundle_id: str):
         result = rollback_bundle(bundle_id)
         return {"success": True, "bundle": result}
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # ==== Calibration Endpoints ====
@@ -3128,8 +3128,8 @@ async def set_governance_mode(domain: str, body: ModeChange):
     """Set governance mode for a domain."""
     try:
         mode = DomainMode(body.mode)
-    except ValueError:
-        raise HTTPException(status_code=400, detail=f"Invalid mode: {body.mode}")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid mode: {body.mode}") from e
 
     governance.set_mode(domain, mode)
 
@@ -5014,7 +5014,7 @@ async def create_issue_from_proposal(body: TagProposalRequest):
             return {"success": True, **result}
         raise HTTPException(status_code=400, detail=result.get("error", "Failed to tag proposal"))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/api/control-room/proposals/{proposal_id}")
@@ -5148,7 +5148,7 @@ async def get_proposal_detail(proposal_id: str):
     except Exception as e:
         import traceback
 
-        raise HTTPException(status_code=500, detail=f"{str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"{str(e)}\n{traceback.format_exc()}") from e
 
 
 class SnoozeProposalRequest(BaseModel):
@@ -5170,7 +5170,7 @@ async def snooze_proposal(proposal_id: str, body: SnoozeProposalRequest):
             status_code=400, detail=result.get("error", "Failed to snooze proposal")
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 class DismissProposalRequest(BaseModel):
@@ -5189,7 +5189,7 @@ async def dismiss_proposal(proposal_id: str, body: DismissProposalRequest):
             status_code=400, detail=result.get("error", "Failed to dismiss proposal")
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 class ResolveFixDataRequest(BaseModel):
@@ -5253,7 +5253,7 @@ async def resolve_fix_data_item(item_type: str, item_id: str, body: ResolveFixDa
             "resolution": body.resolution,
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/api/control-room/couplings")

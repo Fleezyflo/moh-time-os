@@ -73,7 +73,7 @@ def create_subject_access_request(
         raise
     except Exception as e:
         logger.error(f"Error creating SAR: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @governance_router.get("/sar/{request_id}")
@@ -101,7 +101,7 @@ def get_subject_access_request(request_id: str) -> dict:
         raise
     except Exception as e:
         logger.error(f"Error getting SAR status: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @governance_router.get("/sar")
@@ -130,7 +130,7 @@ def list_subject_access_requests(
 
     except Exception as e:
         logger.error(f"Error listing SARs: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @governance_router.post("/sar/{request_id}/fulfill")
@@ -220,7 +220,7 @@ def fulfill_subject_access_request(
         raise
     except Exception as e:
         logger.error(f"Error fulfilling SAR: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @governance_router.get("/audit-log")
@@ -257,4 +257,4 @@ def query_audit_log(
 
     except Exception as e:
         logger.error(f"Error querying audit log: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e

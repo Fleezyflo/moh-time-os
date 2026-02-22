@@ -1,0 +1,11 @@
+# Gitleaks configuration
+# See: https://github.com/gitleaks/gitleaks#configuration
+
+title = "MOH Time OS Gitleaks Config"
+
+[allowlist]
+  description = "Allowlisted files and patterns"
+  paths = [
+    '''tests/test_credential_audit\.py''',
+    '''_archive/''',
+  ]

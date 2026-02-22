@@ -14,7 +14,7 @@ from datetime import datetime, timedelta, timezone
 try:
     from datetime import UTC
 except ImportError:
-    UTC = timezone.utc
+    UTC = timezone.utc  # noqa: UP017
 from enum import Enum
 from pathlib import Path
 from typing import Optional
@@ -149,7 +149,7 @@ class HealthChecker:
         return HealthReport(
             status=overall_status,
             checks=results,
-            timestamp=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
+            timestamp=datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z",
         )
 
     def _check_db(self) -> HealthCheckResult:
@@ -446,7 +446,7 @@ class HealthChecker:
                                         "age_hours": round(age.total_seconds() / 3600, 2),
                                     }
                                 )
-                        except Exception:
+                        except Exception:  # noqa: S110
                             pass
 
                 details = {

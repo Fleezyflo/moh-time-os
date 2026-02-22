@@ -129,10 +129,10 @@ async def propose_action(request: ProposalRequest):
 
     except ValueError as e:
         logger.error(f"Invalid request: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.error(f"Error proposing action: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 @router.post("/batch", response_model=dict)
@@ -160,10 +160,10 @@ async def batch_propose(request: BatchProposalRequest):
 
     except ValueError as e:
         logger.error(f"Invalid request: {str(e)}")
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
     except Exception as e:
         logger.error(f"Error batch proposing actions: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 @router.post("/{action_id}/approve", response_model=dict)
@@ -187,7 +187,7 @@ async def approve_action(action_id: str, request: ApproveRequest):
         raise
     except Exception as e:
         logger.error(f"Error approving action: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 @router.post("/{action_id}/reject", response_model=dict)
@@ -209,7 +209,7 @@ async def reject_action(action_id: str, request: RejectRequest):
         raise
     except Exception as e:
         logger.error(f"Error rejecting action: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 @router.post("/{action_id}/execute", response_model=dict)
@@ -230,7 +230,7 @@ async def execute_action(action_id: str, request: ExecuteRequest):
 
     except Exception as e:
         logger.error(f"Error executing action: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 @router.get("/pending", response_model=dict)
@@ -247,7 +247,7 @@ async def get_pending_actions(action_type: str | None = None, limit: int = 50):
 
     except Exception as e:
         logger.error(f"Error fetching pending actions: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
 @router.get("/history", response_model=dict)
@@ -266,4 +266,4 @@ async def get_action_history(
 
     except Exception as e:
         logger.error(f"Error fetching action history: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
+        raise HTTPException(status_code=500, detail="Internal server error") from e

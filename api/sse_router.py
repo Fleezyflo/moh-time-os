@@ -23,7 +23,7 @@ import logging
 from collections.abc import AsyncGenerator
 from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Optional, Set
+from typing import Optional
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query

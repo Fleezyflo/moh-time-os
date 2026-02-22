@@ -1,4 +1,3 @@
-
 interface ErrorStateProps {
   title?: string;
   message: string;
@@ -6,24 +5,15 @@ interface ErrorStateProps {
   className?: string;
 }
 
-export function ErrorState({
-  title = 'Error',
-  message,
-  onRetry,
-  className = '',
-}: ErrorStateProps) {
+export function ErrorState({ title = 'Error', message, onRetry, className = '' }: ErrorStateProps) {
   return (
     <div
       className={`flex flex-col items-center justify-center py-[var(--space-3xl)] px-[var(--space-lg)] gap-[var(--space-lg)] ${className}`}
     >
       <div className="text-4xl text-[var(--danger)]">⚠️</div>
       <div className="text-center">
-        <h3 className="text-headline-3 text-[var(--white)] mb-[var(--space-sm)]">
-          {title}
-        </h3>
-        <p className="text-body-small text-[var(--grey-light)] max-w-md">
-          {message}
-        </p>
+        <h3 className="text-headline-3 text-[var(--white)] mb-[var(--space-sm)]">{title}</h3>
+        <p className="text-body-small text-[var(--grey-light)] max-w-md">{message}</p>
       </div>
       {onRetry && (
         <button
