@@ -263,7 +263,9 @@ export function Issues() {
   if (loading) return <SkeletonCardList count={5} />;
   if (error)
     return (
-      <div className="text-[var(--danger)] p-8 text-center">Error loading issues: {error.message}</div>
+      <div className="text-[var(--danger)] p-8 text-center">
+        Error loading issues: {error.message}
+      </div>
     );
 
   // Render a single issue row

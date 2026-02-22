@@ -9,19 +9,24 @@ import './index.css';
 
 // Register service worker for PWA
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations().then((registrations) => {
-    for (const registration of registrations) {
-      registration.unregister();
-      console.warn('Old service worker unregistered');
-    }
-  }).then(() => {
-    // Register the new service worker from VitePWA
-    return navigator.serviceWorker.register('/sw.js', { scope: '/' });
-  }).then((registration) => {
-    console.warn('Service worker registered:', registration);
-  }).catch((error) => {
-    console.error('Service worker registration failed:', error);
-  });
+  navigator.serviceWorker
+    .getRegistrations()
+    .then((registrations) => {
+      for (const registration of registrations) {
+        registration.unregister();
+        console.warn('Old service worker unregistered');
+      }
+    })
+    .then(() => {
+      // Register the new service worker from VitePWA
+      return navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    })
+    .then((registration) => {
+      console.warn('Service worker registered:', registration);
+    })
+    .catch((error) => {
+      console.error('Service worker registration failed:', error);
+    });
 }
 
 createRoot(document.getElementById('root')!).render(

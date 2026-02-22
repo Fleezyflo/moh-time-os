@@ -94,12 +94,7 @@ function RootLayout() {
                 aria-expanded={mobileMenuOpen}
                 aria-controls="mobile-nav"
               >
-                <svg
-                  className="w-6 h-6"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -131,7 +126,13 @@ function RootLayout() {
         {/* Main Content */}
         <main id="main-content" role="main" className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
           <ErrorBoundary>
-            <Suspense fallback={<PageSuspense><div /></PageSuspense>}>
+            <Suspense
+              fallback={
+                <PageSuspense>
+                  <div />
+                </PageSuspense>
+              }
+            >
               <Outlet />
             </Suspense>
           </ErrorBoundary>
@@ -152,7 +153,13 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
   component: () => (
-    <Suspense fallback={<PageSuspense><div /></PageSuspense>}>
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
       <Inbox />
     </Suspense>
   ),
@@ -167,7 +174,13 @@ const snapshotRoute = createRoute({
     days: typeof search.days === 'number' ? search.days : 7,
   }),
   component: () => (
-    <Suspense fallback={<PageSuspense><div /></PageSuspense>}>
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
       <Snapshot />
     </Suspense>
   ),
@@ -177,7 +190,13 @@ const issuesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/issues',
   component: () => (
-    <Suspense fallback={<PageSuspense><div /></PageSuspense>}>
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
       <Issues />
     </Suspense>
   ),
@@ -187,7 +206,13 @@ const clientsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/clients',
   component: () => (
-    <Suspense fallback={<PageSuspense><div /></PageSuspense>}>
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
       <ClientIndex />
     </Suspense>
   ),
@@ -197,7 +222,13 @@ const clientDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/clients/$clientId',
   component: () => (
-    <Suspense fallback={<PageSuspense><div /></PageSuspense>}>
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
       <ClientDetailSpec />
     </Suspense>
   ),
@@ -208,7 +239,13 @@ const recentlyActiveDrilldownRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/clients/$clientId/recently-active',
   component: () => (
-    <Suspense fallback={<PageSuspense><div /></PageSuspense>}>
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
       <RecentlyActiveDrilldown />
     </Suspense>
   ),
@@ -219,7 +256,13 @@ const coldClientsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/clients/cold',
   component: () => (
-    <Suspense fallback={<PageSuspense><div /></PageSuspense>}>
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
       <ColdClients />
     </Suspense>
   ),
@@ -229,7 +272,13 @@ const teamRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/team',
   component: () => (
-    <Suspense fallback={<PageSuspense><div /></PageSuspense>}>
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
       <Team />
     </Suspense>
   ),
@@ -239,7 +288,13 @@ const teamDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/team/$id',
   component: () => (
-    <Suspense fallback={<PageSuspense><div /></PageSuspense>}>
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
       <TeamDetail />
     </Suspense>
   ),
@@ -249,7 +304,13 @@ const fixDataRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/fix-data',
   component: () => (
-    <Suspense fallback={<PageSuspense><div /></PageSuspense>}>
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
       <FixData />
     </Suspense>
   ),
@@ -260,7 +321,13 @@ const intelRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/intel',
   component: () => (
-    <Suspense fallback={<PageSuspense><div /></PageSuspense>}>
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
       <CommandCenter />
     </Suspense>
   ),
@@ -270,7 +337,13 @@ const intelBriefingRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/intel/briefing',
   component: () => (
-    <Suspense fallback={<PageSuspense><div /></PageSuspense>}>
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
       <Briefing />
     </Suspense>
   ),
@@ -280,7 +353,13 @@ const intelSignalsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/intel/signals',
   component: () => (
-    <Suspense fallback={<PageSuspense><div /></PageSuspense>}>
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
       <Signals />
     </Suspense>
   ),
@@ -290,7 +369,13 @@ const intelPatternsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/intel/patterns',
   component: () => (
-    <Suspense fallback={<PageSuspense><div /></PageSuspense>}>
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
       <Patterns />
     </Suspense>
   ),
@@ -300,7 +385,13 @@ const intelProposalsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/intel/proposals',
   component: () => (
-    <Suspense fallback={<PageSuspense><div /></PageSuspense>}>
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
       <Proposals />
     </Suspense>
   ),
@@ -310,7 +401,13 @@ const intelClientRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/intel/client/$clientId',
   component: () => (
-    <Suspense fallback={<PageSuspense><div /></PageSuspense>}>
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
       <ClientIntel />
     </Suspense>
   ),
@@ -320,7 +417,13 @@ const intelPersonRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/intel/person/$personId',
   component: () => (
-    <Suspense fallback={<PageSuspense><div /></PageSuspense>}>
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
       <PersonIntel />
     </Suspense>
   ),
@@ -330,7 +433,13 @@ const intelProjectRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/intel/project/$projectId',
   component: () => (
-    <Suspense fallback={<PageSuspense><div /></PageSuspense>}>
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
       <ProjectIntel />
     </Suspense>
   ),

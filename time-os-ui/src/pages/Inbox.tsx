@@ -242,7 +242,8 @@ export function Inbox() {
         {counts && (
           <div className="flex gap-4 text-sm">
             <span className="text-[var(--grey-light)]">
-              Unprocessed: <span className="text-[var(--white)] font-medium">{counts.unprocessed}</span>
+              Unprocessed:{' '}
+              <span className="text-[var(--white)] font-medium">{counts.unprocessed}</span>
             </span>
             {counts.snoozed_returning_soon > 0 && (
               <span className="text-[var(--warning)]">
@@ -507,7 +508,9 @@ function InboxCard({ item, onSelect, onAction, formatAge }: InboxCardProps) {
             {item.client && (
               <span className="text-sm text-[var(--grey-light)] truncate">{item.client.name}</span>
             )}
-            <span className="text-xs text-[var(--grey)]">{formatAge(item.attention_age_start_at)}</span>
+            <span className="text-xs text-[var(--grey)]">
+              {formatAge(item.attention_age_start_at)}
+            </span>
           </div>
 
           {/* Title */}
@@ -580,7 +583,10 @@ function InboxDrawer({ item, onClose, onAction, formatAge }: InboxDrawerProps) {
                 {severity}
               </span>
             </div>
-            <button onClick={onClose} className="p-2 rounded hover:bg-[var(--grey)] text-[var(--grey-light)]">
+            <button
+              onClick={onClose}
+              className="p-2 rounded hover:bg-[var(--grey)] text-[var(--grey-light)]"
+            >
               ✕
             </button>
           </div>
@@ -600,7 +606,9 @@ function InboxDrawer({ item, onClose, onAction, formatAge }: InboxDrawerProps) {
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div>
               <span className="text-[var(--grey-light)]">Age:</span>
-              <span className="ml-2 text-[var(--white)]">{formatAge(item.attention_age_start_at)}</span>
+              <span className="ml-2 text-[var(--white)]">
+                {formatAge(item.attention_age_start_at)}
+              </span>
             </div>
             <div>
               <span className="text-[var(--grey-light)]">State:</span>

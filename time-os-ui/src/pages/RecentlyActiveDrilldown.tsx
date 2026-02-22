@@ -131,7 +131,10 @@ export function RecentlyActiveDrilldown() {
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-[var(--grey-dim)] rounded-lg p-4">
-        <Link to="/clients" className="text-sm text-[var(--grey-light)] hover:text-[var(--white)] mb-2 inline-block">
+        <Link
+          to="/clients"
+          className="text-sm text-[var(--grey-light)] hover:text-[var(--white)] mb-2 inline-block"
+        >
           ← Back to Index
         </Link>
 

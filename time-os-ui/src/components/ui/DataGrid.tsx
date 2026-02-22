@@ -54,9 +54,7 @@ export function DataGrid<T extends { id?: string | number }>({
                 <div className="flex items-center gap-1">
                   {col.label}
                   {col.sortable && sortKey === String(col.key) && (
-                    <span className="text-xs">
-                      {sortDir === 'asc' ? '↑' : '↓'}
-                    </span>
+                    <span className="text-xs">{sortDir === 'asc' ? '↑' : '↓'}</span>
                   )}
                 </div>
               </th>

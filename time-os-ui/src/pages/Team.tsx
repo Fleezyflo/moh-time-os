@@ -30,7 +30,12 @@ const loadLevels = {
     text: 'text-[var(--info)]',
     border: 'border-[var(--grey)]',
   },
-  idle: { label: 'Idle', bg: 'bg-[var(--grey)]', text: 'text-[var(--grey-light)]', border: 'border-[var(--grey)]' },
+  idle: {
+    label: 'Idle',
+    bg: 'bg-[var(--grey)]',
+    text: 'text-[var(--grey-light)]',
+    border: 'border-[var(--grey)]',
+  },
 };
 
 function getLoadLevel(openTasks: number, overdue: number) {

@@ -1,15 +1,10 @@
-
 interface LoadingStateProps {
   message?: string;
   variant?: 'skeleton' | 'spinner';
   className?: string;
 }
 
-export function LoadingState({
-  message,
-  variant = 'skeleton',
-  className = '',
-}: LoadingStateProps) {
+export function LoadingState({ message, variant = 'skeleton', className = '' }: LoadingStateProps) {
   if (variant === 'spinner') {
     return (
       <div
@@ -19,9 +14,7 @@ export function LoadingState({
           className="w-8 h-8 border-2 border-[var(--grey)] border-t-[var(--accent)] rounded-full animate-spin"
           aria-label="Loading"
         />
-        {message && (
-          <p className="text-body-small text-[var(--grey-light)]">{message}</p>
-        )}
+        {message && <p className="text-body-small text-[var(--grey-light)]">{message}</p>}
       </div>
     );
   }

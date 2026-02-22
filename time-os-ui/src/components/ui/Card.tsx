@@ -35,9 +35,5 @@ export function Card({
   const ringStyles = severityStyles[severity];
   const typeStyles = variantStyles[variant];
 
-  return (
-    <div className={`${baseStyles} ${typeStyles} ${ringStyles} ${className}`}>
-      {children}
-    </div>
-  );
+  return <div className={`${baseStyles} ${typeStyles} ${ringStyles} ${className}`}>{children}</div>;
 }

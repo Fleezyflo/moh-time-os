@@ -34,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (apiKey: string) => {
     const apiBase = import.meta.env.VITE_API_BASE_URL || '/api/v2';
-    
+
     try {
       const response = await fetch(`${apiBase}/auth/token`, {
         method: 'POST',

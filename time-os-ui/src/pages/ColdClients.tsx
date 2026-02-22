@@ -113,7 +113,10 @@ export function ColdClients() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <Link to="/clients" className="text-sm text-[var(--grey-light)] hover:text-[var(--white)] mb-1 inline-block">
+          <Link
+            to="/clients"
+            className="text-sm text-[var(--grey-light)] hover:text-[var(--white)] mb-1 inline-block"
+          >
             ← Back to All Clients
           </Link>
           <h1 className="text-2xl font-bold text-[var(--white)]">Cold Clients</h1>
@@ -128,11 +131,15 @@ export function ColdClients() {
           <div className="text-sm text-[var(--grey-light)]">Cold Clients</div>
         </div>
         <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-[var(--grey)]">
-          <div className="text-2xl font-bold text-[var(--white)]">{formatCurrency(totalLifetimeIssued)}</div>
+          <div className="text-2xl font-bold text-[var(--white)]">
+            {formatCurrency(totalLifetimeIssued)}
+          </div>
           <div className="text-sm text-[var(--grey-light)]">Lifetime Issued</div>
         </div>
         <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-[var(--grey)]">
-          <div className="text-2xl font-bold text-[var(--white)]">{formatCurrency(totalLifetimePaid)}</div>
+          <div className="text-2xl font-bold text-[var(--white)]">
+            {formatCurrency(totalLifetimePaid)}
+          </div>
           <div className="text-sm text-[var(--grey-light)]">Lifetime Paid</div>
         </div>
         <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-[var(--grey)]">
@@ -172,7 +179,9 @@ export function ColdClients() {
           </select>
         </div>
 
-        <div className="ml-auto text-sm text-[var(--grey-light)]">Showing {sortedClients.length} clients</div>
+        <div className="ml-auto text-sm text-[var(--grey-light)]">
+          Showing {sortedClients.length} clients
+        </div>
       </div>
 
       {/* Client List */}
@@ -222,7 +231,9 @@ function ColdClientCard({ client }: { client: ColdClient }) {
           </div>
           <div className="text-sm">
             <span className="text-[var(--grey-light)]">Paid:</span>
-            <span className="ml-2 text-[var(--grey-light)]">{formatCurrency(client.paid_lifetime || 0)}</span>
+            <span className="ml-2 text-[var(--grey-light)]">
+              {formatCurrency(client.paid_lifetime || 0)}
+            </span>
           </div>
         </div>
       </div>

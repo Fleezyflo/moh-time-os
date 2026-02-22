@@ -293,7 +293,10 @@ export function ClientDetailSpec() {
     <div className="space-y-4">
       {/* Header */}
       <div className="bg-[var(--grey-dim)] rounded-lg p-4">
-        <Link to="/clients" className="text-sm text-[var(--grey-light)] hover:text-[var(--white)] mb-2 inline-block">
+        <Link
+          to="/clients"
+          className="text-sm text-[var(--grey-light)] hover:text-[var(--white)] mb-2 inline-block"
+        >
           ← Back to Index
         </Link>
 
@@ -406,7 +409,9 @@ function OverviewTab({ client, onIssueAction }: OverviewTabProps) {
             </div>
             <div>
               <div className="text-[var(--grey-light)] text-xs">Overdue</div>
-              <div className="text-lg font-medium text-[var(--danger)]">{client.tasks_overdue || 0}</div>
+              <div className="text-lg font-medium text-[var(--danger)]">
+                {client.tasks_overdue || 0}
+              </div>
             </div>
             <div>
               <div className="text-[var(--grey-light)] text-xs">Signals (30d)</div>

@@ -63,14 +63,10 @@ def get_expected_schema() -> str:
     if hasattr(db_module, "SCHEMA"):
         return db_module.SCHEMA
 
-    # Final fallback: initialize a temp DB and extract schema from it
-    import tempfile
-
-    from lib.paths import data_dir
-
-    db_path = data_dir() / "moh_time_os.db"
-    if db_path.exists():
-        return get_db_schema(db_path)
+    # Fallback: extract from REQUIRED_TABLES dict in db module
+    if hasattr(db_module, "REQUIRED_TABLES"):
+        tables = db_module.REQUIRED_TABLES
+        return "\n\n".join(sql.strip() for sql in tables.values()) + "\n"
 
     raise RuntimeError("Could not find schema definition")
 

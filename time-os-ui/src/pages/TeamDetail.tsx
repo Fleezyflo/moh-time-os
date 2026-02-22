@@ -60,8 +60,10 @@ export function TeamDetail() {
 
   const member = apiTeam?.items?.find((m) => m.id === id);
 
-  if (teamLoading) return <div className="text-[var(--grey-light)] p-8 text-center">Loading...</div>;
-  if (!member) return <div className="text-[var(--grey-light)] p-8 text-center">Team member not found</div>;
+  if (teamLoading)
+    return <div className="text-[var(--grey-light)] p-8 text-center">Loading...</div>;
+  if (!member)
+    return <div className="text-[var(--grey-light)] p-8 text-center">Team member not found</div>;
 
   const memberProposals = (apiProposals?.items || [])
     .filter((p) => p.status === 'open')
@@ -128,7 +130,10 @@ export function TeamDetail() {
     <div>
       {/* Header */}
       <div className="mb-6">
-        <Link to="/team" className="text-[var(--grey-light)] hover:text-[var(--white)] mb-2 inline-block">
+        <Link
+          to="/team"
+          className="text-[var(--grey-light)] hover:text-[var(--white)] mb-2 inline-block"
+        >
           ← Team
         </Link>
         <div className="flex items-start justify-between">
@@ -136,7 +141,9 @@ export function TeamDetail() {
             <h1 className="text-2xl font-semibold">{member.name}</h1>
             <p className="text-[var(--grey)]">
               {member.role || member.department || 'Team Member'}
-              {member.company && <span className="ml-2 text-[var(--grey-light)]">• {member.company}</span>}
+              {member.company && (
+                <span className="ml-2 text-[var(--grey-light)]">• {member.company}</span>
+              )}
             </p>
             {member.email && <p className="text-sm text-[var(--grey)] mt-1">{member.email}</p>}
           </div>
@@ -153,7 +160,9 @@ export function TeamDetail() {
         <div
           className={`bg-[var(--grey-dim)] rounded-lg p-4 border ${hasOverdue ? 'border-[var(--danger)]/50' : 'border-[var(--grey)]'}`}
         >
-          <div className={`text-2xl font-bold ${hasOverdue ? 'text-[var(--danger)]' : 'text-[var(--grey-light)]'}`}>
+          <div
+            className={`text-2xl font-bold ${hasOverdue ? 'text-[var(--danger)]' : 'text-[var(--grey-light)]'}`}
+          >
             {member.overdue_tasks || 0}
           </div>
           <div className="text-sm text-[var(--grey-light)]">Overdue</div>
@@ -163,7 +172,9 @@ export function TeamDetail() {
           <div className="text-sm text-[var(--grey-light)]">Due Today</div>
         </div>
         <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-green-900/50">
-          <div className="text-2xl font-bold text-[var(--success)]">{member.completed_this_week || 0}</div>
+          <div className="text-2xl font-bold text-[var(--success)]">
+            {member.completed_this_week || 0}
+          </div>
           <div className="text-sm text-[var(--grey-light)]">Done This Week</div>
         </div>
       </div>
@@ -218,7 +229,9 @@ export function TeamDetail() {
                   <div className="flex-1 min-w-0">
                     <div className="text-[var(--white)] truncate">{task.title}</div>
                     {task.due_date && (
-                      <div className={`text-xs ${isOverdue ? 'text-[var(--danger)]' : 'text-[var(--grey)]'}`}>
+                      <div
+                        className={`text-xs ${isOverdue ? 'text-[var(--danger)]' : 'text-[var(--grey)]'}`}
+                      >
                         {isOverdue ? '⚠️ Overdue: ' : 'Due: '}
                         {formatRelative(task.due_date)}
                       </div>
@@ -257,10 +270,14 @@ export function TeamDetail() {
                   className="p-3 bg-[var(--grey-dim)] rounded-lg border border-[var(--grey)] cursor-pointer hover:border-[var(--grey-light)]"
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    <span className={issue.state === 'open' ? 'text-[var(--info)]' : 'text-amber-400'}>
+                    <span
+                      className={issue.state === 'open' ? 'text-[var(--info)]' : 'text-amber-400'}
+                    >
                       ●
                     </span>
-                    <h3 className="font-medium text-[var(--white)] truncate flex-1">{issue.headline}</h3>
+                    <h3 className="font-medium text-[var(--white)] truncate flex-1">
+                      {issue.headline}
+                    </h3>
                     <span
                       className={`text-xs px-2 py-0.5 rounded ${priorityBadgeClass(issue.priority ?? 0)}`}
                     >

@@ -238,7 +238,9 @@ export function Snapshot() {
                 className="bg-[var(--grey-dim)] border border-[var(--grey)] rounded px-2 py-1"
                 value={search.scope || ''}
                 onChange={(e) =>
-                  navigate({ search: { scope: e.target.value || undefined, days: search.days ?? 7 } })
+                  navigate({
+                    search: { scope: e.target.value || undefined, days: search.days ?? 7 },
+                  })
                 }
               >
                 <option value="">All Scopes</option>
@@ -260,7 +262,9 @@ export function Snapshot() {
               <select
                 className="bg-[var(--grey-dim)] border border-[var(--grey)] rounded px-2 py-1"
                 value={filterDays}
-                onChange={(e) => navigate({ search: { scope: search.scope, days: Number(e.target.value) } })}
+                onChange={(e) =>
+                  navigate({ search: { scope: search.scope, days: Number(e.target.value) } })
+                }
               >
                 <option value={1}>Today</option>
                 <option value={7}>7 days</option>
@@ -315,7 +319,9 @@ export function Snapshot() {
                     >
                       ●
                     </span>
-                    <span className="text-[var(--grey-light)] truncate flex-1">{cleanHeadline}</span>
+                    <span className="text-[var(--grey-light)] truncate flex-1">
+                      {cleanHeadline}
+                    </span>
                     <span className="text-[var(--grey)] text-xs">→</span>
                   </button>
                 );

@@ -68,7 +68,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             }`}
           >
             <span className="text-lg">
-              {toast.type === 'success' ? '✓' : toast.type === 'error' ? '✕' : toast.type === 'warning' ? '⚠' : 'ℹ'}
+              {toast.type === 'success'
+                ? '✓'
+                : toast.type === 'error'
+                  ? '✕'
+                  : toast.type === 'warning'
+                    ? '⚠'
+                    : 'ℹ'}
             </span>
             <span
               className={`text-sm flex-1 ${

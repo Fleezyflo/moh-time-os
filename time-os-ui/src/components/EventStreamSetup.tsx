@@ -23,7 +23,8 @@ export function EventStreamSetup({ children }: { children: ReactNode }) {
 
         // Route events to appropriate toast based on event type
         if (eventData.type === 'error') {
-          const message = typeof eventData.message === 'string' ? eventData.message : 'An error occurred';
+          const message =
+            typeof eventData.message === 'string' ? eventData.message : 'An error occurred';
           showError(message);
         } else if (eventData.type === 'warning') {
           const message = typeof eventData.message === 'string' ? eventData.message : 'Warning';
@@ -33,7 +34,8 @@ export function EventStreamSetup({ children }: { children: ReactNode }) {
           success(message);
         } else {
           // Default to info for other types
-          const message = typeof eventData.message === 'string' ? eventData.message : `Event: ${eventData.type}`;
+          const message =
+            typeof eventData.message === 'string' ? eventData.message : `Event: ${eventData.type}`;
           info(message);
         }
       } catch (err) {

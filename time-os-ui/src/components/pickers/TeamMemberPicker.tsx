@@ -15,7 +15,11 @@ interface TeamMemberPickerProps {
   disabled?: boolean;
 }
 
-export function TeamMemberPicker({ onSelect, placeholder = 'Select team member...', disabled = false }: TeamMemberPickerProps) {
+export function TeamMemberPicker({
+  onSelect,
+  placeholder = 'Select team member...',
+  disabled = false,
+}: TeamMemberPickerProps) {
   const { token } = useAuth();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [filteredMembers, setFilteredMembers] = useState<TeamMember[]>([]);
@@ -35,7 +39,7 @@ export function TeamMemberPicker({ onSelect, placeholder = 'Select team member..
     const fetchMembers = async () => {
       setLoading(true);
       setError(null);
-      
+
       try {
         const response = await fetch(`${apiBase}/team`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -116,11 +120,7 @@ export function TeamMemberPicker({ onSelect, placeholder = 'Select team member..
         )}
       </div>
 
-      {error && (
-        <div className="mt-2 text-sm text-[var(--danger)]">
-          {error}
-        </div>
-      )}
+      {error && <div className="mt-2 text-sm text-[var(--danger)]">{error}</div>}
 
       {isOpen && !disabled && (
         <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--grey-dim)] border border-[var(--grey)] rounded-lg shadow-lg z-50 max-h-60 overflow-y-auto">
@@ -136,12 +136,8 @@ export function TeamMemberPicker({ onSelect, placeholder = 'Select team member..
                 className="w-full text-left px-4 py-2 hover:bg-[var(--grey)] transition-colors border-b border-[var(--grey)]/50 last:border-b-0"
               >
                 <div className="font-medium text-[var(--white)]">{member.name}</div>
-                {member.role && (
-                  <div className="text-sm text-[var(--grey)]">{member.role}</div>
-                )}
-                {member.email && (
-                  <div className="text-xs text-[var(--grey)]">{member.email}</div>
-                )}
+                {member.role && <div className="text-sm text-[var(--grey)]">{member.role}</div>}
+                {member.email && <div className="text-xs text-[var(--grey)]">{member.email}</div>}
               </button>
             ))
           )}

@@ -1,4 +1,3 @@
-
 export type StatusDotColor = 'success' | 'warning' | 'danger' | 'info' | 'neutral';
 
 interface StatusDotProps {
@@ -21,11 +20,7 @@ const sizeMap = {
   lg: 'w-4 h-4',
 };
 
-export function StatusDot({
-  color = 'neutral',
-  size = 'md',
-  className = '',
-}: StatusDotProps) {
+export function StatusDot({ color = 'neutral', size = 'md', className = '' }: StatusDotProps) {
   return (
     <div
       className={`rounded-full ${colorMap[color]} ${sizeMap[size]} ${className}`}

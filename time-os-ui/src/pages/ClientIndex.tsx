@@ -203,7 +203,9 @@ function Swimlane({ title, count, expanded, onToggle, clients, status }: Swimlan
         <div className="flex items-center gap-2">
           <span className={`transform transition-transform ${expanded ? 'rotate-90' : ''}`}>▶</span>
           <span className="font-medium text-[var(--white)]">{title}</span>
-          <span className="px-2 py-0.5 bg-[var(--grey)] rounded text-sm text-[var(--white)]">{count}</span>
+          <span className="px-2 py-0.5 bg-[var(--grey)] rounded text-sm text-[var(--white)]">
+            {count}
+          </span>
         </div>
       </button>
 
@@ -281,12 +283,16 @@ function ActiveClientCard({ client }: { client: ClientCard }) {
       <div className="grid grid-cols-2 gap-2 text-sm mb-3">
         <div>
           <div className="text-[var(--grey-light)] text-xs">ISSUED</div>
-          <div className="text-[var(--grey-light)]">Prior Yr: {formatCurrency(client.issued_year ?? 0)}</div>
+          <div className="text-[var(--grey-light)]">
+            Prior Yr: {formatCurrency(client.issued_year ?? 0)}
+          </div>
           <div className="text-[var(--white)]">YTD: {formatCurrency(client.issued_ytd ?? 0)}</div>
         </div>
         <div>
           <div className="text-[var(--grey-light)] text-xs">PAID</div>
-          <div className="text-[var(--grey-light)]">Prior Yr: {formatCurrency(client.paid_year ?? 0)}</div>
+          <div className="text-[var(--grey-light)]">
+            Prior Yr: {formatCurrency(client.paid_year ?? 0)}
+          </div>
           <div className="text-[var(--white)]">YTD: {formatCurrency(client.paid_ytd ?? 0)}</div>
         </div>
       </div>
@@ -344,14 +350,18 @@ function RecentlyActiveCard({ client }: { client: ClientCard }) {
       <div className="grid grid-cols-2 gap-2 text-sm mb-3">
         <div>
           <div className="text-[var(--grey-light)] text-xs">ISSUED</div>
-          <div className="text-[var(--white)]">Last 12m: {formatCurrency(client.issued_last_12m ?? 0)}</div>
+          <div className="text-[var(--white)]">
+            Last 12m: {formatCurrency(client.issued_last_12m ?? 0)}
+          </div>
           <div className="text-[var(--grey-light)]">
             Prev 12m: {formatCurrency(client.issued_prev_12m ?? 0)}
           </div>
         </div>
         <div>
           <div className="text-[var(--grey-light)] text-xs">PAID</div>
-          <div className="text-[var(--white)]">Last 12m: {formatCurrency(client.paid_last_12m ?? 0)}</div>
+          <div className="text-[var(--white)]">
+            Last 12m: {formatCurrency(client.paid_last_12m ?? 0)}
+          </div>
           <div className="text-[var(--grey-light)]">
             Prev 12m: {formatCurrency(client.paid_prev_12m ?? 0)}
           </div>
