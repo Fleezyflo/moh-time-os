@@ -130,9 +130,7 @@ class ReportService:
 
             template_id, sections_json = row
             sections = json.loads(sections_json)
-            period_days = (
-                period_days or self.TEMPLATE_TYPES[template_type]["default_period_days"]
-            )
+            period_days = period_days or self.TEMPLATE_TYPES[template_type]["default_period_days"]
 
             # Get client info
             cursor.execute(
@@ -297,9 +295,7 @@ class ReportService:
             }
 
             # Critical risks
-            signals = self.signal_svc.find_signals(
-                severity="critical", status="active", limit=10
-            )
+            signals = self.signal_svc.find_signals(severity="critical", status="active", limit=10)
             content["sections"]["critical_risks"] = {
                 "count": len(signals),
                 "top_risks": [

@@ -10,11 +10,11 @@ import logging
 import sqlite3
 from dataclasses import dataclass
 from datetime import date, datetime
-from enum import StrEnum
+from pathlib import Path
 from typing import Any
 
-from pathlib import Path
 from lib import paths
+from lib.compat import StrEnum
 
 logger = logging.getLogger(__name__)
 
@@ -276,9 +276,7 @@ class CashARPage12Engine:
             # Gates evaluation failed - this indicates a real problem
             logger.warning(f"Gates evaluation failed, using defaults: {e}")
 
-    def _compute_trust_from_invoices(
-        self, valid: list[InvoiceUnit], invalid: list[InvoiceUnit]
-    ):
+    def _compute_trust_from_invoices(self, valid: list[InvoiceUnit], invalid: list[InvoiceUnit]):
         """Update trust metrics from invoice data."""
         self.finance_ar_clean_count = len(invalid)
         self.finance_ar_clean_amount = sum(i.amount for i in invalid)
@@ -466,8 +464,7 @@ class CashARPage12Engine:
                 invalid_by_reason[reason]["count"] += 1
                 curr = i.currency or "AED"
                 invalid_by_reason[reason]["amount_by_currency"][curr] = (
-                    invalid_by_reason[reason]["amount_by_currency"].get(curr, 0)
-                    + i.amount
+                    invalid_by_reason[reason]["amount_by_currency"].get(curr, 0) + i.amount
                 )
 
         # Next 7 days at risk (current invoices due within 7 days)
@@ -555,28 +552,20 @@ class CashARPage12Engine:
         # Rank by risk and amount
         debtors.sort(
             key=lambda d: (
-                0
-                if d.risk_band == RiskBand.HIGH
-                else 1
-                if d.risk_band == RiskBand.MED
-                else 2,
+                0 if d.risk_band == RiskBand.HIGH else 1 if d.risk_band == RiskBand.MED else 2,
                 -d.total_valid_ar,
             )
         )
 
         return debtors[: self.MAX_DEBTORS]
 
-    def _build_debtor_unit(
-        self, client_id: str, invoices: list[InvoiceUnit]
-    ) -> DebtorUnit | None:
+    def _build_debtor_unit(self, client_id: str, invoices: list[InvoiceUnit]) -> DebtorUnit | None:
         """Build a single DebtorUnit."""
         if not invoices:
             return None
 
         # Get client info
-        client = self._query_one(
-            "SELECT name, tier FROM clients WHERE id = ?", (client_id,)
-        )
+        client = self._query_one("SELECT name, tier FROM clients WHERE id = ?", (client_id,))
         client_name = client.get("name", "Unknown") if client else "Unknown"
         tier = client.get("tier", "C") if client else "C"
 
@@ -593,8 +582,7 @@ class CashARPage12Engine:
         severe_ar = sum(
             i.amount
             for i in invoices
-            if i.aging_bucket
-            in [AgingBucket.DAYS_61_90.value, AgingBucket.DAYS_90_PLUS.value]
+            if i.aging_bucket in [AgingBucket.DAYS_61_90.value, AgingBucket.DAYS_90_PLUS.value]
         )
 
         # Next 7 days at risk
@@ -610,9 +598,7 @@ class CashARPage12Engine:
                     logger.debug(f"Could not parse due_date for debtor 7-day calc: {e}")
 
         # Oldest overdue
-        overdue_invoices = [
-            i for i in invoices if i.days_overdue and i.days_overdue > 0
-        ]
+        overdue_invoices = [i for i in invoices if i.days_overdue and i.days_overdue > 0]
         oldest_overdue_days = max((i.days_overdue for i in overdue_invoices), default=0)
 
         # Compute risk band per §6.5
@@ -726,8 +712,7 @@ class CashARPage12Engine:
         severe_invoices = [
             i
             for i in valid
-            if i.aging_bucket
-            in [AgingBucket.DAYS_61_90.value, AgingBucket.DAYS_90_PLUS.value]
+            if i.aging_bucket in [AgingBucket.DAYS_61_90.value, AgingBucket.DAYS_90_PLUS.value]
         ]
         if severe_invoices:
             # Group by client
@@ -738,9 +723,9 @@ class CashARPage12Engine:
                     by_client[cid] = []
                 by_client[cid].append(i)
 
-            for cid, invs in sorted(
-                by_client.items(), key=lambda x: -sum(i.amount for i in x[1])
-            )[:3]:
+            for cid, invs in sorted(by_client.items(), key=lambda x: -sum(i.amount for i in x[1]))[
+                :3
+            ]:
                 move = self._create_move(
                     MoveType.SEVERE_COLLECTION_PUSH,
                     invs[: self.MAX_MOVE_INVOICES],
@@ -769,9 +754,9 @@ class CashARPage12Engine:
                     by_client[cid] = []
                 by_client[cid].append(i)
 
-            for cid, invs in sorted(
-                by_client.items(), key=lambda x: -sum(i.amount for i in x[1])
-            )[:2]:
+            for cid, invs in sorted(by_client.items(), key=lambda x: -sum(i.amount for i in x[1]))[
+                :2
+            ]:
                 move = self._create_move(
                     MoveType.PRE_DUE_SAVE,
                     invs[: self.MAX_MOVE_INVOICES],
@@ -791,12 +776,8 @@ class CashARPage12Engine:
         # Credit risk escalation (high AR + low health)
         for d in debtors[:5]:
             if d.risk_band == RiskBand.HIGH and d.health_band == HealthBand.RED:
-                invs = [i for i in valid if i.client_id == d.client_id][
-                    : self.MAX_MOVE_INVOICES
-                ]
-                move = self._create_move(
-                    MoveType.CREDIT_RISK_ESCALATION, invs, d.client_id
-                )
+                invs = [i for i in valid if i.client_id == d.client_id][: self.MAX_MOVE_INVOICES]
+                move = self._create_move(MoveType.CREDIT_RISK_ESCALATION, invs, d.client_id)
                 if move:
                     moves.append(move)
 
@@ -827,9 +808,7 @@ class CashARPage12Engine:
         # Get client name
         client_name = None
         if client_id:
-            client = self._query_one(
-                "SELECT name FROM clients WHERE id = ?", (client_id,)
-            )
+            client = self._query_one("SELECT name FROM clients WHERE id = ?", (client_id,))
             client_name = client.get("name") if client else None
 
         # Compute totals
@@ -840,9 +819,7 @@ class CashARPage12Engine:
         ttc = self._compute_time_to_consequence(invoices)
 
         # Why surfaced
-        why_surfaced = self._generate_why_surfaced(
-            move_type, invoices, amount, currency
-        )
+        why_surfaced = self._generate_why_surfaced(move_type, invoices, amount, currency)
 
         # Confidence
         why_low = []
@@ -854,9 +831,7 @@ class CashARPage12Engine:
 
         # Actions
         primary_action = self._generate_primary_action(move_type, client_id, invoices)
-        secondary_actions = self._generate_secondary_actions(
-            move_type, client_id, invoices
-        )
+        secondary_actions = self._generate_secondary_actions(move_type, client_id, invoices)
 
         # Evidence
         evidence = [
@@ -1071,9 +1046,7 @@ class CashARPage12Engine:
     # LADDERS (§5 Zone E)
     # ==========================================================================
 
-    def build_ladders(
-        self, invalid: list[InvoiceUnit], debtors: list[DebtorUnit]
-    ) -> dict:
+    def build_ladders(self, invalid: list[InvoiceUnit], debtors: list[DebtorUnit]) -> dict:
         """Build right column ladders."""
         return {
             "invalid_ar_top": self._build_invalid_ladder(invalid),
@@ -1106,9 +1079,7 @@ class CashARPage12Engine:
         """Build money × churn ladder (max 5)."""
         # Only include debtors with health data and high risk
         candidates = [
-            d
-            for d in debtors
-            if d.health_band == HealthBand.RED and d.risk_band == RiskBand.HIGH
+            d for d in debtors if d.health_band == HealthBand.RED and d.risk_band == RiskBand.HIGH
         ]
 
         return [
@@ -1173,36 +1144,24 @@ class CashARPage12Engine:
         # AR breakdown
         breakdown = {
             "current": sum(
-                i.amount
-                for i in invoices
-                if i.aging_bucket == AgingBucket.CURRENT.value
+                i.amount for i in invoices if i.aging_bucket == AgingBucket.CURRENT.value
             ),
             "1-30": sum(
-                i.amount
-                for i in invoices
-                if i.aging_bucket == AgingBucket.DAYS_1_30.value
+                i.amount for i in invoices if i.aging_bucket == AgingBucket.DAYS_1_30.value
             ),
             "31-60": sum(
-                i.amount
-                for i in invoices
-                if i.aging_bucket == AgingBucket.DAYS_31_60.value
+                i.amount for i in invoices if i.aging_bucket == AgingBucket.DAYS_31_60.value
             ),
             "61-90": sum(
-                i.amount
-                for i in invoices
-                if i.aging_bucket == AgingBucket.DAYS_61_90.value
+                i.amount for i in invoices if i.aging_bucket == AgingBucket.DAYS_61_90.value
             ),
             "90+": sum(
-                i.amount
-                for i in invoices
-                if i.aging_bucket == AgingBucket.DAYS_90_PLUS.value
+                i.amount for i in invoices if i.aging_bucket == AgingBucket.DAYS_90_PLUS.value
             ),
         }
 
         # Top invoices (collapsed by default)
-        top_invoices = sorted(invoices, key=lambda i: -i.amount)[
-            : self.MAX_DEBTOR_INVOICES
-        ]
+        top_invoices = sorted(invoices, key=lambda i: -i.amount)[: self.MAX_DEBTOR_INVOICES]
 
         # Invalid invoices
         invalid = [i for i in invoices if not i.valid_ar]
@@ -1275,9 +1234,7 @@ class CashARPage12Engine:
 
     def build_invoice_room(self, invoice_id: str) -> dict | None:
         """Build Invoice room drawer per §9.3."""
-        invoice = next(
-            (i for i in self._invoices_cache if i.invoice_id == invoice_id), None
-        )
+        invoice = next((i for i in self._invoices_cache if i.invoice_id == invoice_id), None)
         if not invoice:
             return None
 
@@ -1285,7 +1242,9 @@ class CashARPage12Engine:
         if invoice.client_name:
             summary += f" from {invoice.client_name}"
         if invoice.valid_ar:
-            summary += f". {invoice.aging_bucket or 'current'}, {invoice.days_overdue or 0} days overdue."
+            summary += (
+                f". {invoice.aging_bucket or 'current'}, {invoice.days_overdue or 0} days overdue."
+            )
         else:
             summary += f". Invalid: {invoice.invalid_reason.value}"
 

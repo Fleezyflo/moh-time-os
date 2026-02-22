@@ -11,7 +11,9 @@ Per MOH_TIME_OS_PRIORITY.md spec:
 
 import json
 import logging
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
+
+from lib.compat import UTC
 
 from .config_store import get
 
@@ -166,9 +168,7 @@ def score_waiting_aging(item: dict) -> tuple[float, str]:
         return 0.0, "invalid waiting date"
 
 
-def score_meeting_linked(
-    item: dict, calendar_events: list[dict] = None
-) -> tuple[float, str]:
+def score_meeting_linked(item: dict, calendar_events: list[dict] = None) -> tuple[float, str]:
     """Score if item is linked to an upcoming meeting."""
     meeting_linked = item.get("meeting_linked", False)
     if not meeting_linked:
@@ -182,12 +182,8 @@ def score_meeting_linked(
                 start = event.get("start", {}).get("dateTime")
                 if start:
                     try:
-                        event_time = datetime.fromisoformat(
-                            start.replace("Z", "+00:00")
-                        )
-                        hours_until = (
-                            event_time - datetime.now(UTC)
-                        ).total_seconds() / 3600
+                        event_time = datetime.fromisoformat(start.replace("Z", "+00:00"))
+                        hours_until = (event_time - datetime.now(UTC)).total_seconds() / 3600
                         if hours_until <= 24:
                             return 1.0, f"meeting in {int(hours_until)}h"
                     except (ValueError, TypeError, AttributeError) as e:

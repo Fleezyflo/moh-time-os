@@ -17,7 +17,7 @@ from pathlib import Path
 # Add repo root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from lib.db import run_migrations, SCHEMA_VERSION
+from lib.db import SCHEMA_VERSION, run_migrations
 from lib.safety import run_safety_migrations
 
 
@@ -25,9 +25,7 @@ def run_smoke_check(conn: sqlite3.Connection) -> tuple[bool, str]:
     """Run basic smoke check on database."""
     try:
         # Check tables exist
-        tables = conn.execute(
-            "SELECT name FROM sqlite_master WHERE type='table'"
-        ).fetchall()
+        tables = conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
         table_names = [t[0] for t in tables]
 
         if "clients" not in table_names:
@@ -112,7 +110,7 @@ def run_drill() -> bool:
         print()
         print("Step 4: Restore from backup")
         shutil.copy(backup_path, db_path)
-        print(f"  ✅ Backup restored")
+        print("  ✅ Backup restored")
 
         # Step 5: Verify restored state
         print()
@@ -123,18 +121,14 @@ def run_drill() -> bool:
         print(f"  📊 Client count: {count}")
 
         # Verify test client exists
-        row = conn.execute(
-            "SELECT id FROM clients WHERE id = 'drill-001'"
-        ).fetchone()
+        row = conn.execute("SELECT id FROM clients WHERE id = 'drill-001'").fetchone()
         if not row:
             print("  ❌ Original data not restored")
             return False
         print("  ✅ Original data present")
 
         # Verify new client NOT present (rolled back)
-        row = conn.execute(
-            "SELECT id FROM clients WHERE id = 'drill-002'"
-        ).fetchone()
+        row = conn.execute("SELECT id FROM clients WHERE id = 'drill-002'").fetchone()
         if row:
             print("  ❌ New data should have been rolled back")
             return False

@@ -7,9 +7,10 @@ Implements inbox item state machine and actions.
 import json
 import sqlite3
 from dataclasses import dataclass
-from enum import StrEnum
 from typing import Any
 from uuid import uuid4
+
+from lib.compat import StrEnum
 
 from .evidence import validate_evidence
 from .suppression import SuppressionManager, check_suppression
@@ -646,7 +647,6 @@ class InboxLifecycleManager:
         return ActionResult(
             success=True,
             inbox_item_state="proposed",
-            # In real implementation, would include next_step_url
         )
 
     def _create_issue_from_signal(self, item: dict, user_id: str, note: str | None) -> str:

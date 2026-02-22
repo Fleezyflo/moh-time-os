@@ -71,9 +71,7 @@ def determine_destination_list(item: dict) -> tuple[str, str]:
 
     # Rule 3: Get lane display name
     lane_config = get_lane(lane)
-    list_name = (
-        lane_config.get("display_name", lane.title()) if lane_config else lane.title()
-    )
+    list_name = lane_config.get("display_name", lane.title()) if lane_config else lane.title()
 
     return list_name, f"Routed to lane: {lane}"
 

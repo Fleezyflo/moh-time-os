@@ -29,17 +29,14 @@ LIVE_DB_PATH = Path(__file__).parent.parent.parent / "data" / "moh_time_os.db"
 GOLDEN_EXPECTATIONS = {
     # Fixture: 5 projects with status in (execution, kickoff, delivery) - none completed/cancelled/archived
     "active_project_count": 5,
-
     # Fixture: 3 invoices with status in (sent, overdue) and payment_date IS NULL
     # inv-001: sent, no payment
     # inv-002: overdue, no payment
     # inv-003: sent, no payment
     # inv-004: paid (excluded)
     "unpaid_invoice_count": 3,
-
     # Fixture: sum of amounts for unpaid invoices = 5000 + 7500 + 2500 = 15000.00
     "total_valid_ar_aed": 15000.00,
-
     # Fixture: 4 commitments with status NOT IN (fulfilled, closed)
     # commit-001: open
     # commit-002: pending
@@ -47,14 +44,11 @@ GOLDEN_EXPECTATIONS = {
     # commit-004: in_progress
     # commit-005: fulfilled (excluded)
     "open_commitment_count": 4,
-
     # Fixture: 3 clients
     "client_count": 3,
-
     # Fixture: 3 distinct assignees with active tasks (status NOT IN done, completed, archived)
     # person-001, person-002, person-003 all have in_progress tasks
     "active_people_count": 3,
-
     # Fixture: 5 communications with received_at set
     "communication_count": 5,
 }
@@ -86,6 +80,7 @@ def block_live_db_access(monkeypatch):
     user-local data or external system state.
     """
     import sqlite3
+
     original_connect = sqlite3.connect
 
     def guarded_connect(database, *args, **kwargs):

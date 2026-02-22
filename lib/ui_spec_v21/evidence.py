@@ -253,7 +253,7 @@ def create_asana_task_evidence(
 
     Spec: 6.16 Kind-specific payload
     """
-    payload = {
+    payload: dict[str, Any] = {
         "task_gid": task_gid,
         "name": name,
     }

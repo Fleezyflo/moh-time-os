@@ -2,7 +2,6 @@
 Cron task handlers for MOH Time OS.
 
 These are called by Clawdbot cron jobs:
-- morning_brief: Deliver daily brief (09:00)
 - daily_sync: Sync from Xero/Asana (06:00)
 - daily_backup: Create backup (03:00)
 - health_check: Run health check (every 6h)
@@ -11,10 +10,10 @@ These are called by Clawdbot cron jobs:
 import logging
 
 from .backup import create_backup, prune_backups
-from .brief import generate_morning_brief
 from .classify import run_auto_classification
 from .health import health_check, self_heal
 from .maintenance import fix_item_priorities
+from .store import get_connection
 from .sync_asana import sync_asana_projects
 from .sync_xero import sync_xero_clients
 
@@ -22,31 +21,6 @@ logger = logging.getLogger(__name__)
 
 
 log = logging.getLogger("moh_time_os.cron")
-
-
-def cron_morning_brief() -> str:
-    """
-    Generate morning brief for delivery.
-
-    Called at 09:00 Dubai time.
-    Returns formatted brief string.
-    """
-    log.info("Generating morning brief")
-
-    # Run health check first
-    report = health_check()
-    if report.overall == "FAILED":
-        return f"⚠️ **System Health: FAILED**\n\n{report.summary()}\n\nCannot generate brief until system is healthy."
-
-    # Generate brief
-    brief = generate_morning_brief()
-
-    # Add health warning if degraded
-    if report.overall == "DEGRADED":
-        brief = f"⚠️ *System degraded: {report.summary()}*\n\n" + brief
-
-    log.info("Morning brief generated")
-    return brief
 
 
 def cron_daily_sync() -> dict:
@@ -168,6 +142,106 @@ def cron_health_check() -> dict:
     return result
 
 
+def cron_retention_enforcement() -> dict:
+    """
+    Run daily retention enforcement.
+
+    Called at 04:00 Dubai time.
+    Deletes rows older than configured retention policies.
+    """
+    log.info("Starting retention enforcement")
+
+    try:
+        from .data_lifecycle import DataLifecycleManager
+
+        manager = DataLifecycleManager()
+        results = manager.enforce_retention(dry_run=False)
+
+        # Format results
+        summary = {
+            "tables_processed": len(results),
+            "total_rows_deleted": sum(r["rows_deleted"] for r in results),
+            "total_rows_archived": sum(r["rows_archived"] for r in results),
+            "space_freed_kb": sum(r["estimated_space_freed_kb"] for r in results),
+            "timestamp": results[0]["timestamp"] if results else None,
+        }
+
+        for result in results:
+            if result["rows_deleted"] > 0:
+                log.info(f"Deleted {result['rows_deleted']} rows from {result['table']}")
+            if result["rows_archived"] > 0:
+                log.info(f"Archived {result['rows_archived']} rows from {result['table']}")
+
+        log.info("Retention enforcement complete")
+        return summary
+
+    except Exception as e:
+        log.error(f"Retention enforcement failed: {e}", exc_info=True)
+        return {"error": str(e), "timestamp": None}
+
+
+def cron_weekly_archive() -> dict:
+    """
+    Run weekly data archival.
+
+    Called weekly at 02:00 Dubai time.
+    Archives old data from archival tables to cold storage.
+    """
+    log.info("Starting weekly archive")
+
+    try:
+        from datetime import date, timedelta
+
+        from .data_lifecycle import DataLifecycleManager
+
+        manager = DataLifecycleManager()
+
+        # Archive communications, messages, etc. older than retention period
+        archival_results = []
+        archive_targets = {
+            "communications": 180,
+            "gmail_messages": 180,
+            "chat_messages": 180,
+        }
+
+        for table, retention_days in archive_targets.items():
+            # Check if table exists
+            with get_connection() as conn:
+                cursor = conn.execute(
+                    """
+                    SELECT name FROM sqlite_master
+                    WHERE type='table' AND name = ?
+                """,
+                    (table,),
+                )
+                if not cursor.fetchone():
+                    log.debug(f"Table {table} does not exist, skipping")
+                    continue
+
+            try:
+                cutoff = date.today() - timedelta(days=retention_days)
+                result = manager.archive_to_cold(table, cutoff, dry_run=False)
+                archival_results.append(result)
+            except ValueError as e:
+                # Table might not have timestamp column or be protected
+                log.debug(f"Cannot archive {table}: {e}")
+            except Exception as e:
+                log.error(f"Failed to archive {table}: {e}", exc_info=True)
+
+        summary = {
+            "tables_archived": len(archival_results),
+            "total_archived": sum(r["rows_archived"] for r in archival_results),
+            "space_freed_kb": sum(r["estimated_space_freed_kb"] for r in archival_results),
+        }
+
+        log.info("Weekly archive complete")
+        return summary
+
+    except Exception as e:
+        log.error(f"Weekly archive failed: {e}", exc_info=True)
+        return {"error": str(e)}
+
+
 def get_cron_config() -> dict:
     """
     Get cron job configuration for Clawdbot.
@@ -175,12 +249,6 @@ def get_cron_config() -> dict:
     These can be added via the cron tool.
     """
     return {
-        "morning_brief": {
-            "schedule": "0 9 * * *",  # 09:00 daily
-            "timezone": "Asia/Dubai",
-            "task": "Generate and send morning brief",
-            "handler": "cron_morning_brief",
-        },
         "daily_sync": {
             "schedule": "0 6 * * *",  # 06:00 daily
             "timezone": "Asia/Dubai",
@@ -198,6 +266,18 @@ def get_cron_config() -> dict:
             "timezone": "Asia/Dubai",
             "task": "Run health check and self-heal",
             "handler": "cron_health_check",
+        },
+        "retention_enforcement": {
+            "schedule": "0 4 * * *",  # 04:00 daily
+            "timezone": "Asia/Dubai",
+            "task": "Enforce data retention policies",
+            "handler": "cron_retention_enforcement",
+        },
+        "weekly_archive": {
+            "schedule": "0 2 * * 0",  # 02:00 on Sunday
+            "timezone": "Asia/Dubai",
+            "task": "Archive old data to cold storage",
+            "handler": "cron_weekly_archive",
         },
     }
 

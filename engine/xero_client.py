@@ -7,12 +7,8 @@ from typing import Any
 
 import requests
 
-CONFIG_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "config", ".credentials.json"
-)
-TOKEN_CACHE_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "config", ".xero_token_cache.json"
-)
+CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", ".credentials.json")
+TOKEN_CACHE_PATH = os.path.join(os.path.dirname(__file__), "..", "config", ".xero_token_cache.json")
 
 XERO_TOKEN_URL = "https://identity.xero.com/connect/token"
 XERO_API_BASE = "https://api.xero.com/api.xro/2.0"
@@ -77,6 +73,7 @@ def refresh_access_token(creds: XeroCredentials) -> str:
             "client_secret": creds.client_secret,
         },
         headers={"Content-Type": "application/x-www-form-urlencoded"},
+        timeout=30,
     )
 
     if resp.status_code != 200:
@@ -111,6 +108,7 @@ def xero_get(endpoint: str) -> dict[str, Any]:
             "Xero-Tenant-Id": tenant_id,
             "Accept": "application/json",
         },
+        timeout=30,
     )
 
     if resp.status_code != 200:
@@ -165,6 +163,32 @@ def get_aged_receivables() -> dict:
 def get_aged_payables() -> dict:
     """Get aged payables report."""
     return xero_get("Reports/AgedPayablesByContact")
+
+
+def list_credit_notes(*, status: str | None = None) -> list[dict]:
+    """List credit notes. Status: DRAFT, SUBMITTED, AUTHORISED, PAID, VOIDED."""
+    endpoint = "CreditNotes"
+    if status:
+        endpoint += f'?where=Status=="{status}"'
+
+    data = xero_get(endpoint)
+    return data.get("CreditNotes", [])
+
+
+def list_bank_transactions(*, status: str | None = None) -> list[dict]:
+    """List bank transactions. Status: DRAFT, SUBMITTED, AUTHORISED, PAID, VOIDED."""
+    endpoint = "BankTransactions"
+    if status:
+        endpoint += f'?where=Status=="{status}"'
+
+    data = xero_get(endpoint)
+    return data.get("BankTransactions", [])
+
+
+def list_tax_rates() -> list[dict]:
+    """List all tax rates."""
+    data = xero_get("TaxRates")
+    return data.get("TaxRates", [])
 
 
 if __name__ == "__main__":

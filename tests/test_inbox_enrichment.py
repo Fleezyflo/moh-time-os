@@ -416,22 +416,14 @@ class TestDrillDownRegressionPrevention(TestCase):
 
         # REGRESSION CHECK: These fields must be present and non-empty
         self.assertIn("rationale", payload, "Missing rationale in API response")
-        self.assertIn(
-            "suggested_actions", payload, "Missing suggested_actions in API response"
-        )
+        self.assertIn("suggested_actions", payload, "Missing suggested_actions in API response")
         self.assertIn("entities", payload, "Missing entities in API response")
-        self.assertIn(
-            "thread_context", payload, "Missing thread_context in API response"
-        )
+        self.assertIn("thread_context", payload, "Missing thread_context in API response")
 
         # Verify values are not None/empty
         self.assertIsNotNone(payload["rationale"], "rationale is None")
-        self.assertIsInstance(
-            payload["suggested_actions"], list, "suggested_actions is not a list"
-        )
-        self.assertGreater(
-            len(payload["suggested_actions"]), 0, "suggested_actions is empty"
-        )
+        self.assertIsInstance(payload["suggested_actions"], list, "suggested_actions is not a list")
+        self.assertGreater(len(payload["suggested_actions"]), 0, "suggested_actions is empty")
 
         conn.close()
 

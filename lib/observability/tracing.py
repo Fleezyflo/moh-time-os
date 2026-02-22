@@ -229,7 +229,14 @@ def export_spans_otlp(endpoint: str = "http://localhost:4318/v1/traces") -> int:
     Returns number of spans exported.
     """
     import json
-    import urllib.request
+    from urllib.parse import urlparse
+
+    import httpx
+
+    # Validate URL scheme to prevent SSRF
+    parsed = urlparse(endpoint)
+    if parsed.scheme not in ("http", "https"):
+        return 0
 
     spans = get_buffered_spans()
     if not spans:
@@ -254,14 +261,15 @@ def export_spans_otlp(endpoint: str = "http://localhost:4318/v1/traces") -> int:
     }
 
     try:
-        req = urllib.request.Request(  # noqa: S310
+        response = httpx.post(
             endpoint,
-            data=json.dumps(payload).encode(),
+            json=payload,
             headers={"Content-Type": "application/json"},
-            method="POST",
+            timeout=5.0,
         )
-        with urllib.request.urlopen(req, timeout=5):  # noqa: S310
+        if response.is_success:
             clear_span_buffer()
             return len(spans)
+        return 0
     except Exception:
         return 0

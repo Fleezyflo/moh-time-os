@@ -10,26 +10,26 @@ import { useTeam, useProposals, useIssues, useTasks } from '../lib/hooks';
 import * as api from '../lib/api';
 
 const taskPriorityColors: Record<string, string> = {
-  urgent: 'text-red-400 bg-red-900/30',
-  high: 'text-orange-400 bg-orange-900/30',
-  medium: 'text-amber-400 bg-amber-900/30',
-  low: 'text-slate-400 bg-slate-700',
+  urgent: 'text-[var(--danger)] bg-red-900/30',
+  high: 'text-[var(--warning)] bg-orange-900/30',
+  medium: 'text-amber-400 bg-[var(--warning)]/30',
+  low: 'text-[var(--grey-light)] bg-[var(--grey)]',
 };
 
 const taskStatusIcons: Record<string, { icon: string; color: string }> = {
-  open: { icon: '○', color: 'text-blue-400' },
+  open: { icon: '○', color: 'text-[var(--info)]' },
   in_progress: { icon: '◐', color: 'text-purple-400' },
-  blocked: { icon: '⊘', color: 'text-red-400' },
-  done: { icon: '✓', color: 'text-green-400' },
-  cancelled: { icon: '✗', color: 'text-slate-400' },
+  blocked: { icon: '⊘', color: 'text-[var(--danger)]' },
+  done: { icon: '✓', color: 'text-[var(--success)]' },
+  cancelled: { icon: '✗', color: 'text-[var(--grey-light)]' },
 };
 
 const loadLevels = {
-  overloaded: { label: 'Overloaded', bg: 'bg-red-900/50', text: 'text-red-300' },
-  high: { label: 'High Load', bg: 'bg-orange-900/50', text: 'text-orange-300' },
-  normal: { label: 'Normal', bg: 'bg-green-900/50', text: 'text-green-300' },
-  light: { label: 'Light', bg: 'bg-blue-900/50', text: 'text-blue-300' },
-  idle: { label: 'Idle', bg: 'bg-slate-700', text: 'text-slate-400' },
+  overloaded: { label: 'Overloaded', bg: 'bg-[var(--danger)]/20', text: 'text-[var(--danger)]' },
+  high: { label: 'High Load', bg: 'bg-[var(--warning)]/20', text: 'text-[var(--warning)]' },
+  normal: { label: 'Normal', bg: 'bg-[var(--success)]/20', text: 'text-[var(--success)]' },
+  light: { label: 'Light', bg: 'bg-[var(--info)]/20', text: 'text-[var(--info)]' },
+  idle: { label: 'Idle', bg: 'bg-[var(--grey)]', text: 'text-[var(--grey-light)]' },
 };
 
 function getLoadLevel(openTasks: number, overdue: number) {
@@ -60,8 +60,8 @@ export function TeamDetail() {
 
   const member = apiTeam?.items?.find((m) => m.id === id);
 
-  if (teamLoading) return <div className="text-slate-400 p-8 text-center">Loading...</div>;
-  if (!member) return <div className="text-slate-400 p-8 text-center">Team member not found</div>;
+  if (teamLoading) return <div className="text-[var(--grey-light)] p-8 text-center">Loading...</div>;
+  if (!member) return <div className="text-[var(--grey-light)] p-8 text-center">Team member not found</div>;
 
   const memberProposals = (apiProposals?.items || [])
     .filter((p) => p.status === 'open')
@@ -128,17 +128,17 @@ export function TeamDetail() {
     <div>
       {/* Header */}
       <div className="mb-6">
-        <Link to="/team" className="text-slate-400 hover:text-slate-200 mb-2 inline-block">
+        <Link to="/team" className="text-[var(--grey-light)] hover:text-[var(--white)] mb-2 inline-block">
           ← Team
         </Link>
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-2xl font-semibold">{member.name}</h1>
-            <p className="text-slate-500">
+            <p className="text-[var(--grey)]">
               {member.role || member.department || 'Team Member'}
-              {member.company && <span className="ml-2 text-slate-600">• {member.company}</span>}
+              {member.company && <span className="ml-2 text-[var(--grey-light)]">• {member.company}</span>}
             </p>
-            {member.email && <p className="text-sm text-slate-500 mt-1">{member.email}</p>}
+            {member.email && <p className="text-sm text-[var(--grey)] mt-1">{member.email}</p>}
           </div>
           <span className={`px-3 py-1 rounded text-sm ${load.bg} ${load.text}`}>{load.label}</span>
         </div>
@@ -146,50 +146,50 @@ export function TeamDetail() {
 
       {/* Workload Stats Banner */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-          <div className="text-2xl font-bold text-blue-400">{member.open_tasks || 0}</div>
-          <div className="text-sm text-slate-400">Open Tasks</div>
+        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-[var(--grey)]">
+          <div className="text-2xl font-bold text-[var(--info)]">{member.open_tasks || 0}</div>
+          <div className="text-sm text-[var(--grey-light)]">Open Tasks</div>
         </div>
         <div
-          className={`bg-slate-800 rounded-lg p-4 border ${hasOverdue ? 'border-red-900/50' : 'border-slate-700'}`}
+          className={`bg-[var(--grey-dim)] rounded-lg p-4 border ${hasOverdue ? 'border-[var(--danger)]/50' : 'border-[var(--grey)]'}`}
         >
-          <div className={`text-2xl font-bold ${hasOverdue ? 'text-red-400' : 'text-slate-400'}`}>
+          <div className={`text-2xl font-bold ${hasOverdue ? 'text-[var(--danger)]' : 'text-[var(--grey-light)]'}`}>
             {member.overdue_tasks || 0}
           </div>
-          <div className="text-sm text-slate-400">Overdue</div>
+          <div className="text-sm text-[var(--grey-light)]">Overdue</div>
         </div>
-        <div className="bg-slate-800 rounded-lg p-4 border border-amber-900/50">
+        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-amber-900/50">
           <div className="text-2xl font-bold text-amber-400">{member.due_today || 0}</div>
-          <div className="text-sm text-slate-400">Due Today</div>
+          <div className="text-sm text-[var(--grey-light)]">Due Today</div>
         </div>
-        <div className="bg-slate-800 rounded-lg p-4 border border-green-900/50">
-          <div className="text-2xl font-bold text-green-400">{member.completed_this_week || 0}</div>
-          <div className="text-sm text-slate-400">Done This Week</div>
+        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-green-900/50">
+          <div className="text-2xl font-bold text-[var(--success)]">{member.completed_this_week || 0}</div>
+          <div className="text-sm text-[var(--grey-light)]">Done This Week</div>
         </div>
       </div>
 
       {/* Due Today Alert */}
       {(member.due_today || 0) > 0 && (
-        <div className="mb-6 p-3 bg-amber-900/20 border border-amber-900/50 rounded-lg text-amber-300 text-sm">
+        <div className="mb-6 p-3 bg-amber-900/20 border border-amber-900/50 rounded-lg text-[var(--warning)] text-sm">
           ⚡ <strong>{member.due_today} tasks due today</strong> — requires immediate attention
         </div>
       )}
 
       {/* Overdue Alert */}
       {hasOverdue && (
-        <div className="mb-6 p-3 bg-red-900/20 border border-red-900/50 rounded-lg text-red-300 text-sm">
+        <div className="mb-6 p-3 bg-red-900/20 border border-[var(--danger)]/50 rounded-lg text-[var(--danger)] text-sm">
           🚨 <strong>{member.overdue_tasks} overdue tasks</strong> — escalation may be needed
         </div>
       )}
 
       {/* Client Association */}
       {member.client_name && (
-        <div className="mb-6 p-3 bg-slate-800/50 border border-slate-700 rounded-lg">
-          <span className="text-slate-400 text-sm">Primary Client: </span>
+        <div className="mb-6 p-3 bg-[var(--grey-dim)]/50 border border-[var(--grey)] rounded-lg">
+          <span className="text-[var(--grey-light)] text-sm">Primary Client: </span>
           <Link
             to="/clients/$clientId"
             params={{ clientId: member.client_id || '' }}
-            className="text-blue-400 hover:text-blue-300"
+            className="text-[var(--info)] hover:text-[var(--info)]"
           >
             {member.client_name}
           </Link>
@@ -197,10 +197,10 @@ export function TeamDetail() {
       )}
 
       {/* Task List */}
-      <section className="mb-6 bg-slate-800/50 rounded-lg border border-slate-700 p-4">
+      <section className="mb-6 bg-[var(--grey-dim)]/50 rounded-lg border border-[var(--grey)] p-4">
         <h2 className="text-lg font-medium mb-4">Open Tasks ({memberTasks.length})</h2>
         {memberTasks.length === 0 ? (
-          <p className="text-slate-500">No open tasks</p>
+          <p className="text-[var(--grey)]">No open tasks</p>
         ) : (
           <div className="space-y-2">
             {memberTasks.slice(0, 10).map((task) => {
@@ -210,15 +210,15 @@ export function TeamDetail() {
               return (
                 <div
                   key={task.id}
-                  className={`flex items-center gap-3 p-3 bg-slate-800 rounded-lg border ${
-                    isOverdue ? 'border-red-900/50' : 'border-slate-700'
+                  className={`flex items-center gap-3 p-3 bg-[var(--grey-dim)] rounded-lg border ${
+                    isOverdue ? 'border-[var(--danger)]/50' : 'border-[var(--grey)]'
                   }`}
                 >
                   <span className={statusStyle.color}>{statusStyle.icon}</span>
                   <div className="flex-1 min-w-0">
-                    <div className="text-slate-200 truncate">{task.title}</div>
+                    <div className="text-[var(--white)] truncate">{task.title}</div>
                     {task.due_date && (
-                      <div className={`text-xs ${isOverdue ? 'text-red-400' : 'text-slate-500'}`}>
+                      <div className={`text-xs ${isOverdue ? 'text-[var(--danger)]' : 'text-[var(--grey)]'}`}>
                         {isOverdue ? '⚠️ Overdue: ' : 'Due: '}
                         {formatRelative(task.due_date)}
                       </div>
@@ -231,7 +231,7 @@ export function TeamDetail() {
               );
             })}
             {memberTasks.length > 10 && (
-              <div className="text-center text-sm text-slate-500 pt-2">
+              <div className="text-center text-sm text-[var(--grey)] pt-2">
                 +{memberTasks.length - 10} more tasks
               </div>
             )}
@@ -241,10 +241,10 @@ export function TeamDetail() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Scoped Issues */}
-        <section className="bg-slate-800/50 rounded-lg border border-slate-700 p-4">
+        <section className="bg-[var(--grey-dim)]/50 rounded-lg border border-[var(--grey)] p-4">
           <h2 className="text-lg font-medium mb-4">Assigned Issues ({memberIssues.length})</h2>
           {memberIssues.length === 0 ? (
-            <p className="text-slate-500">No assigned issues</p>
+            <p className="text-[var(--grey)]">No assigned issues</p>
           ) : (
             <div className="space-y-3">
               {memberIssues.map((issue) => (
@@ -254,13 +254,13 @@ export function TeamDetail() {
                     setSelectedIssue(issue);
                     setIssueDrawerOpen(true);
                   }}
-                  className="p-3 bg-slate-800 rounded-lg border border-slate-700 cursor-pointer hover:border-slate-600"
+                  className="p-3 bg-[var(--grey-dim)] rounded-lg border border-[var(--grey)] cursor-pointer hover:border-[var(--grey-light)]"
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    <span className={issue.state === 'open' ? 'text-blue-400' : 'text-amber-400'}>
+                    <span className={issue.state === 'open' ? 'text-[var(--info)]' : 'text-amber-400'}>
                       ●
                     </span>
-                    <h3 className="font-medium text-slate-200 truncate flex-1">{issue.headline}</h3>
+                    <h3 className="font-medium text-[var(--white)] truncate flex-1">{issue.headline}</h3>
                     <span
                       className={`text-xs px-2 py-0.5 rounded ${priorityBadgeClass(issue.priority ?? 0)}`}
                     >
@@ -269,7 +269,7 @@ export function TeamDetail() {
                         .toUpperCase() + priorityLabel(issue.priority ?? 0).slice(1)}
                     </span>
                   </div>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-[var(--grey)]">
                     {issue.type ||
                       (issue as unknown as { issue_type?: string }).issue_type ||
                       'Issue'}
@@ -281,12 +281,12 @@ export function TeamDetail() {
         </section>
 
         {/* Scoped Proposals */}
-        <section className="bg-slate-800/50 rounded-lg border border-slate-700 p-4">
+        <section className="bg-[var(--grey-dim)]/50 rounded-lg border border-[var(--grey)] p-4">
           <h2 className="text-lg font-medium mb-4">
             Relevant Proposals ({memberProposals.length})
           </h2>
           {memberProposals.length === 0 ? (
-            <p className="text-slate-500">No relevant proposals</p>
+            <p className="text-[var(--grey)]">No relevant proposals</p>
           ) : (
             <div className="space-y-3">
               {memberProposals.slice(0, 5).map((p) => (
@@ -296,11 +296,11 @@ export function TeamDetail() {
                     setSelectedProposal(p);
                     setProposalDrawerOpen(true);
                   }}
-                  className="p-3 bg-slate-800 rounded-lg border border-slate-700 cursor-pointer hover:border-slate-600"
+                  className="p-3 bg-[var(--grey-dim)] rounded-lg border border-[var(--grey)] cursor-pointer hover:border-[var(--grey-light)]"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-slate-200 truncate flex-1">{p.headline}</span>
-                    <span className="text-xs text-slate-500 ml-2">Score: {p.score}</span>
+                    <span className="text-[var(--white)] truncate flex-1">{p.headline}</span>
+                    <span className="text-xs text-[var(--grey)] ml-2">Score: {p.score}</span>
                   </div>
                 </div>
               ))}
@@ -339,3 +339,5 @@ export function TeamDetail() {
     </div>
   );
 }
+
+export default TeamDetail;

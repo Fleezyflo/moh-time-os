@@ -5,6 +5,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import date
 
+from .db import validate_identifier
 from .entities import get_client, get_person, get_project
 from .store import get_connection, now_iso
 
@@ -53,9 +54,7 @@ class ContextSnapshot:
 
     def has_context(self) -> bool:
         """Check if any context is present."""
-        return bool(
-            self.client or self.project or self.person or self.stakes or self.history
-        )
+        return bool(self.client or self.project or self.person or self.stakes or self.history)
 
 
 @dataclass
@@ -128,9 +127,7 @@ class Item:
 
         if self.due:
             if self.is_overdue():
-                lines.append(
-                    f"⚠️ OVERDUE by {self.days_overdue()} days (was due {self.due})"
-                )
+                lines.append(f"⚠️ OVERDUE by {self.days_overdue()} days (was due {self.due})")
             else:
                 lines.append(f"Due: {self.due}")
 
@@ -182,9 +179,7 @@ class Item:
             elif days_until == 1:
                 parts.append(f"**{self.what}** is due tomorrow.")
             elif days_until <= 7:
-                parts.append(
-                    f"**{self.what}** is due in {days_until} days ({self.due})."
-                )
+                parts.append(f"**{self.what}** is due in {days_until} days ({self.due}).")
             else:
                 parts.append(f"**{self.what}** is due {self.due}.")
         else:
@@ -445,19 +440,19 @@ def update_item(item_id: str, changed_by: str = "A", **changes) -> bool:
 
     updates["updated_at"] = now
 
+    for k in updates:
+        validate_identifier(k)
     set_clause = ", ".join(f"{k} = ?" for k in updates)
     values = list(updates.values()) + [item_id]
 
     with get_connection() as conn:
-        cursor = conn.execute(f"UPDATE items SET {set_clause} WHERE id = ?", values)
+        cursor = conn.execute(f"UPDATE items SET {set_clause} WHERE id = ?", values)  # nosec B608 — validated above
 
         if cursor.rowcount == 0:
             return False
 
         # Record history
-        change_desc = ", ".join(
-            f"{k}→{v}" for k, v in changes.items() if k in valid_fields
-        )
+        change_desc = ", ".join(f"{k}→{v}" for k, v in changes.items() if k in valid_fields)
         conn.execute(
             """
             INSERT INTO item_history (id, item_id, timestamp, change, changed_by)
@@ -563,3 +558,46 @@ def list_items(
         ).fetchall()
 
         return [_row_to_item(row) for row in rows]
+
+
+def recalculate_all_priorities() -> int:
+    """Recalculate priority scores for all open/waiting items.
+
+    Returns:
+        Number of items updated.
+    """
+    import logging
+
+    logger = logging.getLogger(__name__)
+    conn = get_connection()
+
+    rows = conn.execute(
+        "SELECT id, status, due, client_id FROM items WHERE status IN ('open', 'waiting')"
+    ).fetchall()
+
+    updated = 0
+    for row in rows:
+        item_id = row["id"]
+        # Priority factors: overdue boost, client importance, age
+        score = 50  # Base score
+
+        if row["due"]:
+            try:
+                due_date = date.fromisoformat(row["due"][:10])
+                days_until = (due_date - date.today()).days
+                if days_until < 0:
+                    score += min(30, abs(days_until))  # Overdue boost, max +30
+                elif days_until <= 7:
+                    score += 10  # Due soon boost
+            except (ValueError, TypeError):
+                pass
+
+        conn.execute(
+            "UPDATE items SET priority_score = ? WHERE id = ?",
+            (score, item_id),
+        )
+        updated += 1
+
+    conn.commit()
+    logger.info(f"Recalculated priorities for {updated} items")
+    return updated

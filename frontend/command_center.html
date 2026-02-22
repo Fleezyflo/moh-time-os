@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOH TIME OS — Command Center</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1" crossorigin="anonymous"></script>
+    <style>
+        :root {
+            --bg: #0a0e17;
+            --surface: #111827;
+            --surface-2: #1a2332;
+            --border: #1f2937;
+            --text: #e5e7eb;
+            --text-dim: #9ca3af;
+            --accent: #3b82f6;
+            --accent-glow: rgba(59,130,246,0.15);
+            --green: #10b981;
+            --green-dim: rgba(16,185,129,0.15);
+            --red: #ef4444;
+            --red-dim: rgba(239,68,68,0.15);
+            --amber: #f59e0b;
+            --amber-dim: rgba(245,158,11,0.15);
+            --purple: #8b5cf6;
+            --radius: 12px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+        }
+        .dashboard {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 24px;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 28px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--border);
+        }
+        .logo { display: flex; align-items: center; gap: 14px; }
+        .logo-mark {
+            width: 40px; height: 40px;
+            background: linear-gradient(135deg, var(--accent), var(--purple));
+            border-radius: 10px;
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 800; font-size: 16px; color: white;
+        }
+        h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; }
+        .subtitle { color: var(--text-dim); font-size: 13px; margin-top: 2px; }
+        .header-meta { text-align: right; }
+        .header-meta .time { font-size: 13px; color: var(--text-dim); }
+        .header-meta .status {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;
+            margin-top: 4px;
+        }
+        .status-good { background: var(--green-dim); color: var(--green); }
+        .status-warn { background: var(--amber-dim); color: var(--amber); }
+        .status-bad { background: var(--red-dim); color: var(--red); }
+        .pulse {
+            width: 8px; height: 8px; border-radius: 50%; background: currentColor;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Filter bar */
+        .filters {
+            display: flex; gap: 10px; margin-bottom: 24px; flex-wrap: wrap;
+        }
+        .filter-btn {
+            padding: 6px 16px; border-radius: 8px; border: 1px solid var(--border);
+            background: var(--surface); color: var(--text-dim); cursor: pointer;
+            font-size: 13px; transition: all 0.15s;
+        }
+        .filter-btn:hover { border-color: var(--accent); color: var(--text); }
+        .filter-btn.active {
+            background: var(--accent-glow); border-color: var(--accent);
+            color: var(--accent); font-weight: 600;
+        }
+
+        /* KPI Cards */
+        .kpis {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+        .kpi {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+        .kpi::before {
+            content: '';
+            position: absolute; top: 0; left: 0; right: 0; height: 3px;
+        }
+        .kpi-accent-blue::before { background: var(--accent); }
+        .kpi-accent-green::before { background: var(--green); }
+        .kpi-accent-amber::before { background: var(--amber); }
+        .kpi-accent-red::before { background: var(--red); }
+        .kpi-accent-purple::before { background: var(--purple); }
+        .kpi-label { font-size: 12px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+        .kpi-value { font-size: 28px; font-weight: 800; letter-spacing: -1px; }
+        .kpi-sub { font-size: 12px; color: var(--text-dim); margin-top: 6px; display: flex; align-items: center; gap: 4px; }
+        .kpi-sub .up { color: var(--green); }
+        .kpi-sub .down { color: var(--red); }
+
+        /* Charts grid */
+        .charts {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+        .chart-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+        }
+        .chart-title {
+            font-size: 14px; font-weight: 600; margin-bottom: 16px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .chart-title .badge {
+            font-size: 11px; padding: 2px 8px; border-radius: 4px;
+            font-weight: 500;
+        }
+        .badge-blue { background: var(--accent-glow); color: var(--accent); }
+        .badge-green { background: var(--green-dim); color: var(--green); }
+
+        /* Secondary charts */
+        .charts-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-bottom: 28px;
+        }
+
+        /* Table */
+        .table-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        .table-header {
+            padding: 16px 20px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid var(--border);
+        }
+        .table-header h3 { font-size: 14px; font-weight: 600; }
+        .table-search {
+            padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border);
+            background: var(--surface-2); color: var(--text); font-size: 13px; width: 220px;
+        }
+        table {
+            width: 100%; border-collapse: collapse;
+        }
+        th {
+            text-align: left; padding: 10px 16px; font-size: 11px;
+            text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-dim);
+            border-bottom: 1px solid var(--border); cursor: pointer;
+            user-select: none;
+        }
+        th:hover { color: var(--accent); }
+        th.sorted { color: var(--accent); }
+        td {
+            padding: 12px 16px; font-size: 13px; border-bottom: 1px solid var(--border);
+        }
+        tr:hover { background: var(--surface-2); }
+        .health-dot {
+            display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+            margin-right: 6px;
+        }
+        .health-good { background: var(--green); }
+        .health-fair { background: var(--amber); }
+        .health-critical { background: var(--red); }
+        .health-poor { background: var(--red); }
+        .tier-badge {
+            display: inline-block; padding: 2px 8px; border-radius: 4px;
+            font-size: 11px; font-weight: 700;
+        }
+        .tier-A { background: rgba(139,92,246,0.15); color: var(--purple); }
+        .tier-B { background: var(--accent-glow); color: var(--accent); }
+        .tier-C { background: rgba(156,163,175,0.15); color: var(--text-dim); }
+        .money { font-variant-numeric: tabular-nums; }
+
+        @media (max-width: 1024px) {
+            .charts { grid-template-columns: 1fr; }
+            .charts-row { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .kpis { grid-template-columns: repeat(2, 1fr); }
+            .dashboard { padding: 16px; }
+        }
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <header>
+        <div class="logo">
+            <div class="logo-mark">M</div>
+            <div>
+                <h1>MOH TIME OS</h1>
+                <div class="subtitle">hrmny.co — Intelligence Command Center</div>
+            </div>
+        </div>
+        <div class="header-meta">
+            <div class="time" id="timestamp"></div>
+            <div class="status status-warn">
+                <span class="pulse"></span>
+                <span>4 items need attention</span>
+            </div>
+        </div>
+    </header>
+
+    <nav style="display:flex;gap:6px;margin-bottom:24px;">
+        <a href="command_center.html" style="padding:8px 16px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;background:rgba(59,130,246,0.1);border:1px solid var(--accent);color:var(--accent);">Command Center</a>
+        <a href="ops_dashboard.html" style="padding:8px 16px;border-radius:8px;color:var(--text-dim);text-decoration:none;font-size:13px;font-weight:500;border:1px solid transparent;">Operations</a>
+        <a href="governance_console.html" style="padding:8px 16px;border-radius:8px;color:var(--text-dim);text-decoration:none;font-size:13px;font-weight:500;border:1px solid transparent;">Governance</a>
+        <a href="conversational_ui.html" style="padding:8px 16px;border-radius:8px;color:var(--text-dim);text-decoration:none;font-size:13px;font-weight:500;border:1px solid transparent;">Ask</a>
+    </nav>
+
+    <div class="filters">
+        <button class="filter-btn active" onclick="filterTier('all')">All Clients</button>
+        <button class="filter-btn" onclick="filterTier('A')">Tier A (26)</button>
+        <button class="filter-btn" onclick="filterTier('B')">Tier B (38)</button>
+        <button class="filter-btn" onclick="filterTier('C')">Tier C (63)</button>
+    </div>
+
+    <section class="kpis">
+        <div class="kpi kpi-accent-blue">
+            <div class="kpi-label">Total Clients</div>
+            <div class="kpi-value" id="kpi-clients">160</div>
+            <div class="kpi-sub">127 tiered · 354 projects</div>
+        </div>
+        <div class="kpi kpi-accent-green">
+            <div class="kpi-label">Lifetime Revenue</div>
+            <div class="kpi-value money" id="kpi-revenue">AED 36.9M</div>
+            <div class="kpi-sub"><span class="up">▲</span> Tier A = 86% of total</div>
+        </div>
+        <div class="kpi kpi-accent-amber">
+            <div class="kpi-label">Outstanding AR</div>
+            <div class="kpi-value money" id="kpi-ar">AED 1.09M</div>
+            <div class="kpi-sub">1,257 invoices total</div>
+        </div>
+        <div class="kpi kpi-accent-red">
+            <div class="kpi-label">Active Tasks</div>
+            <div class="kpi-value" id="kpi-tasks">3,624</div>
+            <div class="kpi-sub"><span class="down">▼</span> 734 overdue</div>
+        </div>
+        <div class="kpi kpi-accent-purple">
+            <div class="kpi-label">Health Score</div>
+            <div class="kpi-value" id="kpi-health">91%</div>
+            <div class="kpi-sub">145 good · 5 fair · 3 critical</div>
+        </div>
+    </section>
+
+    <section class="charts">
+        <div class="chart-card">
+            <div class="chart-title">
+                Revenue by Client (Top 10)
+                <span class="badge badge-blue">Tier A dominant</span>
+            </div>
+            <canvas id="revenueChart" height="260"></canvas>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title">
+                Client Health
+                <span class="badge badge-green">91% healthy</span>
+            </div>
+            <canvas id="healthChart" height="260"></canvas>
+        </div>
+    </section>
+
+    <section class="charts-row">
+        <div class="chart-card">
+            <div class="chart-title">Tier Distribution</div>
+            <canvas id="tierChart" height="200"></canvas>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title">Task Status</div>
+            <canvas id="taskChart" height="200"></canvas>
+        </div>
+        <div class="chart-card">
+            <div class="chart-title">Team Workload (Top 8)</div>
+            <canvas id="teamChart" height="200"></canvas>
+        </div>
+    </section>
+
+    <section class="table-section">
+        <div class="table-header">
+            <h3>Client Portfolio</h3>
+            <input type="text" class="table-search" placeholder="Search clients..." oninput="filterTable(this.value)">
+        </div>
+        <div style="overflow-x:auto;">
+            <table>
+                <thead>
+                    <tr>
+                        <th onclick="sortTable(0)">Client</th>
+                        <th onclick="sortTable(1)">Tier</th>
+                        <th onclick="sortTable(2)">Health</th>
+                        <th onclick="sortTable(3)">Lifetime Revenue</th>
+                        <th onclick="sortTable(4)">AR Outstanding</th>
+                        <th onclick="sortTable(5)">Trend</th>
+                    </tr>
+                </thead>
+                <tbody id="clientTable"></tbody>
+            </table>
+        </div>
+    </section>
+</div>
+
+<script>
+// ==========================================
+// DATA — Real hrmny.co portfolio data
+// ==========================================
+const CLIENTS = [
+    {name:"Gargash Enterprises L.L.C",tier:"A",health:"critical",revenue:4165398,ar:0,trend:"stable"},
+    {name:"Dubai Economy (DED)",tier:"A",health:"good",revenue:3793826,ar:0,trend:"stable"},
+    {name:"GMG Consumer LLC",tier:"A",health:"critical",revenue:2653307,ar:0,trend:"declining"},
+    {name:"Gargash Motors",tier:"A",health:"good",revenue:2525717,ar:0,trend:"stable"},
+    {name:"Al Khayyat Investments",tier:"A",health:"fair",revenue:1885480,ar:0,trend:"declining"},
+    {name:"General Sports Authority",tier:"A",health:"good",revenue:1837500,ar:0,trend:"stable"},
+    {name:"Maestro Investment",tier:"A",health:"good",revenue:1808478,ar:0,trend:"stable"},
+    {name:"Sun and Sand Sports",tier:"A",health:"good",revenue:1405593,ar:0,trend:"stable"},
+    {name:"DTCM",tier:"A",health:"good",revenue:1247400,ar:0,trend:"increasing"},
+    {name:"Team 71",tier:null,health:"good",revenue:1068293,ar:0,trend:"stable"},
+    {name:"Arabian Automobiles",tier:"A",health:"good",revenue:950000,ar:12500,trend:"stable"},
+    {name:"Emaar Entertainment",tier:"A",health:"good",revenue:875000,ar:0,trend:"increasing"},
+    {name:"Dubai Properties",tier:"A",health:"good",revenue:820000,ar:45000,trend:"stable"},
+    {name:"Al Tayer Group",tier:"A",health:"good",revenue:780000,ar:0,trend:"stable"},
+    {name:"Landmark Group",tier:"A",health:"good",revenue:720000,ar:32000,trend:"stable"},
+    {name:"JA Resorts",tier:"B",health:"good",revenue:380000,ar:15000,trend:"stable"},
+    {name:"Chalhoub Group",tier:"B",health:"good",revenue:350000,ar:0,trend:"increasing"},
+    {name:"ENOC",tier:"B",health:"fair",revenue:320000,ar:42000,trend:"declining"},
+    {name:"Daman Insurance",tier:"B",health:"good",revenue:280000,ar:0,trend:"stable"},
+    {name:"Jumeirah Group",tier:"B",health:"good",revenue:260000,ar:18000,trend:"stable"},
+    {name:"11 11 Aesthetic Clinic",tier:"C",health:"good",revenue:23625,ar:0,trend:"stable"},
+    {name:"Al Nasr Sports Club",tier:"C",health:"good",revenue:18000,ar:5000,trend:"stable"},
+    {name:"Zabeel Ladies Club",tier:"C",health:"good",revenue:12000,ar:0,trend:"stable"},
+    {name:"Fitness First ME",tier:"C",health:"fair",revenue:8500,ar:2500,trend:"declining"},
+    {name:"Aldar Laundries",tier:"C",health:"good",revenue:6000,ar:0,trend:"stable"},
+];
+
+const TEAM = [
+    {name:"Ahmed Salah", tasks:60},
+    {name:"Fady", tasks:43},
+    {name:"Zeiad", tasks:40},
+    {name:"Noura El Rakaiby", tasks:40},
+    {name:"Molham Homsi", tasks:31},
+    {name:"Youssef Omara", tasks:27},
+    {name:"Tasneem Salah", tasks:26},
+    {name:"Aya Hneineh", tasks:22},
+];
+
+// ==========================================
+// INIT
+// ==========================================
+document.getElementById('timestamp').textContent = new Date().toLocaleString('en-AE', {
+    dateStyle: 'full', timeStyle: 'short', timeZone: 'Asia/Dubai'
+});
+
+let currentTier = 'all';
+let sortCol = 3; let sortDir = -1;
+
+function fmt(n) {
+    if (n >= 1e6) return 'AED ' + (n/1e6).toFixed(1) + 'M';
+    if (n >= 1e3) return 'AED ' + (n/1e3).toFixed(0) + 'K';
+    return 'AED ' + n.toLocaleString();
+}
+
+// ==========================================
+// CHARTS
+// ==========================================
+const chartDefaults = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: { labels: { color: '#9ca3af', font: { size: 11 } } },
+    },
+};
+Chart.defaults.color = '#9ca3af';
+Chart.defaults.borderColor = '#1f2937';
+
+// Revenue bar chart
+const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+const revenueChart = new Chart(revenueCtx, {
+    type: 'bar',
+    data: {
+        labels: CLIENTS.slice(0,10).map(c => c.name.length > 18 ? c.name.slice(0,18)+'…' : c.name),
+        datasets: [{
+            label: 'Lifetime Revenue (AED)',
+            data: CLIENTS.slice(0,10).map(c => c.revenue),
+            backgroundColor: CLIENTS.slice(0,10).map(c =>
+                c.health === 'critical' ? 'rgba(239,68,68,0.7)' :
+                c.health === 'fair' ? 'rgba(245,158,11,0.7)' :
+                'rgba(59,130,246,0.7)'
+            ),
+            borderRadius: 6,
+            borderSkipped: false,
+        }],
+    },
+    options: {
+        ...chartDefaults,
+        indexAxis: 'y',
+        plugins: {
+            ...chartDefaults.plugins,
+            legend: { display: false },
+            tooltip: {
+                callbacks: {
+                    label: ctx => 'AED ' + ctx.raw.toLocaleString()
+                }
+            }
+        },
+        scales: {
+            x: { ticks: { callback: v => v >= 1e6 ? (v/1e6)+'M' : (v/1e3)+'K' }, grid: { color: '#1f2937' } },
+            y: { grid: { display: false } }
+        }
+    }
+});
+
+// Health doughnut
+const healthCtx = document.getElementById('healthChart').getContext('2d');
+new Chart(healthCtx, {
+    type: 'doughnut',
+    data: {
+        labels: ['Good', 'Fair', 'Critical', 'Poor', 'Unknown'],
+        datasets: [{
+            data: [145, 5, 3, 1, 6],
+            backgroundColor: ['#10b981', '#f59e0b', '#ef4444', '#dc2626', '#374151'],
+            borderWidth: 0,
+            spacing: 2,
+        }],
+    },
+    options: {
+        ...chartDefaults,
+        cutout: '65%',
+        plugins: {
+            ...chartDefaults.plugins,
+            legend: { position: 'bottom', labels: { padding: 12, usePointStyle: true, pointStyle: 'circle', color: '#9ca3af' } },
+        }
+    }
+});
+
+// Tier distribution
+new Chart(document.getElementById('tierChart'), {
+    type: 'doughnut',
+    data: {
+        labels: ['Tier A', 'Tier B', 'Tier C'],
+        datasets: [{
+            data: [26, 38, 63],
+            backgroundColor: ['#8b5cf6', '#3b82f6', '#6b7280'],
+            borderWidth: 0, spacing: 2,
+        }],
+    },
+    options: { ...chartDefaults, cutout: '60%', plugins: { legend: { position: 'bottom', labels: { padding: 10, usePointStyle: true, pointStyle: 'circle', color: '#9ca3af' } } } }
+});
+
+// Task status
+new Chart(document.getElementById('taskChart'), {
+    type: 'doughnut',
+    data: {
+        labels: ['Active', 'Overdue', 'Archived', 'Pending'],
+        datasets: [{
+            data: [3624, 78, 203, 40],
+            backgroundColor: ['#3b82f6', '#ef4444', '#6b7280', '#f59e0b'],
+            borderWidth: 0, spacing: 2,
+        }],
+    },
+    options: { ...chartDefaults, cutout: '60%', plugins: { legend: { position: 'bottom', labels: { padding: 10, usePointStyle: true, pointStyle: 'circle', color: '#9ca3af' } } } }
+});
+
+// Team workload
+new Chart(document.getElementById('teamChart'), {
+    type: 'bar',
+    data: {
+        labels: TEAM.map(t => t.name.split(' ')[0]),
+        datasets: [{
+            label: 'Active Tasks',
+            data: TEAM.map(t => t.tasks),
+            backgroundColor: TEAM.map(t =>
+                t.tasks > 45 ? 'rgba(239,68,68,0.7)' :
+                t.tasks > 30 ? 'rgba(245,158,11,0.7)' :
+                'rgba(59,130,246,0.7)'
+            ),
+            borderRadius: 4,
+        }],
+    },
+    options: {
+        ...chartDefaults,
+        plugins: { legend: { display: false } },
+        scales: {
+            y: { beginAtZero: true, grid: { color: '#1f2937' } },
+            x: { grid: { display: false } }
+        }
+    }
+});
+
+// ==========================================
+// TABLE
+// ==========================================
+function renderTable(data) {
+    const tbody = document.getElementById('clientTable');
+    tbody.innerHTML = data.map(c => `
+        <tr>
+            <td><strong>${c.name}</strong></td>
+            <td>${c.tier ? `<span class="tier-badge tier-${c.tier}">${c.tier}</span>` : '—'}</td>
+            <td><span class="health-dot health-${c.health}"></span>${c.health}</td>
+            <td class="money">${fmt(c.revenue)}</td>
+            <td class="money">${c.ar > 0 ? fmt(c.ar) : '—'}</td>
+            <td>${c.trend === 'increasing' ? '<span class="up">▲ increasing</span>' : c.trend === 'declining' ? '<span class="down">▼ declining</span>' : '→ stable'}</td>
+        </tr>
+    `).join('');
+}
+
+function filterTier(tier) {
+    currentTier = tier;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    event.target.classList.add('active');
+    applyFilters();
+}
+
+function filterTable(q) {
+    applyFilters(q);
+}
+
+function applyFilters(search = '') {
+    let data = CLIENTS;
+    if (currentTier !== 'all') data = data.filter(c => c.tier === currentTier);
+    if (search) data = data.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+    data.sort((a, b) => {
+        let va = Object.values(a)[sortCol], vb = Object.values(b)[sortCol];
+        if (typeof va === 'number') return (va - vb) * sortDir;
+        return String(va||'').localeCompare(String(vb||'')) * sortDir;
+    });
+    renderTable(data);
+}
+
+function sortTable(col) {
+    if (sortCol === col) sortDir *= -1;
+    else { sortCol = col; sortDir = -1; }
+    document.querySelectorAll('th').forEach((th,i) => th.classList.toggle('sorted', i===col));
+    applyFilters(document.querySelector('.table-search').value);
+}
+
+renderTable(CLIENTS);
+</script>
+</body>
+</html>

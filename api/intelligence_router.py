@@ -20,6 +20,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from api.auth import require_auth
+from lib.cache import cache_invalidate, cached, get_cache
 from lib.query_engine import QueryEngine
 
 logger = logging.getLogger(__name__)
@@ -67,6 +68,9 @@ def _error_response(message: str, code: str = "ERROR") -> dict:
 
 
 @intelligence_router.get("/portfolio/overview")
+@cached(
+    ttl=120, key_func=lambda order_by, desc: f"intelligence:portfolio:overview:{order_by}:{desc}"
+)
 def portfolio_overview(
     order_by: str = Query("total_tasks", description="Field to sort by"),
     desc: bool = Query(True, description="Sort descending"),
@@ -76,6 +80,8 @@ def portfolio_overview(
 
     Returns clients with project_count, total_tasks, active_tasks,
     invoice_count, total_invoiced, total_outstanding, etc.
+
+    Cached for 120 seconds.
     """
     try:
         engine = get_engine()
@@ -458,6 +464,7 @@ def financial_aging():
 
 
 @intelligence_router.get("/snapshot")
+@cached(ttl=60, key_func=lambda: "intelligence:snapshot:full")
 def intelligence_snapshot():
     """
     Get complete intelligence snapshot.
@@ -470,6 +477,7 @@ def intelligence_snapshot():
     - Produces daily briefing
 
     This is a heavy endpoint (~45s). Use targeted endpoints for faster responses.
+    Cached for 60 seconds.
     """
     try:
         from lib.intelligence import generate_intelligence_snapshot
@@ -500,6 +508,7 @@ def critical_items():
 
 
 @intelligence_router.get("/briefing")
+@cached(ttl=300, key_func=lambda: "intelligence:briefing:daily")
 def daily_briefing():
     """
     Get daily briefing summary.
@@ -511,6 +520,8 @@ def daily_briefing():
     - Watching items list
     - Portfolio health
     - Top proposal headline
+
+    Cached for 300 seconds (5 minutes).
     """
     try:
         from lib.intelligence import (
@@ -560,9 +571,12 @@ def list_signals(
 
 
 @intelligence_router.get("/signals/summary")
+@cached(ttl=60, key_func=lambda: "intelligence:signals:summary")
 def signals_summary():
     """
     Get signal summary (counts by severity and state).
+
+    Cached for 60 seconds.
     """
     try:
         from lib.intelligence.signals import get_signal_summary
@@ -913,6 +927,7 @@ def score_history_summary():
 
 
 @intelligence_router.post("/scores/record")
+@cache_invalidate("intelligence:*")
 def record_scores():
     """
     Record current scores for all entities.
@@ -921,6 +936,8 @@ def record_scores():
     Should be called once per day (e.g., via cron).
 
     Returns counts of recorded scores by entity type.
+
+    Cache invalidation: Clears all intelligence:* cache entries after recording.
     """
     try:
         from lib.intelligence.scorecard import record_all_scores

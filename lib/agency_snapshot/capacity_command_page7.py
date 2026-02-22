@@ -11,11 +11,11 @@ import logging
 import sqlite3
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
-from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
 from lib import paths
+from lib.compat import StrEnum
 
 logger = logging.getLogger(__name__)
 
@@ -181,10 +181,10 @@ class CapacityCommandPage7Engine:
     def _discover_lanes_from_tasks(self) -> list[str]:
         """Discover actual lanes used in tasks, ordered by task count."""
         rows = self._query_all("""
-            SELECT lane, COUNT(*) as cnt FROM tasks
-            WHERE lane IS NOT NULL AND lane != ''
+            SELECT lane_id AS lane, COUNT(*) as cnt FROM tasks
+            WHERE lane_id IS NOT NULL AND lane_id != ''
             AND status NOT IN ('done', 'completed')
-            GROUP BY lane
+            GROUP BY lane_id
             ORDER BY cnt DESC
             LIMIT 10
         """)
@@ -267,7 +267,7 @@ class CapacityCommandPage7Engine:
         """Load trust state and validate capacity baseline."""
         # Check if capacity_lanes table exists and has valid data
         lanes = self._query_all("""
-            SELECT lane, weekly_hours, buffer_pct
+            SELECT name AS lane, weekly_hours, buffer_pct
             FROM capacity_lanes
             WHERE weekly_hours > 0
         """)
@@ -275,14 +275,12 @@ class CapacityCommandPage7Engine:
         if not lanes:
             # Try to get lanes from tasks
             task_lanes = self._query_all("""
-                SELECT DISTINCT lane FROM tasks WHERE lane IS NOT NULL AND lane != ''
+                SELECT DISTINCT lane_id AS lane FROM tasks WHERE lane_id IS NOT NULL AND lane_id != ''
             """)
             self.capacity_baseline = len(task_lanes) > 0
         else:
             # Validate all lanes have weekly_hours > 0
-            self.capacity_baseline = all(
-                lane.get("weekly_hours", 0) > 0 for lane in lanes
-            )
+            self.capacity_baseline = all(lane.get("weekly_hours", 0) > 0 for lane in lanes)
 
         # Calendar sync
         last_sync = self._query_one("""
@@ -303,7 +301,7 @@ class CapacityCommandPage7Engine:
             self._query_scalar("""
             SELECT COUNT(*) FROM tasks
             WHERE status NOT IN ('done', 'completed')
-            AND (lane IS NOT NULL AND lane != '')
+            AND (lane_id IS NOT NULL AND lane_id != '')
         """)
             or 0
         )
@@ -322,9 +320,7 @@ class CapacityCommandPage7Engine:
         )
 
         if total_tasks > 0:
-            self.duration_missing_pct = (
-                (total_tasks - tasks_with_duration) / total_tasks
-            ) * 100
+            self.duration_missing_pct = ((total_tasks - tasks_with_duration) / total_tasks) * 100
 
         # Reality gap confidence per §5.4
         self._compute_reality_gap_confidence()
@@ -344,9 +340,7 @@ class CapacityCommandPage7Engine:
                 sync_time = datetime.fromisoformat(
                     self.calendar_last_sync_at.replace("Z", "+00:00")
                 )
-                hours_ago = (
-                    self.now - sync_time.replace(tzinfo=None)
-                ).total_seconds() / 3600
+                hours_ago = (self.now - sync_time.replace(tzinfo=None)).total_seconds() / 3600
                 if hours_ago > 24:
                     why_low.append(f"calendar stale ({hours_ago:.0f}h)")
             except (ValueError, TypeError, AttributeError) as e:
@@ -426,7 +420,7 @@ class CapacityCommandPage7Engine:
         # Get configured lanes from capacity_lanes table (fallback)
         configured = {}
         config_rows = self._query_all("""
-            SELECT lane, weekly_hours, buffer_pct
+            SELECT name AS lane, weekly_hours, buffer_pct
             FROM capacity_lanes
         """)
         for row in config_rows:
@@ -468,15 +462,8 @@ class CapacityCommandPage7Engine:
             return task["lane"]
 
         # 2. project.lane_mapping (if task has project_id)
-        if task.get("project_id"):
-            project = self._query_one(
-                """
-                SELECT lane FROM projects WHERE id = ?
-            """,
-                (task["project_id"],),
-            )
-            if project and project.get("lane"):
-                return project["lane"]
+        # NOTE: projects table has no lane column yet; skip this fallback.
+        # When a lane column is added to projects, uncomment and query it.
 
         # 3. assignee.default_lane
         if task.get("assignee"):
@@ -503,7 +490,7 @@ class CapacityCommandPage7Engine:
             # Next 4 hours - urgent tasks due today or overdue
             end_date = self.today.isoformat()
             sql = """
-                SELECT t.id, t.title, t.lane, t.project_id, t.assignee, t.duration_min, t.due_date, t.status,
+                SELECT t.id, t.title, t.lane_id AS lane, t.project_id, t.assignee, t.duration_min, t.due_date, t.status,
                        COALESCE(p.name, t.project) as project
                 FROM tasks t
                 LEFT JOIN projects p ON t.project_id = p.id
@@ -516,7 +503,7 @@ class CapacityCommandPage7Engine:
             # Today's tasks - due today or overdue (need to catch up)
             end_date = self.today.isoformat()
             sql = """
-                SELECT t.id, t.title, t.lane, t.project_id, t.assignee, t.duration_min, t.due_date, t.status,
+                SELECT t.id, t.title, t.lane_id AS lane, t.project_id, t.assignee, t.duration_min, t.due_date, t.status,
                        COALESCE(p.name, t.project) as project
                 FROM tasks t
                 LEFT JOIN projects p ON t.project_id = p.id
@@ -529,7 +516,7 @@ class CapacityCommandPage7Engine:
             # This week's tasks - due within 7 days or overdue
             end_date = (self.today + timedelta(days=7)).isoformat()
             sql = """
-                SELECT t.id, t.title, t.lane, t.project_id, t.assignee, t.duration_min, t.due_date, t.status,
+                SELECT t.id, t.title, t.lane_id AS lane, t.project_id, t.assignee, t.duration_min, t.due_date, t.status,
                        COALESCE(p.name, t.project) as project
                 FROM tasks t
                 LEFT JOIN projects p ON t.project_id = p.id
@@ -608,9 +595,7 @@ class CapacityCommandPage7Engine:
         # Sort events by start time
         sorted_events = []
         for e in events:
-            if not e.get(
-                "is_focus_block"
-            ):  # Only consider non-focus events as blockers
+            if not e.get("is_focus_block"):  # Only consider non-focus events as blockers
                 try:
                     sorted_events.append(
                         {
@@ -676,8 +661,7 @@ class CapacityCommandPage7Engine:
             # Only count actual work, not tracking items
             work_tasks = [t for t in lane_tasks if not is_tracking_item(t)]
             hours_needed = sum(
-                estimate_duration(t.get("title", ""), lane_name) / 60
-                for t in work_tasks
+                estimate_duration(t.get("title", ""), lane_name) / 60 for t in work_tasks
             )
 
             gap_hours = hours_needed - hours_available
@@ -782,8 +766,7 @@ class CapacityCommandPage7Engine:
                     risk_band=risk_band,
                     confidence=Confidence.MED,
                     why_low=["default capacity assumed"]
-                    if hours_available
-                    == 40 * (1 - self.DEFAULT_BUFFER_PCT) * horizon_mult
+                    if hours_available == 40 * (1 - self.DEFAULT_BUFFER_PCT) * horizon_mult
                     else [],
                 )
             )
@@ -922,9 +905,7 @@ class CapacityCommandPage7Engine:
         if self.horizon == Horizon.TODAY:
             return 4.0
         # 30% of effective capacity
-        total_available = sum(
-            lane.effective_capacity for lane in self._lanes_cache.values()
-        )
+        total_available = sum(lane.effective_capacity for lane in self._lanes_cache.values())
         return total_available * 0.30
 
     def _is_move_eligible(
@@ -1026,9 +1007,7 @@ class CapacityCommandPage7Engine:
             controllability=0.7,
         )
 
-    def _create_meeting_overload_move(
-        self, meeting_hours: float, threshold: float
-    ) -> CapacityMove:
+    def _create_meeting_overload_move(self, meeting_hours: float, threshold: float) -> CapacityMove:
         """Create a meeting overload move."""
         excess = meeting_hours - threshold
         return CapacityMove(
@@ -1070,9 +1049,7 @@ class CapacityCommandPage7Engine:
             score=0.0,
             time_to_consequence_hours=None,
             impact_hours=1.5 - largest_focus,
-            confidence=Confidence.HIGH
-            if self.calendar_last_sync_at
-            else Confidence.LOW,
+            confidence=Confidence.HIGH if self.calendar_last_sync_at else Confidence.LOW,
             why_low=[] if self.calendar_last_sync_at else ["no calendar sync"],
             primary_action={
                 "risk": ActionRisk.AUTO.value,
@@ -1276,9 +1253,7 @@ class CapacityCommandPage7Engine:
             key = f"lane:{lane.lane.lower()}"
 
             # Get top 5 tasks driving demand
-            lane_tasks = [
-                t for t in self._tasks_cache if t.get("resolved_lane") == lane.lane
-            ]
+            lane_tasks = [t for t in self._tasks_cache if t.get("resolved_lane") == lane.lane]
             lane_tasks.sort(key=lambda t: -(t.get("duration_min") or 0))
 
             evidence = [
@@ -1305,9 +1280,7 @@ class CapacityCommandPage7Engine:
         for person in people:
             key = f"person:{person.person_id.lower()}"
 
-            person_tasks = [
-                t for t in self._tasks_cache if t.get("assignee") == person.person_id
-            ]
+            person_tasks = [t for t in self._tasks_cache if t.get("assignee") == person.person_id]
             person_tasks.sort(key=lambda t: -(t.get("duration_min") or 0))
 
             evidence = [
@@ -1335,10 +1308,7 @@ class CapacityCommandPage7Engine:
             key = f"move:{move.move_id}"
             entities[key] = {
                 "summary": move.label,
-                "evidence": [
-                    {"type": "ref", "id": eid, "label": eid}
-                    for eid in move.evidence_ids
-                ],
+                "evidence": [{"type": "ref", "id": eid, "label": eid} for eid in move.evidence_ids],
                 "actions": [move.primary_action] + move.secondary_actions,
                 "reason": f"{self.horizon.value} | {move.type.value} | score={move.score:.2f}",
             }
@@ -1402,9 +1372,7 @@ class CapacityCommandPage7Engine:
                 ],
                 "bottleneck_lane": {
                     "lane": bottleneck_lane.lane if bottleneck_lane else None,
-                    "gap_ratio": round(bottleneck_lane.gap_ratio, 2)
-                    if bottleneck_lane
-                    else 0,
+                    "gap_ratio": round(bottleneck_lane.gap_ratio, 2) if bottleneck_lane else 0,
                 }
                 if bottleneck_lane
                 else None,

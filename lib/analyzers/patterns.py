@@ -63,9 +63,7 @@ class PatternAnalyzer:
         for task in tasks:
             if task["status"] in ("completed", "done"):
                 try:
-                    dt = datetime.fromisoformat(
-                        task["updated_at"].replace("Z", "+00:00")
-                    )
+                    dt = datetime.fromisoformat(task["updated_at"].replace("Z", "+00:00"))
                     by_dow[dt.strftime("%A")] += 1
                 except (ValueError, TypeError, AttributeError) as e:
                     logger.debug(
@@ -83,9 +81,7 @@ class PatternAnalyzer:
         for lane in by_lane:
             created = by_lane[lane]["created"]
             completed = by_lane[lane]["completed"]
-            by_lane[lane]["rate"] = (
-                round(completed / created * 100, 1) if created > 0 else 0
-            )
+            by_lane[lane]["rate"] = round(completed / created * 100, 1) if created > 0 else 0
 
         # Find recurring title patterns
         title_counts = defaultdict(int)
@@ -98,9 +94,7 @@ class PatternAnalyzer:
                 title_counts[normalized] += 1
 
         recurring = [
-            {"title": title, "count": count}
-            for title, count in title_counts.items()
-            if count >= 3
+            {"title": title, "count": count} for title, count in title_counts.items() if count >= 3
         ]
         recurring.sort(key=lambda x: x["count"], reverse=True)
 
@@ -110,9 +104,7 @@ class PatternAnalyzer:
         for task in tasks:
             if task["status"] not in ("completed", "done", "cancelled"):
                 try:
-                    updated = datetime.fromisoformat(
-                        task["updated_at"].replace("Z", "+00:00")
-                    )
+                    updated = datetime.fromisoformat(task["updated_at"].replace("Z", "+00:00"))
                     days_stale = (now - updated).days
                     if days_stale >= 7:
                         stale.append(
@@ -185,9 +177,7 @@ class PatternAnalyzer:
                 dt = datetime.fromisoformat(comm["created_at"].replace("Z", "+00:00"))
                 hour_counts[dt.hour] += 1
             except (ValueError, TypeError, AttributeError) as e:
-                logger.debug(
-                    f"Could not parse created_at for communication analysis: {e}"
-                )
+                logger.debug(f"Could not parse created_at for communication analysis: {e}")
 
         peak_hours = sorted(hour_counts.items(), key=lambda x: x[1], reverse=True)[:3]
 
@@ -199,9 +189,7 @@ class PatternAnalyzer:
 
         top_senders = [
             {"email": email, "count": count}
-            for email, count in sorted(
-                sender_counts.items(), key=lambda x: x[1], reverse=True
-            )[:10]
+            for email, count in sorted(sender_counts.items(), key=lambda x: x[1], reverse=True)[:10]
         ]
 
         # Pending responses
@@ -210,9 +198,7 @@ class PatternAnalyzer:
         for comm in comms:
             if comm.get("requires_response") and not comm.get("processed"):
                 try:
-                    created = datetime.fromisoformat(
-                        comm["created_at"].replace("Z", "+00:00")
-                    )
+                    created = datetime.fromisoformat(comm["created_at"].replace("Z", "+00:00"))
                     age_hours = (now - created).total_seconds() / 3600
                     pending.append(
                         {
@@ -223,9 +209,7 @@ class PatternAnalyzer:
                         }
                     )
                 except (ValueError, TypeError, AttributeError) as e:
-                    logger.debug(
-                        f"Could not parse created_at for pending response: {e}"
-                    )
+                    logger.debug(f"Could not parse created_at for pending response: {e}")
 
         pending.sort(key=lambda x: x["age_hours"], reverse=True)
 
@@ -266,9 +250,7 @@ class PatternAnalyzer:
 
         for event in events:
             try:
-                start = datetime.fromisoformat(
-                    event["start_time"].replace("Z", "+00:00")
-                )
+                start = datetime.fromisoformat(event["start_time"].replace("Z", "+00:00"))
                 end_str = event.get("end_time")
                 end = (
                     datetime.fromisoformat(end_str.replace("Z", "+00:00"))
@@ -333,9 +315,7 @@ class PatternAnalyzer:
 
         # Check for pending responses
         comm_patterns = self.analyze_communication_patterns(7)
-        urgent_pending = [
-            p for p in comm_patterns["pending_responses"] if p["age_hours"] > 48
-        ]
+        urgent_pending = [p for p in comm_patterns["pending_responses"] if p["age_hours"] > 48]
         if urgent_pending:
             anomalies.append(
                 {

@@ -57,9 +57,7 @@ def get_ancient_items(days_overdue: int = 180) -> list[dict]:
     return result
 
 
-def archive_ancient_items(
-    days_overdue: int = 365, dry_run: bool = True
-) -> tuple[int, list[str]]:
+def archive_ancient_items(days_overdue: int = 365, dry_run: bool = True) -> tuple[int, list[str]]:
     """
     Archive (cancel) items that are extremely old.
 
@@ -118,9 +116,7 @@ def cleanup_asana_cruft(dry_run: bool = True) -> dict:
             (cutoff_ancient,),
         ).fetchall()
 
-        results["ancient_tasks"] = [
-            {"id": r[0], "what": r[1], "due": r[2]} for r in ancient
-        ]
+        results["ancient_tasks"] = [{"id": r[0], "what": r[1], "due": r[2]} for r in ancient]
 
         # Stale tasks with no client (>6 months, no context)
         stale = conn.execute(
@@ -137,9 +133,7 @@ def cleanup_asana_cruft(dry_run: bool = True) -> dict:
             (cutoff_stale,),
         ).fetchall()
 
-        results["no_context_tasks"] = [
-            {"id": r[0], "what": r[1], "due": r[2]} for r in stale
-        ]
+        results["no_context_tasks"] = [{"id": r[0], "what": r[1], "due": r[2]} for r in stale]
 
     if not dry_run:
         create_backup(tag="pre-cleanup")
@@ -224,9 +218,5 @@ if __name__ == "__main__":
     if report["very_ancient_items"] > 0:
         logger.info("\n=== Cleanup Preview (dry run) ===")
         results = cleanup_asana_cruft(dry_run=True)
-        logger.info(
-            f"Would archive {len(results['ancient_tasks'])} ancient Asana tasks"
-        )
-        logger.info(
-            f"Would archive {len(results['no_context_tasks'])} stale no-context tasks"
-        )
+        logger.info(f"Would archive {len(results['ancient_tasks'])} ancient Asana tasks")
+        logger.info(f"Would archive {len(results['no_context_tasks'])} stale no-context tasks")

@@ -131,9 +131,7 @@ class ProposalService:
                     continue
 
                 # Step 2: Get scope details (hierarchy info)
-                scope_info = get_scope_info(
-                    scope_level, scope_id, signals, self.db_path
-                )
+                scope_info = get_scope_info(scope_level, scope_id, signals, self.db_path)
 
                 # Step 3: Build hierarchy dict for scoring
                 hierarchy = {
@@ -154,9 +152,7 @@ class ProposalService:
                 affected_task_ids = get_affected_task_ids(signals)
 
                 # Step 7: Collect signal IDs and evidence
-                all_signal_ids = [
-                    s.get("signal_id") for s in signals if s.get("signal_id")
-                ]
+                all_signal_ids = [s.get("signal_id") for s in signals if s.get("signal_id")]
                 all_excerpts = []
                 for sig in signals:
                     excerpts = sig.get("excerpt_ids", [])
@@ -200,11 +196,7 @@ class ProposalService:
 
                 # Build impact JSON
                 impact = {
-                    "severity": "critical"
-                    if score > 100
-                    else "high"
-                    if score > 50
-                    else "medium",
+                    "severity": "critical" if score > 100 else "high" if score > 50 else "medium",
                     "signal_count": len(signals),
                     "entity_type": scope_level,
                     "worst_signal": worst_signal_text,
@@ -262,9 +254,9 @@ class ProposalService:
                     # Create new proposal with unique ID based on scope
                     import hashlib
 
-                    scope_hash = hashlib.sha256(
-                        f"{scope_level}:{scope_id}".encode()
-                    ).hexdigest()[:16]
+                    scope_hash = hashlib.sha256(f"{scope_level}:{scope_id}".encode()).hexdigest()[
+                        :16
+                    ]
                     proposal_id = f"prop_{scope_hash}"
 
                     # Build hypotheses from top signals
@@ -385,7 +377,9 @@ class ProposalService:
         if signal_type == "deadline_overdue":
             return f"Task '{value.get('title', 'Unknown')}' is {value.get('days_overdue', '?')} days overdue"
         if signal_type == "deadline_approaching":
-            return f"Task '{value.get('title', 'Unknown')}' due in {value.get('days_until', '?')} days"
+            return (
+                f"Task '{value.get('title', 'Unknown')}' due in {value.get('days_until', '?')} days"
+            )
         if signal_type == "ar_aging_risk":
             return f"${value.get('ar_overdue', 0):,.0f} overdue in {value.get('aging_bucket', 'unknown')} bucket"
         if signal_type == "communication_gap":
@@ -394,9 +388,7 @@ class ProposalService:
             return f"Health: {value.get('current_health', '?')}, Trend: {value.get('trend', '?')}"
         return f"{signal_type}: {str(value)[:100]}"
 
-    def _compute_score(
-        self, signals: list, max_severity: str, total_weight: float
-    ) -> float:
+    def _compute_score(self, signals: list, max_severity: str, total_weight: float) -> float:
         """Compute proposal priority score."""
         severity_scores = {"low": 1, "medium": 2, "high": 4, "critical": 8}
         base = severity_scores.get(max_severity, 1)

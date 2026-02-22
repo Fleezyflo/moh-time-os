@@ -17,9 +17,7 @@ from typing import Any
 from ..artifact_service import decrypt_blob_payload
 from .base import BaseDetector
 
-DB_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "..", "..", "data", "moh_time_os.db"
-)
+DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "moh_time_os.db")
 
 
 class CommitmentDetector(BaseDetector):
@@ -168,11 +166,7 @@ class CommitmentDetector(BaseDetector):
                 # Get payload
                 if payload_ref.startswith("blob:"):
                     blob_ref = payload_ref.replace("blob:", "")
-                    blob_id = (
-                        blob_ref
-                        if blob_ref.startswith("blob_")
-                        else f"blob_{blob_ref[:16]}"
-                    )
+                    blob_id = blob_ref if blob_ref.startswith("blob_") else f"blob_{blob_ref[:16]}"
                     cursor.execute(
                         "SELECT payload FROM artifact_blobs WHERE blob_id = ?",
                         (blob_id,),
@@ -212,8 +206,7 @@ class CommitmentDetector(BaseDetector):
                     )
 
                     linked_entities = [
-                        {"type": r[0], "id": r[1], "confidence": r[2]}
-                        for r in cursor.fetchall()
+                        {"type": r[0], "id": r[1], "confidence": r[2]} for r in cursor.fetchall()
                     ]
 
                     # Primary entity for signal

@@ -8,11 +8,13 @@ import json
 import logging
 import sys
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from lib import paths
 
 from .analyzers import AnalyzerOrchestrator
+from .change_bundles import BundleManager
 from .collectors import CollectorOrchestrator
 from .executor import ExecutorEngine
 from .governance import get_governance
@@ -54,6 +56,7 @@ class AutonomousLoop:
         self.reasoner = ReasonerEngine(store=self.store, governance=self.governance)
         self.executor = ExecutorEngine(store=self.store, governance=self.governance)
         self.notifier = NotificationEngine(self.store, self._load_notification_config())
+        self.bundle_manager = BundleManager()
 
         self.cycle_count = 0
         self.running = False
@@ -101,9 +104,7 @@ class AutonomousLoop:
                 for r in collect_results.values()
                 if isinstance(r, dict) and r.get("success")
             )
-            logger.info(
-                f"  Collected {collected_count} items from {len(collect_results)} sources"
-            )
+            logger.info(f"  Collected {collected_count} items from {len(collect_results)} sources")
 
             # ═══════════════════════════════════════
             # PHASE 1a2: DATA NORMALIZATION
@@ -152,9 +153,7 @@ class AutonomousLoop:
                 lane_results = run_assignment()
                 results["phases"]["lane_assignment"] = lane_results
                 if lane_results.get("changed", 0) > 0:
-                    logger.info(
-                        f"  Reassigned {lane_results['changed']} tasks to lanes"
-                    )
+                    logger.info(f"  Reassigned {lane_results['changed']} tasks to lanes")
             except Exception as e:
                 logger.error(f"Lane assignment error: {e}")
                 results["phases"]["lane_assignment"] = {"error": str(e)}
@@ -168,16 +167,8 @@ class AutonomousLoop:
             results["phases"]["gates"] = gate_results
 
             # Log gate status
-            passed = [
-                g
-                for g, v in gate_results.items()
-                if v is True and not g.endswith("_pct")
-            ]
-            failed = [
-                g
-                for g, v in gate_results.items()
-                if v is False and not g.endswith("_pct")
-            ]
+            passed = [g for g, v in gate_results.items() if v is True and not g.endswith("_pct")]
+            failed = [g for g, v in gate_results.items() if v is False and not g.endswith("_pct")]
             logger.info(f"  Gates: {len(passed)} passed, {len(failed)} failed")
             if failed:
                 logger.warning(f"  Failed gates: {', '.join(failed)}")
@@ -239,7 +230,7 @@ class AutonomousLoop:
                     "reason": "project_gates_failed",
                 }
             else:
-                # PHASE 1b: TIME TRUTH (Tier 0)
+                # PHASE 1b: TIME TRUTH
                 logger.info("▶ Phase 1b: TIME TRUTH")
                 time_truth_results = self._process_time_truth()
                 results["phases"]["time_truth"] = time_truth_results
@@ -247,7 +238,7 @@ class AutonomousLoop:
                     f"  Blocks: {time_truth_results.get('blocks_total', 0)}, Scheduled: {time_truth_results.get('tasks_scheduled', 0)}"
                 )
 
-                # PHASE 1c: COMMITMENT TRUTH (Tier 1)
+                # PHASE 1c: COMMITMENT TRUTH
                 logger.info("▶ Phase 1c: COMMITMENT TRUTH")
                 commitment_results = self._process_commitment_truth()
                 results["phases"]["commitment_truth"] = commitment_results
@@ -255,7 +246,7 @@ class AutonomousLoop:
                     f"  Extracted: {commitment_results.get('extracted', 0)}, Untracked: {commitment_results.get('untracked', 0)}"
                 )
 
-                # PHASE 1d: CAPACITY TRUTH (Tier 2)
+                # PHASE 1d: CAPACITY TRUTH
                 logger.info("▶ Phase 1d: CAPACITY TRUTH")
                 capacity_results = self._process_capacity_truth()
                 results["phases"]["capacity_truth"] = capacity_results
@@ -263,7 +254,7 @@ class AutonomousLoop:
                     f"  Utilization: {capacity_results.get('overall_utilization', 0)}%, Overloaded: {len(capacity_results.get('overloaded_lanes', []))}"
                 )
 
-                # PHASE 1e: CLIENT TRUTH (Tier 3)
+                # PHASE 1e: CLIENT TRUTH
                 logger.info("▶ Phase 1e: CLIENT TRUTH")
                 client_results = self._process_client_truth()
                 results["phases"]["client_truth"] = client_results
@@ -272,13 +263,26 @@ class AutonomousLoop:
                 )
 
             # ═══════════════════════════════════════
+            # PHASE 1f: INTELLIGENCE
+            # Score entities, detect signals/patterns,
+            # persist snapshots, emit events
+            # ═══════════════════════════════════════
+            logger.info("▶ Phase 1f: INTELLIGENCE")
+            intel_results = self._intelligence_phase()
+            results["phases"]["intelligence"] = intel_results
+            logger.info(
+                f"  Scores: {intel_results.get('scores_recorded', 0)}, "
+                f"Signals: {intel_results.get('signals_detected', 0)}, "
+                f"Patterns: {intel_results.get('patterns_detected', 0)}, "
+                f"Events: {intel_results.get('events_emitted', 0)}"
+            )
+
+            # ═══════════════════════════════════════
             # PHASE 2-5: ANALYZE/SURFACE/REASON/EXECUTE
             # SKIP if data_integrity fails
             # ═══════════════════════════════════════
             if not data_integrity_ok:
-                logger.warning(
-                    "  SKIPPING analyze/surface/reason/execute (data_integrity failed)"
-                )
+                logger.warning("  SKIPPING analyze/surface/reason/execute (data_integrity failed)")
                 results["phases"]["analyze"] = {
                     "skipped": True,
                     "reason": "data_integrity_failed",
@@ -301,9 +305,7 @@ class AutonomousLoop:
                 analyze_results = self.analyzers.analyze_all()
                 results["phases"]["analyze"] = analyze_results
 
-                priority_count = analyze_results.get("priority", {}).get(
-                    "total_items", 0
-                )
+                priority_count = analyze_results.get("priority", {}).get("total_items", 0)
                 anomaly_count = analyze_results.get("anomalies", {}).get("total", 0)
                 logger.info(f"  Priority queue: {priority_count} items")
                 logger.info(f"  Anomalies detected: {anomaly_count}")
@@ -312,9 +314,7 @@ class AutonomousLoop:
                 logger.info("▶ Phase 3: SURFACE")
                 surface_results = self._surface_critical_items(analyze_results)
                 results["phases"]["surface"] = surface_results
-                logger.info(
-                    f"  Created {surface_results.get('notifications', 0)} notifications"
-                )
+                logger.info(f"  Created {surface_results.get('notifications', 0)} notifications")
 
                 # PHASE 3b: SEND NOTIFICATIONS
                 logger.info("▶ Phase 3b: SEND NOTIFICATIONS")
@@ -335,9 +335,7 @@ class AutonomousLoop:
                 logger.info("▶ Phase 4: REASON")
                 reason_results = self.reasoner.process_cycle()
                 results["phases"]["reason"] = reason_results
-                logger.info(
-                    f"  Created {reason_results.get('decisions_created', 0)} decisions"
-                )
+                logger.info(f"  Created {reason_results.get('decisions_created', 0)} decisions")
 
             # ═══════════════════════════════════════
             # PHASE 5: EXECUTE
@@ -347,12 +345,8 @@ class AutonomousLoop:
             execute_results = self.executor.process_pending_actions()
             results["phases"]["execute"] = {
                 "processed": len(execute_results),
-                "succeeded": len(
-                    [r for r in execute_results if r.get("status") == "done"]
-                ),
-                "failed": len(
-                    [r for r in execute_results if r.get("status") == "failed"]
-                ),
+                "succeeded": len([r for r in execute_results if r.get("status") == "done"]),
+                "failed": len([r for r in execute_results if r.get("status") == "failed"]),
             }
             logger.info(f"  Executed {len(execute_results)} actions")
 
@@ -394,16 +388,14 @@ class AutonomousLoop:
         )
 
         logger.info("═══════════════════════════════════════")
-        logger.info(
-            f"  CYCLE {self.cycle_count} COMPLETE ({results['duration_ms']:.0f}ms)"
-        )
+        logger.info(f"  CYCLE {self.cycle_count} COMPLETE ({results['duration_ms']:.0f}ms)")
         logger.info("═══════════════════════════════════════\n")
 
         return results
 
     def _process_client_truth(self) -> dict:
         """
-        Process Tier 3: Client Truth.
+        Process Client Truth.
 
         - Compute health for key clients
         - Surface at-risk clients
@@ -466,9 +458,183 @@ class AutonomousLoop:
 
         return results
 
+    def _intelligence_phase(self) -> dict:
+        """
+        Run intelligence pipeline: score → signal → pattern → cost → events.
+
+        Each sub-step is isolated so a failure in one does not block the others.
+        Results are persisted to their respective tables for downstream consumption
+        by the preparation engine (Brief 24) and conversational interface (Brief 25).
+        """
+        from pathlib import Path
+
+        from lib.intelligence.cost_to_serve import CostToServeEngine
+        from lib.intelligence.health_unifier import HealthUnifier
+        from lib.intelligence.patterns import detect_all_patterns
+        from lib.intelligence.persistence import (
+            CostPersistence,
+            IntelligenceEventStore,
+            PatternPersistence,
+            event_from_pattern,
+            event_from_signal_change,
+            snapshot_from_cost_profile,
+            snapshot_from_pattern_evidence,
+        )
+        from lib.intelligence.scorecard import (
+            score_all_clients,
+            score_all_persons,
+            score_all_projects,
+        )
+        from lib.intelligence.signals import detect_all_signals, update_signal_state
+
+        db_path = Path(self.store.db_path)
+
+        results = {
+            "scores_recorded": 0,
+            "signals_detected": 0,
+            "signal_state_changes": 0,
+            "patterns_detected": 0,
+            "cost_snapshots": 0,
+            "events_emitted": 0,
+        }
+
+        # --- 1. Score all entities and persist to score_history ---
+        try:
+            health_unifier = HealthUnifier(db_path)
+
+            for score_fn, entity_type in [
+                (score_all_clients, "client"),
+                (score_all_projects, "project"),
+                (score_all_persons, "person"),
+            ]:
+                try:
+                    scorecards = score_fn(db_path)
+                    for sc in scorecards:
+                        if sc.get("composite_score") is None:
+                            continue
+                        # Build dimensions dict from dimension list
+                        dims = {}
+                        for dim in sc.get("dimensions", []):
+                            dim_name = dim.get("dimension") or dim.get("name", "unknown")
+                            dims[dim_name] = dim.get("score")
+                        health_unifier.record_health(
+                            entity_type=entity_type,
+                            entity_id=sc["entity_id"],
+                            composite_score=sc["composite_score"],
+                            dimensions=dims,
+                            data_completeness=sc.get("data_completeness", 0),
+                        )
+                        results["scores_recorded"] += 1
+                except Exception as e:
+                    logger.error(f"Intelligence: {entity_type} scoring failed: {e}")
+        except Exception as e:
+            logger.error(f"Intelligence: scoring init failed: {e}")
+
+        # --- 2. Detect signals and update signal state ---
+        try:
+            signal_results = detect_all_signals(db_path)
+            detected = signal_results.get("signals", [])
+            results["signals_detected"] = len(detected)
+
+            if detected:
+                state_results = update_signal_state(detected, db_path)
+                results["signal_state_changes"] = (
+                    state_results.get("new", 0)
+                    + state_results.get("escalated", 0)
+                    + state_results.get("cleared", 0)
+                )
+        except Exception as e:
+            logger.error(f"Intelligence: signal detection failed: {e}")
+
+        # --- 3. Detect patterns and persist snapshots ---
+        pattern_persistence = PatternPersistence(db_path)
+        pattern_list = []
+        try:
+            pattern_results = detect_all_patterns(db_path)
+            pattern_list = pattern_results.get("patterns", [])
+            results["patterns_detected"] = len(pattern_list)
+
+            for p_dict in pattern_list:
+                try:
+                    snapshot = snapshot_from_pattern_evidence(p_dict)
+                    pattern_persistence.record_pattern(snapshot)
+                except Exception as e:
+                    logger.error(
+                        f"Intelligence: failed to persist pattern "
+                        f"{p_dict.get('pattern_id', '?')}: {e}"
+                    )
+        except Exception as e:
+            logger.error(f"Intelligence: pattern detection failed: {e}")
+
+        # --- 4. Compute and persist cost-to-serve snapshots ---
+        cost_persistence = CostPersistence(db_path)
+        try:
+            cost_engine = CostToServeEngine(db_path)
+            portfolio = cost_engine.compute_portfolio_profitability()
+            if portfolio and hasattr(portfolio, "client_profiles"):
+                for profile in portfolio.client_profiles:
+                    try:
+                        cost_dict = {
+                            "effort_score": profile.effort_score,
+                            "efficiency_ratio": profile.efficiency_ratio,
+                            "profitability_band": profile.profitability_band,
+                            "cost_drivers": getattr(profile, "cost_drivers", []),
+                        }
+                        snapshot = snapshot_from_cost_profile(
+                            cost_dict, "client", profile.client_id
+                        )
+                        cost_persistence.record_snapshot(snapshot)
+                        results["cost_snapshots"] += 1
+                    except Exception as e:
+                        logger.error(
+                            f"Intelligence: cost snapshot failed for "
+                            f"{getattr(profile, 'client_id', '?')}: {e}"
+                        )
+        except Exception as e:
+            logger.error(f"Intelligence: cost-to-serve failed: {e}")
+
+        # --- 5. Emit intelligence events for critical/warning findings ---
+        event_store = IntelligenceEventStore(db_path)
+        try:
+            # Events from signal state changes
+            if results["signals_detected"] > 0:
+                signal_data = signal_results.get("signals", [])
+                for sig in signal_data:
+                    sev = sig.get("severity", "").lower()
+                    if sev in ("critical", "warning"):
+                        try:
+                            event = event_from_signal_change(
+                                signal_id=sig.get("signal_id", sig.get("id", "")),
+                                entity_type=sig.get("entity_type", ""),
+                                entity_id=sig.get("entity_id", ""),
+                                severity=sev,
+                                change_type="detected",
+                                details=sig,
+                            )
+                            event_store.publish(event)
+                            results["events_emitted"] += 1
+                        except Exception as e:
+                            logger.error(f"Intelligence: signal event emit failed: {e}")
+
+            # Events from pattern detection
+            for p_dict in pattern_list:
+                p_sev = p_dict.get("severity", "").lower()
+                if p_sev in ("critical", "warning", "structural"):
+                    try:
+                        event = event_from_pattern(p_dict, change_type="detected")
+                        event_store.publish(event)
+                        results["events_emitted"] += 1
+                    except Exception as e:
+                        logger.error(f"Intelligence: pattern event emit failed: {e}")
+
+        except Exception as e:
+            logger.error(f"Intelligence: event emission failed: {e}")
+
+        return results
+
     def _process_capacity_truth(self) -> dict:
         """
-        Process Tier 2: Capacity Truth.
+        Process Capacity Truth.
 
         - Calculate lane utilization
         - Check for overloaded lanes
@@ -529,7 +695,7 @@ class AutonomousLoop:
 
     def _process_commitment_truth(self) -> dict:
         """
-        Process Tier 1: Commitment Truth.
+        Process Commitment Truth.
 
         - Extract commitments from recent emails
         - Track untracked commitments
@@ -564,9 +730,7 @@ class AutonomousLoop:
                 results["emails_processed"] += 1
 
                 # Mark email as processed
-                self.store.query(
-                    "UPDATE communications SET processed = 1 WHERE id = ?", [email_id]
-                )
+                self.store.query("UPDATE communications SET processed = 1 WHERE id = ?", [email_id])
 
             # Count untracked
             results["untracked"] = len(manager.get_untracked_commitments())
@@ -645,7 +809,7 @@ class AutonomousLoop:
 
     def _process_time_truth(self) -> dict:
         """
-        Process Tier 0: Time Truth.
+        Process Time Truth.
 
         - Generate time blocks for today
         - Run auto-scheduler for unscheduled tasks
@@ -697,9 +861,7 @@ class AutonomousLoop:
                 self._create_notification(
                     title=anomaly.get("title", "Alert"),
                     body=anomaly.get("description", ""),
-                    priority="high"
-                    if anomaly.get("severity") == "critical"
-                    else "normal",
+                    priority="high" if anomaly.get("severity") == "critical" else "normal",
                     type="anomaly",
                     data=anomaly,
                 )
@@ -720,9 +882,7 @@ class AutonomousLoop:
 
         return {"notifications": notifications_created}
 
-    def _create_notification(
-        self, title: str, body: str, priority: str, type: str, data: dict
-    ):
+    def _create_notification(self, title: str, body: str, priority: str, type: str, data: dict):
         """Create a notification record."""
         from uuid import uuid4
 
@@ -810,9 +970,7 @@ class AutonomousLoop:
     def get_status(self) -> dict[str, Any]:
         """Get current system status."""
         # Get latest cycle
-        latest_cycle = self.store.query(
-            "SELECT * FROM cycle_logs ORDER BY created_at DESC LIMIT 1"
-        )
+        latest_cycle = self.store.query("SELECT * FROM cycle_logs ORDER BY created_at DESC LIMIT 1")
 
         # Get collector status
         collector_status = self.collectors.get_status()
@@ -822,9 +980,7 @@ class AutonomousLoop:
 
         # Get counts
         task_count = self.store.count("tasks", "status != 'done'")
-        email_count = self.store.count(
-            "communications", "requires_response = 1 AND processed = 0"
-        )
+        email_count = self.store.count("communications", "requires_response = 1 AND processed = 0")
         event_count = self.store.count(
             "events",
             "datetime(start_time) >= datetime('now') AND datetime(start_time) <= datetime('now', '+24 hours')",
@@ -855,9 +1011,7 @@ def run_once():
 def main():
     """CLI entry point."""
     parser = argparse.ArgumentParser(description="MOH TIME OS Autonomous Loop")
-    parser.add_argument(
-        "command", choices=["run", "status", "sync"], help="Command to run"
-    )
+    parser.add_argument("command", choices=["run", "status", "sync"], help="Command to run")
     parser.add_argument("--source", help="Specific source to sync")
 
     args = parser.parse_args()

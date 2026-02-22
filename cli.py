@@ -6,7 +6,6 @@ Quick command-line access to the system for A integration.
 
 Usage:
     python cli.py status          # System status + summary
-    python cli.py brief           # Morning brief
     python cli.py overdue         # Overdue items
     python cli.py open            # All open items
     python cli.py client <name>   # Client status
@@ -32,7 +31,6 @@ from lib import (
     find_client,
     find_project,
     generate_client_status,
-    generate_morning_brief,
     generate_status_summary,
     get_item,
     # Health
@@ -58,12 +56,6 @@ def cmd_status(args):
         return 1
 
     print(generate_status_summary())
-    return 0
-
-
-def cmd_brief(args):
-    """Morning brief."""
-    print(generate_morning_brief())
     return 0
 
 
@@ -333,9 +325,6 @@ def main():
     # status
     subparsers.add_parser("status", help="System status")
 
-    # brief
-    subparsers.add_parser("brief", help="Morning brief")
-
     # overdue
     p = subparsers.add_parser("overdue", help="Overdue items")
     p.add_argument("--all", action="store_true", help="Include ancient items")
@@ -401,7 +390,6 @@ def main():
     # Dispatch
     commands = {
         "status": cmd_status,
-        "brief": cmd_brief,
         "overdue": cmd_overdue,
         "open": cmd_open,
         "waiting": cmd_waiting,

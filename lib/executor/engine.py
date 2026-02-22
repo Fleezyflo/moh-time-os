@@ -8,6 +8,7 @@ from datetime import datetime
 
 from lib import paths
 
+from ..change_bundles import BundleManager
 from ..governance import GovernanceEngine, get_governance
 from ..notifier import NotificationEngine
 from ..state_store import StateStore, get_store
@@ -55,6 +56,8 @@ class ExecutorEngine:
             "email_label": EmailHandler(self.store),
         }
 
+        self.bundle_manager = BundleManager()
+
     def _load_notification_config(self) -> dict:
         """Load notification config from governance.yaml."""
         from pathlib import Path
@@ -68,8 +71,16 @@ class ExecutorEngine:
                 return config.get("notification_settings", {})
         return {}
 
-    def process_pending_actions(self) -> list[dict]:
-        """Process all pending approved actions."""
+    def process_pending_actions(self, cycle_id: str = None) -> list[dict]:
+        """
+        Process all pending approved actions.
+
+        Args:
+            cycle_id: Optional cycle ID to track bundles per cycle
+
+        Returns:
+            List of execution results (with bundle tracking if cycle_id provided)
+        """
         results = []
 
         # Get approved actions
@@ -78,15 +89,25 @@ class ExecutorEngine:
         )
 
         for action in actions:
-            result = self._execute_action(action)
+            result = self._execute_action(action, cycle_id=cycle_id)
             results.append(result)
 
         return results
 
-    def _execute_action(self, action: dict) -> dict:
-        """Execute a single action."""
+    def _execute_action(self, action: dict, cycle_id: str = None) -> dict:
+        """
+        Execute a single action.
+
+        Args:
+            action: The action to execute
+            cycle_id: Optional cycle ID for bundle tracking
+
+        Returns:
+            Execution result dict
+        """
         action_id = action["id"]
         action_type = action["type"]
+        bundle_id = None
 
         logger.info(f"Executing action {action_id}: {action_type}")
 
@@ -105,6 +126,22 @@ class ExecutorEngine:
                 else action["payload"]
             )
 
+            # Create bundle for tracking if cycle_id provided
+            if cycle_id:
+                change_data = {
+                    "type": action_type,
+                    "id": action_id,
+                    "target": action_type.split("_")[0],
+                    "data": payload,
+                }
+                bundle_id = self.bundle_manager.start_bundle(
+                    cycle_id=cycle_id,
+                    domain=action_type.split("_")[0],
+                    description=f"Action: {action_type}",
+                    changes=[change_data],
+                    pre_images={},
+                )
+
             # Update status to executing
             self._update_action_status(action_id, "executing")
 
@@ -114,20 +151,36 @@ class ExecutorEngine:
             # Update with success
             self._update_action_status(action_id, "done", result=result)
 
+            # Mark bundle as applied if created
+            if bundle_id and cycle_id:
+                self.bundle_manager.apply_bundle(bundle_id)
+
             logger.info(f"Action {action_id} completed successfully")
-            return {"id": action_id, "status": "done", "result": result}
+            return {
+                "id": action_id,
+                "status": "done",
+                "result": result,
+                "bundle_id": bundle_id,
+            }
 
         except Exception as e:
             error = str(e)
             logger.error(f"Action {action_id} failed: {error}")
 
+            # Mark bundle as failed if created
+            if bundle_id and cycle_id:
+                self.bundle_manager.fail_bundle(bundle_id, error)
+
             # Update with failure
             retry_count = action.get("retry_count", 0) + 1
-            self._update_action_status(
-                action_id, "failed", error=error, retry_count=retry_count
-            )
+            self._update_action_status(action_id, "failed", error=error, retry_count=retry_count)
 
-            return {"id": action_id, "status": "failed", "error": error}
+            return {
+                "id": action_id,
+                "status": "failed",
+                "error": error,
+                "bundle_id": bundle_id,
+            }
 
     def _update_action_status(
         self,
@@ -153,9 +206,7 @@ class ExecutorEngine:
 
         self.store.update("actions", action_id, update)
 
-    def queue_action(
-        self, action_type: str, payload: dict, requires_approval: bool = True
-    ) -> str:
+    def queue_action(self, action_type: str, payload: dict, requires_approval: bool = True) -> str:
         """Queue a new action for execution."""
         from uuid import uuid4
 
@@ -227,6 +278,4 @@ class ExecutorEngine:
 
     def get_action_history(self, limit: int = 50) -> list[dict]:
         """Get recent action history."""
-        return self.store.query(
-            "SELECT * FROM actions ORDER BY created_at DESC LIMIT ?", [limit]
-        )
+        return self.store.query("SELECT * FROM actions ORDER BY created_at DESC LIMIT ?", [limit])

@@ -38,3 +38,10 @@ patterns:
   min_occurrences: 3
   confidence_threshold: 0.7
   lookback_days: 30
+
+# Recency weighting for score normalization (Brief 31 TC-3.1)
+recency_weighting:
+  enabled: true
+  half_life_business_days: 14     # data halves in weight every 14 business days
+  min_weight: 0.05                # floor — old data still counts slightly
+  trend_direction_threshold: 0.3  # slope magnitude for improving/declining

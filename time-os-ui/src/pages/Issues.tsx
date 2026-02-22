@@ -11,21 +11,21 @@ import * as api from '../lib/api';
 
 const stateIcons: Record<string, { icon: string; color: string }> = {
   // v29 states
-  detected: { icon: '◎', color: 'text-blue-300' },
-  surfaced: { icon: '○', color: 'text-blue-400' },
+  detected: { icon: '◎', color: 'text-[var(--info)]' },
+  surfaced: { icon: '○', color: 'text-[var(--info)]' },
   snoozed: { icon: '◷', color: 'text-amber-400' },
   acknowledged: { icon: '◉', color: 'text-purple-400' },
   addressing: { icon: '⊕', color: 'text-cyan-400' },
   awaiting_resolution: { icon: '◷', color: 'text-amber-400' },
-  regression_watch: { icon: '◎', color: 'text-yellow-400' },
-  closed: { icon: '✓', color: 'text-green-400' },
-  regressed: { icon: '⊘', color: 'text-red-400' },
+  regression_watch: { icon: '◎', color: 'text-[var(--warning)]' },
+  closed: { icon: '✓', color: 'text-[var(--success)]' },
+  regressed: { icon: '⊘', color: 'text-[var(--danger)]' },
   // Legacy states (for backward compat)
-  open: { icon: '○', color: 'text-blue-400' },
+  open: { icon: '○', color: 'text-[var(--info)]' },
   monitoring: { icon: '◉', color: 'text-purple-400' },
   awaiting: { icon: '◷', color: 'text-amber-400' },
-  blocked: { icon: '⊘', color: 'text-red-400' },
-  resolved: { icon: '✓', color: 'text-green-400' },
+  blocked: { icon: '⊘', color: 'text-[var(--danger)]' },
+  resolved: { icon: '✓', color: 'text-[var(--success)]' },
 };
 
 // Convert v29 severity to legacy priority number
@@ -263,7 +263,7 @@ export function Issues() {
   if (loading) return <SkeletonCardList count={5} />;
   if (error)
     return (
-      <div className="text-red-400 p-8 text-center">Error loading issues: {error.message}</div>
+      <div className="text-[var(--danger)] p-8 text-center">Error loading issues: {error.message}</div>
     );
 
   // Render a single issue row
@@ -281,12 +281,12 @@ export function Issues() {
           setSelectedIssue(issue);
           setDrawerOpen(true);
         }}
-        className="bg-slate-800/50 rounded border border-slate-700/50 p-3 cursor-pointer hover:border-slate-600 transition-colors"
+        className="bg-[var(--grey-dim)]/50 rounded border border-[var(--grey)]/50 p-3 cursor-pointer hover:border-[var(--grey-light)] transition-colors"
         style={{ marginLeft: indent * 16 }}
       >
         <div className="flex items-center gap-2">
           <span className={`text-sm ${stateConfig.color}`}>{stateConfig.icon}</span>
-          <span className="flex-1 text-sm text-slate-300 truncate">
+          <span className="flex-1 text-sm text-[var(--grey-light)] truncate">
             {title.split(':').slice(1).join(':').trim() || title}
           </span>
           <span className={`text-xs px-1.5 py-0.5 rounded ${pColor}`}>{pLabel}</span>
@@ -301,10 +301,10 @@ export function Issues() {
     const hasChildren = node.children.length > 0 || node.issues.length > 0;
     const priorityColor =
       node.maxPriority >= 80
-        ? 'text-red-400'
+        ? 'text-[var(--danger)]'
         : node.maxPriority >= 60
-          ? 'text-orange-400'
-          : 'text-slate-400';
+          ? 'text-[var(--warning)]'
+          : 'text-[var(--grey-light)]';
 
     return (
       <div key={node.id} className="mb-1">
@@ -312,14 +312,14 @@ export function Issues() {
         <div
           className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-colors ${
             depth === 0
-              ? 'bg-slate-800 hover:bg-slate-700'
-              : 'bg-slate-800/30 hover:bg-slate-800/50'
+              ? 'bg-[var(--grey-dim)] hover:bg-[var(--grey)]'
+              : 'bg-[var(--grey-dim)]/30 hover:bg-[var(--grey-dim)]/50'
           }`}
           style={{ marginLeft: depth * 16 }}
           onClick={() => hasChildren && toggleNode(node.id)}
         >
           {hasChildren && (
-            <span className="text-slate-500 w-4 text-center">{isExpanded ? '▼' : '▶'}</span>
+            <span className="text-[var(--grey)] w-4 text-center">{isExpanded ? '▼' : '▶'}</span>
           )}
           {!hasChildren && <span className="w-4" />}
 
@@ -328,7 +328,7 @@ export function Issues() {
           </span>
 
           <span
-            className={`flex-1 font-medium ${depth === 0 ? 'text-slate-100' : 'text-slate-300'}`}
+            className={`flex-1 font-medium ${depth === 0 ? 'text-[var(--white)]' : 'text-[var(--grey-light)]'}`}
           >
             {node.name}
           </span>
@@ -339,8 +339,8 @@ export function Issues() {
                 node.tier === 'A'
                   ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
                   : node.tier === 'B'
-                    ? 'bg-blue-500/20 text-blue-400 border-blue-500/30'
-                    : 'bg-slate-500/20 text-slate-400 border-slate-500/30'
+                    ? 'bg-[var(--info)]/20 text-[var(--info)] border-blue-500/30'
+                    : 'bg-slate-500/20 text-[var(--grey-light)] border-slate-500/30'
               }`}
             >
               {node.tier}
@@ -370,25 +370,25 @@ export function Issues() {
     <div>
       {/* Summary Banner */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-        <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-          <div className="text-2xl font-bold text-slate-100">{allIssues.length}</div>
-          <div className="text-sm text-slate-400">Total Issues</div>
+        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-[var(--grey)]">
+          <div className="text-2xl font-bold text-[var(--white)]">{allIssues.length}</div>
+          <div className="text-sm text-[var(--grey-light)]">Total Issues</div>
         </div>
-        <div className="bg-slate-800 rounded-lg p-4 border border-red-900/50">
-          <div className="text-2xl font-bold text-red-400">{criticalCount}</div>
-          <div className="text-sm text-slate-400">Critical (80+)</div>
+        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-[var(--danger)]/50">
+          <div className="text-2xl font-bold text-[var(--danger)]">{criticalCount}</div>
+          <div className="text-sm text-[var(--grey-light)]">Critical (80+)</div>
         </div>
-        <div className="bg-slate-800 rounded-lg p-4 border border-orange-900/50">
-          <div className="text-2xl font-bold text-orange-400">{highCount}</div>
-          <div className="text-sm text-slate-400">High (60-79)</div>
+        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-[var(--warning)]/50">
+          <div className="text-2xl font-bold text-[var(--warning)]">{highCount}</div>
+          <div className="text-sm text-[var(--grey-light)]">High (60-79)</div>
         </div>
-        <div className="bg-slate-800 rounded-lg p-4 border border-blue-900/50">
-          <div className="text-2xl font-bold text-blue-400">{openCount}</div>
-          <div className="text-sm text-slate-400">Open</div>
+        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-blue-900/50">
+          <div className="text-2xl font-bold text-[var(--info)]">{openCount}</div>
+          <div className="text-sm text-[var(--grey-light)]">Open</div>
         </div>
-        <div className="bg-slate-800 rounded-lg p-4 border border-purple-900/50">
+        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-purple-900/50">
           <div className="text-2xl font-bold text-purple-400">{blockedCount}</div>
-          <div className="text-sm text-slate-400">Blocked</div>
+          <div className="text-sm text-[var(--grey-light)]">Blocked</div>
         </div>
       </div>
 
@@ -396,16 +396,16 @@ export function Issues() {
         <h1 className="text-2xl font-semibold">Issues Inbox</h1>
         <div className="flex flex-wrap items-center gap-2">
           {/* View toggle */}
-          <div className="flex rounded overflow-hidden border border-slate-700">
+          <div className="flex rounded overflow-hidden border border-[var(--grey)]">
             <button
               onClick={() => setViewMode('flat')}
-              className={`px-3 py-1.5 text-xs ${viewMode === 'flat' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+              className={`px-3 py-1.5 text-xs ${viewMode === 'flat' ? 'bg-blue-600 text-[var(--white)]' : 'bg-[var(--grey-dim)] text-[var(--grey-light)] hover:bg-[var(--grey)]'}`}
             >
               Flat
             </button>
             <button
               onClick={() => setViewMode('hierarchy')}
-              className={`px-3 py-1.5 text-xs ${viewMode === 'hierarchy' ? 'bg-blue-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+              className={`px-3 py-1.5 text-xs ${viewMode === 'hierarchy' ? 'bg-blue-600 text-[var(--white)]' : 'bg-[var(--grey-dim)] text-[var(--grey-light)] hover:bg-[var(--grey)]'}`}
             >
               Hierarchy
             </button>
@@ -416,10 +416,10 @@ export function Issues() {
             placeholder="Search issues..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded text-sm w-48"
+            className="px-3 py-1.5 bg-[var(--grey-dim)] border border-[var(--grey)] rounded text-sm w-48"
           />
           <select
-            className="px-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-sm"
+            className="px-2 py-1.5 bg-[var(--grey-dim)] border border-[var(--grey)] rounded text-sm"
             value={stateFilter}
             onChange={(e) => setStateFilter(e.target.value)}
           >
@@ -440,7 +440,7 @@ export function Issues() {
               <button
                 key={String(value)}
                 onClick={() => setPriorityFilter(value as number | 'all')}
-                className={`px-2 py-1 text-xs rounded ${priorityFilter === value ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'}`}
+                className={`px-2 py-1 text-xs rounded ${priorityFilter === value ? 'bg-blue-600 text-[var(--white)]' : 'bg-[var(--grey)] text-[var(--grey-light)] hover:bg-[var(--grey-light)]'}`}
               >
                 {label}
               </button>
@@ -450,14 +450,14 @@ export function Issues() {
       </div>
 
       {search || stateFilter !== 'all' || priorityFilter !== 'all' ? (
-        <p className="text-sm text-slate-500 mb-4">
+        <p className="text-sm text-[var(--grey)] mb-4">
           {filteredIssues.length} of {allIssues.length} issues
         </p>
       ) : null}
 
       {filteredIssues.length === 0 ? (
-        <div className="bg-slate-800/50 rounded-lg border border-slate-700 p-8 text-center">
-          <p className="text-slate-400">No issues match your filters</p>
+        <div className="bg-[var(--grey-dim)]/50 rounded-lg border border-[var(--grey)] p-8 text-center">
+          <p className="text-[var(--grey-light)]">No issues match your filters</p>
         </div>
       ) : viewMode === 'hierarchy' ? (
         /* Hierarchy View */
@@ -482,13 +482,13 @@ export function Issues() {
                   setSelectedIssue(issue);
                   setDrawerOpen(true);
                 }}
-                className="bg-slate-800 rounded-lg border border-slate-700 p-4 cursor-pointer hover:border-slate-600 transition-colors"
+                className="bg-[var(--grey-dim)] rounded-lg border border-[var(--grey)] p-4 cursor-pointer hover:border-[var(--grey-light)] transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <span className={`text-xl ${stateConfig.color}`}>{stateConfig.icon}</span>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-medium text-slate-200 truncate">{title}</h3>
-                    <div className="flex items-center gap-2 mt-1 text-xs text-slate-500">
+                    <h3 className="font-medium text-[var(--white)] truncate">{title}</h3>
+                    <div className="flex items-center gap-2 mt-1 text-xs text-[var(--grey)]">
                       <span>{issueType}</span>
                       <span>•</span>
                       <span>
@@ -520,3 +520,5 @@ export function Issues() {
     </div>
   );
 }
+
+export default Issues;

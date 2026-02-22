@@ -4,7 +4,7 @@ import re
 import uuid
 from collections import Counter
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 from typing import Any
 
 from lib import paths
@@ -73,7 +73,7 @@ def run_discovery(db_path: str, cfg: DiscoveryConfig) -> dict[str, Any]:
     report: list[str] = []
     report.append("# MOH Time OS — Discovery Report (v0.2)\n")
     report.append(f"Account: `{cfg.account}`\n")
-    report.append(f"Window: `{iso(start)}` → `{iso(end)}` (UTC)\n")
+    report.append(f"Window: `{iso(start)}` → `{iso(end)}` (timezone.utc)\n")
     report.append(
         f"Included: gmail={cfg.include_gmail} calendar={cfg.include_calendar} tasks={cfg.include_tasks} chat={cfg.include_chat}\n"
     )
@@ -90,9 +90,7 @@ def run_discovery(db_path: str, cfg: DiscoveryConfig) -> dict[str, Any]:
             con.close()
             return {"ok": False, "error": "calendar calendars failed"}
 
-        calendars = (
-            cal_res.data.get("calendars") or cal_res.data.get("data") or cal_res.data
-        )
+        calendars = cal_res.data.get("calendars") or cal_res.data.get("data") or cal_res.data
         insert_raw_event(
             con,
             id=f"calendar:calendars:{cfg.account}",
@@ -140,11 +138,7 @@ def run_discovery(db_path: str, cfg: DiscoveryConfig) -> dict[str, Any]:
             if not ev_res.ok:
                 error_res = ev_res
                 break
-            chunk = (
-                (ev_res.data or {}).get("events")
-                or (ev_res.data or {}).get("data")
-                or []
-            )
+            chunk = (ev_res.data or {}).get("events") or (ev_res.data or {}).get("data") or []
             if not isinstance(chunk, list):
                 chunk = []
             events.extend(chunk)
@@ -169,12 +163,8 @@ def run_discovery(db_path: str, cfg: DiscoveryConfig) -> dict[str, Any]:
             hours_by_weekday: dict[int, list[float]] = {i: [] for i in range(7)}
 
             for e in events:
-                s = (e.get("start") or {}).get("dateTime") or (
-                    e.get("start") or {}
-                ).get("date")
-                en = (e.get("end") or {}).get("dateTime") or (e.get("end") or {}).get(
-                    "date"
-                )
+                s = (e.get("start") or {}).get("dateTime") or (e.get("start") or {}).get("date")
+                en = (e.get("end") or {}).get("dateTime") or (e.get("end") or {}).get("date")
                 if s:
                     by_day[s[:10]] += 1
                 if s and en and "T" in s and "T" in en:
@@ -204,9 +194,7 @@ def run_discovery(db_path: str, cfg: DiscoveryConfig) -> dict[str, Any]:
             for wd in range(7):
                 vals = hours_by_weekday[wd]
                 if vals:
-                    avg_hours_by_weekday[weekday_names[wd]] = round(
-                        sum(vals) / len(vals), 1
-                    )
+                    avg_hours_by_weekday[weekday_names[wd]] = round(sum(vals) / len(vals), 1)
                 else:
                     avg_hours_by_weekday[weekday_names[wd]] = 0
 
@@ -234,9 +222,7 @@ def run_discovery(db_path: str, cfg: DiscoveryConfig) -> dict[str, Any]:
             overloaded_days = [(d, h) for d, h in hours_by_day.items() if h > 8]
             overloaded_days.sort(key=lambda x: -x[1])
             if overloaded_days:
-                report.append(
-                    f"\n⚠️ **Overloaded days (>8h blocked):** {len(overloaded_days)}\n"
-                )
+                report.append(f"\n⚠️ **Overloaded days (>8h blocked):** {len(overloaded_days)}\n")
                 for d, h in overloaded_days[:5]:
                     report.append(f"- {d}: {h:.1f}h\n")
 
@@ -280,9 +266,7 @@ def run_discovery(db_path: str, cfg: DiscoveryConfig) -> dict[str, Any]:
             urgent_re = re.compile(r"\b(urgent|asap|today|eod|deadline)\b", re.I)
             for m in msgs:
                 frm = m.get("from") or m.get("headers", {}).get("From") or ""
-                email_match = re.search(
-                    r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", frm, re.I
-                )
+                email_match = re.search(r"[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}", frm, re.I)
                 if email_match:
                     domains[_safe_email_domain(email_match.group(0))] += 1
                 subj = m.get("subject") or m.get("headers", {}).get("Subject") or ""
@@ -302,21 +286,15 @@ def run_discovery(db_path: str, cfg: DiscoveryConfig) -> dict[str, Any]:
     # Tasks (optional)
     if cfg.include_tasks:
         report.append("\n## Google Tasks baseline\n")
-        tsummary = run_tasks_discovery(
-            con, account=cfg.account, include_completed=False
-        )
+        tsummary = run_tasks_discovery(con, account=cfg.account, include_completed=False)
         report.append(f"Task lists found: **{len(tsummary.get('tasklists', []))}**\n")
         report.append(f"Open tasks (sample): **{tsummary.get('openTasks')}**\n")
 
         # Overdue breakdown
         overdue = tsummary.get("overdueOpenTasks", 0)
         overdue_health = tsummary.get("overdueHealth", "unknown")
-        health_emoji = {"critical": "🔴", "warning": "🟡", "ok": "🟢"}.get(
-            overdue_health, "⚪"
-        )
-        report.append(
-            f"Overdue open tasks: **{overdue}** {health_emoji} ({overdue_health})\n"
-        )
+        health_emoji = {"critical": "🔴", "warning": "🟡", "ok": "🟢"}.get(overdue_health, "⚪")
+        report.append(f"Overdue open tasks: **{overdue}** {health_emoji} ({overdue_health})\n")
 
         overdue_breakdown = tsummary.get("overdueBreakdown", {})
         if overdue > 0:
@@ -373,9 +351,7 @@ def run_discovery(db_path: str, cfg: DiscoveryConfig) -> dict[str, Any]:
         )
         report.append(f"Spaces sampled: **{summary.get('spacesSampled')}**\n")
         report.append(f"Messages sampled: **{summary.get('totalMessagesSampled')}**\n")
-        report.append(
-            f"Urgent message rate (sample): **{summary.get('urgentMessageRate'):.4f}**\n"
-        )
+        report.append(f"Urgent message rate (sample): **{summary.get('urgentMessageRate'):.4f}**\n")
         report.append(f"Urgent messages: **{summary.get('urgentMessages')}**\n")
 
         # Sensitivity signals
@@ -389,12 +365,8 @@ def run_discovery(db_path: str, cfg: DiscoveryConfig) -> dict[str, Any]:
         mention_stats = summary.get("mentionStats", {})
         if mention_stats.get("totalMentions"):
             report.append("\n### Mention activity\n")
-            report.append(
-                f"Total @mentions: **{mention_stats.get('totalMentions')}**\n"
-            )
-            report.append(
-                f"Unique people mentioned: **{mention_stats.get('uniqueMentioned')}**\n"
-            )
+            report.append(f"Total @mentions: **{mention_stats.get('totalMentions')}**\n")
+            report.append(f"Unique people mentioned: **{mention_stats.get('uniqueMentioned')}**\n")
             top_mentioned = mention_stats.get("topMentioned", [])[:10]
             if top_mentioned:
                 report.append("Most mentioned:\n")
@@ -408,22 +380,16 @@ def run_discovery(db_path: str, cfg: DiscoveryConfig) -> dict[str, Any]:
 
         # Signal summary
         signals = summary.get("signals", {})
-        report.append(
-            f"\n**Urgency level:** {signals.get('urgencyLevel', 'unknown')}\n"
-        )
+        report.append(f"\n**Urgency level:** {signals.get('urgencyLevel', 'unknown')}\n")
         if signals.get("sensitivityFlag"):
-            report.append(
-                "⚠️ **Sensitivity flag:** Messages with sensitive content detected\n"
-            )
+            report.append("⚠️ **Sensitivity flag:** Messages with sensitive content detected\n")
 
     proposal = {
         "version": "MOHOS_CONFIG/v0.2",
         "account": cfg.account,
         "windowDays": cfg.days,
         "defaults": {
-            "scheduling.sew": {
-                "weekday": {"start": "10:00", "end": "20:30", "tz": "Asia/Dubai"}
-            },
+            "scheduling.sew": {"weekday": {"start": "10:00", "end": "20:30", "tz": "Asia/Dubai"}},
             "modes": {
                 "calendar": "observe",
                 "tasks": "observe",

@@ -10,9 +10,9 @@ import re
 import sqlite3
 import subprocess
 import sys
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
-from collections import defaultdict
 
 # Paths
 REPO_ROOT = Path(__file__).parent.parent
@@ -54,12 +54,9 @@ def get_table_inventory(db_path: Path) -> dict:
         try:
             col_cursor = conn.execute(f'PRAGMA table_info("{table_name}")')
             for col in col_cursor.fetchall():
-                columns.append({
-                    "name": col[1],
-                    "type": col[2],
-                    "notnull": bool(col[3]),
-                    "pk": bool(col[5])
-                })
+                columns.append(
+                    {"name": col[1], "type": col[2], "notnull": bool(col[3]), "pk": bool(col[5])}
+                )
         except Exception:
             pass
 
@@ -72,13 +69,15 @@ def get_table_inventory(db_path: Path) -> dict:
         except Exception:
             pass
 
-        tables.append({
-            "name": table_name,
-            "type": obj_type,
-            "row_count": row_count,
-            "columns": columns,
-            "indexes": indexes
-        })
+        tables.append(
+            {
+                "name": table_name,
+                "type": obj_type,
+                "row_count": row_count,
+                "columns": columns,
+                "indexes": indexes,
+            }
+        )
 
         total_rows += row_count
         if obj_type == "view":
@@ -91,7 +90,7 @@ def get_table_inventory(db_path: Path) -> dict:
         "tables": tables,
         "total_tables": len([t for t in tables if t["type"] == "table"]),
         "total_views": view_count,
-        "total_rows": total_rows
+        "total_rows": total_rows,
     }
 
 
@@ -112,12 +111,12 @@ def build_import_index(repo_root: Path) -> dict:
 
             # Find all imports
             # "from X import Y" or "from X.Y import Z"
-            for match in re.finditer(r'^from\s+([\w.]+)\s+import', content, re.MULTILINE):
+            for match in re.finditer(r"^from\s+([\w.]+)\s+import", content, re.MULTILINE):
                 module = match.group(1)
                 import_index[module].append(rel_path)
 
             # "import X" or "import X.Y"
-            for match in re.finditer(r'^import\s+([\w.]+)', content, re.MULTILINE):
+            for match in re.finditer(r"^import\s+([\w.]+)", content, re.MULTILINE):
                 module = match.group(1)
                 import_index[module].append(rel_path)
         except Exception:
@@ -175,14 +174,16 @@ def get_module_inventory(repo_root: Path, lib_dirs: list, import_index: dict) ->
                             if importer != str_rel_path:
                                 imported_by.add(importer)
 
-            modules.append({
-                "path": str_rel_path,
-                "module_name": module_names[0],
-                "size_bytes": stat.st_size,
-                "line_count": line_count,
-                "imported_by": sorted(list(imported_by)),
-                "import_count": len(imported_by)
-            })
+            modules.append(
+                {
+                    "path": str_rel_path,
+                    "module_name": module_names[0],
+                    "size_bytes": stat.st_size,
+                    "line_count": line_count,
+                    "imported_by": sorted(imported_by),
+                    "import_count": len(imported_by),
+                }
+            )
 
     orphaned = [m for m in modules if m["import_count"] == 0]
 
@@ -190,7 +191,7 @@ def get_module_inventory(repo_root: Path, lib_dirs: list, import_index: dict) ->
         "files": modules,
         "total_modules": len(modules),
         "orphaned_count": len(orphaned),
-        "orphaned_modules": [m["path"] for m in orphaned]
+        "orphaned_modules": [m["path"] for m in orphaned],
     }
 
 
@@ -217,17 +218,19 @@ def get_endpoint_inventory(repo_root: Path) -> dict:
                 # Find the function name in subsequent lines
                 func_name = "unknown"
                 for j in range(i + 1, min(i + 5, len(lines))):
-                    func_match = re.search(r'(?:async\s+)?def\s+(\w+)', lines[j])
+                    func_match = re.search(r"(?:async\s+)?def\s+(\w+)", lines[j])
                     if func_match:
                         func_name = func_match.group(1)
                         break
 
-                routes.append({
-                    "path": path,
-                    "method": method.upper(),
-                    "function": func_name,
-                    "router": router_name
-                })
+                routes.append(
+                    {
+                        "path": path,
+                        "method": method.upper(),
+                        "function": func_name,
+                        "router": router_name,
+                    }
+                )
 
         return routes
 
@@ -238,7 +241,7 @@ def get_endpoint_inventory(repo_root: Path) -> dict:
         "spec_router": spec_router_routes,
         "server_legacy": server_routes,
         "total_active": len(spec_router_routes),
-        "total_legacy": len(server_routes)
+        "total_legacy": len(server_routes),
     }
 
 
@@ -248,11 +251,7 @@ def get_ui_inventory(ui_dir: Path) -> dict:
     api_calls = []
 
     if not ui_dir.exists():
-        return {
-            "files": [],
-            "total_components": 0,
-            "api_calls": []
-        }
+        return {"files": [], "total_components": 0, "api_calls": []}
 
     extensions = [".tsx", ".jsx", ".ts", ".js"]
 
@@ -269,35 +268,36 @@ def get_ui_inventory(ui_dir: Path) -> dict:
 
             # Find exported components
             component_names = []
-            for match in re.finditer(r'export\s+(?:default\s+)?(?:function|const|class)\s+(\w+)', content):
+            for match in re.finditer(
+                r"export\s+(?:default\s+)?(?:function|const|class)\s+(\w+)", content
+            ):
                 component_names.append(match.group(1))
-            for match in re.finditer(r'export\s+\{\s*([^}]+)\s*\}', content):
+            for match in re.finditer(r"export\s+\{\s*([^}]+)\s*\}", content):
                 names = [n.strip().split(" as ")[0] for n in match.group(1).split(",")]
                 component_names.extend([n for n in names if n])
 
             # Find API calls
             file_api_calls = []
-            for match in re.finditer(r'(?:fetch|get|post|put|delete|patch)\s*\(\s*[`"\']([^`"\']*(?:api|/v2)[^`"\']*)[`"\']', content, re.IGNORECASE):
+            for match in re.finditer(
+                r'(?:fetch|get|post|put|delete|patch)\s*\(\s*[`"\']([^`"\']*(?:api|/v2)[^`"\']*)[`"\']',
+                content,
+                re.IGNORECASE,
+            ):
                 endpoint = match.group(1)
                 if endpoint not in file_api_calls:
                     file_api_calls.append(endpoint)
-                    api_calls.append({
-                        "file": str(rel_path),
-                        "endpoint": endpoint
-                    })
+                    api_calls.append({"file": str(rel_path), "endpoint": endpoint})
 
-            components.append({
-                "path": str(rel_path),
-                "components": component_names,
-                "api_calls": file_api_calls,
-                "line_count": len(content.splitlines())
-            })
+            components.append(
+                {
+                    "path": str(rel_path),
+                    "components": component_names,
+                    "api_calls": file_api_calls,
+                    "line_count": len(content.splitlines()),
+                }
+            )
 
-    return {
-        "files": components,
-        "total_components": len(components),
-        "api_calls": api_calls
-    }
+    return {"files": components, "total_components": len(components), "api_calls": api_calls}
 
 
 def run_tests(repo_root: Path) -> dict:
@@ -308,19 +308,19 @@ def run_tests(repo_root: Path) -> dict:
             cwd=str(repo_root),
             capture_output=True,
             text=True,
-            timeout=300
+            timeout=300,
         )
 
         output = result.stdout + result.stderr
 
         # Parse output
-        match = re.search(r'(\d+)\s+passed', output)
+        match = re.search(r"(\d+)\s+passed", output)
         passed = int(match.group(1)) if match else 0
 
-        match = re.search(r'(\d+)\s+failed', output)
+        match = re.search(r"(\d+)\s+failed", output)
         failed = int(match.group(1)) if match else 0
 
-        match = re.search(r'(\d+)\s+error', output)
+        match = re.search(r"(\d+)\s+error", output)
         errors = int(match.group(1)) if match else 0
 
         return {
@@ -328,7 +328,7 @@ def run_tests(repo_root: Path) -> dict:
             "passed": passed,
             "failed": failed,
             "errors": errors,
-            "all_passing": failed == 0 and errors == 0
+            "all_passing": failed == 0 and errors == 0,
         }
     except Exception as e:
         return {
@@ -337,7 +337,7 @@ def run_tests(repo_root: Path) -> dict:
             "failed": 0,
             "errors": 1,
             "error_message": str(e),
-            "all_passing": False
+            "all_passing": False,
         }
 
 
@@ -354,7 +354,9 @@ def main():
     # Step 2: Table inventory
     print("Collecting table inventory...")
     database = get_table_inventory(DB_PATH)
-    print(f"✓ Found {database['total_tables']} tables, {database['total_views']} views, {database['total_rows']:,} total rows")
+    print(
+        f"✓ Found {database['total_tables']} tables, {database['total_views']} views, {database['total_rows']:,} total rows"
+    )
 
     # Build import index once (single pass)
     print("Building import index...")
@@ -364,17 +366,23 @@ def main():
     # Step 3: Module inventory
     print("Collecting module inventory...")
     modules = get_module_inventory(REPO_ROOT, LIB_DIRS, import_index)
-    print(f"✓ Found {modules['total_modules']} modules, {modules['orphaned_count']} potentially orphaned")
+    print(
+        f"✓ Found {modules['total_modules']} modules, {modules['orphaned_count']} potentially orphaned"
+    )
 
     # Step 4: Endpoint inventory
     print("Collecting endpoint inventory...")
     endpoints = get_endpoint_inventory(REPO_ROOT)
-    print(f"✓ Found {endpoints['total_active']} active endpoints, {endpoints['total_legacy']} legacy endpoints")
+    print(
+        f"✓ Found {endpoints['total_active']} active endpoints, {endpoints['total_legacy']} legacy endpoints"
+    )
 
     # Step 5: UI inventory
     print("Collecting UI inventory...")
     ui_components = get_ui_inventory(UI_DIR)
-    print(f"✓ Found {ui_components['total_components']} UI files, {len(ui_components['api_calls'])} API calls")
+    print(
+        f"✓ Found {ui_components['total_components']} UI files, {len(ui_components['api_calls'])} API calls"
+    )
 
     # Step 6: Test baseline
     print("Running test suite...")
@@ -388,7 +396,7 @@ def main():
         "modules": modules,
         "endpoints": endpoints,
         "ui_components": ui_components,
-        "tests": tests
+        "tests": tests,
     }
 
     # Save

@@ -14,43 +14,43 @@ Live data verification (run against actual DB):
 - No crashes on sparse data
 """
 
-import pytest
 from pathlib import Path
 
+import pytest
+
+from lib.intelligence.scorecard import (
+    get_entities_by_classification,
+    get_score_distribution,
+    score_all_clients,
+    score_all_persons,
+    score_all_projects,
+    score_client,
+    score_person,
+    score_portfolio,
+    score_project,
+)
 from lib.intelligence.scoring import (
-    EntityType,
-    ScoreRange,
-    NormMethod,
-    ScoringDimension,
     CLIENT_DIMENSIONS,
-    PROJECT_DIMENSIONS,
     PERSON_DIMENSIONS,
     PORTFOLIO_DIMENSIONS,
-    normalize_percentile,
-    normalize_threshold,
-    normalize_relative,
-    score_dimension,
+    PROJECT_DIMENSIONS,
+    EntityType,
+    NormMethod,
+    ScoreRange,
+    ScoringDimension,
     classify_score,
+    normalize_percentile,
+    normalize_relative,
+    normalize_threshold,
+    score_dimension,
     score_to_range,
     validate_dimensions,
 )
 
-from lib.intelligence.scorecard import (
-    score_client,
-    score_project,
-    score_person,
-    score_portfolio,
-    score_all_clients,
-    score_all_projects,
-    score_all_persons,
-    get_entities_by_classification,
-    get_score_distribution,
-)
-
-
 # =============================================================================
 # NORMALIZATION UNIT TESTS
 # =============================================================================
+
 
 class TestNormalizePercentile:
     """Tests for percentile normalization."""
@@ -182,6 +182,7 @@ class TestNormalizeRelative:
 # DIMENSION SCORING TESTS
 # =============================================================================
 
+
 class TestScoreDimension:
     """Tests for dimension scoring."""
 
@@ -260,6 +261,7 @@ class TestClassifyScore:
 # VALIDATION TESTS
 # =============================================================================
 
+
 class TestDimensionValidation:
     """Tests for dimension definition validation."""
 
@@ -284,6 +286,7 @@ class TestDimensionValidation:
 # SCORECARD INTEGRATION TESTS (against live DB)
 # =============================================================================
 
+
 class TestScorecardIntegration:
     """Integration tests for scorecard computation using fixture database."""
 
@@ -296,6 +299,7 @@ class TestScorecardIntegration:
         """score_client returns valid scorecard structure."""
         # Get a client ID from the database
         from lib.query_engine import QueryEngine
+
         engine = QueryEngine(db_path)
         clients = engine.client_portfolio_overview()
 
@@ -334,6 +338,7 @@ class TestScorecardIntegration:
     def test_score_project_returns_valid_structure(self, db_path):
         """score_project returns valid scorecard structure."""
         from lib.query_engine import QueryEngine
+
         engine = QueryEngine(db_path)
         projects = engine.projects_by_health(min_tasks=1)
 
@@ -432,5 +437,7 @@ class TestEdgeCases:
             assert entity["composite_classification"] == target_class
 
         # Count should match
-        expected_count = sum(1 for c in all_clients if c.get("composite_classification") == target_class)
+        expected_count = sum(
+            1 for c in all_clients if c.get("composite_classification") == target_class
+        )
         assert len(filtered) == expected_count

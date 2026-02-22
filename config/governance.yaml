@@ -39,21 +39,15 @@ emergency:
     window_minutes: 5
 notification_settings:
   batching:
-    briefs:
-      daily: 09:00
-      eod: '19:30'
-      midday: '13:00'
     low_priority:
       enabled: true
       interval_minutes: 60
       max_batch_size: 10
   channels:
-    clawdbot:
-      default_channel: telegram
-      default_to: '5629458720'
+    google_chat:
       enabled: true
-      gateway_url: http://127.0.0.1:18789
-      token: e8b18308104005157f57252173c0cef311ede96b485d98d3
+      webhook_url: "${MOH_GCHAT_WEBHOOK_URL}"
+      dry_run: false
     email:
       enabled: false
     push:
@@ -71,22 +65,14 @@ notification_settings:
     timezone: Asia/Dubai
   types:
     alert:
-      channels:
-      - clawdbot
       default_priority: high
     decision:
-      channels:
-      - clawdbot
       default_priority: high
       require_action: true
     insight:
       batch: true
-      channels:
-      - clawdbot
       default_priority: low
     reminder:
-      channels:
-      - clawdbot
       default_priority: normal
 rate_limits:
   calendar_updates: 20

@@ -10,6 +10,7 @@ Per MASTER_SPEC.md §5:
 
 import logging
 import sqlite3
+from pathlib import Path
 from typing import Any
 
 from lib import paths
@@ -116,7 +117,7 @@ class ResolutionQueue:
                 SELECT 'invoice', id, 'missing_due_date', 2
                 FROM invoices
                 WHERE status IN ('sent', 'overdue')
-                AND paid_date IS NULL
+                AND payment_date IS NULL
                 AND due_date IS NULL
                 AND NOT EXISTS (SELECT 1 FROM resolution_queue
                     WHERE entity_type = 'invoice' AND entity_id = invoices.id
@@ -130,7 +131,7 @@ class ResolutionQueue:
                 SELECT 'invoice', id, 'missing_client', 2
                 FROM invoices
                 WHERE status IN ('sent', 'overdue')
-                AND paid_date IS NULL
+                AND payment_date IS NULL
                 AND client_id IS NULL
                 AND NOT EXISTS (SELECT 1 FROM resolution_queue
                     WHERE entity_type = 'invoice' AND entity_id = invoices.id

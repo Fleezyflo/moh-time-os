@@ -14,9 +14,17 @@ import logging
 import os
 import sqlite3
 import sys
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+# Python 3.11+ compatibility: UTC constant
+try:
+    from datetime import UTC  # Python 3.11+
+except ImportError:
+    import datetime as _dtmod  # noqa: F811
+
+    UTC = _dtmod.timezone.utc  # noqa
 
 from lib import paths
 

@@ -5,8 +5,9 @@ Tests for lib/query_engine.py cross-entity intelligence queries.
 Uses fixture DB for deterministic testing.
 """
 
-import pytest
 from pathlib import Path
+
+import pytest
 
 from lib.query_engine import QueryEngine, get_engine
 
@@ -323,11 +324,7 @@ class TestPeriodComparison:
         if not sample_client_id:
             pytest.skip("No clients with data")
 
-        result = engine.client_metrics_in_period(
-            sample_client_id,
-            "2024-01-01",
-            "2025-01-01"
-        )
+        result = engine.client_metrics_in_period(sample_client_id, "2024-01-01", "2025-01-01")
         assert isinstance(result, dict)
         assert "tasks_created" in result
         assert "invoices_issued" in result
@@ -338,9 +335,7 @@ class TestPeriodComparison:
             pytest.skip("No clients with data")
 
         result = engine.compare_client_periods(
-            sample_client_id,
-            ("2024-01-01", "2024-06-30"),
-            ("2024-07-01", "2024-12-31")
+            sample_client_id, ("2024-01-01", "2024-06-30"), ("2024-07-01", "2024-12-31")
         )
 
         assert "period_a" in result
@@ -354,9 +349,7 @@ class TestPeriodComparison:
             pytest.skip("No clients with data")
 
         result = engine.compare_client_periods(
-            sample_client_id,
-            ("2024-01-01", "2024-06-30"),
-            ("2024-07-01", "2024-12-31")
+            sample_client_id, ("2024-01-01", "2024-06-30"), ("2024-07-01", "2024-12-31")
         )
 
         a_tasks = result["period_a"]["metrics"]["tasks_created"]
@@ -382,11 +375,7 @@ class TestTrajectoryFunctions:
         if not sample_client_id:
             pytest.skip("No clients with data")
 
-        result = engine.client_trajectory(
-            sample_client_id,
-            window_size_days=30,
-            num_windows=3
-        )
+        result = engine.client_trajectory(sample_client_id, window_size_days=30, num_windows=3)
 
         assert "windows" in result
         assert len(result["windows"]) == 3
@@ -407,11 +396,7 @@ class TestTrajectoryFunctions:
 
     def test_portfolio_trajectory_returns_list(self, engine):
         """portfolio_trajectory returns list of client trajectories."""
-        result = engine.portfolio_trajectory(
-            window_size_days=30,
-            num_windows=3,
-            min_activity=10
-        )
+        result = engine.portfolio_trajectory(window_size_days=30, num_windows=3, min_activity=10)
 
         assert isinstance(result, list)
         if result:

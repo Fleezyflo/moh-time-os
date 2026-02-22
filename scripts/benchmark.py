@@ -20,18 +20,18 @@ import json
 import statistics
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 # Performance budgets (in milliseconds)
 BUDGETS = {
-    "normalize_client_id": 0.1,      # 0.1ms per call
-    "schema_validation": 50.0,       # 50ms for full schema check
-    "collector_sync": 5000.0,        # 5s for full collector sync
-    "api_health": 100.0,             # 100ms for health endpoint
-    "api_clients_list": 500.0,       # 500ms for clients list
-    "json_parse_safe": 0.5,          # 0.5ms per JSON parse
+    "normalize_client_id": 0.1,  # 0.1ms per call
+    "schema_validation": 50.0,  # 50ms for full schema check
+    "collector_sync": 5000.0,  # 5s for full collector sync
+    "api_health": 100.0,  # 100ms for health endpoint
+    "api_clients_list": 500.0,  # 500ms for clients list
+    "json_parse_safe": 0.5,  # 0.5ms per JSON parse
 }
 
 
@@ -105,6 +105,7 @@ def run_benchmarks() -> list[BenchmarkResult]:
     # Benchmark: normalize_client_id
     try:
         from lib.normalize import normalize_client_id
+
         result = benchmark(
             "normalize_client_id",
             lambda: normalize_client_id("Test Client Name"),
@@ -117,6 +118,7 @@ def run_benchmarks() -> list[BenchmarkResult]:
     # Benchmark: JSON safe parse
     try:
         from lib.safety.json_parse import safe_json_loads
+
         test_json = '{"key": "value", "nested": {"a": 1, "b": 2}}'
         result = benchmark(
             "json_parse_safe",
@@ -131,12 +133,14 @@ def run_benchmarks() -> list[BenchmarkResult]:
     try:
         import sqlite3
         import tempfile
+
         from lib.db import init_db
         from lib.safety.schema import SchemaAssertion
 
         # Create temp DB
         fd, path = tempfile.mkstemp(suffix=".db")
         import os
+
         os.close(fd)
 
         conn = sqlite3.connect(path)

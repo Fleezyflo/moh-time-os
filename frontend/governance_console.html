@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOH TIME OS — Data Governance</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1" crossorigin="anonymous"></script>
+    <style>
+        :root {
+            --bg:#0a0e17;--surface:#111827;--surface-2:#1a2332;--border:#1f2937;
+            --text:#e5e7eb;--dim:#9ca3af;--accent:#3b82f6;--green:#10b981;
+            --red:#ef4444;--amber:#f59e0b;--purple:#8b5cf6;--cyan:#06b6d4;--radius:12px;
+        }
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+        .dashboard{max-width:1440px;margin:0 auto;padding:24px;}
+        header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border);}
+        .logo{display:flex;align-items:center;gap:14px;}
+        .logo-mark{width:40px;height:40px;background:linear-gradient(135deg,var(--purple),var(--cyan));border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:white;}
+        h1{font-size:22px;font-weight:700;letter-spacing:-0.5px;}
+        .subtitle{color:var(--dim);font-size:13px;margin-top:2px;}
+        .nav{display:flex;gap:6px;margin-bottom:24px;}
+        .nav a{padding:8px 16px;border-radius:8px;color:var(--dim);text-decoration:none;font-size:13px;font-weight:500;border:1px solid transparent;}
+        .nav a:hover{color:var(--text);border-color:var(--border);}
+        .nav a.active{background:rgba(139,92,246,0.1);border-color:var(--purple);color:var(--purple);font-weight:600;}
+
+        .section-title{font-size:16px;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+        .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:24px;}
+        .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px;}
+        .grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+        .grid-5{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-bottom:24px;}
+        .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:20px;}
+        .card-title{font-size:14px;font-weight:600;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;}
+        .mini-stat{text-align:center;padding:16px;}
+        .mini-stat .val{font-size:32px;font-weight:800;letter-spacing:-1px;}
+        .mini-stat .label{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:0.5px;margin-top:4px;}
+        .mini-stat .sub{font-size:12px;margin-top:6px;}
+
+        .status-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:16px;font-size:11px;font-weight:600;}
+        .pill-green{background:rgba(16,185,129,0.15);color:var(--green);}
+        .pill-amber{background:rgba(245,158,11,0.15);color:var(--amber);}
+        .pill-red{background:rgba(239,68,68,0.15);color:var(--red);}
+        .pill-blue{background:rgba(59,130,246,0.15);color:var(--accent);}
+        .pill-purple{background:rgba(139,92,246,0.15);color:var(--purple);}
+        .pill-cyan{background:rgba(6,182,212,0.15);color:var(--cyan);}
+
+        /* Table catalog */
+        .catalog-table{width:100%;border-collapse:collapse;font-size:13px;}
+        .catalog-table th{text-align:left;color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:0.5px;padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;}
+        .catalog-table th:hover{color:var(--text);}
+        .catalog-table td{padding:8px 10px;border-bottom:1px solid rgba(31,41,55,0.5);}
+        .catalog-table tr:hover{background:rgba(59,130,246,0.04);}
+        .catalog-table .num{font-variant-numeric:tabular-nums;text-align:right;}
+        .catalog-table .mono{font-family:'SF Mono',Monaco,Consolas,monospace;font-size:12px;}
+
+        /* Sensitivity badge */
+        .sens{display:inline-block;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:700;letter-spacing:0.3px;text-transform:uppercase;}
+        .sens-restricted{background:rgba(239,68,68,0.15);color:var(--red);}
+        .sens-confidential{background:rgba(245,158,11,0.15);color:var(--amber);}
+        .sens-internal{background:rgba(59,130,246,0.15);color:var(--accent);}
+        .sens-public{background:rgba(16,185,129,0.15);color:var(--green);}
+
+        /* Retention bars */
+        .ret-bar-bg{width:100%;height:6px;background:var(--surface-2);border-radius:3px;overflow:hidden;}
+        .ret-bar{height:100%;border-radius:3px;}
+
+        /* Compliance gauge */
+        .gauge-wrap{display:flex;flex-direction:column;align-items:center;gap:12px;}
+        .gauge{position:relative;width:160px;height:80px;overflow:hidden;}
+        .gauge-bg{width:160px;height:160px;border-radius:50%;border:14px solid var(--surface-2);border-bottom-color:transparent;border-left-color:transparent;transform:rotate(225deg);position:absolute;top:0;left:0;}
+        .gauge-fill{width:160px;height:160px;border-radius:50%;border:14px solid transparent;border-top-color:var(--green);border-right-color:var(--green);transform:rotate(225deg);position:absolute;top:0;left:0;transition:clip-path 1s;}
+        .gauge-val{position:absolute;bottom:0;left:50%;transform:translateX(-50%);font-size:28px;font-weight:800;}
+
+        /* Filters */
+        .filter-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+        .filter-btn{padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--dim);font-size:12px;cursor:pointer;font-weight:500;}
+        .filter-btn:hover{border-color:var(--purple);color:var(--purple);}
+        .filter-btn.active{background:rgba(139,92,246,0.12);border-color:var(--purple);color:var(--purple);}
+        .search-box{padding:6px 14px;border-radius:8px;border:1px solid var(--border);background:var(--surface-2);color:var(--text);font-size:12px;width:220px;}
+        .search-box::placeholder{color:var(--dim);}
+        .search-box:focus{outline:none;border-color:var(--purple);}
+
+        /* Checklist */
+        .check-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(31,41,55,0.4);font-size:13px;}
+        .check-item:last-child{border:none;}
+        .check-icon{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;}
+        .check-ok{background:rgba(16,185,129,0.15);color:var(--green);}
+        .check-warn{background:rgba(245,158,11,0.15);color:var(--amber);}
+        .check-fail{background:rgba(239,68,68,0.15);color:var(--red);}
+
+        .scroll-table{max-height:440px;overflow-y:auto;}
+
+        @media(max-width:1024px){.grid-2,.grid-3,.grid-4,.grid-5{grid-template-columns:1fr;}}
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <header>
+        <div class="logo">
+            <div class="logo-mark">DG</div>
+            <div>
+                <h1>Data Governance Console</h1>
+                <div class="subtitle">Classification · Retention · Compliance · Subject Access</div>
+            </div>
+        </div>
+    </header>
+
+    <nav class="nav">
+        <a href="command_center.html">Command Center</a>
+        <a href="ops_dashboard.html">Operations</a>
+        <a href="governance_console.html" class="active">Governance</a>
+        <a href="conversational_ui.html">Ask</a>
+    </nav>
+
+    <!-- KPI Row -->
+    <div class="grid-5">
+        <div class="card mini-stat">
+            <div class="val">109</div>
+            <div class="label">Total Tables</div>
+            <div class="sub" style="color:var(--dim)">Cataloged</div>
+        </div>
+        <div class="card mini-stat">
+            <div class="val" style="color:var(--red);">45</div>
+            <div class="label">PII Tables</div>
+            <div class="sub"><span class="status-pill pill-red">41.3%</span></div>
+        </div>
+        <div class="card mini-stat">
+            <div class="val">397K</div>
+            <div class="label">Total Records</div>
+            <div class="sub" style="color:var(--dim)">All tables</div>
+        </div>
+        <div class="card mini-stat">
+            <div class="val" style="color:var(--green);">87%</div>
+            <div class="label">Compliance Score</div>
+            <div class="sub"><span class="status-pill pill-green">Passing</span></div>
+        </div>
+        <div class="card mini-stat">
+            <div class="val" style="color:var(--amber);">3</div>
+            <div class="label">Policy Warnings</div>
+            <div class="sub"><span class="status-pill pill-amber">Needs attention</span></div>
+        </div>
+    </div>
+
+    <!-- Classification + Compliance Row -->
+    <div class="grid-2">
+        <div class="card">
+            <div class="card-title">Sensitivity Classification <span class="status-pill pill-purple">4 levels</span></div>
+            <canvas id="sensitivityChart" height="200"></canvas>
+        </div>
+        <div class="card">
+            <div class="card-title">Data Volume by Category</div>
+            <canvas id="volumeChart" height="200"></canvas>
+        </div>
+    </div>
+
+    <!-- Compliance Checks -->
+    <h2 class="section-title" style="color:var(--purple);">🛡 Compliance Status</h2>
+    <div class="grid-3" style="margin-bottom:24px;">
+        <div class="card">
+            <div class="card-title">GDPR Readiness</div>
+            <div class="check-item"><div class="check-icon check-ok">✓</div>Data catalog maintained</div>
+            <div class="check-item"><div class="check-icon check-ok">✓</div>PII tables identified (44)</div>
+            <div class="check-item"><div class="check-icon check-ok">✓</div>Subject access search available</div>
+            <div class="check-item"><div class="check-icon check-ok">✓</div>Deletion/anonymization supported</div>
+            <div class="check-item"><div class="check-icon check-warn">!</div>3 PII tables missing retention policy</div>
+            <div class="check-item"><div class="check-icon check-ok">✓</div>Export with PII filtering enabled</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Retention Policies</div>
+            <div class="check-item"><div class="check-icon check-ok">✓</div>chat_messages — 365 days, archive</div>
+            <div class="check-item"><div class="check-icon check-ok">✓</div>calendar_events — 730 days, archive</div>
+            <div class="check-item"><div class="check-icon check-ok">✓</div>gmail_messages — 365 days, archive</div>
+            <div class="check-item"><div class="check-icon check-ok">✓</div>invoices — 2555 days, archive</div>
+            <div class="check-item"><div class="check-icon check-ok">✓</div>cycle_logs — 90 days, delete</div>
+            <div class="check-item"><div class="check-icon check-ok">✓</div>detector_runs — 180 days, delete</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Security Controls</div>
+            <div class="check-item"><div class="check-icon check-ok">✓</div>Database opened read-only mode</div>
+            <div class="check-item"><div class="check-icon check-ok">✓</div>API key authentication active</div>
+            <div class="check-item"><div class="check-icon check-ok">✓</div>Role-based access control</div>
+            <div class="check-item"><div class="check-icon check-ok">✓</div>Rate limiting per role</div>
+            <div class="check-item"><div class="check-icon check-ok">✓</div>Write audit trail enabled</div>
+            <div class="check-item"><div class="check-icon check-ok">✓</div>SHA-256 deletion certificates</div>
+        </div>
+    </div>
+
+    <!-- Data Catalog -->
+    <h2 class="section-title" style="color:var(--cyan);">📋 Data Catalog</h2>
+    <div class="card" style="margin-bottom:24px;">
+        <div class="filter-bar">
+            <button class="filter-btn active" onclick="filterCatalog('all')">All (109)</button>
+            <button class="filter-btn" onclick="filterCatalog('restricted')">Restricted (3)</button>
+            <button class="filter-btn" onclick="filterCatalog('confidential')">Confidential (42)</button>
+            <button class="filter-btn" onclick="filterCatalog('internal')">Internal (7)</button>
+            <button class="filter-btn" onclick="filterCatalog('public')">Public (57)</button>
+            <input type="text" class="search-box" placeholder="Search tables…" oninput="searchCatalog(this.value)">
+        </div>
+        <div class="scroll-table">
+            <table class="catalog-table" id="catalogTable">
+                <thead>
+                    <tr>
+                        <th onclick="sortCatalog('name')">Table Name ↕</th>
+                        <th onclick="sortCatalog('sensitivity')">Sensitivity ↕</th>
+                        <th onclick="sortCatalog('pii')">PII ↕</th>
+                        <th onclick="sortCatalog('rows')" style="text-align:right">Rows ↕</th>
+                        <th onclick="sortCatalog('cols')" style="text-align:right">Columns ↕</th>
+                        <th>Retention</th>
+                    </tr>
+                </thead>
+                <tbody id="catalogBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Retention + Subject Access Row -->
+    <div class="grid-2">
+        <div class="card">
+            <div class="card-title">Retention Policy Coverage</div>
+            <canvas id="retentionChart" height="220"></canvas>
+        </div>
+        <div class="card">
+            <div class="card-title">Subject Access Requests</div>
+            <div style="padding:16px 0;">
+                <div style="text-align:center;margin-bottom:20px;">
+                    <div style="font-size:48px;font-weight:800;color:var(--cyan);">0</div>
+                    <div style="font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:0.5px;">Pending SARs</div>
+                </div>
+                <div class="check-item"><div class="check-icon check-ok">✓</div>Subject search across 108 tables</div>
+                <div class="check-item"><div class="check-icon check-ok">✓</div>Anonymization engine ready</div>
+                <div class="check-item"><div class="check-icon check-ok">✓</div>Deletion certificates with SHA-256</div>
+                <div class="check-item"><div class="check-icon check-ok">✓</div>Audit trail for all deletions</div>
+            </div>
+            <div style="background:var(--surface-2);border-radius:8px;padding:14px;margin-top:8px;">
+                <div style="font-size:12px;color:var(--dim);margin-bottom:6px;">Recent Activity</div>
+                <div style="font-size:13px;display:flex;justify-content:space-between;padding:4px 0;"><span>Last SAR processed</span><span style="color:var(--dim)">—</span></div>
+                <div style="font-size:13px;display:flex;justify-content:space-between;padding:4px 0;"><span>Total processed</span><span>0</span></div>
+                <div style="font-size:13px;display:flex;justify-content:space-between;padding:4px 0;"><span>Avg response time</span><span style="color:var(--dim)">—</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Activity -->
+    <div class="card" style="margin-top:24px;">
+        <div class="card-title">Data Export Activity <span class="status-pill pill-cyan">Last 30 days</span></div>
+        <canvas id="exportChart" height="100"></canvas>
+    </div>
+</div>
+
+<script>
+// ===== DATA CATALOG =====
+const CATALOG_DATA = [
+    {name:"chat_messages",sensitivity:"restricted",pii:true,rows:183244,cols:15,retention:"365d archive",category:"Communications"},
+    {name:"calendar_events",sensitivity:"restricted",pii:true,rows:38643,cols:11,retention:"730d archive",category:"Communications"},
+    {name:"gmail_messages",sensitivity:"restricted",pii:true,rows:255,cols:10,retention:"365d archive",category:"Communications"},
+    {name:"communications",sensitivity:"confidential",pii:true,rows:99,cols:30,retention:null,category:"Communications"},
+    {name:"calendar_attendees",sensitivity:"confidential",pii:true,rows:0,cols:7,retention:"730d archive",category:"Communications"},
+    {name:"calendar_recurrence_rules",sensitivity:"public",pii:false,rows:0,cols:3,retention:"730d archive",category:"Communications"},
+    {name:"chat_attachments",sensitivity:"confidential",pii:true,rows:0,cols:6,retention:"365d archive",category:"Communications"},
+    {name:"chat_reactions",sensitivity:"confidential",pii:true,rows:0,cols:5,retention:"365d archive",category:"Communications"},
+    {name:"chat_space_members",sensitivity:"confidential",pii:true,rows:0,cols:6,retention:"365d archive",category:"Communications"},
+    {name:"chat_space_metadata",sensitivity:"confidential",pii:true,rows:0,cols:7,retention:"365d archive",category:"Communications"},
+    {name:"gmail_attachments",sensitivity:"confidential",pii:true,rows:0,cols:6,retention:"365d archive",category:"Communications"},
+    {name:"gmail_labels",sensitivity:"confidential",pii:true,rows:0,cols:4,retention:"365d archive",category:"Communications"},
+    {name:"gmail_participants",sensitivity:"confidential",pii:true,rows:0,cols:5,retention:"365d archive",category:"Communications"},
+    {name:"clients",sensitivity:"confidential",pii:true,rows:160,cols:26,retention:"Indefinite",category:"Core"},
+    {name:"people",sensitivity:"confidential",pii:true,rows:71,cols:19,retention:"Indefinite",category:"Core"},
+    {name:"team_members",sensitivity:"confidential",pii:true,rows:31,cols:7,retention:"Indefinite",category:"Core"},
+    {name:"brands",sensitivity:"confidential",pii:true,rows:21,cols:5,retention:"Indefinite",category:"Core"},
+    {name:"identity_profiles",sensitivity:"confidential",pii:true,rows:880,cols:9,retention:"Indefinite",category:"Core"},
+    {name:"identity_claims",sensitivity:"public",pii:false,rows:724,cols:10,retention:"Indefinite",category:"Core"},
+    {name:"access_roles",sensitivity:"confidential",pii:true,rows:4,cols:4,retention:null,category:"Core"},
+    {name:"client_identities",sensitivity:"public",pii:false,rows:4,cols:5,retention:null,category:"Core"},
+    {name:"client_projects",sensitivity:"public",pii:false,rows:0,cols:3,retention:null,category:"Core"},
+    {name:"identity_operations",sensitivity:"public",pii:false,rows:2,cols:8,retention:null,category:"Core"},
+    {name:"client_health_log",sensitivity:"public",pii:false,rows:969,cols:5,retention:"365d archive",category:"Core"},
+    {name:"invoices",sensitivity:"confidential",pii:true,rows:1257,cols:18,retention:"2555d archive",category:"Financial"},
+    {name:"xero_bank_transactions",sensitivity:"confidential",pii:true,rows:0,cols:9,retention:null,category:"Integrations"},
+    {name:"xero_contacts",sensitivity:"confidential",pii:true,rows:0,cols:12,retention:null,category:"Integrations"},
+    {name:"xero_credit_notes",sensitivity:"confidential",pii:true,rows:0,cols:9,retention:null,category:"Integrations"},
+    {name:"xero_line_items",sensitivity:"public",pii:false,rows:0,cols:11,retention:null,category:"Operations"},
+    {name:"xero_tax_rates",sensitivity:"confidential",pii:true,rows:0,cols:4,retention:null,category:"Integrations"},
+    {name:"projects",sensitivity:"confidential",pii:true,rows:354,cols:23,retention:"Indefinite",category:"Operations"},
+    {name:"tasks",sensitivity:"confidential",pii:true,rows:3946,cols:37,retention:"Indefinite",category:"Operations"},
+    {name:"engagements",sensitivity:"confidential",pii:true,rows:354,cols:12,retention:"Indefinite",category:"Operations"},
+    {name:"items",sensitivity:"confidential",pii:true,rows:272,cols:28,retention:null,category:"Operations"},
+    {name:"commitments",sensitivity:"public",pii:false,rows:68,cols:18,retention:"Indefinite",category:"Operations"},
+    {name:"capacity_lanes",sensitivity:"confidential",pii:true,rows:7,cols:9,retention:null,category:"Operations"},
+    {name:"time_blocks",sensitivity:"public",pii:false,rows:89,cols:12,retention:null,category:"Operations"},
+    {name:"item_history",sensitivity:"public",pii:false,rows:450,cols:7,retention:"180d delete",category:"Operations"},
+    {name:"inbox_items_v29",sensitivity:"public",pii:false,rows:122,cols:28,retention:"90d delete",category:"Operations"},
+    {name:"asana_project_map",sensitivity:"confidential",pii:true,rows:36,cols:4,retention:null,category:"Operations"},
+    {name:"asana_subtasks",sensitivity:"confidential",pii:true,rows:0,cols:8,retention:null,category:"Operations"},
+    {name:"asana_task_dependencies",sensitivity:"public",pii:false,rows:0,cols:4,retention:null,category:"Operations"},
+    {name:"engagement_transitions",sensitivity:"public",pii:false,rows:0,cols:9,retention:null,category:"Operations"},
+    {name:"drive_files",sensitivity:"confidential",pii:true,rows:17722,cols:9,retention:"Indefinite",category:"Documents"},
+    {name:"docs_documents",sensitivity:"confidential",pii:true,rows:318,cols:9,retention:"Indefinite",category:"Documents"},
+    {name:"artifacts",sensitivity:"confidential",pii:true,rows:4070,cols:10,retention:"365d archive",category:"Documents"},
+    {name:"artifact_excerpts",sensitivity:"internal",pii:false,rows:42415,cols:9,retention:"365d archive",category:"Documents"},
+    {name:"artifact_blobs",sensitivity:"internal",pii:false,rows:4367,cols:7,retention:"365d archive",category:"Documents"},
+    {name:"couplings",sensitivity:"internal",pii:false,rows:56500,cols:11,retention:"180d delete",category:"Analytics"},
+    {name:"entity_links",sensitivity:"internal",pii:false,rows:30129,cols:12,retention:"365d archive",category:"Analytics"},
+    {name:"signals",sensitivity:"public",pii:false,rows:809,cols:19,retention:"365d archive",category:"Analytics"},
+    {name:"signal_state",sensitivity:"public",pii:false,rows:30,cols:14,retention:"365d archive",category:"Analytics"},
+    {name:"signal_definitions",sensitivity:"public",pii:false,rows:15,cols:9,retention:"365d archive",category:"Analytics"},
+    {name:"signal_feedback",sensitivity:"public",pii:false,rows:11,cols:8,retention:"365d archive",category:"Analytics"},
+    {name:"issue_evidence",sensitivity:"public",pii:false,rows:462,cols:3,retention:"365d archive",category:"Analytics"},
+    {name:"issue_signals",sensitivity:"public",pii:false,rows:166,cols:3,retention:"365d archive",category:"Analytics"},
+    {name:"issues",sensitivity:"public",pii:false,rows:10,cols:15,retention:"365d archive",category:"Analytics"},
+    {name:"issue_notes",sensitivity:"public",pii:false,rows:9,cols:5,retention:"365d archive",category:"Analytics"},
+    {name:"issue_transitions",sensitivity:"public",pii:false,rows:6,cols:10,retention:"365d archive",category:"Analytics"},
+    {name:"issues_v29",sensitivity:"confidential",pii:true,rows:6,cols:30,retention:"365d archive",category:"Analytics"},
+    {name:"issue_transitions_v29",sensitivity:"public",pii:false,rows:0,cols:9,retention:"365d archive",category:"Analytics"},
+    {name:"patterns",sensitivity:"public",pii:false,rows:0,cols:9,retention:null,category:"Analytics"},
+    {name:"score_history",sensitivity:"public",pii:false,rows:0,cols:8,retention:null,category:"Analytics"},
+    {name:"_health_check",sensitivity:"public",pii:false,rows:1,cols:2,retention:null,category:"Analytics"},
+    {name:"db_write_audit_v1",sensitivity:"confidential",pii:true,rows:244,cols:11,retention:"365d archive",category:"Audit"},
+    {name:"protocol_violations",sensitivity:"public",pii:false,rows:80,cols:7,retention:"365d archive",category:"Audit"},
+    {name:"sync_cursor",sensitivity:"internal",pii:false,rows:1222,cols:5,retention:null,category:"Integrations"},
+    {name:"sync_state",sensitivity:"public",pii:false,rows:4,cols:5,retention:null,category:"Integrations"},
+    {name:"asana_attachments",sensitivity:"confidential",pii:true,rows:0,cols:7,retention:null,category:"Integrations"},
+    {name:"asana_custom_fields",sensitivity:"confidential",pii:true,rows:0,cols:10,retention:null,category:"Integrations"},
+    {name:"asana_goals",sensitivity:"confidential",pii:true,rows:0,cols:8,retention:null,category:"Integrations"},
+    {name:"asana_portfolios",sensitivity:"confidential",pii:true,rows:0,cols:5,retention:null,category:"Integrations"},
+    {name:"asana_sections",sensitivity:"confidential",pii:true,rows:0,cols:5,retention:null,category:"Integrations"},
+    {name:"asana_stories",sensitivity:"public",pii:false,rows:0,cols:6,retention:null,category:"Integrations"},
+    {name:"resolution_queue",sensitivity:"internal",pii:false,rows:3580,cols:11,retention:"90d delete",category:"System"},
+    {name:"detector_runs",sensitivity:"internal",pii:false,rows:2310,cols:9,retention:"180d delete",category:"System"},
+    {name:"fix_data_queue",sensitivity:"public",pii:false,rows:532,cols:15,retention:"90d delete",category:"System"},
+    {name:"cycle_logs",sensitivity:"public",pii:false,rows:431,cols:6,retention:"90d delete",category:"System"},
+    {name:"events",sensitivity:"confidential",pii:true,rows:167,cols:26,retention:"365d archive",category:"System"},
+    {name:"subject_blocklist",sensitivity:"public",pii:false,rows:37,cols:8,retention:null,category:"System"},
+    {name:"proposals_v4",sensitivity:"confidential",pii:true,rows:20,cols:35,retention:null,category:"System"},
+    {name:"events_raw",sensitivity:"public",pii:false,rows:14,cols:5,retention:"365d archive",category:"System"},
+    {name:"watchers",sensitivity:"public",pii:false,rows:13,cols:9,retention:null,category:"System"},
+    {name:"entity_acl",sensitivity:"public",pii:false,rows:10,cols:6,retention:null,category:"System"},
+    {name:"decision_log",sensitivity:"public",pii:false,rows:9,cols:7,retention:null,category:"System"},
+    {name:"retention_rules",sensitivity:"public",pii:false,rows:6,cols:6,retention:null,category:"System"},
+    {name:"sqlite_sequence",sensitivity:"confidential",pii:true,rows:6,cols:2,retention:null,category:"System"},
+    {name:"redaction_markers",sensitivity:"public",pii:false,rows:5,cols:6,retention:null,category:"System"},
+    {name:"detector_versions",sensitivity:"public",pii:false,rows:4,cols:5,retention:"180d delete",category:"System"},
+    {name:"report_templates",sensitivity:"public",pii:false,rows:4,cols:5,retention:null,category:"System"},
+    {name:"_schema_version",sensitivity:"public",pii:false,rows:3,cols:2,retention:null,category:"System"},
+    {name:"handoffs",sensitivity:"confidential",pii:true,rows:3,cols:9,retention:null,category:"System"},
+    {name:"report_snapshots",sensitivity:"public",pii:false,rows:2,cols:11,retention:null,category:"System"},
+    {name:"config_kv",sensitivity:"public",pii:false,rows:1,cols:3,retention:null,category:"System"},
+    {name:"inbox_suppression_rules_v29",sensitivity:"public",pii:false,rows:1,cols:11,retention:"90d delete",category:"System"},
+    {name:"maintenance_mode_v1",sensitivity:"public",pii:false,rows:1,cols:5,retention:null,category:"System"},
+    {name:"org_settings",sensitivity:"public",pii:false,rows:1,cols:6,retention:null,category:"System"},
+    {name:"proposals",sensitivity:"public",pii:false,rows:1,cols:6,retention:null,category:"System"},
+    {name:"write_context_v1",sensitivity:"public",pii:false,rows:1,cols:6,retention:null,category:"System"},
+    {name:"actions",sensitivity:"public",pii:false,rows:0,cols:13,retention:null,category:"System"},
+    {name:"attention_events",sensitivity:"public",pii:false,rows:0,cols:7,retention:"365d archive",category:"System"},
+    {name:"conflicts",sensitivity:"public",pii:false,rows:0,cols:8,retention:null,category:"System"},
+    {name:"decisions",sensitivity:"public",pii:false,rows:0,cols:16,retention:null,category:"System"},
+    {name:"feedback",sensitivity:"public",pii:false,rows:0,cols:7,retention:null,category:"System"},
+    {name:"identities",sensitivity:"confidential",pii:true,rows:0,cols:6,retention:null,category:"System"},
+    {name:"inbox_suppression_rules",sensitivity:"public",pii:false,rows:0,cols:8,retention:"90d delete",category:"System"},
+    {name:"insights",sensitivity:"public",pii:false,rows:0,cols:11,retention:null,category:"System"},
+    {name:"notifications",sensitivity:"public",pii:false,rows:0,cols:12,retention:null,category:"System"},
+    {name:"time_debt",sensitivity:"public",pii:false,rows:0,cols:7,retention:null,category:"System"},
+];
+
+let catalogFilter = 'all';
+let catalogSearch = '';
+let catalogSort = {col:'rows',asc:false};
+
+function getSensClass(s){return 'sens-'+s;}
+
+function renderCatalog(){
+    let data = CATALOG_DATA.filter(r=>{
+        if(catalogFilter!=='all' && r.sensitivity!==catalogFilter) return false;
+        if(catalogSearch && !r.name.toLowerCase().includes(catalogSearch.toLowerCase())) return false;
+        return true;
+    });
+    data.sort((a,b)=>{
+        let va=a[catalogSort.col],vb=b[catalogSort.col];
+        if(typeof va==='string') va=va.toLowerCase();
+        if(typeof vb==='string') vb=vb.toLowerCase();
+        if(typeof va==='boolean'){va=va?1:0;vb=vb?1:0;}
+        if(va<vb) return catalogSort.asc?-1:1;
+        if(va>vb) return catalogSort.asc?1:-1;
+        return 0;
+    });
+    const tbody=document.getElementById('catalogBody');
+    tbody.innerHTML=data.map(r=>`<tr>
+        <td class="mono">${r.name}</td>
+        <td><span class="sens ${getSensClass(r.sensitivity)}">${r.sensitivity}</span></td>
+        <td>${r.pii?'<span style="color:var(--red)">● Yes</span>':'<span style="color:var(--dim)">—</span>'}</td>
+        <td class="num">${r.rows.toLocaleString()}</td>
+        <td class="num">${r.cols}</td>
+        <td style="font-size:12px;color:${r.retention?'var(--text)':'var(--amber)'}">${r.retention||'⚠ Not set'}</td>
+    </tr>`).join('');
+}
+
+function filterCatalog(f){
+    catalogFilter=f;
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.toggle('active',b.textContent.toLowerCase().startsWith(f==='all'?'all':f)));
+    renderCatalog();
+}
+
+function searchCatalog(v){catalogSearch=v;renderCatalog();}
+
+function sortCatalog(col){
+    if(catalogSort.col===col) catalogSort.asc=!catalogSort.asc;
+    else{catalogSort.col=col;catalogSort.asc=col==='name';}
+    renderCatalog();
+}
+
+renderCatalog();
+
+// ===== CHARTS =====
+const chartDefaults={responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'bottom',labels:{color:'#9ca3af',font:{size:11},padding:12,usePointStyle:true,pointStyleWidth:8}}}};
+
+// Sensitivity Classification
+new Chart(document.getElementById('sensitivityChart'),{
+    type:'doughnut',
+    data:{
+        labels:['Restricted','Confidential','Internal','Public'],
+        datasets:[{
+            data:[3,42,7,57],
+            backgroundColor:['rgba(239,68,68,0.7)','rgba(245,158,11,0.7)','rgba(59,130,246,0.7)','rgba(16,185,129,0.7)'],
+            borderColor:['#ef4444','#f59e0b','#3b82f6','#10b981'],
+            borderWidth:2,
+        }]
+    },
+    options:{...chartDefaults,cutout:'60%',plugins:{...chartDefaults.plugins,tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.raw} tables (${((ctx.raw/109)*100).toFixed(0)}%)`}}}}
+});
+
+// Data Volume by Category
+new Chart(document.getElementById('volumeChart'),{
+    type:'bar',
+    data:{
+        labels:['Communications','Documents','Analytics','Operations','Core','Financial','System','Integrations','Audit'],
+        datasets:[{
+            label:'Records',
+            data:[222241,68892,131040,5162,1142,1257,8497,36,324],
+            backgroundColor:'rgba(6,182,212,0.5)',
+            borderColor:'#06b6d4',
+            borderWidth:1,
+            borderRadius:4,
+        }]
+    },
+    options:{...chartDefaults,indexAxis:'y',plugins:{...chartDefaults.plugins,legend:{display:false}},scales:{
+        x:{ticks:{color:'#9ca3af',font:{size:10},callback:v=>v>=1000?(v/1000).toFixed(0)+'K':v},grid:{color:'rgba(31,41,55,0.5)'}},
+        y:{ticks:{color:'#9ca3af',font:{size:11}},grid:{display:false}}
+    }}
+});
+
+// Retention Policy Coverage
+new Chart(document.getElementById('retentionChart'),{
+    type:'doughnut',
+    data:{
+        labels:['With Retention Policy','No Retention Policy'],
+        datasets:[{
+            data:[56,53],
+            backgroundColor:['rgba(16,185,129,0.7)','rgba(245,158,11,0.4)'],
+            borderColor:['#10b981','#f59e0b'],
+            borderWidth:2,
+        }]
+    },
+    options:{...chartDefaults,cutout:'60%',plugins:{...chartDefaults.plugins,tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.raw} tables`}}}}
+});
+
+// Export Activity (simulated timeline)
+const exportDays = Array.from({length:30},(_,i)=>{const d=new Date();d.setDate(d.getDate()-29+i);return d.toLocaleDateString('en',{month:'short',day:'numeric'});});
+const exportCounts = [0,1,0,2,1,0,0,3,1,2,0,0,1,0,0,2,1,0,3,1,0,0,2,0,1,1,0,0,1,0];
+new Chart(document.getElementById('exportChart'),{
+    type:'bar',
+    data:{
+        labels:exportDays,
+        datasets:[{label:'Exports',data:exportCounts,backgroundColor:'rgba(139,92,246,0.4)',borderColor:'#8b5cf6',borderWidth:1,borderRadius:3}]
+    },
+    options:{...chartDefaults,plugins:{...chartDefaults.plugins,legend:{display:false}},scales:{
+        x:{ticks:{color:'#9ca3af',font:{size:9},maxRotation:45},grid:{display:false}},
+        y:{ticks:{color:'#9ca3af',stepSize:1},grid:{color:'rgba(31,41,55,0.5)'},beginAtZero:true}
+    }}
+});
+</script>
+</body>
+</html>

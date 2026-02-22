@@ -8,8 +8,9 @@ import json
 import logging
 import sqlite3
 from dataclasses import dataclass
-from enum import StrEnum
 from uuid import uuid4
+
+from lib.compat import StrEnum
 
 from .evidence import create_flagged_signal_evidence, create_invoice_evidence
 from .suppression import (

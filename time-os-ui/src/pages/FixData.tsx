@@ -141,29 +141,29 @@ export function FixData() {
       {/* Summary Banner */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         <div
-          className={`bg-slate-800 rounded-lg p-4 border ${totalIssues > 0 ? 'border-amber-900/50' : 'border-slate-700'}`}
+          className={`bg-[var(--grey-dim)] rounded-lg p-4 border ${totalIssues > 0 ? 'border-amber-900/50' : 'border-[var(--grey)]'}`}
         >
           <div
-            className={`text-2xl font-bold ${totalIssues > 0 ? 'text-amber-400' : 'text-green-400'}`}
+            className={`text-2xl font-bold ${totalIssues > 0 ? 'text-amber-400' : 'text-[var(--success)]'}`}
           >
             {totalIssues}
           </div>
-          <div className="text-sm text-slate-400">Total Issues</div>
+          <div className="text-sm text-[var(--grey-light)]">Total Issues</div>
         </div>
-        <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
+        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-[var(--grey)]">
           <div className="text-2xl font-bold text-purple-400">{identityCount}</div>
-          <div className="text-sm text-slate-400">Identity Conflicts</div>
+          <div className="text-sm text-[var(--grey-light)]">Identity Conflicts</div>
         </div>
-        <div className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-          <div className="text-2xl font-bold text-blue-400">{linkCount}</div>
-          <div className="text-sm text-slate-400">Ambiguous Links</div>
+        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-[var(--grey)]">
+          <div className="text-2xl font-bold text-[var(--info)]">{linkCount}</div>
+          <div className="text-sm text-[var(--grey-light)]">Ambiguous Links</div>
         </div>
       </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-semibold">Fix Data</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-[var(--grey)] mt-1">
             {totalIssues === 0
               ? '✓ No issues — data quality is good!'
               : `${totalIssues} items need attention`}
@@ -175,31 +175,31 @@ export function FixData() {
             placeholder="Search..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="px-3 py-1.5 bg-slate-800 border border-slate-700 rounded text-sm w-48"
+            className="px-3 py-1.5 bg-[var(--grey-dim)] border border-[var(--grey)] rounded text-sm w-48"
           />
         </div>
       </div>
 
       {/* Bulk Actions Bar */}
       {filtered.length > 0 && (
-        <div className="flex items-center gap-4 mb-4 p-3 bg-slate-800/50 rounded-lg border border-slate-700">
-          <label className="flex items-center gap-2 text-sm text-slate-300 cursor-pointer">
+        <div className="flex items-center gap-4 mb-4 p-3 bg-[var(--grey-dim)]/50 rounded-lg border border-[var(--grey)]">
+          <label className="flex items-center gap-2 text-sm text-[var(--grey-light)] cursor-pointer">
             <input
               type="checkbox"
               checked={selectedIds.size === filtered.length && filtered.length > 0}
               onChange={selectAll}
-              className="rounded bg-slate-700 border-slate-600"
+              className="rounded bg-[var(--grey)] border-[var(--grey-light)]"
             />
             Select All ({filtered.length})
           </label>
           {selectedIds.size > 0 && (
             <>
-              <span className="text-slate-500">|</span>
-              <span className="text-sm text-slate-400">{selectedIds.size} selected</span>
+              <span className="text-[var(--grey)]">|</span>
+              <span className="text-sm text-[var(--grey-light)]">{selectedIds.size} selected</span>
               <button
                 onClick={handleBulkResolveClick}
                 disabled={isBulkResolving}
-                className="ml-auto px-4 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm rounded"
+                className="ml-auto px-4 py-1.5 bg-blue-600 hover:bg-[var(--info)] disabled:bg-[var(--grey)] disabled:cursor-not-allowed text-[var(--white)] text-sm rounded"
               >
                 {isBulkResolving ? 'Resolving...' : `Resolve ${selectedIds.size} Items`}
               </button>
@@ -209,11 +209,11 @@ export function FixData() {
       )}
 
       {resolveError && (
-        <div className="mb-4 p-3 bg-red-900/20 border border-red-700/50 rounded text-red-400 text-sm">
+        <div className="mb-4 p-3 bg-red-900/20 border border-[var(--danger)]/50 rounded text-[var(--danger)] text-sm">
           {resolveError}
           <button
             onClick={() => setResolveError(null)}
-            className="ml-2 text-red-300 hover:text-red-200"
+            className="ml-2 text-[var(--danger)] hover:text-red-200"
           >
             ×
           </button>
@@ -221,8 +221,8 @@ export function FixData() {
       )}
 
       {filtered.length === 0 ? (
-        <div className="bg-slate-800/50 rounded-lg border border-slate-700 p-8 text-center">
-          <p className="text-slate-400">No data issues to fix</p>
+        <div className="bg-[var(--grey-dim)]/50 rounded-lg border border-[var(--grey)] p-8 text-center">
+          <p className="text-[var(--grey-light)]">No data issues to fix</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -232,7 +232,7 @@ export function FixData() {
                 type="checkbox"
                 checked={selectedIds.has(item.id)}
                 onChange={() => toggleSelect(item.id)}
-                className="mt-4 rounded bg-slate-700 border-slate-600"
+                className="mt-4 rounded bg-[var(--grey)] border-[var(--grey-light)]"
               />
               <div className="flex-1">
                 <FixDataCard
@@ -254,9 +254,9 @@ export function FixData() {
             className="absolute inset-0 bg-black/50"
             onClick={() => setConfirmDialog({ show: false })}
           />
-          <div className="relative bg-slate-800 border border-slate-700 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-            <h3 className="text-lg font-medium text-slate-100 mb-2">Confirm Resolution</h3>
-            <p className="text-slate-400 mb-4">
+          <div className="relative bg-[var(--grey-dim)] border border-[var(--grey)] rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <h3 className="text-lg font-medium text-[var(--white)] mb-2">Confirm Resolution</h3>
+            <p className="text-[var(--grey-light)] mb-4">
               {confirmDialog.bulk
                 ? `Are you sure you want to resolve ${selectedIds.size} selected item${selectedIds.size !== 1 ? 's' : ''}? This action cannot be undone.`
                 : 'Are you sure you want to resolve this item? This action cannot be undone.'}
@@ -264,7 +264,7 @@ export function FixData() {
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setConfirmDialog({ show: false })}
-                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm rounded"
+                className="px-4 py-2 bg-[var(--grey)] hover:bg-[var(--grey-light)] text-[var(--white)] text-sm rounded"
               >
                 Cancel
               </button>
@@ -276,7 +276,7 @@ export function FixData() {
                     handleResolveConfirmed(confirmDialog.itemId, confirmDialog.itemType);
                   }
                 }}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-sm rounded"
+                className="px-4 py-2 bg-blue-600 hover:bg-[var(--info)] text-[var(--white)] text-sm rounded"
               >
                 {confirmDialog.bulk ? `Resolve ${selectedIds.size} Items` : 'Resolve'}
               </button>
@@ -287,3 +287,5 @@ export function FixData() {
     </div>
   );
 }
+
+export default FixData;

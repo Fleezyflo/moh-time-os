@@ -121,9 +121,7 @@ class TimeAnalyzer:
         gaps = self._find_gaps(event_blocks, work_start, work_end)
         conflicts = self._find_conflicts(event_blocks)
 
-        utilization = (
-            (total_minutes / available_minutes * 100) if available_minutes > 0 else 0
-        )
+        utilization = (total_minutes / available_minutes * 100) if available_minutes > 0 else 0
 
         return {
             "date": date,
@@ -234,9 +232,7 @@ class TimeAnalyzer:
 
         # Gap before first event
         if sorted_blocks[0]["start"] > work_start:
-            gap_minutes = int(
-                (sorted_blocks[0]["start"] - work_start).total_seconds() / 60
-            )
+            gap_minutes = int((sorted_blocks[0]["start"] - work_start).total_seconds() / 60)
             if gap_minutes >= 15:  # Only count gaps >= 15 min
                 gaps.append(
                     {
@@ -264,9 +260,7 @@ class TimeAnalyzer:
 
         # Gap after last event
         if sorted_blocks[-1]["end"] < work_end:
-            gap_minutes = int(
-                (work_end - sorted_blocks[-1]["end"]).total_seconds() / 60
-            )
+            gap_minutes = int((work_end - sorted_blocks[-1]["end"]).total_seconds() / 60)
             if gap_minutes >= 15:
                 gaps.append(
                     {
@@ -290,9 +284,7 @@ class TimeAnalyzer:
 
                 # Check overlap
                 if block1["end"] > block2["start"]:
-                    overlap_minutes = int(
-                        (block1["end"] - block2["start"]).total_seconds() / 60
-                    )
+                    overlap_minutes = int((block1["end"] - block2["start"]).total_seconds() / 60)
                     conflicts.append(
                         {
                             "event1": {"id": block1["id"], "title": block1["title"]},

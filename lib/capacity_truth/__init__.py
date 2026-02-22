@@ -1,11 +1,9 @@
 """
-Capacity Truth Module (Tier 2)
+Capacity Truth Module
 
 Tracks lane capacity, time debt, and workload distribution.
 
 Dependencies:
-- Tier 0 (Time Truth) must be stable
-- Tier 1 (Commitment Truth) must be stable
 
 Objects:
 - Lane (capacity allocation unit)

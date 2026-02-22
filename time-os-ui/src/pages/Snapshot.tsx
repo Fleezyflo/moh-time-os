@@ -190,34 +190,34 @@ export function Snapshot() {
       {/* Executive Pulse - Key metrics at a glance */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
         <div
-          className={`bg-slate-800 rounded-lg p-3 border ${currentProposals.length > 0 ? 'border-blue-900/50' : 'border-slate-700'}`}
+          className={`bg-[var(--grey-dim)] rounded-lg p-3 border ${currentProposals.length > 0 ? 'border-blue-900/50' : 'border-[var(--grey)]'}`}
         >
-          <div className="text-xl font-bold text-blue-400">{currentProposals.length}</div>
-          <div className="text-xs text-slate-400">Proposals</div>
+          <div className="text-xl font-bold text-[var(--info)]">{currentProposals.length}</div>
+          <div className="text-xs text-[var(--grey-light)]">Proposals</div>
         </div>
         <div
-          className={`bg-slate-800 rounded-lg p-3 border ${criticalIssues > 0 ? 'border-red-900/50' : 'border-slate-700'}`}
+          className={`bg-[var(--grey-dim)] rounded-lg p-3 border ${criticalIssues > 0 ? 'border-[var(--danger)]/50' : 'border-[var(--grey)]'}`}
         >
           <div
-            className={`text-xl font-bold ${criticalIssues > 0 ? 'text-red-400' : 'text-slate-400'}`}
+            className={`text-xl font-bold ${criticalIssues > 0 ? 'text-[var(--danger)]' : 'text-[var(--grey-light)]'}`}
           >
             {criticalIssues}
           </div>
-          <div className="text-xs text-slate-400">Critical Issues</div>
+          <div className="text-xs text-[var(--grey-light)]">Critical Issues</div>
         </div>
         <div
-          className={`bg-slate-800 rounded-lg p-3 border ${atRiskClients > 0 ? 'border-orange-900/50' : 'border-slate-700'}`}
+          className={`bg-[var(--grey-dim)] rounded-lg p-3 border ${atRiskClients > 0 ? 'border-[var(--warning)]/50' : 'border-[var(--grey)]'}`}
         >
           <div
-            className={`text-xl font-bold ${atRiskClients > 0 ? 'text-orange-400' : 'text-slate-400'}`}
+            className={`text-xl font-bold ${atRiskClients > 0 ? 'text-[var(--warning)]' : 'text-[var(--grey-light)]'}`}
           >
             {atRiskClients}
           </div>
-          <div className="text-xs text-slate-400">At-Risk Clients</div>
+          <div className="text-xs text-[var(--grey-light)]">At-Risk Clients</div>
         </div>
-        <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
+        <div className="bg-[var(--grey-dim)] rounded-lg p-3 border border-[var(--grey)]">
           <div className="text-xl font-bold text-amber-400">${(totalAR / 1000).toFixed(0)}k</div>
-          <div className="text-xs text-slate-400">Total AR</div>
+          <div className="text-xs text-[var(--grey-light)]">Total AR</div>
         </div>
       </div>
 
@@ -231,14 +231,14 @@ export function Snapshot() {
         <div className="lg:col-span-8 space-y-4">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-2xl font-semibold">
-              Snapshot <span className="text-xs text-green-500 ml-2">● Live</span>
+              Snapshot <span className="text-xs text-[var(--success)] ml-2">● Live</span>
             </h1>
             <div className="flex items-center gap-2 text-sm">
               <select
-                className="bg-slate-800 border border-slate-700 rounded px-2 py-1"
+                className="bg-[var(--grey-dim)] border border-[var(--grey)] rounded px-2 py-1"
                 value={search.scope || ''}
                 onChange={(e) =>
-                  navigate({ search: { ...search, scope: e.target.value || undefined } })
+                  navigate({ search: { scope: e.target.value || undefined, days: search.days ?? 7 } })
                 }
               >
                 <option value="">All Scopes</option>
@@ -258,9 +258,9 @@ export function Snapshot() {
                 </optgroup>
               </select>
               <select
-                className="bg-slate-800 border border-slate-700 rounded px-2 py-1"
+                className="bg-[var(--grey-dim)] border border-[var(--grey)] rounded px-2 py-1"
                 value={filterDays}
-                onChange={(e) => navigate({ search: { ...search, days: Number(e.target.value) } })}
+                onChange={(e) => navigate({ search: { scope: search.scope, days: Number(e.target.value) } })}
               >
                 <option value={1}>Today</option>
                 <option value={7}>7 days</option>
@@ -271,8 +271,8 @@ export function Snapshot() {
 
           <div className="space-y-4">
             {currentProposals.length === 0 ? (
-              <div className="bg-slate-800/50 rounded-lg border border-slate-700 p-8 text-center">
-                <p className="text-slate-400">No proposals require attention right now</p>
+              <div className="bg-[var(--grey-dim)]/50 rounded-lg border border-[var(--grey)] p-8 text-center">
+                <p className="text-[var(--grey-light)]">No proposals require attention right now</p>
               </div>
             ) : (
               currentProposals.map((proposal) => (
@@ -288,8 +288,8 @@ export function Snapshot() {
 
         <div className="lg:col-span-4 mt-6 lg:mt-0 space-y-6">
           {/* Issues Summary */}
-          <div className="bg-slate-800/50 rounded-lg border border-slate-700 p-4">
-            <h2 className="text-sm font-medium text-slate-400 mb-3">
+          <div className="bg-[var(--grey-dim)]/50 rounded-lg border border-[var(--grey)] p-4">
+            <h2 className="text-sm font-medium text-[var(--grey-light)] mb-3">
               Open Issues ({currentIssues.length})
             </h2>
             <div className="space-y-2">
@@ -304,19 +304,19 @@ export function Snapshot() {
                   <button
                     key={issue.issue_id}
                     onClick={() => handleOpenIssue(issue)}
-                    className="flex items-center gap-2 text-sm w-full text-left hover:bg-slate-700/50 rounded px-2 py-1 -mx-2 transition-colors"
+                    className="flex items-center gap-2 text-sm w-full text-left hover:bg-[var(--grey)]/50 rounded px-2 py-1 -mx-2 transition-colors"
                   >
                     <span
                       className={
                         priorityBadgeClass(issue.priority ?? 0).includes('red')
-                          ? 'text-red-400'
+                          ? 'text-[var(--danger)]'
                           : 'text-amber-400'
                       }
                     >
                       ●
                     </span>
-                    <span className="text-slate-300 truncate flex-1">{cleanHeadline}</span>
-                    <span className="text-slate-500 text-xs">→</span>
+                    <span className="text-[var(--grey-light)] truncate flex-1">{cleanHeadline}</span>
+                    <span className="text-[var(--grey)] text-xs">→</span>
                   </button>
                 );
               })}
@@ -324,25 +324,25 @@ export function Snapshot() {
           </div>
 
           {/* Watchers */}
-          <div className="bg-slate-800/50 rounded-lg border border-slate-700 p-4">
-            <h2 className="text-sm font-medium text-slate-400 mb-3">
+          <div className="bg-[var(--grey-dim)]/50 rounded-lg border border-[var(--grey)] p-4">
+            <h2 className="text-sm font-medium text-[var(--grey-light)] mb-3">
               Watchers ({upcomingWatchers.length})
             </h2>
             <div className="space-y-2">
               {upcomingWatchers.length === 0 ? (
-                <p className="text-sm text-slate-500">No watchers triggered</p>
+                <p className="text-sm text-[var(--grey)]">No watchers triggered</p>
               ) : (
                 upcomingWatchers.map((w, i) => (
                   <div
                     key={w.watcher_id || i}
-                    className="text-sm py-2 border-b border-slate-700 last:border-0"
+                    className="text-sm py-2 border-b border-[var(--grey)] last:border-0"
                   >
                     <div className="flex items-center gap-2">
-                      <span className="px-1.5 py-0.5 text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded font-medium">
+                      <span className="px-1.5 py-0.5 text-xs bg-[var(--info)]/20 text-[var(--info)] border border-blue-500/30 rounded font-medium">
                         WATCH
                       </span>
                       <span
-                        className="text-slate-300 cursor-pointer hover:text-blue-400"
+                        className="text-[var(--grey-light)] cursor-pointer hover:text-[var(--info)]"
                         onClick={() => navigate({ to: '/issues' })}
                       >
                         {w.issue_title || 'Watcher alert'}
@@ -358,7 +358,7 @@ export function Snapshot() {
                               refetchWatchers();
                             }
                           }}
-                          className="px-1.5 py-0.5 text-xs bg-slate-700 hover:bg-slate-600 rounded"
+                          className="px-1.5 py-0.5 text-xs bg-[var(--grey)] hover:bg-[var(--grey-light)] rounded"
                           title="Snooze 4h"
                         >
                           4h
@@ -371,7 +371,7 @@ export function Snapshot() {
                               refetchWatchers();
                             }
                           }}
-                          className="px-1.5 py-0.5 text-xs bg-slate-700 hover:bg-slate-600 rounded"
+                          className="px-1.5 py-0.5 text-xs bg-[var(--grey)] hover:bg-[var(--grey-light)] rounded"
                           title="Snooze 24h"
                         >
                           24h
@@ -384,7 +384,7 @@ export function Snapshot() {
                               refetchWatchers();
                             }
                           }}
-                          className="px-1.5 py-0.5 text-xs bg-red-900/50 hover:bg-red-800/50 text-red-300 rounded"
+                          className="px-1.5 py-0.5 text-xs bg-[var(--danger)]/20 hover:bg-red-800/50 text-[var(--danger)] rounded"
                           title="Dismiss"
                         >
                           ✕
@@ -431,3 +431,5 @@ export function Snapshot() {
     </div>
   );
 }
+
+export default Snapshot;

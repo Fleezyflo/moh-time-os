@@ -13,7 +13,10 @@ NOT:
 """
 
 import logging
+import os
 from typing import Any
+
+_INTERNAL_DOMAINS = os.environ.get("MOH_INTERNAL_DOMAINS", "hrmny.co,hrmny.ae").split(",")
 
 from .entities import (
     Person,
@@ -128,7 +131,7 @@ def find_external_contact(
 
 def is_internal_team(name: str = None, email: str = None) -> bool:
     """Check if a name/email refers to internal team."""
-    if email and "@hrmny.co" in email.lower():
+    if email and any(f"@{d}" in email.lower() for d in _INTERNAL_DOMAINS):
         return True
 
     if name:

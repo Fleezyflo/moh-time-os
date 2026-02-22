@@ -48,8 +48,12 @@ class CapacityCalculator:
     - Alert on overutilization
     """
 
-    def __init__(self, store=None):
-        self.store = store or get_store()
+    def __init__(self, store=None, db_path=None):
+        if isinstance(store, str):
+            # Handle case where store is actually a db_path
+            db_path = store
+            store = None
+        self.store = store or get_store(db_path)
 
     def get_lanes(self) -> list[dict]:
         """Get all configured lanes."""
@@ -84,9 +88,7 @@ class CapacityCalculator:
             daily_hours=daily_hours,
         )
 
-    def get_lane_utilization(
-        self, lane_id: str, target_date: str = None
-    ) -> LaneUtilization:
+    def get_lane_utilization(self, lane_id: str, target_date: str = None) -> LaneUtilization:
         """
         Calculate utilization for a lane on a specific date.
 
@@ -125,9 +127,7 @@ class CapacityCalculator:
         capacity_min = int(capacity.daily_hours * 60)
         available_min = max(0, capacity_min - scheduled_min)
 
-        utilization_pct = (
-            (scheduled_min / capacity_min * 100) if capacity_min > 0 else 0
-        )
+        utilization_pct = (scheduled_min / capacity_min * 100) if capacity_min > 0 else 0
 
         return LaneUtilization(
             lane_id=lane_id,
@@ -147,9 +147,7 @@ class CapacityCalculator:
         lanes = self.get_lanes()
         return [self.get_lane_utilization(lane["id"], target_date) for lane in lanes]
 
-    def forecast_capacity(
-        self, lane_id: str, days_ahead: int = 7
-    ) -> list[LaneUtilization]:
+    def forecast_capacity(self, lane_id: str, days_ahead: int = 7) -> list[LaneUtilization]:
         """
         Forecast capacity utilization for upcoming days.
 
@@ -195,9 +193,7 @@ class CapacityCalculator:
 
         overloaded_lanes = [u.lane_id for u in utilizations if u.is_overloaded]
         high_util_lanes = [
-            u.lane_id
-            for u in utilizations
-            if u.utilization_pct >= 80 and not u.is_overloaded
+            u.lane_id for u in utilizations if u.utilization_pct >= 80 and not u.is_overloaded
         ]
 
         return {

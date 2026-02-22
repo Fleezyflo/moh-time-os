@@ -208,7 +208,7 @@ def table_counts() -> dict:
         counts = {}
         for table in tables:
             try:
-                count = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                count = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]  # nosec B608 — table from hardcoded list
                 counts[table] = count
             except sqlite3.OperationalError:
                 counts[table] = 0

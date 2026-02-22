@@ -13,11 +13,11 @@ Enables rollback-first safety.
 import json
 import logging
 import uuid
-from datetime import UTC, datetime
-from enum import StrEnum
+from datetime import datetime, timezone
 from typing import Any
 
 from lib import paths
+from lib.compat import UTC, StrEnum
 
 logger = logging.getLogger(__name__)
 
@@ -199,15 +199,53 @@ def rollback_bundle(bundle_id: str) -> dict:
     rollback_results = []
 
     for step in bundle.get("rollback_steps", []):
-        # In a real implementation, this would execute the rollback
-        # For now, we just record what would happen
-        rollback_results.append(
-            {
-                "step": step,
-                "executed": False,  # Would be True after actual execution
-                "result": "pending_execution",
-            }
-        )
+        try:
+            step_type = step.get("type", "unknown")
+            step.get("target", "")
+
+            if step_type == "restore_value":
+                # Restore a configuration or field value
+                from lib.store import Store
+
+                store = Store()
+                collection = step.get("collection", "")
+                record_id = step.get("record_id", "")
+                field_name = step.get("field", "")
+                old_value = step.get("old_value")
+                if collection and record_id and field_name:
+                    store.update(collection, record_id, {field_name: old_value})
+                    rollback_results.append({"step": step, "executed": True, "result": "restored"})
+                else:
+                    rollback_results.append(
+                        {"step": step, "executed": False, "result": "missing_params"}
+                    )
+
+            elif step_type == "delete_record":
+                from lib.store import Store
+
+                store = Store()
+                collection = step.get("collection", "")
+                record_id = step.get("record_id", "")
+                if collection and record_id:
+                    store.delete(collection, record_id)
+                    rollback_results.append({"step": step, "executed": True, "result": "deleted"})
+                else:
+                    rollback_results.append(
+                        {"step": step, "executed": False, "result": "missing_params"}
+                    )
+
+            else:
+                # Unknown step type — record but don't execute
+                logger.warning(f"Unknown rollback step type: {step_type}")
+                rollback_results.append(
+                    {"step": step, "executed": False, "result": f"unknown_type:{step_type}"}
+                )
+
+        except Exception as step_err:
+            logger.error(f"Rollback step failed: {step_err}", exc_info=True)
+            rollback_results.append(
+                {"step": step, "executed": False, "result": f"error:{str(step_err)[:80]}"}
+            )
 
     bundle["status"] = BundleStatus.ROLLED_BACK.value
     bundle["rolled_back_at"] = datetime.now(UTC).isoformat()
@@ -267,9 +305,7 @@ def cleanup_old_bundles(days: int = 30) -> int:
     for bundle_file in BUNDLES_DIR.glob("*.json"):
         try:
             bundle = json.loads(bundle_file.read_text())
-            created = datetime.fromisoformat(
-                bundle["created_at"].replace("Z", "+00:00")
-            )
+            created = datetime.fromisoformat(bundle["created_at"].replace("Z", "+00:00"))
             if created < cutoff:
                 bundle_file.unlink()
                 removed += 1
@@ -406,9 +442,7 @@ if __name__ == "__main__":
     if cmd == "list":
         bundles = list_bundles()
         for b in bundles:
-            logger.info(
-                f"{b['id']} | {b['domain']} | {b['status']} | {b['description'][:40]}"
-            )
+            logger.info(f"{b['id']} | {b['domain']} | {b['status']} | {b['description'][:40]}")
     elif cmd == "pending":
         bundles = list_pending_bundles()
         for b in bundles:
@@ -429,3 +463,149 @@ if __name__ == "__main__":
     else:
         logger.info(f"Unknown command: {cmd}")
         sys.exit(1)
+
+
+class BundleManager:
+    """
+    Manages change bundles for a cycle.
+
+    Tracks active bundles, provides rollback capabilities, and cleanup.
+    This is the high-level API for bundle operations.
+    """
+
+    def __init__(self):
+        """Initialize the bundle manager."""
+        self.active_bundles: dict[str, str] = {}  # cycle_id -> [bundle_ids]
+
+    def start_bundle(
+        self,
+        cycle_id: str,
+        domain: str,
+        description: str,
+        changes: list[dict],
+        pre_images: dict[str, Any] = None,
+    ) -> str:
+        """
+        Create and track a new bundle for a cycle.
+
+        Returns the bundle ID.
+        """
+        bundle = create_bundle(domain, description, changes, pre_images)
+        bundle_id = bundle["id"]
+
+        # Track this bundle for the cycle
+        if cycle_id not in self.active_bundles:
+            self.active_bundles[cycle_id] = []
+        self.active_bundles[cycle_id].append(bundle_id)
+
+        logger.info(f"Started bundle {bundle_id} for cycle {cycle_id}")
+        return bundle_id
+
+    def apply_bundle(self, bundle_id: str) -> dict:
+        """Mark a bundle as applied."""
+        bundle = mark_applied(bundle_id)
+        logger.info(f"Applied bundle {bundle_id}")
+        return bundle
+
+    def fail_bundle(self, bundle_id: str, error: str) -> dict:
+        """Mark a bundle as failed."""
+        bundle = mark_failed(bundle_id, error)
+        logger.error(f"Failed bundle {bundle_id}: {error}")
+        return bundle
+
+    def rollback_cycle(self, cycle_id: str) -> dict:
+        """
+        Rollback all bundles from a failed cycle.
+
+        Returns summary of rollback operations.
+        """
+        bundle_ids = self.active_bundles.get(cycle_id, [])
+        if not bundle_ids:
+            logger.warning(f"No bundles to rollback for cycle {cycle_id}")
+            return {
+                "cycle_id": cycle_id,
+                "bundles_processed": 0,
+                "bundles_rolled_back": 0,
+                "errors": [],
+            }
+
+        rolled_back = 0
+        errors = []
+
+        for bundle_id in bundle_ids:
+            try:
+                bundle = get_bundle(bundle_id)
+                if bundle and bundle["status"] == BundleStatus.APPLIED.value:
+                    rollback_bundle(bundle_id)
+                    rolled_back += 1
+                    logger.info(f"Rolled back bundle {bundle_id}")
+            except Exception as e:
+                error_msg = f"Failed to rollback {bundle_id}: {e}"
+                logger.error(error_msg)
+                errors.append(error_msg)
+
+        return {
+            "cycle_id": cycle_id,
+            "bundles_processed": len(bundle_ids),
+            "bundles_rolled_back": rolled_back,
+            "errors": errors,
+        }
+
+    def list_bundles_for_status(
+        self, status: str = None, since: str = None, limit: int = 50
+    ) -> list[dict]:
+        """
+        List bundles with optional filters.
+
+        Args:
+            status: Filter by bundle status (pending, applied, failed, rolled_back)
+            since: ISO timestamp to filter bundles created after this time
+            limit: Maximum number of bundles to return
+
+        Returns:
+            List of bundle dicts
+        """
+        bundles = list_bundles(status=status, limit=limit * 2)
+
+        if since:
+            try:
+                since_dt = datetime.fromisoformat(since.replace("Z", "+00:00"))
+                bundles = [
+                    b
+                    for b in bundles
+                    if datetime.fromisoformat(b["created_at"].replace("Z", "+00:00")) >= since_dt
+                ]
+            except ValueError as e:
+                logger.warning(f"Invalid since timestamp {since}: {e}")
+
+        return bundles[:limit]
+
+    def prune_bundles(self, keep_days: int = 30) -> int:
+        """
+        Remove bundles older than keep_days.
+
+        Returns the count of bundles removed.
+        """
+        removed = cleanup_old_bundles(keep_days)
+        logger.info(f"Pruned {removed} bundles older than {keep_days} days")
+        return removed
+
+    def get_cycle_summary(self, cycle_id: str) -> dict:
+        """Get summary of bundles for a cycle."""
+        bundle_ids = self.active_bundles.get(cycle_id, [])
+
+        bundles = [get_bundle(bid) for bid in bundle_ids]
+        bundles = [b for b in bundles if b is not None]
+
+        created = len(bundles)
+        applied = len([b for b in bundles if b["status"] == BundleStatus.APPLIED.value])
+        failed = len([b for b in bundles if b["status"] == BundleStatus.FAILED.value])
+        rolled_back = len([b for b in bundles if b["status"] == BundleStatus.ROLLED_BACK.value])
+
+        return {
+            "cycle_id": cycle_id,
+            "bundles_created": created,
+            "bundles_applied": applied,
+            "bundles_failed": failed,
+            "bundles_rolled_back": rolled_back,
+        }

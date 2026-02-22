@@ -1,6 +1,7 @@
 """Sync data from Xero and Asana into MOH Time OS v2."""
 
 import logging
+import os
 from typing import Any
 
 from .entities import (
@@ -13,6 +14,14 @@ from .entities import (
 from .store import now_iso
 
 logger = logging.getLogger(__name__)
+
+_INTERNAL_DOMAINS = os.environ.get("MOH_INTERNAL_DOMAINS", "hrmny.co,hrmny.ae").split(",")
+
+
+def _is_internal(text: str) -> bool:
+    """Check if text contains an internal domain."""
+    text_lower = text.lower()
+    return any(f"@{d}" in text_lower for d in _INTERNAL_DOMAINS)
 
 
 def infer_tier(ar_outstanding: float, annual_value: float = 0) -> str:
@@ -58,9 +67,7 @@ def sync_xero_clients_from_cache() -> dict[str, Any]:
     """
     import json
 
-    cache_path = os.path.join(
-        os.path.dirname(__file__), "..", "config", "xero_contacts.json"
-    )
+    cache_path = os.path.join(os.path.dirname(__file__), "..", "config", "xero_contacts.json")
 
     result = {
         "synced": 0,
@@ -82,7 +89,7 @@ def sync_xero_clients_from_cache() -> dict[str, Any]:
                 # Skip if no name or internal
                 if not name or name == "Unknown":
                     continue
-                if "@hrmny.co" in name.lower():
+                if _is_internal(name):
                     continue  # Skip internal contacts
 
                 # Infer tier from name (will be updated with AR later)
@@ -165,7 +172,7 @@ def sync_xero_clients() -> dict[str, Any]:
             # Skip if no name or internal
             if not name or name == "Unknown":
                 continue
-            if "@hrmny.co" in name.lower():
+            if _is_internal(name):
                 continue
 
             # Infer tier (default C, will update with AR later)
@@ -201,15 +208,15 @@ def sync_xero_clients() -> dict[str, Any]:
         except Exception as e:
             # Unexpected error - log with stack trace but continue batch
             error_msg = f"{contact.get('Name', 'Unknown')}: {e}"
-            logger.warning(
-                f"Failed to sync contact from API: {error_msg}", exc_info=True
-            )
+            logger.warning(f"Failed to sync contact from API: {error_msg}", exc_info=True)
             result["errors"].append(error_msg)
 
     return result
 
 
-def sync_asana_projects(workspace_name: str = "hrmny.co") -> dict[str, Any]:
+def sync_asana_projects(
+    workspace_name: str = os.environ.get("MOH_ASANA_WORKSPACE", "hrmny.co"),
+) -> dict[str, Any]:
     """
     Sync projects from Asana.
     Returns summary of sync operation.
@@ -266,9 +273,7 @@ def sync_asana_projects(workspace_name: str = "hrmny.co") -> dict[str, Any]:
                 "with",
             }
             words = [
-                w.strip(".,()")
-                for w in name_lower.split()
-                if len(w) > 3 and w not in skip_words
+                w.strip(".,()") for w in name_lower.split() if len(w) > 3 and w not in skip_words
             ]
             for word in words:
                 if word not in client_words_map:
@@ -281,9 +286,7 @@ def sync_asana_projects(workspace_name: str = "hrmny.co") -> dict[str, Any]:
                 name = proj.get("name", "Unknown")
 
                 # Skip templates and internal
-                if any(
-                    skip in name.lower() for skip in ["template", "internal", "test"]
-                ):
+                if any(skip in name.lower() for skip in ["template", "internal", "test"]):
                     continue
 
                 # Try to match to a client
@@ -298,9 +301,7 @@ def sync_asana_projects(workspace_name: str = "hrmny.co") -> dict[str, Any]:
 
                 # Then try word matching
                 if not client_id:
-                    proj_words = [
-                        w.strip(".,()") for w in name_lower.split() if len(w) > 3
-                    ]
+                    proj_words = [w.strip(".,()") for w in name_lower.split() if len(w) > 3]
                     best_match = None
                     best_score = 0
 
@@ -398,9 +399,7 @@ def sync_team_from_kb() -> dict[str, Any]:
     """
     import json
 
-    kb_path = os.path.join(
-        os.path.dirname(__file__), "..", "config", "knowledge_base.json"
-    )
+    kb_path = os.path.join(os.path.dirname(__file__), "..", "config", "knowledge_base.json")
 
     result = {
         "synced": 0,
@@ -448,9 +447,7 @@ def sync_team_from_kb() -> dict[str, Any]:
                 result["errors"].append(error_msg)
             except Exception as e:
                 error_msg = f"{member.get('name', '?')}: {e}"
-                logger.warning(
-                    f"Failed to sync team member: {error_msg}", exc_info=True
-                )
+                logger.warning(f"Failed to sync team member: {error_msg}", exc_info=True)
                 result["errors"].append(error_msg)
 
     except FileNotFoundError:
@@ -476,9 +473,7 @@ def sync_external_contacts_from_xero() -> dict[str, Any]:
     """
     import json
 
-    cache_path = os.path.join(
-        os.path.dirname(__file__), "..", "config", "xero_contacts.json"
-    )
+    cache_path = os.path.join(os.path.dirname(__file__), "..", "config", "xero_contacts.json")
 
     result = {
         "synced": 0,
@@ -499,13 +494,11 @@ def sync_external_contacts_from_xero() -> dict[str, Any]:
                 email = contact.get("email", "")
 
                 # Skip if no email (can't create meaningful contact)
-                if not email or "@hrmny.co" in email.lower():
+                if not email or _is_internal(email):
                     continue
 
                 # Skip if name looks like a company (has LLC, etc)
-                if any(
-                    x in name.lower() for x in ["llc", "fze", "l.l.c", "ltd", "inc"]
-                ):
+                if any(x in name.lower() for x in ["llc", "fze", "l.l.c", "ltd", "inc"]):
                     continue
 
                 # Try to find the client this contact belongs to
@@ -529,9 +522,7 @@ def sync_external_contacts_from_xero() -> dict[str, Any]:
                 result["errors"].append(error_msg)
             except Exception as e:
                 error_msg = f"{contact.get('name', '?')}: {e}"
-                logger.warning(
-                    f"Failed to sync external contact: {error_msg}", exc_info=True
-                )
+                logger.warning(f"Failed to sync external contact: {error_msg}", exc_info=True)
                 result["errors"].append(error_msg)
 
     except FileNotFoundError:
@@ -581,17 +572,13 @@ def sync_all() -> dict[str, Any]:
     # Sync Asana projects
     logger.info("Syncing projects from Asana...")
     results["asana"] = sync_asana_projects()
-    logger.info(
-        f"  Synced: {results['asana']['synced']}, Unlinked: {results['asana']['unlinked']}"
-    )
+    logger.info(f"  Synced: {results['asana']['synced']}, Unlinked: {results['asana']['unlinked']}")
     if results["asana"]["errors"]:
         logger.info(f"  Errors: {len(results['asana']['errors'])}")
     # Sync team
     logger.info("Syncing team from knowledge base...")
     results["team"] = sync_team_from_kb()
-    logger.info(
-        f"  Synced: {results['team']['synced']} ({results['team']['active']} active)"
-    )
+    logger.info(f"  Synced: {results['team']['synced']} ({results['team']['active']} active)")
     if results["team"]["errors"]:
         logger.info(f"  Errors: {len(results['team']['errors'])}")
     # Sync external contacts

@@ -16,6 +16,7 @@ from typing import Optional
 
 class EntityType(Enum):
     """Entity types that can be scored."""
+
     CLIENT = "client"
     PROJECT = "project"
     PERSON = "person"
@@ -24,38 +25,41 @@ class EntityType(Enum):
 
 class ScoreRange(Enum):
     """Score interpretation ranges."""
-    CRITICAL = "critical"       # 0-30: Requires immediate attention
-    AT_RISK = "at_risk"         # 31-50: Deteriorating, needs intervention
-    STABLE = "stable"           # 51-70: Healthy but worth monitoring
-    HEALTHY = "healthy"         # 71-90: Performing well
-    STRONG = "strong"           # 91-100: Exceptional performance
+
+    CRITICAL = "critical"  # 0-30: Requires immediate attention
+    AT_RISK = "at_risk"  # 31-50: Deteriorating, needs intervention
+    STABLE = "stable"  # 51-70: Healthy but worth monitoring
+    HEALTHY = "healthy"  # 71-90: Performing well
+    STRONG = "strong"  # 91-100: Exceptional performance
 
 
 class NormMethod(Enum):
     """Normalization methods for score computation."""
-    PERCENTILE = "percentile"   # Rank against peers
-    THRESHOLD = "threshold"     # Against absolute targets
-    RELATIVE = "relative"       # Against own history
+
+    PERCENTILE = "percentile"  # Rank against peers
+    THRESHOLD = "threshold"  # Against absolute targets
+    RELATIVE = "relative"  # Against own history
 
 
 @dataclass
 class ScoringDimension:
     """
     Definition of a scoring dimension.
-    
+
     A dimension is one aspect of entity health (e.g., "Operational Health" for clients).
     Multiple dimensions combine into a composite score.
     """
+
     name: str
     description: str
     entity_type: EntityType
-    input_metrics: list[str]            # Query engine return keys
-    query_function: str                 # Query engine function name
+    input_metrics: list[str]  # Query engine return keys
+    query_function: str  # Query engine function name
     normalization: NormMethod
-    weight: float                       # Contribution to composite (sum to 1.0 per entity)
-    critical_below: float = 30.0        # Score below this = CRITICAL
-    warning_below: float = 60.0         # Score below this = WARNING
-    
+    weight: float  # Contribution to composite (sum to 1.0 per entity)
+    critical_below: float = 30.0  # Score below this = CRITICAL
+    warning_below: float = 60.0  # Score below this = WARNING
+
     def __post_init__(self):
         """Validate weight is in valid range."""
         if not 0 < self.weight <= 1.0:
@@ -66,17 +70,18 @@ class ScoringDimension:
 class EntityScore:
     """
     Complete score for an entity.
-    
+
     Contains dimension scores and computed composite.
     """
+
     entity_type: EntityType
     entity_id: str
     entity_name: str
     dimension_scores: dict[str, float] = field(default_factory=dict)
     composite_score: float = 0.0
     score_range: ScoreRange = ScoreRange.STABLE
-    computed_at: Optional[str] = None
-    
+    computed_at: str | None = None
+
     def get_range(self) -> ScoreRange:
         """Determine score range from composite."""
         if self.composite_score <= 30:
@@ -315,27 +320,26 @@ DIMENSIONS_BY_TYPE: dict[EntityType, list[ScoringDimension]] = {
 # VALIDATION
 # =============================================================================
 
+
 def validate_dimensions() -> list[str]:
     """
     Validate that all dimension definitions are internally consistent.
-    
+
     Returns list of error messages (empty if valid).
     """
     errors = []
-    
+
     for entity_type, dimensions in DIMENSIONS_BY_TYPE.items():
         # Check weights sum to 1.0
         total_weight = sum(d.weight for d in dimensions)
         if abs(total_weight - 1.0) > 0.001:
-            errors.append(
-                f"{entity_type.value}: weights sum to {total_weight}, expected 1.0"
-            )
-        
+            errors.append(f"{entity_type.value}: weights sum to {total_weight}, expected 1.0")
+
         # Check for duplicate dimension names
         names = [d.name for d in dimensions]
         if len(names) != len(set(names)):
             errors.append(f"{entity_type.value}: duplicate dimension names")
-        
+
         # Check entity_type consistency
         for d in dimensions:
             if d.entity_type != entity_type:
@@ -343,7 +347,7 @@ def validate_dimensions() -> list[str]:
                     f"{d.name}: entity_type mismatch "
                     f"(dimension says {d.entity_type}, registered under {entity_type})"
                 )
-    
+
     return errors
 
 
@@ -355,6 +359,7 @@ def get_dimensions(entity_type: EntityType) -> list[ScoringDimension]:
 # =============================================================================
 # SCORE RANGE HELPERS
 # =============================================================================
+
 
 def score_to_range(score: float) -> ScoreRange:
     """Convert numeric score to ScoreRange."""
@@ -386,60 +391,58 @@ def range_to_bounds(score_range: ScoreRange) -> tuple[float, float]:
 _validation_errors = validate_dimensions()
 if _validation_errors:
     import warnings
-    warnings.warn(f"Scoring dimension validation errors: {_validation_errors}")
+
+    warnings.warn(f"Scoring dimension validation errors: {_validation_errors}", stacklevel=2)
 
 
 # =============================================================================
 # NORMALIZATION FUNCTIONS
 # =============================================================================
 
+
 def normalize_percentile(value: float, all_values: list[float]) -> float:
     """
     Score 0-100 based on where value ranks among all_values.
-    
+
     Highest value = 100, lowest = 0.
     Handles ties by using average rank.
     Returns 50.0 for empty or single-item lists.
     """
     if not all_values or len(all_values) < 2:
         return 50.0
-    
+
     if value is None:
         return 50.0
-    
+
     # Filter out None values
     clean_values = [v for v in all_values if v is not None]
     if len(clean_values) < 2:
         return 50.0
-    
+
     # Count how many values are below this one
     below_count = sum(1 for v in clean_values if v < value)
     equal_count = sum(1 for v in clean_values if v == value)
-    
+
     # Use average rank for ties
     percentile = (below_count + (equal_count - 1) / 2) / (len(clean_values) - 1)
-    
+
     return min(100.0, max(0.0, percentile * 100))
 
 
-def normalize_threshold(
-    value: float, 
-    target: float, 
-    direction: str = "higher_is_better"
-) -> float:
+def normalize_threshold(value: float, target: float, direction: str = "higher_is_better") -> float:
     """
     Score 0-100 based on distance from target.
-    
+
     For higher_is_better: at or above target = 100, at zero = 0
     For lower_is_better: at or below target = 100, at 2x target = 0
     Linear interpolation between.
     """
     if value is None:
         return 50.0
-    
+
     if target == 0:
         return 100.0 if value == 0 else 50.0
-    
+
     if direction == "higher_is_better":
         # At or above target = 100
         if value >= target:
@@ -458,21 +461,21 @@ def normalize_threshold(
 def normalize_relative(current: float, baseline: float) -> float:
     """
     Score 0-100 based on current vs historical baseline.
-    
+
     At baseline = 70 (stable).
     Above baseline scales up (max 100 at 2x baseline).
     Below baseline scales down (min 0 at 0).
     """
     if current is None or baseline is None:
         return 50.0
-    
+
     if baseline == 0:
         if current == 0:
             return 70.0  # Stable at zero
         return 100.0 if current > 0 else 0.0
-    
+
     ratio = current / baseline
-    
+
     if ratio >= 1.0:
         # Above baseline: scale 70 -> 100 as ratio goes 1.0 -> 2.0
         return min(100.0, 70 + (ratio - 1.0) * 30)
@@ -485,21 +488,20 @@ def normalize_relative(current: float, baseline: float) -> float:
 # DIMENSION SCORING
 # =============================================================================
 
+
 def score_dimension(
-    dimension: ScoringDimension, 
-    metrics: dict, 
-    context: Optional[dict] = None
+    dimension: ScoringDimension, metrics: dict, context: dict | None = None
 ) -> dict:
     """
     Compute score for a single dimension.
-    
+
     Args:
         dimension: The ScoringDimension definition
         metrics: Dict of metric values (keys should match dimension.input_metrics)
         context: Additional context for normalization:
             - For PERCENTILE: {"all_values": list[float]}
             - For RELATIVE: {"baseline": float}
-    
+
     Returns:
         {
             "dimension": dimension.name,
@@ -510,18 +512,18 @@ def score_dimension(
         }
     """
     context = context or {}
-    
+
     # Extract metrics
     metrics_used = {}
     missing_metrics = []
-    
+
     for metric_name in dimension.input_metrics:
         value = metrics.get(metric_name)
         if value is not None:
             metrics_used[metric_name] = value
         else:
             missing_metrics.append(metric_name)
-    
+
     # If all metrics missing, return null score
     if not metrics_used:
         return {
@@ -532,10 +534,10 @@ def score_dimension(
             "normalization": dimension.normalization.value,
             "missing_metrics": missing_metrics,
         }
-    
+
     # Compute raw value based on dimension
     raw_value = _compute_dimension_raw_value(dimension, metrics_used)
-    
+
     # Normalize
     if dimension.normalization == NormMethod.PERCENTILE:
         all_values = context.get("all_values", [raw_value])
@@ -549,7 +551,7 @@ def score_dimension(
         score = normalize_relative(raw_value, baseline)
     else:
         score = 50.0
-    
+
     # Classify
     if score <= dimension.critical_below:
         classification = "critical"
@@ -557,7 +559,7 @@ def score_dimension(
         classification = "warning"
     else:
         classification = "healthy"
-    
+
     return {
         "dimension": dimension.name,
         "score": round(score, 1),
@@ -571,12 +573,12 @@ def score_dimension(
 def _compute_dimension_raw_value(dimension: ScoringDimension, metrics: dict) -> float:
     """
     Compute the raw value for a dimension from its metrics.
-    
+
     This is dimension-specific logic that combines input metrics into
     a single value suitable for normalization.
     """
     name = dimension.name
-    
+
     # CLIENT DIMENSIONS
     if name == "operational_health":
         # completion_rate * 0.6 + (100 - overdue_penalty) * 0.4
@@ -586,7 +588,7 @@ def _compute_dimension_raw_value(dimension: ScoringDimension, metrics: dict) -> 
         overdue_ratio = overdue / active
         overdue_penalty = min(100, overdue_ratio * 200)
         return completion_rate * 0.6 + (100 - overdue_penalty) * 0.4
-    
+
     elif name == "financial_health":
         total_invoiced = metrics.get("total_invoiced", 0) or 1
         total_paid = metrics.get("total_paid", 0)
@@ -594,25 +596,42 @@ def _compute_dimension_raw_value(dimension: ScoringDimension, metrics: dict) -> 
         payment_ratio = total_paid / total_invoiced
         overdue_ratio = ar_overdue / total_invoiced
         return (payment_ratio * 70) + ((1 - overdue_ratio) * 30)
-    
+
     elif name == "communication_health":
         # For percentile: just use raw communication count
         return metrics.get("communications_count", metrics.get("entity_links_count", 0))
-    
+
     elif name == "engagement_trajectory":
-        # This requires trend data; use placeholder if not available
-        return metrics.get("trend_score", 60)
-    
+        # Compute engagement trend from recent communication and task activity
+        recent_comms = metrics.get("recent_communications", metrics.get("communications_count", 0))
+        total_comms = metrics.get("total_communications", metrics.get("communications_count", 0))
+        active_tasks = metrics.get("active_tasks", 0)
+        completed_tasks = metrics.get("completed_tasks", 0)
+
+        # If explicit trend_score is available, use it
+        if metrics.get("trend_score") is not None:
+            return metrics["trend_score"]
+
+        # Otherwise compute from activity signals
+        # Higher recent comms relative to total = growing engagement
+        comm_ratio = recent_comms / max(total_comms, 1) if total_comms > 0 else 0.5
+        task_momentum = (
+            completed_tasks / max(active_tasks + completed_tasks, 1)
+            if (active_tasks + completed_tasks) > 0
+            else 0.5
+        )
+        return comm_ratio * 50 + task_momentum * 50
+
     # PROJECT DIMENSIONS
     elif name == "velocity":
         return metrics.get("completion_rate_pct", 50)
-    
+
     elif name == "risk_exposure":
         overdue = metrics.get("overdue_tasks", 0)
         open_tasks = metrics.get("open_tasks", 1) or 1
         overdue_ratio = overdue / open_tasks
         return max(0, 100 - (overdue_ratio * 150))
-    
+
     elif name == "team_coverage":
         people = metrics.get("assigned_people_count", 0)
         open_tasks = metrics.get("open_tasks", 0)
@@ -622,25 +641,25 @@ def _compute_dimension_raw_value(dimension: ScoringDimension, metrics: dict) -> 
             return 50
         tasks_per_person = open_tasks / people
         return max(0, 100 - (tasks_per_person - 10) * 5)
-    
+
     elif name == "scope_control":
         total = metrics.get("total_tasks", 1) or 1
         completed = metrics.get("completed_tasks", 0)
         return (completed / total) * 100
-    
+
     # PERSON DIMENSIONS
     elif name == "load_balance":
         active = metrics.get("active_tasks", 10)
         if 5 <= active <= 15:
             return 100
         return max(0, 100 - abs(active - 10) * 5)
-    
+
     elif name == "output_consistency":
         assigned = metrics.get("assigned_tasks", 1) or 1
         active = metrics.get("active_tasks", 0)
         completed = assigned - active
         return (completed / assigned) * 100 if assigned > 0 else 50
-    
+
     elif name == "spread":
         projects = metrics.get("project_count", 3)
         if 2 <= projects <= 5:
@@ -650,34 +669,34 @@ def _compute_dimension_raw_value(dimension: ScoringDimension, metrics: dict) -> 
         if projects > 5:
             return max(0, 100 - (projects - 5) * 10)
         return 50
-    
+
     elif name == "availability_risk":
         # For percentile: dependency score = active * projects
         active = metrics.get("active_tasks", 0)
         projects = metrics.get("project_count", 1)
         return active * projects
-    
+
     # PORTFOLIO DIMENSIONS
     elif name == "revenue_concentration":
         # This needs special handling - pass through for percentile
         return metrics.get("top_client_share", 0.5) * 100
-    
+
     elif name == "resource_concentration":
         max_tasks = metrics.get("max_tasks_per_person", 10)
         avg_tasks = metrics.get("avg_tasks_per_person", 10) or 10
         ratio = max_tasks / avg_tasks
         return max(0, 100 - (ratio - 1) * 30)
-    
+
     elif name == "client_health_distribution":
         return metrics.get("healthy_client_pct", 50) * 100
-    
+
     elif name == "capacity_utilization":
         total = metrics.get("total_people", 1) or 1
         overloaded = metrics.get("people_overloaded", 0)
         available = metrics.get("people_available", 0)
         balanced = 1 - (overloaded / total) - (available / total)
         return max(0, balanced * 100)
-    
+
     # Default: average of all metrics
     values = [v for v in metrics.values() if isinstance(v, (int, float))]
     return sum(values) / len(values) if values else 50.0
@@ -686,6 +705,7 @@ def _compute_dimension_raw_value(dimension: ScoringDimension, metrics: dict) -> 
 # =============================================================================
 # SCORE CLASSIFICATION
 # =============================================================================
+
 
 def classify_score(score: float) -> str:
     """Map a 0-100 score to operational classification string."""

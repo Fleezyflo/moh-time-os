@@ -1,3 +1,15 @@
+// Auth exports
+export { AuthProvider, useAuth, ProtectedRoute } from './auth';
+
+// Notifications exports
+export { ToastProvider, useToast } from './notifications';
+
+// Picker exports
+export { TeamMemberPicker, DateRangePicker } from './pickers';
+
+// Dialog exports
+export { ConfirmationDialog } from './ConfirmationDialog';
+
 // Components
 export { ProposalCard } from './ProposalCard';
 export { IssueCard, IssueRow } from './IssueCard';
@@ -9,7 +21,6 @@ export { IssueDrawer } from './IssueDrawer';
 export { EvidenceViewer } from './EvidenceViewer';
 export { ErrorState } from './ErrorState';
 export { ErrorBoundary } from './ErrorBoundary';
-export { ToastProvider, useToast } from './Toast';
 export {
   SkeletonRow,
   SkeletonCard,

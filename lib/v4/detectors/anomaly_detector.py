@@ -14,9 +14,7 @@ from typing import Any
 
 from .base import BaseDetector
 
-DB_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "..", "..", "data", "moh_time_os.db"
-)
+DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "moh_time_os.db")
 
 
 class AnomalyDetector(BaseDetector):

@@ -13,9 +13,10 @@ Per MOH_TIME_OS_DELEGATION.md:
 import json
 import logging
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from lib import paths
+from lib.compat import UTC
 
 from .config_store import get
 from .delegation_graph import Delegatee, get_delegatee
@@ -43,9 +44,7 @@ class DelegationPacket:
     delegatee_name: str
 
     # Status
-    status: str = (
-        "draft"  # draft, pending_approval, sent, acknowledged, completed, escalated
-    )
+    status: str = "draft"  # draft, pending_approval, sent, acknowledged, completed, escalated
 
     # Tracking
     created_at: str = None
@@ -112,9 +111,7 @@ def calculate_completeness(packet: DelegationPacket) -> float:
     return score / total
 
 
-def apply_least_disclosure(
-    packet: DelegationPacket, delegatee: Delegatee
-) -> DelegationPacket:
+def apply_least_disclosure(packet: DelegationPacket, delegatee: Delegatee) -> DelegationPacket:
     """Apply least-disclosure rule - redact sensitive info."""
     sensitivity = packet.constraints.get("sensitivity", [])
 
@@ -163,9 +160,7 @@ def create_delegation_packet(
     # Source refs
     source_refs = []
     if item.get("source_ref"):
-        source_refs.append(
-            f"{item.get('source_type', 'unknown')}:{item.get('source_ref')}"
-        )
+        source_refs.append(f"{item.get('source_type', 'unknown')}:{item.get('source_ref')}")
 
     packet = DelegationPacket(
         id=packet_id,
@@ -273,9 +268,7 @@ def check_nudges_due() -> list[DelegationPacket]:
             continue
 
         if packet.next_nudge_at:
-            nudge_time = datetime.fromisoformat(
-                packet.next_nudge_at.replace("Z", "+00:00")
-            )
+            nudge_time = datetime.fromisoformat(packet.next_nudge_at.replace("Z", "+00:00"))
             if now >= nudge_time:
                 due.append(packet)
 
@@ -293,9 +286,7 @@ def check_escalations_due() -> list[DelegationPacket]:
             continue
 
         if packet.escalation_at:
-            esc_time = datetime.fromisoformat(
-                packet.escalation_at.replace("Z", "+00:00")
-            )
+            esc_time = datetime.fromisoformat(packet.escalation_at.replace("Z", "+00:00"))
             if now >= esc_time:
                 due.append(packet)
 
@@ -382,9 +373,7 @@ if __name__ == "__main__":
             logger.info(f"{p.id}: {p.objective[:40]} → {p.delegatee_name} (nudge due)")
     elif cmd == "escalations":
         for p in check_escalations_due():
-            logger.info(
-                f"{p.id}: {p.objective[:40]} → {p.delegatee_name} (escalation due)"
-            )
+            logger.info(f"{p.id}: {p.objective[:40]} → {p.delegatee_name} (escalation due)")
     elif cmd == "approve" and len(sys.argv) >= 3:
         ok, msg = approve_and_send(sys.argv[2])
         logger.info(msg)

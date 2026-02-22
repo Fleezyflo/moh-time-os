@@ -18,9 +18,7 @@ from .base import BaseDetector
 
 logger = logging.getLogger(__name__)
 
-DB_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "..", "..", "data", "moh_time_os.db"
-)
+DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "moh_time_os.db")
 
 # Legacy filter: tasks overdue more than this many days are considered archived/legacy noise
 # and excluded from signal generation to keep proposals clean
@@ -70,14 +68,10 @@ class DeadlineDetector(BaseDetector):
 
         try:
             today = datetime.now().date()
-            approaching_cutoff = (
-                today + timedelta(days=self.APPROACHING_DAYS)
-            ).isoformat()
+            approaching_cutoff = (today + timedelta(days=self.APPROACHING_DAYS)).isoformat()
 
             # Find overdue tasks (excluding legacy tasks > LEGACY_OVERDUE_THRESHOLD_DAYS old)
-            legacy_cutoff = (
-                today - timedelta(days=LEGACY_OVERDUE_THRESHOLD_DAYS)
-            ).isoformat()
+            legacy_cutoff = (today - timedelta(days=LEGACY_OVERDUE_THRESHOLD_DAYS)).isoformat()
             cursor.execute(
                 """
                 SELECT t.id, t.title, t.source, t.due_date, t.assignee, t.project,
@@ -106,9 +100,7 @@ class DeadlineDetector(BaseDetector):
                 owner = assignee
 
                 try:
-                    days_overdue = (
-                        today - datetime.fromisoformat(due_date[:10]).date()
-                    ).days
+                    days_overdue = (today - datetime.fromisoformat(due_date[:10]).date()).days
                 except (ValueError, TypeError):
                     # Can't parse due_date - may miss overdue detection
                     logger.warning(
@@ -116,11 +108,7 @@ class DeadlineDetector(BaseDetector):
                     )
                     continue
                 severity = (
-                    "critical"
-                    if days_overdue > 7
-                    else "high"
-                    if days_overdue > 3
-                    else "medium"
+                    "critical" if days_overdue > 7 else "high" if days_overdue > 3 else "medium"
                 )
 
                 # Create evidence excerpts
@@ -243,9 +231,7 @@ class DeadlineDetector(BaseDetector):
                 owner = assignee
 
                 try:
-                    days_until = (
-                        datetime.fromisoformat(due_date[:10]).date() - today
-                    ).days
+                    days_until = (datetime.fromisoformat(due_date[:10]).date() - today).days
                 except (ValueError, TypeError):
                     # Can't parse due_date - may miss approaching deadline
                     logger.warning(
@@ -267,7 +253,9 @@ class DeadlineDetector(BaseDetector):
                     artifact_id = art_row[0]
                     evidence_artifacts.append(artifact_id)
 
-                    proof_text = f"Task '{title or 'Unknown'}' due in {days_until} day(s) on {due_date}"
+                    proof_text = (
+                        f"Task '{title or 'Unknown'}' due in {days_until} day(s) on {due_date}"
+                    )
                     excerpt = artifact_svc.create_excerpt(
                         artifact_id,
                         proof_text,

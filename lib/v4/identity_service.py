@@ -403,9 +403,7 @@ class IdentityService:
                     org_row = cursor.fetchone()
                     if org_row:
                         # Found org by domain - create person profile
-                        person_name = (
-                            claim_value.split("@")[0].replace(".", " ").title()
-                        )
+                        person_name = claim_value.split("@")[0].replace(".", " ").title()
                         result = self.create_profile(
                             profile_type="person",
                             canonical_name=person_name,
@@ -415,9 +413,7 @@ class IdentityService:
                                 "org_profile_id": org_row[0],
                             },
                         )
-                        self.add_claim(
-                            result["profile_id"], "email", claim_value, source, 0.9
-                        )
+                        self.add_claim(result["profile_id"], "email", claim_value, source, 0.9)
                         return {
                             "profile_id": result["profile_id"],
                             "confidence": 0.9,
@@ -446,9 +442,7 @@ class IdentityService:
                     canonical_domain=claim_value if claim_type == "domain" else None,
                     metadata={"auto_created": True},
                 )
-                self.add_claim(
-                    result["profile_id"], claim_type, claim_value, source, 0.7
-                )
+                self.add_claim(result["profile_id"], claim_type, claim_value, source, 0.7)
 
                 return {
                     "profile_id": result["profile_id"],
@@ -566,9 +560,7 @@ class IdentityService:
         try:
             stats = {}
 
-            cursor.execute(
-                "SELECT COUNT(*) FROM identity_profiles WHERE status = 'active'"
-            )
+            cursor.execute("SELECT COUNT(*) FROM identity_profiles WHERE status = 'active'")
             stats["active_profiles"] = cursor.fetchone()[0]
 
             cursor.execute("""
@@ -578,9 +570,7 @@ class IdentityService:
             """)
             stats["by_type"] = {row[0]: row[1] for row in cursor.fetchall()}
 
-            cursor.execute(
-                "SELECT COUNT(*) FROM identity_claims WHERE status = 'active'"
-            )
+            cursor.execute("SELECT COUNT(*) FROM identity_claims WHERE status = 'active'")
             stats["active_claims"] = cursor.fetchone()[0]
 
             cursor.execute("""

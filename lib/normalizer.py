@@ -12,6 +12,7 @@ Per MASTER_SPEC.md §4:
 import logging
 import sqlite3
 from datetime import date
+from pathlib import Path
 
 from lib import paths
 
@@ -354,7 +355,7 @@ class Normalizer:
                 END,
                 updated_at = datetime('now')
                 WHERE status IN ('sent', 'overdue')
-                AND paid_date IS NULL
+                AND payment_date IS NULL
                 AND due_date IS NOT NULL
                 AND client_id IS NOT NULL
                 AND (

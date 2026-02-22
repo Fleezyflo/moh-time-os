@@ -38,9 +38,7 @@ class TestThresholdDefaults:
         """All thresholds must have a justification in their config."""
         for name, config in DEFAULT_THRESHOLDS.items():
             assert config.justification, f"Threshold {name} missing justification"
-            assert (
-                len(config.justification) > 10
-            ), f"Threshold {name} justification too short"
+            assert len(config.justification) > 10, f"Threshold {name} justification too short"
 
 
 class TestEnvironmentSpecificThresholds:
@@ -52,10 +50,7 @@ class TestEnvironmentSpecificThresholds:
         production = get_thresholds_for_environment("production")
 
         # Production should be more permissive
-        assert (
-            production["commitment_resolution_rate"]
-            <= standard["commitment_resolution_rate"]
-        )
+        assert production["commitment_resolution_rate"] <= standard["commitment_resolution_rate"]
         assert production["invoice_validity_rate"] <= standard["invoice_validity_rate"]
 
     def test_development_thresholds_are_most_relaxed(self):
@@ -64,10 +59,7 @@ class TestEnvironmentSpecificThresholds:
         development = get_thresholds_for_environment("development")
 
         # Development should be more permissive than production
-        assert (
-            development["commitment_resolution_rate"]
-            <= production["commitment_resolution_rate"]
-        )
+        assert development["commitment_resolution_rate"] <= production["commitment_resolution_rate"]
 
 
 class TestEnforceThresholds:
@@ -114,9 +106,7 @@ class TestEnforceThresholds:
         """Uses environment-specific thresholds when specified."""
         stats = ResolutionStats()
         stats.commitments_total = 100
-        stats.commitments_resolved = (
-            82  # 82% - fails standard (85%) but passes production (80%)
-        )
+        stats.commitments_resolved = 82  # 82% - fails standard (85%) but passes production (80%)
 
         # Fails with standard thresholds
         violations_standard = enforce_thresholds(stats, "standard_agency")

@@ -176,12 +176,70 @@ class TaskHandler:
         return {"success": True, "task_id": task_id, "snoozed_until": until}
 
     def _sync_to_asana(self, task_id: str, data: dict):
-        """Sync task to Asana via CLI."""
-        raise NotImplementedError("Asana sync not implemented")
+        """
+        Sync task to Asana via API.
+
+        Uses the Asana client from config to create or update a task.
+        Falls back gracefully if Asana credentials are not configured.
+        """
+        import logging
+
+        logger = logging.getLogger(__name__)
+
+        asana_client = self.config.get("asana_client")
+        if not asana_client:
+            logger.warning(f"Asana client not configured; skipping sync for task {task_id}")
+            return
+
+        try:
+            project_gid = data.get("asana_project_gid")
+            task_data = {
+                "name": data.get("title", f"Task {task_id}"),
+                "notes": data.get("notes", ""),
+            }
+            if data.get("due_date"):
+                task_data["due_on"] = data["due_date"]
+            if data.get("assignee_email"):
+                task_data["assignee"] = data["assignee_email"]
+
+            existing_gid = data.get("asana_gid")
+            if existing_gid:
+                # Update existing task
+                asana_client.tasks.update_task(existing_gid, task_data)
+                logger.info(f"Updated Asana task {existing_gid} for local task {task_id}")
+            else:
+                # Create new task
+                if project_gid:
+                    task_data["projects"] = [project_gid]
+                result = asana_client.tasks.create_task(task_data)
+                new_gid = result.get("gid", "")
+                # Store Asana GID back to local record
+                self.store.update("tasks", task_id, {"asana_gid": new_gid})
+                logger.info(f"Created Asana task {new_gid} for local task {task_id}")
+
+        except Exception as e:
+            logger.error(f"Asana sync failed for task {task_id}: {e}")
 
     def _complete_in_asana(self, asana_id: str):
-        """Mark task complete in Asana."""
-        raise NotImplementedError("Asana complete not implemented")
+        """
+        Mark task complete in Asana.
+
+        Falls back gracefully if Asana credentials are not configured.
+        """
+        import logging
+
+        logger = logging.getLogger(__name__)
+
+        asana_client = self.config.get("asana_client")
+        if not asana_client:
+            logger.warning(f"Asana client not configured; skipping complete for {asana_id}")
+            return
+
+        try:
+            asana_client.tasks.update_task(asana_id, {"completed": True})
+            logger.info(f"Marked Asana task {asana_id} as complete")
+        except Exception as e:
+            logger.error(f"Failed to complete Asana task {asana_id}: {e}")
 
     def _log_action(self, action: dict, result: dict):
         """Log action to database."""

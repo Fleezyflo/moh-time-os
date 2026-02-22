@@ -62,12 +62,8 @@ Examples:
 
     parser.add_argument("sql", help="SQL to execute")
     parser.add_argument("--actor", required=True, help="Who is running this (required)")
-    parser.add_argument(
-        "--source", required=True, help="Source of this operation (required)"
-    )
-    parser.add_argument(
-        "--request-id", help="Request ID (auto-generated if not provided)"
-    )
+    parser.add_argument("--source", required=True, help="Source of this operation (required)")
+    parser.add_argument("--request-id", help="Request ID (auto-generated if not provided)")
     parser.add_argument(
         "--maintenance",
         action="store_true",
@@ -111,9 +107,7 @@ Examples:
     try:
         if args.maintenance:
             # Enable maintenance mode
-            enable_maintenance_mode(
-                conn, reason=f"db_exec: {args.sql[:100]}", set_by=args.actor
-            )
+            enable_maintenance_mode(conn, reason=f"db_exec: {args.sql[:100]}", set_by=args.actor)
             logger.info("Maintenance mode ENABLED")
 
         # Set write context

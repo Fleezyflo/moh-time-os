@@ -68,9 +68,7 @@ class NotificationHandler:
                 "action_data": json.dumps(data.get("action_data"))
                 if data.get("action_data")
                 else None,
-                "channels": json.dumps(data.get("channels"))
-                if data.get("channels")
-                else None,
+                "channels": json.dumps(data.get("channels")) if data.get("channels") else None,
                 "created_at": datetime.now().isoformat(),
             },
         )
