@@ -51,9 +51,7 @@ def seed_identities_from_clients():
                 # Add alias claims
                 aliases = json.loads(aliases_json or "[]")
                 for alias in aliases:
-                    ident.add_claim(
-                        profile_id, "alias_name", alias, "clients_table", 0.95
-                    )
+                    ident.add_claim(profile_id, "alias_name", alias, "clients_table", 0.95)
 
                 # Add xero claim if available
                 if xero_id:
@@ -97,9 +95,7 @@ def seed_identities_from_people():
             try:
                 # Check if profile already exists via email
                 if email:
-                    existing = ident.resolve_identity(
-                        "email", email, create_if_missing=False
-                    )
+                    existing = ident.resolve_identity("email", email, create_if_missing=False)
                     if existing and not existing.get("auto_created"):
                         # Already have a profile
                         stats["skipped"] += 1
@@ -165,9 +161,7 @@ def main():
     logger.info("=" * 60)
     logger.info("\n🏢 Seeding from clients table...")
     client_stats = seed_identities_from_clients()
-    logger.info(
-        f"   Created: {client_stats['created']}, Errors: {client_stats['errors']}"
-    )
+    logger.info(f"   Created: {client_stats['created']}, Errors: {client_stats['errors']}")
     logger.info("\n👤 Seeding from people table...")
     people_stats = seed_identities_from_people()
     logger.info(

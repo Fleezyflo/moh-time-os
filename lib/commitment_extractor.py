@@ -179,7 +179,9 @@ def extract_from_communications(limit: int = 100) -> dict:
             commit_id = generate_commitment_id(source_id, c["text"])
 
             # Check if already exists
-            cursor.execute("SELECT id FROM commitments WHERE id = ?", (commit_id,))
+            cursor.execute(
+                "SELECT commitment_id FROM commitments WHERE commitment_id = ?", (commit_id,)
+            )
             if cursor.fetchone():
                 skipped += 1
                 continue
@@ -194,22 +196,31 @@ def extract_from_communications(limit: int = 100) -> dict:
                 target = "hrmny"
 
             # Insert commitment
+            # Map to actual schema: commitment_id, scope_ref_type, scope_ref_id,
+            # commitment_text, type, confidence, due_at, speaker, target, client_id,
+            # source_id, status, created_at
             cursor.execute(
                 """
                 INSERT INTO commitments (
-                    id, source_type, source_id, text, type, confidence,
-                    deadline, speaker, target, client_id, status, created_at
-                ) VALUES (?, 'communication', ?, ?, ?, 0.7, ?, ?, ?, ?, 'open', ?)
+                    commitment_id, scope_ref_type, scope_ref_id,
+                    committed_by_type, committed_by_id,
+                    commitment_text, type, confidence,
+                    due_at, speaker, target, client_id,
+                    source_id, status, created_at
+                ) VALUES (?, 'communication', ?, ?, ?, ?, ?, 0.7, ?, ?, ?, ?, ?, 'open', ?)
             """,
                 (
                     commit_id,
                     source_id,
+                    speaker,
+                    from_email,
                     c["text"],
                     c["type"],
                     c["deadline"],
                     speaker,
                     target,
                     client_id,
+                    source_id,
                     now,
                 ),
             )
@@ -241,14 +252,12 @@ def run():
     cursor.execute("SELECT COUNT(*) as cnt FROM commitments")
     after = cursor.fetchone()["cnt"]
 
-    logger.info(
-        f"\nCommitments: {before} → {after} (+{result['commitments_extracted']})"
-    )
+    logger.info(f"\nCommitments: {before} → {after} (+{result['commitments_extracted']})")
     logger.info(f"Communications scanned: {result['communications_scanned']}")
     logger.info(f"Skipped duplicates: {result['skipped_duplicates']}")
     # Show recent commitments
     cursor.execute("""
-        SELECT cm.text, cm.type, cm.deadline, cm.speaker, c.name as client
+        SELECT cm.commitment_text, cm.type, cm.due_at, cm.speaker, c.name as client
         FROM commitments cm
         LEFT JOIN clients c ON cm.client_id = c.id
         ORDER BY cm.created_at DESC
@@ -258,8 +267,8 @@ def run():
     logger.info(f"\nRecent commitments ({len(rows)}):")
     for r in rows:
         client = r["client"] or "Unknown"
-        deadline = r["deadline"] or "No deadline"
-        logger.info(f"  [{r['type']}] {r['text'][:60]}...")
+        deadline = r["due_at"] or "No deadline"
+        logger.info(f"  [{r['type']}] {r['commitment_text'][:60]}...")
         logger.info(
             f"       Speaker: {r['speaker']} | Client: {client[:20]} | Deadline: {deadline}"
         )

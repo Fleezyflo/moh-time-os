@@ -21,8 +21,26 @@ from lib import paths
 
 logger = logging.getLogger(__name__)
 
+# ============================================================
+# SQL IDENTIFIER VALIDATION
+# ============================================================
+
+_SAFE_IDENTIFIER_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
+
+
+def validate_identifier(name: str) -> str:
+    """Validate that *name* is a safe SQL identifier (table or column name).
+
+    Returns the name unchanged if valid; raises ``ValueError`` otherwise.
+    This prevents SQL injection via dynamic identifier interpolation.
+    """
+    if not _SAFE_IDENTIFIER_RE.match(name):
+        raise ValueError(f"Invalid SQL identifier: {name!r}")
+    return name
+
+
 # Schema version - increment when adding migrations
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 
 # ============================================================
 # REQUIRED TABLES - Create if missing
@@ -90,6 +108,249 @@ REQUIRED_TABLES = {
 }
 
 # ============================================================
+# COLLECTOR EXPANSION TABLES - New tables for full API coverage
+# ============================================================
+COLLECTOR_EXPANSION_TABLES = {
+    "asana_custom_fields": """
+        CREATE TABLE IF NOT EXISTS asana_custom_fields (
+            id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL,
+            task_id TEXT,
+            field_name TEXT NOT NULL,
+            field_type TEXT NOT NULL,
+            text_value TEXT,
+            number_value REAL,
+            enum_value TEXT,
+            date_value TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """,
+    "asana_subtasks": """
+        CREATE TABLE IF NOT EXISTS asana_subtasks (
+            id TEXT PRIMARY KEY,
+            parent_task_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            assignee_id TEXT,
+            assignee_name TEXT,
+            completed INTEGER DEFAULT 0,
+            due_on TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """,
+    "asana_sections": """
+        CREATE TABLE IF NOT EXISTS asana_sections (
+            id TEXT PRIMARY KEY,
+            project_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            sort_order INTEGER,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """,
+    "asana_stories": """
+        CREATE TABLE IF NOT EXISTS asana_stories (
+            id TEXT PRIMARY KEY,
+            task_id TEXT NOT NULL,
+            type TEXT NOT NULL,
+            text TEXT,
+            created_by TEXT,
+            created_at TEXT NOT NULL
+        )
+    """,
+    "asana_task_dependencies": """
+        CREATE TABLE IF NOT EXISTS asana_task_dependencies (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            task_id TEXT NOT NULL,
+            depends_on_task_id TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            UNIQUE(task_id, depends_on_task_id)
+        )
+    """,
+    "asana_portfolios": """
+        CREATE TABLE IF NOT EXISTS asana_portfolios (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            owner_id TEXT,
+            owner_name TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """,
+    "asana_goals": """
+        CREATE TABLE IF NOT EXISTS asana_goals (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            owner_id TEXT,
+            owner_name TEXT,
+            status TEXT,
+            due_on TEXT,
+            html_notes TEXT,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """,
+    "asana_attachments": """
+        CREATE TABLE IF NOT EXISTS asana_attachments (
+            id TEXT PRIMARY KEY,
+            task_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            download_url TEXT,
+            host TEXT,
+            size_bytes INTEGER,
+            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """,
+    "gmail_participants": """
+        CREATE TABLE IF NOT EXISTS gmail_participants (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message_id TEXT NOT NULL,
+            role TEXT NOT NULL,
+            email TEXT NOT NULL,
+            name TEXT
+        )
+    """,
+    "gmail_attachments": """
+        CREATE TABLE IF NOT EXISTS gmail_attachments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message_id TEXT NOT NULL,
+            filename TEXT NOT NULL,
+            mime_type TEXT,
+            size_bytes INTEGER,
+            attachment_id TEXT
+        )
+    """,
+    "gmail_labels": """
+        CREATE TABLE IF NOT EXISTS gmail_labels (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message_id TEXT NOT NULL,
+            label_id TEXT NOT NULL,
+            label_name TEXT
+        )
+    """,
+    "calendar_attendees": """
+        CREATE TABLE IF NOT EXISTS calendar_attendees (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_id TEXT NOT NULL,
+            email TEXT NOT NULL,
+            display_name TEXT,
+            response_status TEXT,
+            organizer INTEGER DEFAULT 0,
+            self INTEGER DEFAULT 0
+        )
+    """,
+    "calendar_recurrence_rules": """
+        CREATE TABLE IF NOT EXISTS calendar_recurrence_rules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_id TEXT NOT NULL,
+            rrule TEXT NOT NULL
+        )
+    """,
+    "chat_reactions": """
+        CREATE TABLE IF NOT EXISTS chat_reactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message_id TEXT NOT NULL,
+            emoji TEXT NOT NULL,
+            user_id TEXT,
+            user_name TEXT
+        )
+    """,
+    "chat_attachments": """
+        CREATE TABLE IF NOT EXISTS chat_attachments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            message_id TEXT NOT NULL,
+            name TEXT,
+            content_type TEXT,
+            source_uri TEXT,
+            thumbnail_uri TEXT
+        )
+    """,
+    "chat_space_metadata": """
+        CREATE TABLE IF NOT EXISTS chat_space_metadata (
+            space_id TEXT PRIMARY KEY,
+            display_name TEXT,
+            space_type TEXT,
+            threaded INTEGER DEFAULT 0,
+            member_count INTEGER,
+            created_time TEXT,
+            last_synced TEXT
+        )
+    """,
+    "chat_space_members": """
+        CREATE TABLE IF NOT EXISTS chat_space_members (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            space_id TEXT NOT NULL,
+            member_id TEXT NOT NULL,
+            display_name TEXT,
+            email TEXT,
+            role TEXT,
+            UNIQUE(space_id, member_id)
+        )
+    """,
+    "xero_line_items": """
+        CREATE TABLE IF NOT EXISTS xero_line_items (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            invoice_id TEXT NOT NULL,
+            description TEXT,
+            quantity REAL,
+            unit_amount REAL,
+            line_amount REAL,
+            tax_type TEXT,
+            tax_amount REAL,
+            account_code TEXT,
+            tracking_category TEXT,
+            tracking_option TEXT
+        )
+    """,
+    "xero_contacts": """
+        CREATE TABLE IF NOT EXISTS xero_contacts (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            email TEXT,
+            phone TEXT,
+            account_number TEXT,
+            tax_number TEXT,
+            is_supplier INTEGER DEFAULT 0,
+            is_customer INTEGER DEFAULT 0,
+            default_currency TEXT,
+            outstanding_balance REAL,
+            overdue_balance REAL,
+            last_synced TEXT
+        )
+    """,
+    "xero_credit_notes": """
+        CREATE TABLE IF NOT EXISTS xero_credit_notes (
+            id TEXT PRIMARY KEY,
+            contact_id TEXT,
+            date TEXT,
+            status TEXT,
+            total REAL,
+            currency_code TEXT,
+            remaining_credit REAL,
+            allocated_amount REAL,
+            last_synced TEXT
+        )
+    """,
+    "xero_bank_transactions": """
+        CREATE TABLE IF NOT EXISTS xero_bank_transactions (
+            id TEXT PRIMARY KEY,
+            type TEXT,
+            contact_id TEXT,
+            date TEXT,
+            status TEXT,
+            total REAL,
+            currency_code TEXT,
+            reference TEXT,
+            last_synced TEXT
+        )
+    """,
+    "xero_tax_rates": """
+        CREATE TABLE IF NOT EXISTS xero_tax_rates (
+            name TEXT PRIMARY KEY,
+            tax_type TEXT,
+            effective_rate REAL,
+            status TEXT
+        )
+    """,
+}
+
+# ============================================================
 # REQUIRED COLUMNS - Add if missing
 # ============================================================
 REQUIRED_COLUMNS = {
@@ -99,6 +360,13 @@ REQUIRED_COLUMNS = {
         ("notes", "TEXT"),
         ("completed_at", "TEXT"),
         ("priority_reasons", "TEXT"),
+        ("section_id", "TEXT"),
+        ("section_name", "TEXT"),
+        ("subtask_count", "INTEGER DEFAULT 0"),
+        ("has_dependencies", "INTEGER DEFAULT 0"),
+        ("attachment_count", "INTEGER DEFAULT 0"),
+        ("story_count", "INTEGER DEFAULT 0"),
+        ("custom_fields_json", "TEXT"),
     ],
     "communications": [
         ("content_hash", "TEXT"),
@@ -107,11 +375,27 @@ REQUIRED_COLUMNS = {
         ("received_at", "TEXT"),
         ("sensitivity", "TEXT"),
         ("stakeholder_tier", "TEXT"),
+        ("is_read", "INTEGER"),
+        ("is_starred", "INTEGER"),
+        ("importance", "TEXT"),
+        ("has_attachments", "INTEGER DEFAULT 0"),
+        ("attachment_count", "INTEGER DEFAULT 0"),
+        ("label_ids", "TEXT"),
     ],
     "events": [
         ("prep_notes", "TEXT"),
         ("start_at", "TEXT"),
         ("end_at", "TEXT"),
+        ("organizer_email", "TEXT"),
+        ("organizer_name", "TEXT"),
+        ("conference_url", "TEXT"),
+        ("conference_type", "TEXT"),
+        ("recurrence", "TEXT"),
+        ("event_type", "TEXT"),
+        ("calendar_id", "TEXT DEFAULT 'primary'"),
+        ("attendee_count", "INTEGER DEFAULT 0"),
+        ("accepted_count", "INTEGER DEFAULT 0"),
+        ("declined_count", "INTEGER DEFAULT 0"),
     ],
     "invoices": [
         ("source_id", "TEXT"),
@@ -144,6 +428,13 @@ REQUIRED_COLUMNS = {
     "signals": [
         ("resolved_at", "TEXT"),
         ("resolution", "TEXT"),
+    ],
+    "chat_messages": [
+        ("thread_id", "TEXT"),
+        ("thread_reply_count", "INTEGER DEFAULT 0"),
+        ("reaction_count", "INTEGER DEFAULT 0"),
+        ("has_attachment", "INTEGER DEFAULT 0"),
+        ("attachment_count", "INTEGER DEFAULT 0"),
     ],
 }
 
@@ -352,8 +643,9 @@ def get_connection(
 
 def get_table_columns(conn: sqlite3.Connection, table: str) -> set[str]:
     """Get existing column names for a table."""
+    validate_identifier(table)
     try:
-        cursor = conn.execute(f"PRAGMA table_info({table})")
+        cursor = conn.execute(f"PRAGMA table_info({table})")  # nosec B608 — validated above
         return {row[1] for row in cursor.fetchall()}
     except sqlite3.OperationalError:
         return set()
@@ -361,9 +653,7 @@ def get_table_columns(conn: sqlite3.Connection, table: str) -> set[str]:
 
 def table_exists(conn: sqlite3.Connection, table: str) -> bool:
     """Check if a table exists."""
-    cursor = conn.execute(
-        "SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,)
-    )
+    cursor = conn.execute("SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table,))
     return cursor.fetchone() is not None
 
 
@@ -375,7 +665,9 @@ def get_schema_version(conn: sqlite3.Connection) -> int:
 
 def set_schema_version(conn: sqlite3.Connection, version: int):
     """Set schema version via PRAGMA user_version."""
-    conn.execute(f"PRAGMA user_version = {version}")
+    if not isinstance(version, int) or version < 0:
+        raise ValueError(f"Invalid schema version: {version!r}")
+    conn.execute(f"PRAGMA user_version = {version}")  # nosec B608 — int-validated above
 
 
 # ============================================================
@@ -383,9 +675,7 @@ def set_schema_version(conn: sqlite3.Connection, version: int):
 # ============================================================
 
 
-def create_table_if_missing(
-    conn: sqlite3.Connection, table: str, create_sql: str
-) -> bool:
+def create_table_if_missing(conn: sqlite3.Connection, table: str, create_sql: str) -> bool:
     """Create a table if it doesn't exist. Returns True if created."""
     if table_exists(conn, table):
         return False
@@ -409,8 +699,11 @@ def add_column_if_missing(
     if column in existing:
         return False
 
+    validate_identifier(table)
+    validate_identifier(column)
+    # definition is a type spec like "TEXT DEFAULT ''" — not parameterizable in SQLite
     try:
-        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+        conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")  # nosec B608 — validated above
         logger.info(f"Migration: added column {table}.{column}")
         return True
     except sqlite3.OperationalError as e:
@@ -442,6 +735,14 @@ def run_migrations(conn: sqlite3.Connection) -> dict:
         except Exception as e:
             results["errors"].append(f"create {table}: {e}")
 
+    # Step 1b: Create collector expansion tables
+    for table, create_sql in COLLECTOR_EXPANSION_TABLES.items():
+        try:
+            if create_table_if_missing(conn, table, create_sql):
+                results["tables_created"].append(table)
+        except Exception as e:
+            results["errors"].append(f"create {table}: {e}")
+
     # Step 2: Add required columns to existing tables
     for table, columns in REQUIRED_COLUMNS.items():
         for column, definition in columns:
@@ -458,13 +759,38 @@ def run_migrations(conn: sqlite3.Connection) -> dict:
         ("idx_invoices_status", "invoices", "status"),
         ("idx_invoices_due_at", "invoices", "due_at"),
         ("idx_events_start_at", "events", "start_at"),
+        ("idx_asana_custom_fields_project", "asana_custom_fields", "project_id"),
+        ("idx_asana_custom_fields_task", "asana_custom_fields", "task_id"),
+        ("idx_asana_subtasks_parent_task", "asana_subtasks", "parent_task_id"),
+        ("idx_asana_sections_project", "asana_sections", "project_id"),
+        ("idx_asana_stories_task", "asana_stories", "task_id"),
+        ("idx_asana_task_dependencies_task", "asana_task_dependencies", "task_id"),
+        ("idx_asana_portfolios_owner", "asana_portfolios", "owner_id"),
+        ("idx_asana_goals_owner", "asana_goals", "owner_id"),
+        ("idx_asana_attachments_task", "asana_attachments", "task_id"),
+        ("idx_gmail_participants_message", "gmail_participants", "message_id"),
+        ("idx_gmail_attachments_message", "gmail_attachments", "message_id"),
+        ("idx_gmail_labels_message", "gmail_labels", "message_id"),
+        ("idx_calendar_attendees_event", "calendar_attendees", "event_id"),
+        ("idx_calendar_recurrence_event", "calendar_recurrence_rules", "event_id"),
+        ("idx_chat_reactions_message", "chat_reactions", "message_id"),
+        ("idx_chat_attachments_message", "chat_attachments", "message_id"),
+        ("idx_chat_space_members_space", "chat_space_members", "space_id"),
+        ("idx_xero_line_items_invoice", "xero_line_items", "invoice_id"),
+        ("idx_xero_contacts_name", "xero_contacts", "name"),
+        ("idx_xero_credit_notes_contact", "xero_credit_notes", "contact_id"),
+        ("idx_xero_bank_transactions_contact", "xero_bank_transactions", "contact_id"),
     ]
 
     for idx_name, table, columns in indexes:
+        # All identifiers come from hardcoded list above
+        validate_identifier(idx_name)
+        validate_identifier(table)
+        validate_identifier(columns)
         if table_exists(conn, table):
             try:
                 conn.execute(
-                    f"CREATE INDEX IF NOT EXISTS {idx_name} ON {table}({columns})"
+                    f"CREATE INDEX IF NOT EXISTS {idx_name} ON {table}({columns})"  # nosec B608
                 )
             except sqlite3.OperationalError:
                 pass
@@ -516,9 +842,7 @@ def run_migrations(conn: sqlite3.Connection) -> dict:
     if previous_version < 9:
         try:
             # Check if issues_v29 is empty table (not a view)
-            cursor = conn.execute(
-                "SELECT type FROM sqlite_master WHERE name = 'issues_v29'"
-            )
+            cursor = conn.execute("SELECT type FROM sqlite_master WHERE name = 'issues_v29'")
             row = cursor.fetchone()
             if row and row[0] == "table":
                 cursor = conn.execute("SELECT COUNT(*) FROM issues_v29")
@@ -572,14 +896,10 @@ def run_migrations(conn: sqlite3.Connection) -> dict:
                             i.closed_at
                         FROM issues i
                     """)
-                    logger.info(
-                        "Migration 9: Created issues_v29 VIEW from legacy issues table"
-                    )
+                    logger.info("Migration 9: Created issues_v29 VIEW from legacy issues table")
 
             # Check if signals_v29 is empty table
-            cursor = conn.execute(
-                "SELECT type FROM sqlite_master WHERE name = 'signals_v29'"
-            )
+            cursor = conn.execute("SELECT type FROM sqlite_master WHERE name = 'signals_v29'")
             row = cursor.fetchone()
             if row and row[0] == "table":
                 cursor = conn.execute("SELECT COUNT(*) FROM signals_v29")
@@ -611,9 +931,7 @@ def run_migrations(conn: sqlite3.Connection) -> dict:
                             COALESCE(s.detected_at, datetime('now')) AS updated_at
                         FROM signals s
                     """)
-                    logger.info(
-                        "Migration 9: Created signals_v29 VIEW from legacy signals table"
-                    )
+                    logger.info("Migration 9: Created signals_v29 VIEW from legacy signals table")
         except Exception as e:
             results["errors"].append(f"migration 9 views: {e}")
 

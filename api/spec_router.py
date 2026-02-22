@@ -129,7 +129,7 @@ async def get_clients(
     conn = get_db()
     try:
         endpoints = ClientEndpoints(conn)
-        filters = {}
+        filters: dict[str, str | bool] = {}
         if status:
             filters["status"] = status
         if tier:
@@ -160,7 +160,8 @@ async def get_client_detail(
         include_sections = include.split(",") if include else None
         result, error_code = endpoints.get_client_detail(client_id, include_sections)
         if error_code:
-            raise HTTPException(status_code=error_code, detail=result.get("error", "Error"))
+            detail = result.get("error", "Error") if result else "Error"
+            raise HTTPException(status_code=error_code, detail=detail)
         if not result:
             raise HTTPException(status_code=404, detail="Client not found")
         return result
@@ -1015,7 +1016,7 @@ async def get_projects_v2(limit: int = Query(50), status: str | None = Query(Non
     conn = get_db()
     try:
         where = ["1=1"]
-        params = []
+        params: list[str | int] = []
 
         if status:
             where.append("p.status = ?")
@@ -1055,7 +1056,7 @@ async def get_events_v2(
     conn = get_db()
     try:
         where = ["1=1"]
-        params = []
+        params: list[str | int] = []
 
         if start_date:
             where.append("start_time >= ?")
@@ -1096,7 +1097,7 @@ async def get_invoices_v2(
     conn = get_db()
     try:
         where = ["1=1"]
-        params = []
+        params: list[str | int] = []
 
         if status:
             where.append("status = ?")
@@ -1138,7 +1139,7 @@ async def get_proposals_v2(
     try:
         # Query proposals_v4 table
         where = ["1=1"]
-        params = []
+        params: list[str | int] = []
 
         if status:
             where.append("status = ?")

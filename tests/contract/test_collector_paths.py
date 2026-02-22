@@ -53,9 +53,7 @@ class TestCollectorOrchestratorPathResolution:
                 with mock.patch("lib.collectors.orchestrator.CalendarCollector"):
                     with mock.patch("lib.collectors.orchestrator.GmailCollector"):
                         with mock.patch("lib.collectors.orchestrator.TasksCollector"):
-                            with mock.patch(
-                                "lib.collectors.orchestrator.XeroCollector"
-                            ):
+                            with mock.patch("lib.collectors.orchestrator.XeroCollector"):
                                 orch = CollectorOrchestrator()
 
         # Verify it read from our marker file
@@ -81,9 +79,7 @@ class TestCollectorOrchestratorPathResolution:
                 with mock.patch("lib.collectors.orchestrator.CalendarCollector"):
                     with mock.patch("lib.collectors.orchestrator.GmailCollector"):
                         with mock.patch("lib.collectors.orchestrator.TasksCollector"):
-                            with mock.patch(
-                                "lib.collectors.orchestrator.XeroCollector"
-                            ):
+                            with mock.patch("lib.collectors.orchestrator.XeroCollector"):
                                 orch = CollectorOrchestrator()
 
         assert orch.config_path == str(

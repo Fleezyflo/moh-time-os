@@ -22,11 +22,11 @@ interface ColdClient {
 }
 
 const TIER_COLORS: Record<Tier, string> = {
-  platinum: 'bg-purple-500 text-white',
-  gold: 'bg-yellow-500 text-black',
-  silver: 'bg-slate-400 text-black',
-  bronze: 'bg-orange-700 text-white',
-  none: 'bg-slate-600 text-slate-300',
+  platinum: 'bg-purple-500 text-[var(--white)]',
+  gold: 'bg-[var(--warning)] text-[var(--black)]',
+  silver: 'bg-[var(--grey-light)] text-[var(--black)]',
+  bronze: 'bg-[var(--warning)] text-[var(--white)]',
+  none: 'bg-[var(--grey-dim)] text-[var(--grey-light)]',
 };
 
 function formatCurrency(amount: number, currency = 'AED'): string {
@@ -94,15 +94,15 @@ export function ColdClients() {
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="h-8 bg-slate-800 rounded animate-pulse w-48" />
-        <div className="h-64 bg-slate-800 rounded animate-pulse" />
+        <div className="h-8 bg-[var(--grey-dim)] rounded animate-pulse w-48" />
+        <div className="h-64 bg-[var(--grey-dim)] rounded animate-pulse" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="p-8 text-center text-red-400">
+      <div className="p-8 text-center text-[var(--danger)]">
         <p>{error}</p>
       </div>
     );
@@ -113,42 +113,49 @@ export function ColdClients() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <Link to="/clients" className="text-sm text-slate-400 hover:text-white mb-1 inline-block">
+          <Link
+            to="/clients"
+            className="text-sm text-[var(--grey-light)] hover:text-[var(--white)] mb-1 inline-block"
+          >
             ← Back to All Clients
           </Link>
-          <h1 className="text-2xl font-bold">Cold Clients</h1>
-          <p className="text-slate-400 text-sm">Clients with no activity for 270+ days</p>
+          <h1 className="text-2xl font-bold text-[var(--white)]">Cold Clients</h1>
+          <p className="text-[var(--grey-light)] text-sm">Clients with no activity for 270+ days</p>
         </div>
       </div>
 
       {/* Summary Stats */}
       <div className="grid md:grid-cols-4 gap-4">
-        <div className="bg-slate-800 rounded-lg p-4">
-          <div className="text-2xl font-bold">{clients.length}</div>
-          <div className="text-sm text-slate-400">Cold Clients</div>
+        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-[var(--grey)]">
+          <div className="text-2xl font-bold text-[var(--white)]">{clients.length}</div>
+          <div className="text-sm text-[var(--grey-light)]">Cold Clients</div>
         </div>
-        <div className="bg-slate-800 rounded-lg p-4">
-          <div className="text-2xl font-bold">{formatCurrency(totalLifetimeIssued)}</div>
-          <div className="text-sm text-slate-400">Lifetime Issued</div>
+        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-[var(--grey)]">
+          <div className="text-2xl font-bold text-[var(--white)]">
+            {formatCurrency(totalLifetimeIssued)}
+          </div>
+          <div className="text-sm text-[var(--grey-light)]">Lifetime Issued</div>
         </div>
-        <div className="bg-slate-800 rounded-lg p-4">
-          <div className="text-2xl font-bold">{formatCurrency(totalLifetimePaid)}</div>
-          <div className="text-sm text-slate-400">Lifetime Paid</div>
+        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-[var(--grey)]">
+          <div className="text-2xl font-bold text-[var(--white)]">
+            {formatCurrency(totalLifetimePaid)}
+          </div>
+          <div className="text-sm text-[var(--grey-light)]">Lifetime Paid</div>
         </div>
-        <div className="bg-slate-800 rounded-lg p-4">
-          <div className="text-2xl font-bold">{avgDaysSince}d</div>
-          <div className="text-sm text-slate-400">Avg Days Inactive</div>
+        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-[var(--grey)]">
+          <div className="text-2xl font-bold text-[var(--white)]">{avgDaysSince}d</div>
+          <div className="text-sm text-[var(--grey-light)]">Avg Days Inactive</div>
         </div>
       </div>
 
       {/* Filters and Sort */}
-      <div className="flex items-center gap-4 bg-slate-800 rounded-lg p-3">
+      <div className="flex items-center gap-4 bg-[var(--grey-dim)] rounded-lg p-3 border border-[var(--grey)]">
         <div className="flex items-center gap-2">
-          <label className="text-sm text-slate-400">Tier:</label>
+          <label className="text-sm text-[var(--grey-light)]">Tier:</label>
           <select
             value={tierFilter}
             onChange={(e) => setTierFilter(e.target.value)}
-            className="bg-slate-700 border-none rounded px-2 py-1 text-sm"
+            className="bg-[var(--grey)] border-none rounded px-2 py-1 text-sm text-[var(--white)]"
           >
             <option value="all">All</option>
             <option value="platinum">Platinum</option>
@@ -160,11 +167,11 @@ export function ColdClients() {
         </div>
 
         <div className="flex items-center gap-2">
-          <label className="text-sm text-slate-400">Sort:</label>
+          <label className="text-sm text-[var(--grey-light)]">Sort:</label>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
-            className="bg-slate-700 border-none rounded px-2 py-1 text-sm"
+            className="bg-[var(--grey)] border-none rounded px-2 py-1 text-sm text-[var(--white)]"
           >
             <option value="last_activity">Last Activity (most recent)</option>
             <option value="lifetime">Lifetime Value (highest)</option>
@@ -172,12 +179,14 @@ export function ColdClients() {
           </select>
         </div>
 
-        <div className="ml-auto text-sm text-slate-400">Showing {sortedClients.length} clients</div>
+        <div className="ml-auto text-sm text-[var(--grey-light)]">
+          Showing {sortedClients.length} clients
+        </div>
       </div>
 
       {/* Client List */}
       {sortedClients.length === 0 ? (
-        <div className="text-center py-16 text-slate-400">
+        <div className="text-center py-16 text-[var(--grey-light)]">
           <span className="text-4xl mb-2 block">🥶</span>
           <p>No cold clients found</p>
         </div>
@@ -194,17 +203,17 @@ export function ColdClients() {
 
 function ColdClientCard({ client }: { client: ColdClient }) {
   return (
-    <div className="bg-slate-800/60 rounded-lg p-4 opacity-70 hover:opacity-100 transition-opacity">
+    <div className="bg-[var(--black)]/60 rounded-lg p-4 opacity-70 hover:opacity-100 transition-opacity border border-[var(--grey)]">
       <div className="flex items-start gap-4">
         {/* Left: Name and tier */}
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <h3 className="font-medium text-slate-200">{client.name}</h3>
+            <h3 className="font-medium text-[var(--grey-light)]">{client.name}</h3>
             <span className={`px-2 py-0.5 rounded text-xs font-medium ${TIER_COLORS[client.tier]}`}>
               {client.tier}
             </span>
           </div>
-          <div className="text-sm text-slate-500">
+          <div className="text-sm text-[var(--grey)]">
             Last invoice: {formatDate(client.last_invoice_date)}
             {client.days_since_last_invoice && (
               <span className="ml-2">({client.days_since_last_invoice} days ago)</span>
@@ -215,14 +224,16 @@ function ColdClientCard({ client }: { client: ColdClient }) {
         {/* Right: Lifetime stats */}
         <div className="text-right">
           <div className="text-sm">
-            <span className="text-slate-400">Issued:</span>
-            <span className="ml-2 text-slate-200">
+            <span className="text-[var(--grey-light)]">Issued:</span>
+            <span className="ml-2 text-[var(--grey-light)]">
               {formatCurrency(client.issued_lifetime || 0)}
             </span>
           </div>
           <div className="text-sm">
-            <span className="text-slate-400">Paid:</span>
-            <span className="ml-2 text-slate-200">{formatCurrency(client.paid_lifetime || 0)}</span>
+            <span className="text-[var(--grey-light)]">Paid:</span>
+            <span className="ml-2 text-[var(--grey-light)]">
+              {formatCurrency(client.paid_lifetime || 0)}
+            </span>
           </div>
         </div>
       </div>

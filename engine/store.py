@@ -47,9 +47,7 @@ def insert_proposal(
             kind,
             json.dumps(payload, ensure_ascii=False),
             json.dumps(attribution, ensure_ascii=False),
-            json.dumps(assumptions, ensure_ascii=False)
-            if assumptions is not None
-            else None,
+            json.dumps(assumptions, ensure_ascii=False) if assumptions is not None else None,
             now_ms(),
         ),
     )

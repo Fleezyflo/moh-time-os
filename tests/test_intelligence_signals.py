@@ -8,40 +8,41 @@ Covers:
 - Full database signal scan
 """
 
-import pytest
 from pathlib import Path
 
+import pytest
+
 from lib.intelligence.signals import (
-    SignalSeverity,
+    SIGNAL_CATALOG,
     SignalCategory,
     SignalDefinition,
-    SIGNAL_CATALOG,
-    get_signal,
-    get_signals_by_entity_type,
-    get_signals_by_category,
-    get_signals_by_severity,
-    validate_signal_catalog,
-    evaluate_signal,
-    detect_signals_for_entity,
-    detect_all_client_signals,
-    detect_all_signals,
-    _evaluate_threshold,
-    _evaluate_trend,
+    SignalSeverity,
     _evaluate_anomaly,
     _evaluate_compound,
+    _evaluate_threshold,
+    _evaluate_trend,
+    acknowledge_signal,
+    clear_all_signal_state,
+    detect_all_client_signals,
+    detect_all_signals,
+    detect_signals_for_entity,
+    evaluate_signal,
+    get_active_signals,
+    get_signal,
+    get_signal_history,
+    get_signal_summary,
+    get_signals_by_category,
+    get_signals_by_entity_type,
+    get_signals_by_severity,
     # State management
     update_signal_state,
-    get_active_signals,
-    get_signal_history,
-    acknowledge_signal,
-    get_signal_summary,
-    clear_all_signal_state,
+    validate_signal_catalog,
 )
-
 
 # =============================================================================
 # CATALOG VALIDATION TESTS
 # =============================================================================
+
 
 class TestSignalCatalog:
     """Tests for signal catalog structure and validation."""
@@ -93,6 +94,7 @@ class TestSignalCatalog:
 # THRESHOLD EVALUATOR TESTS
 # =============================================================================
 
+
 class TestThresholdEvaluator:
     """Tests for threshold condition evaluation."""
 
@@ -115,6 +117,7 @@ class TestThresholdEvaluator:
     def test_threshold_evaluates_client_metric(self, db_path):
         """Should evaluate threshold for real client."""
         from lib.query_engine import QueryEngine
+
         engine = QueryEngine(db_path)
         clients = engine.client_portfolio_overview()
 
@@ -141,6 +144,7 @@ class TestThresholdEvaluator:
 # TREND EVALUATOR TESTS
 # =============================================================================
 
+
 class TestTrendEvaluator:
     """Tests for trend condition evaluation."""
 
@@ -165,6 +169,7 @@ class TestTrendEvaluator:
 # ANOMALY EVALUATOR TESTS
 # =============================================================================
 
+
 class TestAnomalyEvaluator:
     """Tests for anomaly condition evaluation."""
 
@@ -188,6 +193,7 @@ class TestAnomalyEvaluator:
 # COMPOUND EVALUATOR TESTS
 # =============================================================================
 
+
 class TestCompoundEvaluator:
     """Tests for compound condition evaluation."""
 
@@ -210,6 +216,7 @@ class TestCompoundEvaluator:
 # =============================================================================
 # SIGNAL DETECTION TESTS
 # =============================================================================
+
 
 class TestSignalDetection:
     """Tests for signal detection functions."""
@@ -235,6 +242,7 @@ class TestSignalDetection:
     def test_detect_signals_for_real_client(self, db_path):
         """Should run without error for real client."""
         from lib.query_engine import QueryEngine
+
         engine = QueryEngine(db_path)
         clients = engine.client_portfolio_overview()
 
@@ -255,6 +263,7 @@ class TestSignalDetection:
     def test_detect_signals_sorted_by_severity(self, db_path):
         """Detected signals should be sorted CRITICAL > WARNING > WATCH."""
         from lib.query_engine import QueryEngine
+
         engine = QueryEngine(db_path)
         clients = engine.client_portfolio_overview()
 
@@ -275,6 +284,7 @@ class TestSignalDetection:
 # =============================================================================
 # FULL DETECTION TESTS
 # =============================================================================
+
 
 class TestFullDetection:
     """Tests for full database signal detection."""
@@ -315,6 +325,7 @@ class TestFullDetection:
     def test_detect_all_client_signals(self, db_path):
         """detect_all_client_signals should return list (quick mode)."""
         from lib.intelligence.signals import SignalCategory
+
         result = detect_all_client_signals(db_path, categories=[SignalCategory.THRESHOLD])
 
         assert isinstance(result, list)
@@ -329,13 +340,15 @@ class TestFullDetection:
 
         # All detected signals should be threshold type
         for signal in result["signals"]:
-            assert signal["category"] == "threshold", \
-                f"Quick mode returned non-threshold signal: {signal['signal_id']}"
+            assert (
+                signal["category"] == "threshold"
+            ), f"Quick mode returned non-threshold signal: {signal['signal_id']}"
 
 
 # =============================================================================
 # EVIDENCE FORMATTING TESTS
 # =============================================================================
+
 
 class TestEvidenceFormatting:
     """Tests for evidence text formatting."""
@@ -348,6 +361,7 @@ class TestEvidenceFormatting:
     def test_detected_signal_has_evidence_text(self, db_path):
         """Detected signals should have formatted evidence text."""
         from lib.query_engine import QueryEngine
+
         engine = QueryEngine(db_path)
         clients = engine.client_portfolio_overview()
 
@@ -383,13 +397,15 @@ class TestSignalStateTracking:
 
     def test_update_state_inserts_new_signal(self, fixture_db):
         """New detected signal should be inserted as active."""
-        detected = [{
-            "signal_id": "sig_test_new",
-            "entity_type": "client",
-            "entity_id": "test-client-123",
-            "severity": "warning",
-            "evidence": {"test": True},
-        }]
+        detected = [
+            {
+                "signal_id": "sig_test_new",
+                "entity_type": "client",
+                "entity_id": "test-client-123",
+                "severity": "warning",
+                "evidence": {"test": True},
+            }
+        ]
 
         result = update_signal_state(detected, fixture_db)
 
@@ -404,13 +420,15 @@ class TestSignalStateTracking:
 
     def test_update_state_increments_evaluation_count(self, fixture_db):
         """Detecting same signal again should increment count."""
-        detected = [{
-            "signal_id": "sig_test_ongoing",
-            "entity_type": "client",
-            "entity_id": "test-client-456",
-            "severity": "warning",
-            "evidence": {"test": True},
-        }]
+        detected = [
+            {
+                "signal_id": "sig_test_ongoing",
+                "entity_type": "client",
+                "entity_id": "test-client-456",
+                "severity": "warning",
+                "evidence": {"test": True},
+            }
+        ]
 
         # First detection
         result1 = update_signal_state(detected, fixture_db)
@@ -425,9 +443,27 @@ class TestSignalStateTracking:
     def test_get_active_signals_filters(self, fixture_db):
         """get_active_signals should filter by entity_type and severity."""
         signals = [
-            {"signal_id": "sig_a", "entity_type": "client", "entity_id": "c1", "severity": "warning", "evidence": {}},
-            {"signal_id": "sig_b", "entity_type": "client", "entity_id": "c2", "severity": "critical", "evidence": {}},
-            {"signal_id": "sig_c", "entity_type": "project", "entity_id": "p1", "severity": "warning", "evidence": {}},
+            {
+                "signal_id": "sig_a",
+                "entity_type": "client",
+                "entity_id": "c1",
+                "severity": "warning",
+                "evidence": {},
+            },
+            {
+                "signal_id": "sig_b",
+                "entity_type": "client",
+                "entity_id": "c2",
+                "severity": "critical",
+                "evidence": {},
+            },
+            {
+                "signal_id": "sig_c",
+                "entity_type": "project",
+                "entity_id": "p1",
+                "severity": "warning",
+                "evidence": {},
+            },
         ]
         update_signal_state(signals, fixture_db)
 
@@ -441,14 +477,28 @@ class TestSignalStateTracking:
         assert critical[0]["signal_id"] == "sig_b"
 
         # Filter by both
-        client_warning = get_active_signals(entity_type="client", severity="warning", db_path=fixture_db)
+        client_warning = get_active_signals(
+            entity_type="client", severity="warning", db_path=fixture_db
+        )
         assert len(client_warning) == 1
 
     def test_get_signal_history(self, fixture_db):
         """get_signal_history should return all signals for entity."""
         signals = [
-            {"signal_id": "sig_hist1", "entity_type": "client", "entity_id": "hist-client", "severity": "warning", "evidence": {}},
-            {"signal_id": "sig_hist2", "entity_type": "client", "entity_id": "hist-client", "severity": "watch", "evidence": {}},
+            {
+                "signal_id": "sig_hist1",
+                "entity_type": "client",
+                "entity_id": "hist-client",
+                "severity": "warning",
+                "evidence": {},
+            },
+            {
+                "signal_id": "sig_hist2",
+                "entity_type": "client",
+                "entity_id": "hist-client",
+                "severity": "watch",
+                "evidence": {},
+            },
         ]
         update_signal_state(signals, fixture_db)
 
@@ -461,7 +511,13 @@ class TestSignalStateTracking:
     def test_acknowledge_signal(self, fixture_db):
         """acknowledge_signal should change status."""
         signals = [
-            {"signal_id": "sig_ack", "entity_type": "client", "entity_id": "ack-client", "severity": "warning", "evidence": {}},
+            {
+                "signal_id": "sig_ack",
+                "entity_type": "client",
+                "entity_id": "ack-client",
+                "severity": "warning",
+                "evidence": {},
+            },
         ]
         update_signal_state(signals, fixture_db)
 
@@ -485,9 +541,27 @@ class TestSignalStateTracking:
     def test_get_signal_summary(self, fixture_db):
         """get_signal_summary should return dashboard counts."""
         signals = [
-            {"signal_id": "sig_sum1", "entity_type": "client", "entity_id": "s1", "severity": "critical", "evidence": {}},
-            {"signal_id": "sig_sum2", "entity_type": "client", "entity_id": "s2", "severity": "warning", "evidence": {}},
-            {"signal_id": "sig_sum3", "entity_type": "project", "entity_id": "s3", "severity": "warning", "evidence": {}},
+            {
+                "signal_id": "sig_sum1",
+                "entity_type": "client",
+                "entity_id": "s1",
+                "severity": "critical",
+                "evidence": {},
+            },
+            {
+                "signal_id": "sig_sum2",
+                "entity_type": "client",
+                "entity_id": "s2",
+                "severity": "warning",
+                "evidence": {},
+            },
+            {
+                "signal_id": "sig_sum3",
+                "entity_type": "project",
+                "entity_id": "s3",
+                "severity": "warning",
+                "evidence": {},
+            },
         ]
         update_signal_state(signals, fixture_db)
 
@@ -535,12 +609,18 @@ class TestSignalClearing:
         """Signal should remain active if not detected but within cooldown."""
         # Insert a signal
         signals = [
-            {"signal_id": "sig_cooldown", "entity_type": "client", "entity_id": "cool-client", "severity": "warning", "evidence": {}},
+            {
+                "signal_id": "sig_cooldown",
+                "entity_type": "client",
+                "entity_id": "cool-client",
+                "severity": "warning",
+                "evidence": {},
+            },
         ]
         update_signal_state(signals, fixture_db)
 
         # Now update with empty list (signal not detected)
-        result = update_signal_state([], fixture_db)
+        update_signal_state([], fixture_db)
 
         # Should NOT be cleared yet (cooldown not expired)
         active = get_active_signals(entity_id="cool-client", db_path=fixture_db)

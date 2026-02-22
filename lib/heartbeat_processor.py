@@ -12,9 +12,10 @@ Instead of regenerating everything from scratch, this:
 
 import json
 import logging
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from lib import paths
+from lib.compat import UTC
 from lib.state_tracker import filter_new_items, mark_surfaced
 
 logger = logging.getLogger(__name__)
@@ -109,9 +110,7 @@ def is_urgent_task(task: dict) -> bool:
         today = datetime.now(UTC).date()
         return due_date <= today
     except (ValueError, TypeError, AttributeError) as e:
-        logger.debug(
-            f"Could not parse due date for task {task.get('id', 'unknown')}: {e}"
-        )
+        logger.debug(f"Could not parse due date for task {task.get('id', 'unknown')}: {e}")
         return False
 
 
@@ -129,9 +128,7 @@ def get_overdue_tasks(tasks: list[dict]) -> list[dict]:
             if due_date < today:
                 overdue.append(task)
         except (ValueError, TypeError, AttributeError) as e:
-            logger.debug(
-                f"Could not parse due date for task {task.get('id', 'unknown')}: {e}"
-            )
+            logger.debug(f"Could not parse due date for task {task.get('id', 'unknown')}: {e}")
 
     return overdue
 
@@ -150,9 +147,7 @@ def get_due_today(tasks: list[dict]) -> list[dict]:
             if due_date == today:
                 due_today.append(task)
         except (ValueError, TypeError, AttributeError) as e:
-            logger.debug(
-                f"Could not parse due date for task {task.get('id', 'unknown')}: {e}"
-            )
+            logger.debug(f"Could not parse due date for task {task.get('id', 'unknown')}: {e}")
 
     return due_today
 

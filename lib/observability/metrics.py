@@ -226,3 +226,13 @@ def timed(histogram: Histogram) -> Callable:
         return wrapper
 
     return decorator
+
+
+# Additional middleware metrics
+request_duration_histogram = REGISTRY.histogram(
+    "http_request_duration_seconds", "HTTP request duration in seconds"
+)
+active_requests = REGISTRY.gauge("http_active_requests", "Currently active HTTP requests")
+request_errors_by_status = REGISTRY.counter(
+    "http_request_errors_total", "Total HTTP request errors by status code"
+)

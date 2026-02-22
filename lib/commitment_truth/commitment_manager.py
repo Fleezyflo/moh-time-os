@@ -5,6 +5,16 @@ Handles:
 - Creating commitments from detected patterns
 - Linking commitments to tasks
 - Querying untracked/due commitments
+
+Column mapping (dataclass -> DB):
+    id          -> commitment_id
+    source_type -> scope_ref_type
+    source_id   -> scope_ref_id  (also source_id column exists for pipeline compat)
+    text        -> commitment_text
+    owner       -> speaker
+    target_date -> due_at
+    task_id     -> task_id
+    updated_at  -> updated_at
 """
 
 import logging
@@ -45,8 +55,12 @@ class CommitmentManager:
     - Prevent duplicates
     """
 
-    def __init__(self, store=None):
-        self.store = store or get_store()
+    def __init__(self, store=None, db_path=None):
+        if isinstance(store, str):
+            # Handle case where store is actually a db_path
+            db_path = store
+            store = None
+        self.store = store or get_store(db_path)
 
     def extract_commitments_from_email(
         self, email_id: str, email_text: str, sender: str = None, recipient: str = None
@@ -65,17 +79,15 @@ class CommitmentManager:
         """
         # Check if we already processed this email
         existing = self.store.query(
-            "SELECT id FROM commitments WHERE source_type = 'email' AND source_id = ?",
+            "SELECT commitment_id FROM commitments WHERE scope_ref_type = 'email' AND scope_ref_id = ?",
             [email_id],
         )
         if existing:
-            # Already processed
             return []
 
         # Extract commitments
         extracted = extract_all(email_text)
         created = []
-        datetime.now().isoformat()
 
         # Process promises
         for promise in extracted["promises"]:
@@ -103,8 +115,8 @@ class CommitmentManager:
                 source_type="email",
                 source_id=email_id,
                 text=request["text"],
-                owner=recipient,  # The person being asked
-                target=sender,  # The person asking
+                owner=recipient,
+                target=sender,
                 target_date=request["deadline"],
                 confidence=request["confidence"],
             )
@@ -127,28 +139,43 @@ class CommitmentManager:
         now = datetime.now().isoformat()
         commitment_id = f"commit_{uuid.uuid4().hex[:12]}"
 
+        # Map to actual DB columns
         data = {
-            "id": commitment_id,
-            "source_type": source_type,
-            "source_id": source_id,
-            "text": text,
-            "owner": owner,
+            "commitment_id": commitment_id,
+            "scope_ref_type": source_type,
+            "scope_ref_id": source_id,
+            "committed_by_type": "person",
+            "committed_by_id": owner or "",
+            "commitment_text": text,
+            "speaker": owner,
             "target": target,
-            "target_date": target_date,
+            "due_at": target_date,
             "status": "open",
             "task_id": None,
             "confidence": confidence,
+            "source_id": source_id,
             "created_at": now,
             "updated_at": now,
         }
 
         self.store.insert("commitments", data)
 
-        return Commitment(**data)
+        return Commitment(
+            id=commitment_id,
+            source_type=source_type,
+            source_id=source_id,
+            text=text,
+            owner=owner,
+            target=target,
+            target_date=target_date,
+            status="open",
+            task_id=None,
+            confidence=confidence,
+            created_at=now,
+            updated_at=now,
+        )
 
-    def link_commitment_to_task(
-        self, commitment_id: str, task_id: str
-    ) -> tuple[bool, str]:
+    def link_commitment_to_task(self, commitment_id: str, task_id: str) -> tuple[bool, str]:
         """
         Link a commitment to a task.
 
@@ -172,11 +199,17 @@ class CommitmentManager:
 
         now = datetime.now().isoformat()
         self.store.query(
-            "UPDATE commitments SET task_id = ?, status = 'linked', updated_at = ? WHERE id = ?",
+            "UPDATE commitments SET task_id = ?, status = 'linked', updated_at = ? WHERE commitment_id = ?",
             [task_id, now, commitment_id],
         )
 
         return True, f"Linked commitment to task {task_id}"
+
+    # Alias for API compat
+    def link_to_task(self, commitment_id: str, task_id: str) -> bool:
+        """Link a commitment to a task. Returns bool for API compat."""
+        success, _ = self.link_commitment_to_task(commitment_id, task_id)
+        return success
 
     def unlink_commitment(self, commitment_id: str) -> tuple[bool, str]:
         """Remove task link from a commitment."""
@@ -186,7 +219,7 @@ class CommitmentManager:
 
         now = datetime.now().isoformat()
         self.store.query(
-            "UPDATE commitments SET task_id = NULL, status = 'open', updated_at = ? WHERE id = ?",
+            "UPDATE commitments SET task_id = NULL, status = 'open', updated_at = ? WHERE commitment_id = ?",
             [now, commitment_id],
         )
 
@@ -196,7 +229,7 @@ class CommitmentManager:
         """Mark a commitment as done."""
         now = datetime.now().isoformat()
         self.store.query(
-            "UPDATE commitments SET status = 'done', updated_at = ? WHERE id = ?",
+            "UPDATE commitments SET status = 'done', updated_at = ? WHERE commitment_id = ?",
             [now, commitment_id],
         )
         return True, "Commitment marked done"
@@ -205,7 +238,7 @@ class CommitmentManager:
         """Mark a commitment as broken (not fulfilled)."""
         now = datetime.now().isoformat()
         self.store.query(
-            "UPDATE commitments SET status = 'broken', updated_at = ? WHERE id = ?",
+            "UPDATE commitments SET status = 'broken', updated_at = ? WHERE commitment_id = ?",
             [now, commitment_id],
         )
         return True, "Commitment marked broken"
@@ -213,7 +246,7 @@ class CommitmentManager:
     def get_commitment(self, commitment_id: str) -> Commitment | None:
         """Get a single commitment by ID."""
         rows = self.store.query(
-            "SELECT * FROM commitments WHERE id = ?", [commitment_id]
+            "SELECT * FROM commitments WHERE commitment_id = ?", [commitment_id]
         )
         if not rows:
             return None
@@ -229,12 +262,27 @@ class CommitmentManager:
             SELECT * FROM commitments
             WHERE status = 'open'
             AND (task_id IS NULL OR task_id = '')
-            ORDER BY target_date ASC, confidence DESC
+            ORDER BY due_at ASC, confidence DESC
             LIMIT ?
         """,
             [limit],
         )
 
+        return [self._row_to_commitment(r) for r in rows]
+
+    def get_overdue(self) -> list[Commitment]:
+        """Get overdue commitments (due before today, still open/linked)."""
+        today = date.today().isoformat()
+        rows = self.store.query(
+            """
+            SELECT * FROM commitments
+            WHERE status IN ('open', 'linked')
+            AND due_at IS NOT NULL
+            AND due_at < ?
+            ORDER BY due_at ASC
+        """,
+            [today],
+        )
         return [self._row_to_commitment(r) for r in rows]
 
     def get_commitments_due(
@@ -255,9 +303,9 @@ class CommitmentManager:
                 """
                 SELECT * FROM commitments
                 WHERE status IN ('open', 'linked')
-                AND target_date IS NOT NULL
-                AND target_date <= ?
-                ORDER BY target_date ASC
+                AND due_at IS NOT NULL
+                AND due_at <= ?
+                ORDER BY due_at ASC
             """,
                 [target_date],
             )
@@ -266,7 +314,7 @@ class CommitmentManager:
                 """
                 SELECT * FROM commitments
                 WHERE status IN ('open', 'linked')
-                AND target_date = ?
+                AND due_at = ?
                 ORDER BY confidence DESC
             """,
                 [target_date],
@@ -279,9 +327,9 @@ class CommitmentManager:
         rows = self.store.query(
             """
             SELECT * FROM commitments
-            WHERE owner LIKE ?
+            WHERE speaker LIKE ?
             AND status IN ('open', 'linked')
-            ORDER BY target_date ASC
+            ORDER BY due_at ASC
         """,
             [f"%{owner}%"],
         )
@@ -290,14 +338,10 @@ class CommitmentManager:
 
     def get_commitments_for_task(self, task_id: str) -> list[Commitment]:
         """Get all commitments linked to a task."""
-        rows = self.store.query(
-            "SELECT * FROM commitments WHERE task_id = ?", [task_id]
-        )
+        rows = self.store.query("SELECT * FROM commitments WHERE task_id = ?", [task_id])
         return [self._row_to_commitment(r) for r in rows]
 
-    def get_all_commitments(
-        self, status: str = None, limit: int = 100
-    ) -> list[Commitment]:
+    def get_all_commitments(self, status: str = None, limit: int = 100) -> list[Commitment]:
         """Get all commitments with optional status filter."""
         if status:
             rows = self.store.query(
@@ -311,20 +355,23 @@ class CommitmentManager:
         return [self._row_to_commitment(r) for r in rows]
 
     def _row_to_commitment(self, row: dict) -> Commitment:
-        """Convert database row to Commitment object."""
+        """Convert database row to Commitment object.
+
+        Maps actual DB columns to Commitment dataclass fields.
+        """
         return Commitment(
-            id=row["id"],
-            source_type=row["source_type"],
-            source_id=row.get("source_id"),
-            text=row["text"],
-            owner=row.get("owner"),
+            id=row.get("commitment_id", row.get("id", "")),
+            source_type=row.get("scope_ref_type", row.get("source_type", "")),
+            source_id=row.get("scope_ref_id", row.get("source_id", "")),
+            text=row.get("commitment_text", row.get("text", "")),
+            owner=row.get("speaker", row.get("owner")),
             target=row.get("target"),
-            target_date=row.get("target_date"),
+            target_date=row.get("due_at", row.get("target_date")),
             status=row.get("status", "open"),
             task_id=row.get("task_id"),
             confidence=row.get("confidence", 0.8),
-            created_at=row["created_at"],
-            updated_at=row["updated_at"],
+            created_at=row.get("created_at", ""),
+            updated_at=row.get("updated_at", ""),
         )
 
     def get_summary(self) -> dict:
@@ -333,20 +380,20 @@ class CommitmentManager:
         open_count = self.store.query(
             "SELECT COUNT(*) as c FROM commitments WHERE status = 'open'"
         )[0]["c"]
-        linked = self.store.query(
-            "SELECT COUNT(*) as c FROM commitments WHERE status = 'linked'"
-        )[0]["c"]
-        done = self.store.query(
-            "SELECT COUNT(*) as c FROM commitments WHERE status = 'done'"
-        )[0]["c"]
-        broken = self.store.query(
-            "SELECT COUNT(*) as c FROM commitments WHERE status = 'broken'"
-        )[0]["c"]
+        linked = self.store.query("SELECT COUNT(*) as c FROM commitments WHERE status = 'linked'")[
+            0
+        ]["c"]
+        done = self.store.query("SELECT COUNT(*) as c FROM commitments WHERE status = 'done'")[0][
+            "c"
+        ]
+        broken = self.store.query("SELECT COUNT(*) as c FROM commitments WHERE status = 'broken'")[
+            0
+        ]["c"]
 
         overdue = self.store.query("""
             SELECT COUNT(*) as c FROM commitments
             WHERE status IN ('open', 'linked')
-            AND target_date < date('now')
+            AND due_at < date('now')
         """)[0]["c"]
 
         return {
@@ -356,42 +403,5 @@ class CommitmentManager:
             "done": done,
             "broken": broken,
             "overdue": overdue,
-            "untracked": open_count,  # Open = untracked
+            "untracked": open_count,
         }
-
-
-# Test
-if __name__ == "__main__":
-    manager = CommitmentManager()
-
-    logger.info("Testing CommitmentManager")
-    logger.info("-" * 50)
-    # Test email extraction
-    test_email = """
-    Hi team,
-
-    I'll send you the updated proposal by Friday.
-    Can you please review the budget spreadsheet by tomorrow?
-
-    We're going to have the final designs ready by end of week.
-
-    Thanks,
-    John
-    """
-
-    commitments = manager.extract_commitments_from_email(
-        email_id="test_email_001",
-        email_text=test_email,
-        sender="john@example.com",
-        recipient="team@example.com",
-    )
-
-    logger.info(f"Extracted {len(commitments)} commitments:")
-    for c in commitments:
-        logger.info(f"  - {c.text[:50]}... (owner: {c.owner}, due: {c.target_date})")
-    # Get untracked
-    untracked = manager.get_untracked_commitments()
-    logger.info(f"\nUntracked commitments: {len(untracked)}")
-    # Summary
-    summary = manager.get_summary()
-    logger.info(f"\nSummary: {summary}")

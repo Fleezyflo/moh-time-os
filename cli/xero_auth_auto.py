@@ -48,18 +48,14 @@ class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
                 self.send_response(400)
                 self.send_header("Content-type", "text/html")
                 self.end_headers()
-                self.wfile.write(
-                    f"<h1>Error: {OAuthCallbackHandler.error}</h1>".encode()
-                )
+                self.wfile.write(f"<h1>Error: {OAuthCallbackHandler.error}</h1>".encode())
             elif "code" in params:
                 OAuthCallbackHandler.auth_code = params["code"][0]
                 OAuthCallbackHandler.state = params.get("state", [None])[0]
                 self.send_response(200)
                 self.send_header("Content-type", "text/html")
                 self.end_headers()
-                self.wfile.write(
-                    b"<html><body><h1>Success! Close this window.</h1></body></html>"
-                )
+                self.wfile.write(b"<html><body><h1>Success! Close this window.</h1></body></html>")
         else:
             self.send_response(404)
             self.end_headers()
@@ -98,10 +94,7 @@ def main():
         webbrowser.open(auth_url)
 
         print("Waiting for authorization (2 min timeout)...")
-        while (
-            OAuthCallbackHandler.auth_code is None
-            and OAuthCallbackHandler.error is None
-        ):
+        while OAuthCallbackHandler.auth_code is None and OAuthCallbackHandler.error is None:
             httpd.handle_request()
 
     if OAuthCallbackHandler.error:

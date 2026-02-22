@@ -63,6 +63,11 @@ def get_expected_schema() -> str:
     if hasattr(db_module, "SCHEMA"):
         return db_module.SCHEMA
 
+    # Fallback: extract from REQUIRED_TABLES dict in db module
+    if hasattr(db_module, "REQUIRED_TABLES"):
+        tables = db_module.REQUIRED_TABLES
+        return "\n\n".join(sql.strip() for sql in tables.values()) + "\n"
+
     raise RuntimeError("Could not find schema definition")
 
 

@@ -16,6 +16,7 @@ Per MASTER_SPEC.md §6:
 
 import logging
 import sqlite3
+from pathlib import Path
 from typing import Any
 
 from lib import paths
@@ -219,9 +220,7 @@ class GateEvaluator:
             )
         """)
         results["inv1_linked_valid"] = {"count": cursor.fetchone()["c"], "pass": None}
-        results["inv1_linked_valid"]["pass"] = (
-            results["inv1_linked_valid"]["count"] == 0
-        )
+        results["inv1_linked_valid"]["pass"] = results["inv1_linked_valid"]["count"] == 0
 
         # Invariant 2
         cursor.execute("""
@@ -260,9 +259,7 @@ class GateEvaluator:
             AND c.id IS NOT NULL
         """)
         results["inv4_partial_broken"] = {"count": cursor.fetchone()["c"], "pass": None}
-        results["inv4_partial_broken"]["pass"] = (
-            results["inv4_partial_broken"]["count"] == 0
-        )
+        results["inv4_partial_broken"]["pass"] = results["inv4_partial_broken"]["count"] == 0
 
         # Invariant 5
         cursor.execute("""

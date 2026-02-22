@@ -16,8 +16,8 @@ import logging
 import os
 import sqlite3
 from datetime import date, datetime
-
 from pathlib import Path
+
 from lib import paths
 
 # Contracts module - validation gates
@@ -31,6 +31,10 @@ from lib.contracts.predicates import NormalizedData
 from lib.contracts.schema import SCHEMA_VERSION
 from lib.contracts.thresholds import ResolutionStats
 
+from .capacity_command_page7 import CapacityCommandPage7Engine
+from .cash_ar import CashAREngine
+from .client360 import Client360Engine
+from .comms_commitments import CommsCommitmentsEngine
 from .confidence import ConfidenceModel, TrustState
 from .delivery import DeliveryEngine, ProjectDeliveryData, ProjectStatus
 from .scoring import (
@@ -96,6 +100,10 @@ class AgencySnapshotGenerator:
 
         self.delivery_engine = DeliveryEngine(db_path)
         self.confidence_model = ConfidenceModel(db_path)
+        self.capacity_engine = CapacityCommandPage7Engine(db_path, mode, horizon)
+        self.cash_ar_engine = CashAREngine(db_path, mode, horizon)
+        self.comms_engine = CommsCommitmentsEngine(db_path, mode, horizon)
+        self.client360_engine = Client360Engine(db_path, mode, horizon)
 
         self.now = datetime.now()
         self.today = date.today()
@@ -208,11 +216,7 @@ class AgencySnapshotGenerator:
         # Commitments
         commitments_total = len(normalized.commitments)
         commitments_resolved = len(
-            [
-                c
-                for c in normalized.commitments
-                if c.get("resolved_client_id") is not None
-            ]
+            [c for c in normalized.commitments if c.get("resolved_client_id") is not None]
         )
 
         # Threads/communications
@@ -224,18 +228,12 @@ class AgencySnapshotGenerator:
         # Invoices
         invoices_total = len(normalized.invoices)
         invoices_valid = len(
-            [
-                inv
-                for inv in normalized.invoices
-                if inv.get("client_id") and inv.get("due_date")
-            ]
+            [inv for inv in normalized.invoices if inv.get("client_id") and inv.get("due_date")]
         )
 
         # People
         people_total = len(normalized.people)
-        people_with_hours = len(
-            [p for p in normalized.people if p.get("hours_assigned", 0) > 0]
-        )
+        people_with_hours = len([p for p in normalized.people if p.get("hours_assigned", 0) > 0])
 
         # Projects
         projects_total = len(normalized.projects)
@@ -285,7 +283,7 @@ class AgencySnapshotGenerator:
         self._trust = self.confidence_model.get_trust_state()
 
         # Check if blocked (metadata only - does NOT bypass gates)
-        is_blocked = self.confidence_model.is_blocked(self._trust)
+        self.confidence_model.is_blocked(self._trust)
 
         snapshot = {
             "meta": self._build_meta(started_at),
@@ -323,16 +321,19 @@ class AgencySnapshotGenerator:
         snapshot["delivery_command"] = self._build_delivery_command_minimal(normalized)
         snapshot["client_360"] = self._build_client_360_minimal(normalized)
         snapshot["cash_ar"] = self._build_cash_ar_minimal(normalized)
-        snapshot["comms_commitments"] = self._build_comms_commitments_minimal(
-            normalized
-        )
+        snapshot["comms_commitments"] = self._build_comms_commitments_minimal(normalized)
         snapshot["capacity_command"] = self._build_capacity_command_minimal(normalized)
         snapshot["drawers"] = self._drawers
 
         snapshot["meta"]["finished_at"] = datetime.now().isoformat()
-        snapshot["meta"]["duration_ms"] = (
-            datetime.now() - started_at
-        ).total_seconds() * 1000
+        snapshot["meta"]["duration_ms"] = (datetime.now() - started_at).total_seconds() * 1000
+
+        # Compute deltas BEFORE patchwork boundary (load previous snapshot if exists)
+        prev_snapshot = self._load_previous_snapshot()
+        if prev_snapshot:
+            snapshot["meta"]["deltas"] = self._compute_deltas_with_previous(snapshot, prev_snapshot)
+        else:
+            snapshot["meta"]["deltas"] = {"first_run": True}
 
         # =========================================================
         # PATCHWORK_BOUNDARY: ASSEMBLY COMPLETE
@@ -376,6 +377,7 @@ class AgencySnapshotGenerator:
             "finished_at": None,
             "duration_ms": None,
             "schema_version": SCHEMA_VERSION,  # Bound to UI spec v2.9.0
+            "deltas": None,  # Will be set in generate() before patchwork boundary
         }
 
     def _build_narrative(self) -> dict:
@@ -439,9 +441,7 @@ class AgencySnapshotGenerator:
             "cash": self._build_cash_tile(partial_domains),
             "clients": self._build_clients_tile(partial_domains),
             "churn_x_money": self._build_churn_x_money_tile(partial_domains),
-            "delivery_x_capacity": self._build_delivery_x_capacity_tile(
-                partial_domains
-            ),
+            "delivery_x_capacity": self._build_delivery_x_capacity_tile(partial_domains),
         }
 
     def _build_delivery_tile(self, partial: dict) -> dict:
@@ -473,9 +473,7 @@ class AgencySnapshotGenerator:
         if "delivery" in partial:
             badge = "PARTIAL"
 
-        summary = (
-            f"{red_count} Red, {yellow_count} Yellow, {green_count} Green (top 25)"
-        )
+        summary = f"{red_count} Red, {yellow_count} Yellow, {green_count} Green (top 25)"
         if highest_risk:
             ttc = highest_risk.time_to_slip_hours
             ttc_str = f"{ttc:.0f}h" if ttc and ttc > 0 else "overdue"
@@ -603,8 +601,7 @@ class AgencySnapshotGenerator:
             "summary": summary,
             "cta": "Open Client 360",
             "top": [
-                {"id": c["id"], "name": c["name"], "overdue_ar": c["overdue_ar"]}
-                for c in clients
+                {"id": c["id"], "name": c["name"], "overdue_ar": c["overdue_ar"]} for c in clients
             ],
         }
 
@@ -638,9 +635,7 @@ class AgencySnapshotGenerator:
             "badge": badge,
             "summary": summary,
             "cta": "Open Delivery Command",
-            "top": [
-                {"project_id": p.project_id, "name": p.name} for p in impossible[:5]
-            ],
+            "top": [{"project_id": p.project_id, "name": p.name} for p in impossible[:5]],
         }
 
     def _build_heatstrip(self) -> list[dict]:
@@ -812,9 +807,7 @@ class AgencySnapshotGenerator:
         candidates.extend(self._get_blocked_items())
 
         # Rank
-        ranked = rank_items(
-            candidates, self.mode, self.horizon, max_items=self.MAX_EXCEPTIONS
-        )
+        ranked = rank_items(candidates, self.mode, self.horizon, max_items=self.MAX_EXCEPTIONS)
 
         exceptions = []
         for idx, item in enumerate(ranked):
@@ -824,9 +817,7 @@ class AgencySnapshotGenerator:
             # Add deterministic variation based on entity_id for tie-breaking (0.001-0.099)
             variation = (hash(item.entity_id) % 100 + 1) / 1000
             # Also factor in ranking position (higher ranked = slightly higher score)
-            position_boost = (len(ranked) - idx) / (
-                len(ranked) * 100
-            )  # 0.01-0.07 boost
+            position_boost = (len(ranked) - idx) / (len(ranked) * 100)  # 0.01-0.07 boost
             final_score = base_score + variation + position_boost
 
             exc = {
@@ -882,9 +873,7 @@ class AgencySnapshotGenerator:
                     "project_id": p.project_id,
                     "name": p.name,
                     "status": p.status.value,
-                    "slip_risk_score": p.slip_risk.slip_risk_score
-                    if p.slip_risk
-                    else 0.0,
+                    "slip_risk_score": p.slip_risk.slip_risk_score if p.slip_risk else 0.0,
                     "time_to_slip_hours": p.time_to_slip_hours,
                     "top_driver": p.top_driver.value,
                     "confidence": p.confidence.value,
@@ -907,14 +896,12 @@ class AgencySnapshotGenerator:
 
     def _build_selected_project(self, proj: ProjectDeliveryData) -> dict:
         """Build selected_project section for Page 1."""
-        breaks_next = self.delivery_engine.get_breaks_next(
-            proj.project_id, self.MAX_BREAKS_NEXT
-        )
+        breaks_next = self.delivery_engine.get_breaks_next(proj.project_id, self.MAX_BREAKS_NEXT)
         critical_chain = self.delivery_engine.get_critical_chain(proj.project_id)
 
         # Get comms threads - ONLY show comms that are actually related to this project/client
         # Don't show unrelated comms in project view
-        project_client_id = proj.client_id if hasattr(proj, "client_id") else None
+        proj.client_id if hasattr(proj, "client_id") else None
         project_name_search = proj.name[:20] if proj.name else ""
 
         comms = []
@@ -953,11 +940,7 @@ class AgencySnapshotGenerator:
                     "subject": c.get("subject", ""),
                     "age_hours": round(age_hours, 1),
                     "expected_response_by": c.get("expected_response_by"),
-                    "risk": "HIGH"
-                    if age_hours > 48
-                    else "MED"
-                    if age_hours > 24
-                    else "LOW",
+                    "risk": "HIGH" if age_hours > 48 else "MED" if age_hours > 24 else "LOW",
                 }
             )
 
@@ -974,9 +957,7 @@ class AgencySnapshotGenerator:
                 "is_internal": proj.is_internal,
             },
             "slip": {
-                "slip_risk_score": proj.slip_risk.slip_risk_score
-                if proj.slip_risk
-                else 0.0,
+                "slip_risk_score": proj.slip_risk.slip_risk_score if proj.slip_risk else 0.0,
                 "time_to_slip_hours": proj.time_to_slip_hours,
                 "top_drivers": proj.slip_risk.top_drivers if proj.slip_risk else [],
             },
@@ -1001,9 +982,7 @@ class AgencySnapshotGenerator:
                 ]
                 if critical_chain
                 else [],
-                "unlock_action": critical_chain.unlock_action
-                if critical_chain
-                else None,
+                "unlock_action": critical_chain.unlock_action if critical_chain else None,
             }
             if critical_chain
             else None,
@@ -1011,9 +990,7 @@ class AgencySnapshotGenerator:
                 "hours_needed": proj.hours_needed,
                 "hours_available": proj.hours_available,
                 "gap_hours": proj.hours_needed - proj.hours_available,
-                "top_constraint": {"type": "lane", "name": proj.lane}
-                if proj.lane
-                else None,
+                "top_constraint": {"type": "lane", "name": proj.lane} if proj.lane else None,
             },
             "comms_threads": comms_threads,
             "recent_change": recent_change[: self.MAX_RECENT_CHANGE],
@@ -1338,9 +1315,7 @@ class AgencySnapshotGenerator:
                     import json
 
                     blockers_list = json.loads(blocker_reason)
-                    blocker_reason = (
-                        blockers_list[0] if blockers_list else "Unknown blocker"
-                    )
+                    blocker_reason = blockers_list[0] if blockers_list else "Unknown blocker"
                 except (json.JSONDecodeError, TypeError, IndexError) as e:
                     logger.debug(f"Could not parse blockers JSON: {e}")
 
@@ -1487,102 +1462,166 @@ class AgencySnapshotGenerator:
         return heatstrip
 
     def _build_delivery_command_minimal(self, normalized) -> dict:
-        """Minimal delivery command section."""
+        """Build delivery command using DeliveryEngine."""
         portfolio = []
         for proj in normalized.projects[:25]:
-            portfolio.append(
-                {
-                    "project_id": proj.get("id", ""),
-                    "name": proj.get("name", "Unknown"),
-                    "status": "YELLOW",
-                    "slip_risk_score": 0.0,
-                    "time_to_slip_hours": None,
-                    "overdue_count": 0,
-                    "total_tasks": 0,
-                    "top_driver": None,
-                    "confidence": "MED",
-                }
-            )
+            proj_data = self.delivery_engine.get_project_data(proj.get("id", ""))
+            if proj_data:
+                slip_risk = self.delivery_engine.compute_slip_risk(proj_data)
+                status = self.delivery_engine.compute_status(proj_data)
+                top_driver = self.delivery_engine.determine_top_driver(proj_data)
+                portfolio.append(
+                    {
+                        "project_id": proj.get("id", ""),
+                        "name": proj.get("name", "Unknown"),
+                        "status": status.value,
+                        "slip_risk_score": slip_risk.slip_risk_score,
+                        "time_to_slip_hours": None,
+                        "overdue_count": slip_risk.top_drivers.count("Overdue"),
+                        "total_tasks": proj_data.total_tasks,
+                        "top_driver": top_driver.value,
+                        "confidence": "MED",
+                    }
+                )
+            else:
+                portfolio.append(
+                    {
+                        "project_id": proj.get("id", ""),
+                        "name": proj.get("name", "Unknown"),
+                        "status": "YELLOW",
+                        "slip_risk_score": 0.0,
+                        "time_to_slip_hours": None,
+                        "overdue_count": 0,
+                        "total_tasks": 0,
+                        "top_driver": None,
+                        "confidence": "MED",
+                    }
+                )
         return {"portfolio": portfolio, "selected_project": None}
 
     def _build_client_360_minimal(self, normalized) -> dict:
-        """Minimal client 360 section."""
-        portfolio = []
-        for client in normalized.clients[:25]:
-            # Ensure tier is valid (A/B/C/D/untiered), default None to 'untiered'
-            tier = client.get("tier")
-            if tier not in ("A", "B", "C", "D", "untiered"):
-                tier = "untiered"
-            portfolio.append(
-                {
-                    "client_id": client.get("id", ""),
-                    "name": client.get("name", "Unknown"),
-                    "tier": tier,
-                    "health_score": 0.5,
-                    "health_status": "fair",
-                    "total_ar": 0.0,
-                    "overdue_tasks": 0,
-                    "at_risk": False,
-                }
-            )
-        at_risk_count = len([c for c in portfolio if c.get("at_risk")])
-        return {"portfolio": portfolio, "at_risk_count": at_risk_count, "drawer": {}}
+        """Build client 360 using Client360Engine."""
+        try:
+            full_snapshot = self.client360_engine.generate()
+            portfolio = full_snapshot.get("portfolio", [])
+            at_risk_count = len([c for c in portfolio if c.get("at_risk")])
+
+            return {
+                "portfolio": portfolio[:25],
+                "at_risk_count": at_risk_count,
+                "drawer": {},
+            }
+        except Exception as e:
+            logger.warning(f"Client360Engine.generate() failed: {e}, using minimal data")
+            portfolio = []
+            for client in normalized.clients[:25]:
+                tier = client.get("tier")
+                if tier not in ("A", "B", "C", "D", "untiered"):
+                    tier = "untiered"
+                portfolio.append(
+                    {
+                        "client_id": client.get("id", ""),
+                        "name": client.get("name", "Unknown"),
+                        "tier": tier,
+                        "health_score": 0.5,
+                        "health_status": "fair",
+                        "total_ar": 0.0,
+                        "overdue_tasks": 0,
+                        "at_risk": False,
+                    }
+                )
+            at_risk_count = len([c for c in portfolio if c.get("at_risk")])
+            return {"portfolio": portfolio, "at_risk_count": at_risk_count, "drawer": {}}
 
     def _build_cash_ar_minimal(self, normalized) -> dict:
-        """Minimal cash AR section from normalized invoices."""
-        total_ar = sum(inv.get("amount", 0) for inv in normalized.invoices)
-        severe_ar = sum(
-            inv.get("amount", 0)
-            for inv in normalized.invoices
-            if inv.get("due_date") and self._days_overdue(inv.get("due_date")) > 60
-        )
+        """Build cash AR using CashAREngine."""
+        try:
+            full_snapshot = self.cash_ar_engine.generate()
+            summary = full_snapshot.get("summary", {})
+            portfolio = full_snapshot.get("portfolio", [])
 
-        # Build debtors from invoices grouped by client
-        client_ar = {}
-        for inv in normalized.invoices:
-            cid = inv.get("client_id") or "unknown"
-            if cid not in client_ar:
-                client_ar[cid] = {"total": 0, "severe": 0, "count": 0}
-            client_ar[cid]["total"] += inv.get("amount", 0)
-            client_ar[cid]["count"] += 1
-            if inv.get("due_date") and self._days_overdue(inv.get("due_date")) > 60:
-                client_ar[cid]["severe"] += inv.get("amount", 0)
-
-        debtors = []
-        for cid, data in client_ar.items():
-            if data["total"] > 0:
+            # Convert portfolio to debtors format
+            debtors = []
+            for client_data in portfolio:
                 debtors.append(
                     {
-                        "client_id": cid,
-                        "client_name": cid,
+                        "client_id": client_data.get("client_id", ""),
+                        "client_name": client_data.get("name", "Unknown"),
                         "currency": "AED",
-                        "total_valid_ar": data["total"],
-                        "severe_ar": data["severe"],
-                        "aging_bucket": "current",
-                        "days_overdue_max": 0,
-                        "invoice_count": data["count"],
+                        "total_valid_ar": client_data.get("valid_ar_total", 0),
+                        "severe_ar": client_data.get("overdue_total", 0),
+                        "aging_bucket": client_data.get("worst_bucket", "current"),
+                        "days_overdue_max": client_data.get("oldest_days_overdue", 0),
+                        "invoice_count": 0,
                         "risk_score": 0.0,
                     }
                 )
 
-        badge = (
-            "RED"
-            if severe_ar > total_ar * 0.25
-            else "YELLOW"
-            if severe_ar > total_ar * 0.15
-            else "GREEN"
-        )
+            tiles = {
+                "valid_ar": {"AED": summary.get("valid_ar_total", 0)},
+                "severe_ar": {"AED": summary.get("overdue_total", 0)},
+                "badge": summary.get("risk_band", "GREEN"),
+                "summary": summary.get("summary_sentence", ""),
+            }
 
-        return {
-            "tiles": {
-                "valid_ar": {"AED": total_ar},
-                "severe_ar": {"AED": severe_ar},
-                "badge": badge,
-                "summary": f"Valid AR: AED {total_ar:,.0f}. Severe: AED {severe_ar:,.0f}.",
-            },
-            "debtors": debtors,
-            "aging_distribution": [],
-        }
+            return {
+                "tiles": tiles,
+                "debtors": debtors,
+            }
+        except Exception as e:
+            logger.warning(f"CashAREngine.generate() failed: {e}, using minimal data")
+            total_ar = sum(inv.get("amount", 0) for inv in normalized.invoices)
+            severe_ar = sum(
+                inv.get("amount", 0)
+                for inv in normalized.invoices
+                if inv.get("due_date") and self._days_overdue(inv.get("due_date")) > 60
+            )
+
+            # Build debtors from invoices grouped by client
+            client_ar = {}
+            for inv in normalized.invoices:
+                cid = inv.get("client_id") or "unknown"
+                if cid not in client_ar:
+                    client_ar[cid] = {"total": 0, "severe": 0, "count": 0}
+                client_ar[cid]["total"] += inv.get("amount", 0)
+                client_ar[cid]["count"] += 1
+                if inv.get("due_date") and self._days_overdue(inv.get("due_date")) > 60:
+                    client_ar[cid]["severe"] += inv.get("amount", 0)
+
+            debtors = []
+            for cid, data in client_ar.items():
+                if data["total"] > 0:
+                    debtors.append(
+                        {
+                            "client_id": cid,
+                            "client_name": cid,
+                            "currency": "AED",
+                            "total_valid_ar": data["total"],
+                            "severe_ar": data["severe"],
+                            "aging_bucket": "current",
+                            "days_overdue_max": 0,
+                            "invoice_count": data["count"],
+                            "risk_score": 0.0,
+                        }
+                    )
+
+            badge = (
+                "RED"
+                if total_ar > 0 and severe_ar > total_ar * 0.25
+                else "YELLOW"
+                if total_ar > 0 and severe_ar > total_ar * 0.15
+                else "GREEN"
+            )
+
+            return {
+                "tiles": {
+                    "valid_ar": {"AED": total_ar},
+                    "severe_ar": {"AED": severe_ar},
+                    "badge": badge,
+                    "summary": f"Valid AR: AED {total_ar:,.0f}. Severe: AED {severe_ar:,.0f}.",
+                },
+                "debtors": debtors,
+            }
 
     def _days_overdue(self, due_date_str: str) -> int:
         """Calculate days overdue from due date string."""
@@ -1593,76 +1632,127 @@ class AgencySnapshotGenerator:
             return 0
 
     def _build_comms_commitments_minimal(self, normalized) -> dict:
-        """Minimal comms/commitments section."""
-        threads = []
-        for comm in normalized.communications[:10]:
-            threads.append(
-                {
-                    "thread_id": comm.get("id", ""),
-                    "subject": comm.get("subject", ""),
-                    "client_id": comm.get("client_id"),
-                    "client_name": None,
-                    "last_activity": comm.get("created_at"),
-                    "commitment_count": 0,
-                }
-            )
+        """Build comms/commitments using CommsCommitmentsEngine."""
+        try:
+            full_snapshot = self.comms_engine.generate()
+            return {
+                "threads": full_snapshot.get("threads", []),
+                "commitments": full_snapshot.get("commitments", []),
+                "overdue_count": full_snapshot.get("overdue_count", 0),
+            }
+        except Exception as e:
+            logger.warning(f"CommsCommitmentsEngine.generate() failed: {e}, using minimal data")
+            threads = []
+            for comm in normalized.communications[:10]:
+                threads.append(
+                    {
+                        "thread_id": comm.get("id", ""),
+                        "subject": comm.get("subject", ""),
+                        "client_id": comm.get("client_id"),
+                        "client_name": None,
+                        "last_activity": comm.get("created_at"),
+                        "commitment_count": 0,
+                    }
+                )
 
-        commitments = []
-        for cmt in normalized.commitments[:10]:
-            commitments.append(
-                {
-                    "commitment_id": cmt.get("commitment_id", ""),
-                    "content": cmt.get("content", ""),
-                    "scope_ref_type": cmt.get("scope_ref_type", "client"),
-                    "scope_ref_id": cmt.get("scope_ref_id", ""),
-                    "resolved_client_id": cmt.get("resolved_client_id"),
-                    "unresolved_reason": "Not linked to client"
-                    if not cmt.get("resolved_client_id")
-                    else None,
-                    "due_date": cmt.get("due_date"),
-                    "is_overdue": False,
-                }
-            )
+            commitments = []
+            for cmt in normalized.commitments[:10]:
+                commitments.append(
+                    {
+                        "commitment_id": cmt.get("commitment_id", ""),
+                        "content": cmt.get("content", ""),
+                        "scope_ref_type": cmt.get("scope_ref_type", "client"),
+                        "scope_ref_id": cmt.get("scope_ref_id", ""),
+                        "resolved_client_id": cmt.get("resolved_client_id"),
+                        "unresolved_reason": "Not linked to client"
+                        if not cmt.get("resolved_client_id")
+                        else None,
+                        "due_date": cmt.get("due_date"),
+                        "is_overdue": False,
+                    }
+                )
 
-        overdue_count = len([c for c in commitments if c.get("is_overdue")])
-        return {
-            "threads": threads,
-            "commitments": commitments,
-            "overdue_count": overdue_count,
-        }
+            overdue_count = len([c for c in commitments if c.get("is_overdue")])
+            return {
+                "threads": threads,
+                "commitments": commitments,
+                "overdue_count": overdue_count,
+            }
 
     def _build_capacity_command_minimal(self, normalized) -> dict:
-        """Minimal capacity command section."""
-        people_overview = []
-        total_assigned = 0.0
-        total_capacity = 0.0
+        """Build capacity command using CapacityCommandPage7Engine."""
+        people_overview_raw = []
+        try:
+            people_overview_raw = self.capacity_engine.build_people_overview()
+        except Exception as e:
+            logger.warning(f"CapacityCommandPage7Engine.build_people_overview() failed: {e}")
 
-        for person in normalized.people:  # No limit - must match normalized count
-            hours = person.get("hours_assigned", 0) or 0
-            capacity = 40.0  # Default weekly capacity
-            people_overview.append(
+        # Convert PersonData objects to dicts if we got them
+        if people_overview_raw and hasattr(people_overview_raw[0], "__dict__"):
+            people_overview = [
                 {
-                    "person_id": None,
-                    "name": person.get("name", "Unknown"),
-                    "hours_assigned": hours,
-                    "hours_capacity": capacity,
-                    "utilization": hours / capacity if capacity > 0 else 0,
-                    "gap_hours": hours - capacity,
-                    "is_overloaded": hours > capacity,
+                    "person_id": p.person_id,
+                    "name": p.name,
+                    "lane": p.lane,
+                    "hours_needed": round(p.hours_needed, 1),
+                    "hours_available": round(p.hours_available, 1),
+                    "gap_hours": round(p.gap_hours, 1),
+                    "risk_band": p.risk_band.value,
+                    "confidence": p.confidence.value,
+                    "why_low": p.why_low,
                 }
-            )
-            total_assigned += hours
-            total_capacity += capacity
+                for p in people_overview_raw
+            ]
+        elif people_overview_raw:
+            people_overview = people_overview_raw
+        else:
+            # Fallback to minimal data from normalized
+            people_overview = []
+            for person in normalized.people:  # No limit - must match normalized count
+                hours = person.get("hours_assigned", 0) or 0
+                capacity = 40.0  # Default weekly capacity
+                people_overview.append(
+                    {
+                        "person_id": None,
+                        "name": person.get("name", "Unknown"),
+                        "hours_assigned": hours,
+                        "hours_capacity": capacity,
+                        "utilization": hours / capacity if capacity > 0 else 0,
+                        "gap_hours": hours - capacity,
+                        "is_overloaded": hours > capacity,
+                    }
+                )
+
+        # Calculate totals from people_overview
+        total_assigned = sum(
+            p.get("hours_needed", p.get("hours_assigned", 0)) for p in people_overview
+        )
+        total_capacity = sum(
+            p.get("hours_available", p.get("hours_capacity", 0)) for p in people_overview
+        )
+        utilization_rate = total_assigned / total_capacity if total_capacity > 0 else 0
 
         return {
             "people_overview": people_overview,
             "total_assigned": total_assigned,
             "total_capacity": total_capacity,
-            "utilization_rate": total_assigned / total_capacity
-            if total_capacity > 0
-            else 0,
+            "utilization_rate": utilization_rate,
             "drawer": {},
         }
+
+    def _load_previous_snapshot(self) -> dict | None:
+        """Load previous snapshot if it exists."""
+        prev_path = OUTPUT_PATH / "agency_snapshot.json"
+
+        if not prev_path.exists():
+            return None
+
+        try:
+            with open(prev_path) as f:
+                return json.load(f)
+        except (OSError, json.JSONDecodeError) as e:
+            logger.warning(f"Could not load previous snapshot: {e}")
+            return None
 
     def save(self, snapshot: dict, path: Path = None) -> Path:
         """Save snapshot to file and history."""
@@ -1680,15 +1770,46 @@ class AgencySnapshotGenerator:
 
         return path
 
+    def _compute_deltas_with_previous(self, current: dict, previous: dict) -> dict:
+        """
+        Compute detailed deltas between current and previous snapshot.
 
-def generate_snapshot(
-    mode: str = "Ops Head", horizon: str = "TODAY", scope: dict = None
-) -> dict:
+        Returns dict with gate flips and metric changes.
+        """
+        deltas = {"first_run": False, "gate_flips": []}
+
+        # Extract gate statuses
+        {g.get("name"): g.get("passed") for g in previous.get("trust", {}).get("gates", [])}
+
+        # Build current gates dict (would need to recompute from trust state)
+        # For now, track trust state confidence changes
+        prev_confidence = previous.get("trust", {}).get("confidence_level", "unknown")
+        curr_confidence = current.get("trust", {}).get("confidence_level", "unknown")
+
+        if prev_confidence != curr_confidence:
+            deltas["confidence_change"] = {
+                "from": prev_confidence,
+                "to": curr_confidence,
+            }
+
+        # Track top risks count change
+        prev_risks_count = len(previous.get("trust", {}).get("top_risks", []))
+        curr_risks_count = len(current.get("trust", {}).get("top_risks", []))
+
+        if prev_risks_count != curr_risks_count:
+            deltas["risks_delta"] = {
+                "from": prev_risks_count,
+                "to": curr_risks_count,
+                "change": curr_risks_count - prev_risks_count,
+            }
+
+        return deltas
+
+
+def generate_snapshot(mode: str = "Ops Head", horizon: str = "TODAY", scope: dict = None) -> dict:
     """Convenience function to generate snapshot."""
     mode_enum = Mode(mode) if mode in [m.value for m in Mode] else Mode.OPS_HEAD
-    horizon_enum = (
-        Horizon(horizon) if horizon in [h.value for h in Horizon] else Horizon.TODAY
-    )
+    horizon_enum = Horizon(horizon) if horizon in [h.value for h in Horizon] else Horizon.TODAY
 
     generator = AgencySnapshotGenerator(
         mode=mode_enum,

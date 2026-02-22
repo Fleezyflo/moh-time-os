@@ -32,11 +32,7 @@ def create_backup(label: str = None) -> Path | None:
 
     # Generate backup filename
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = (
-        f"moh_time_os_{timestamp}_{label}.db"
-        if label
-        else f"moh_time_os_{timestamp}.db"
-    )
+    filename = f"moh_time_os_{timestamp}_{label}.db" if label else f"moh_time_os_{timestamp}.db"
 
     backup_path = BACKUP_DIR / filename
 

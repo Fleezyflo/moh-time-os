@@ -6,8 +6,14 @@ import json
 import logging
 import os
 import sys
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any
+
+# UTC compatibility for Python 3.10/3.11
+try:
+    from datetime import UTC
+except ImportError:
+    UTC = timezone.utc  # noqa: UP017
 
 from .context import get_request_id
 
@@ -123,3 +129,101 @@ def get_logger(name: str) -> logging.Logger:
         logger.info("Processing", extra={"count": 42})
     """
     return logging.getLogger(name)
+
+
+class CorrelationIdMiddleware:
+    """
+    FastAPI middleware for adding request ID to logs.
+
+    Usage in server.py:
+        from lib.observability.logging import CorrelationIdMiddleware
+        app.add_middleware(CorrelationIdMiddleware)
+
+    All logs within a request will include the request_id in context.
+    """
+
+    def __init__(self, app):
+        self.app = app
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        # Get or generate request ID
+        from .context import RequestContext, generate_request_id
+
+        request_id = None
+
+        # Check for X-Request-ID header
+        headers = dict(scope.get("headers", []))
+        for key, value in headers.items():
+            if key.lower() == b"x-request-id":
+                try:
+                    request_id = value.decode("utf-8")
+                except Exception:  # noqa: S110
+                    pass
+                break
+
+        # Generate if not provided
+        if not request_id:
+            request_id = generate_request_id()
+
+        # Set in context for all operations in this request
+        with RequestContext(request_id=request_id):
+            await self.app(scope, receive, send)
+
+
+def configure_request_logging(app) -> None:
+    """
+    Configure request logging with correlation ID middleware.
+
+    Args:
+        app: FastAPI application instance
+    """
+    app.add_middleware(CorrelationIdMiddleware)
+
+
+def configure_log_rotation(
+    log_file: str | None = None,
+    max_bytes: int = 50 * 1024 * 1024,  # 50 MB
+    backup_count: int = 5,
+) -> None:
+    """
+    Configure rotating file handler for logs.
+
+    Args:
+        log_file: Path to log file. If None, logs go to stderr only.
+        max_bytes: Max size of log file before rotation (default 50MB)
+        backup_count: Number of backup files to keep (default 5)
+    """
+    from logging.handlers import RotatingFileHandler
+
+    if not log_file:
+        return
+
+    # Create log directory if needed
+    log_dir = os.path.dirname(os.path.abspath(log_file))
+    if log_dir and not os.path.exists(log_dir):
+        try:
+            os.makedirs(log_dir, exist_ok=True)
+        except Exception as e:
+            logger = logging.getLogger(__name__)
+            logger.error(f"Could not create log directory {log_dir}: {e}")
+            return
+
+    root_logger = logging.getLogger()
+
+    # Add rotating file handler
+    try:
+        file_handler = RotatingFileHandler(
+            log_file,
+            maxBytes=max_bytes,
+            backupCount=backup_count,
+        )
+        formatter = JSONFormatter()
+        file_handler.setFormatter(formatter)
+        root_logger.addHandler(file_handler)
+    except Exception as e:
+        logger = logging.getLogger(__name__)
+        logger.error(f"Could not configure log rotation: {e}")

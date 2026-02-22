@@ -246,9 +246,7 @@ class CommsCommitmentsEngine:
         finally:
             conn.close()
 
-    def generate(
-        self, selected_thread_id: str | None = None, expanded: bool = False
-    ) -> dict:
+    def generate(self, selected_thread_id: str | None = None, expanded: bool = False) -> dict:
         """
         Generate complete comms_commitments section per §8 schema.
         """
@@ -272,9 +270,7 @@ class CommsCommitmentsEngine:
         ranked_threads = self._rank_threads(eligible_threads)
 
         # Apply caps
-        hot_list_limit = (
-            self.MAX_HOT_LIST_EXPANDED if expanded else self.MAX_HOT_LIST_DEFAULT
-        )
+        hot_list_limit = self.MAX_HOT_LIST_EXPANDED if expanded else self.MAX_HOT_LIST_DEFAULT
         hot_list = ranked_threads[:hot_list_limit]
 
         # Build summary
@@ -366,9 +362,7 @@ class CommsCommitmentsEngine:
                     "id": row.get("commitment_id"),
                     "from_email": row.get("from_email"),
                     "received_at": row.get("received_at"),
-                    "direction": row.get(
-                        "link_status"
-                    ),  # Using link_status as direction proxy
+                    "direction": row.get("link_status"),  # Using link_status as direction proxy
                     "snippet": row.get("snippet"),
                     "body_text": row.get("body_text"),
                 }
@@ -405,9 +399,7 @@ class CommsCommitmentsEngine:
             # Inbound = received from external
             if direction == "inbound" or (not direction and msg.get("from_email")):
                 try:
-                    ts = datetime.fromisoformat(
-                        msg["received_at"].replace("Z", "+00:00")
-                    )
+                    ts = datetime.fromisoformat(msg["received_at"].replace("Z", "+00:00"))
                     if last_inbound_at is None or ts > last_inbound_at:
                         last_inbound_at = ts.replace(tzinfo=None)
                 except (ValueError, TypeError, AttributeError) as e:
@@ -556,9 +548,7 @@ class CommsCommitmentsEngine:
             return False
 
         # Check for actionable indicators
-        has_request = any(
-            kw in text for kw in self.REQUEST_KEYWORDS + self.PROMISE_KEYWORDS
-        )
+        has_request = any(kw in text for kw in self.REQUEST_KEYWORDS + self.PROMISE_KEYWORDS)
         has_payment = any(kw in text for kw in self.PAYMENT_KEYWORDS)
         has_blocker = any(kw in text for kw in self.BLOCKER_KEYWORDS)
 
@@ -695,9 +685,7 @@ class CommsCommitmentsEngine:
             return ResponseStatus.OK.value
 
         try:
-            expected = datetime.fromisoformat(
-                thread.expected_response_by.replace("Z", "+00:00")
-            )
+            expected = datetime.fromisoformat(thread.expected_response_by.replace("Z", "+00:00"))
             expected = expected.replace(tzinfo=None)
         except (ValueError, TypeError, AttributeError) as e:
             logger.debug(f"Could not parse expected_response_by: {e}")
@@ -745,9 +733,7 @@ class CommsCommitmentsEngine:
         controllability = self._compute_controllability(thread)
         confidence = self._compute_confidence_factor(thread)
 
-        score = 100 * (
-            0.35 * urgency + 0.25 * impact + 0.20 * controllability + 0.20 * confidence
-        )
+        score = 100 * (0.35 * urgency + 0.25 * impact + 0.20 * controllability + 0.20 * confidence)
 
         return max(0.0, min(100.0, score))
 
@@ -757,9 +743,7 @@ class CommsCommitmentsEngine:
             return 0.3  # Default low urgency
 
         try:
-            expected = datetime.fromisoformat(
-                thread.expected_response_by.replace("Z", "+00:00")
-            )
+            expected = datetime.fromisoformat(thread.expected_response_by.replace("Z", "+00:00"))
             expected = expected.replace(tzinfo=None)
         except (ValueError, TypeError, AttributeError) as e:
             logger.debug(f"Could not parse expected_response_by for urgency: {e}")
@@ -916,15 +900,11 @@ class CommsCommitmentsEngine:
         if thread.thread_type == ThreadType.CLIENT_ASK.value:
             parts.append(f"Client request from {thread.client_name or 'unknown'}.")
         elif thread.thread_type == ThreadType.PAYMENT.value:
-            parts.append(
-                f"Payment/billing thread with {thread.client_name or 'unknown'}."
-            )
+            parts.append(f"Payment/billing thread with {thread.client_name or 'unknown'}.")
         elif thread.thread_type == ThreadType.DELIVERY_BLOCKER.value:
             parts.append(f"Delivery blocker from {thread.client_name or 'unknown'}.")
         elif thread.thread_type == ThreadType.RELATIONSHIP.value:
-            parts.append(
-                f"Potential relationship issue with {thread.client_name or 'unknown'}."
-            )
+            parts.append(f"Potential relationship issue with {thread.client_name or 'unknown'}.")
         else:
             parts.append(f"Thread: {thread.subject[:50]}.")
 
@@ -974,9 +954,7 @@ class CommsCommitmentsEngine:
         )
 
         for p in projects:
-            objects.append(
-                LinkedObject(type="project", id=p["id"], label=p["name"][:40])
-            )
+            objects.append(LinkedObject(type="project", id=p["id"], label=p["name"][:40]))
 
         # Linked invoices (overdue)
         invoices = self._query_all(
@@ -1028,9 +1006,7 @@ class CommsCommitmentsEngine:
                     expected = datetime.fromisoformat(
                         thread.expected_response_by.replace("Z", "+00:00")
                     )
-                    if (
-                        expected.replace(tzinfo=None) - self.now
-                    ).total_seconds() / 3600 <= 12:
+                    if (expected.replace(tzinfo=None) - self.now).total_seconds() / 3600 <= 12:
                         return True
                 except (ValueError, TypeError, AttributeError) as e:
                     logger.debug(f"Could not parse expected_response_by: {e}")
@@ -1042,9 +1018,7 @@ class CommsCommitmentsEngine:
                 if c.status == "open" and c.deadline:
                     try:
                         dl = datetime.fromisoformat(c.deadline.replace("Z", "+00:00"))
-                        if (
-                            dl.replace(tzinfo=None) - self.now
-                        ).total_seconds() / 3600 <= 12:
+                        if (dl.replace(tzinfo=None) - self.now).total_seconds() / 3600 <= 12:
                             return True
                     except (ValueError, TypeError, AttributeError) as e:
                         logger.debug(f"Could not parse commitment deadline: {e}")
@@ -1078,9 +1052,7 @@ class CommsCommitmentsEngine:
                 expected = datetime.fromisoformat(
                     thread.expected_response_by.replace("Z", "+00:00")
                 )
-                if (
-                    expected.replace(tzinfo=None) - self.now
-                ).total_seconds() / 3600 <= 7 * 24:
+                if (expected.replace(tzinfo=None) - self.now).total_seconds() / 3600 <= 7 * 24:
                     return True
             except (ValueError, TypeError, AttributeError) as e:
                 logger.debug(f"Could not parse expected_response_by: {e}")
@@ -1089,9 +1061,7 @@ class CommsCommitmentsEngine:
             if c.status == "open" and c.deadline:
                 try:
                     dl = datetime.fromisoformat(c.deadline.replace("Z", "+00:00"))
-                    if (
-                        dl.replace(tzinfo=None) - self.now
-                    ).total_seconds() / 3600 <= 7 * 24:
+                    if (dl.replace(tzinfo=None) - self.now).total_seconds() / 3600 <= 7 * 24:
                         return True
                 except (ValueError, TypeError, AttributeError) as e:
                     logger.debug(f"Could not parse commitment deadline: {e}")
@@ -1126,12 +1096,8 @@ class CommsCommitmentsEngine:
             ttx = 99999
             if t.expected_response_by:
                 try:
-                    expected = datetime.fromisoformat(
-                        t.expected_response_by.replace("Z", "+00:00")
-                    )
-                    ttx = (
-                        expected.replace(tzinfo=None) - self.now
-                    ).total_seconds() / 3600
+                    expected = datetime.fromisoformat(t.expected_response_by.replace("Z", "+00:00"))
+                    ttx = (expected.replace(tzinfo=None) - self.now).total_seconds() / 3600
                 except (ValueError, TypeError, AttributeError) as e:
                     logger.debug(f"Could not parse expected_response_by for sort: {e}")
 
@@ -1146,9 +1112,7 @@ class CommsCommitmentsEngine:
         threads.sort(key=sort_key)
         return threads
 
-    def _build_summary(
-        self, threads: list[ThreadData], commitments: list[Commitment]
-    ) -> dict:
+    def _build_summary(self, threads: list[ThreadData], commitments: list[Commitment]) -> dict:
         """Build executive strip summary per §3 Zone B."""
         # Count overdue replies
         overdue_replies = sum(
@@ -1160,8 +1124,7 @@ class CommsCommitmentsEngine:
             1
             for t in threads
             if t.vip
-            and t.response_status
-            in (ResponseStatus.OVERDUE.value, ResponseStatus.DUE.value)
+            and t.response_status in (ResponseStatus.OVERDUE.value, ResponseStatus.DUE.value)
         )
 
         # Count commitments at risk / broken
@@ -1173,9 +1136,7 @@ class CommsCommitmentsEngine:
                 try:
                     dl = datetime.fromisoformat(c.deadline.replace("Z", "+00:00"))
                     # At risk if within horizon or past
-                    hours_to_dl = (
-                        dl.replace(tzinfo=None) - self.now
-                    ).total_seconds() / 3600
+                    hours_to_dl = (dl.replace(tzinfo=None) - self.now).total_seconds() / 3600
                     horizon_hours = {
                         Horizon.NOW: 12,
                         Horizon.TODAY: 24,
@@ -1190,8 +1151,7 @@ class CommsCommitmentsEngine:
         unlinked_actionable = sum(
             1
             for t in threads
-            if t.link_status == "unlinked"
-            and t.thread_type == ThreadType.UNKNOWN_TRIAGE.value
+            if t.link_status == "unlinked" and t.thread_type == ThreadType.UNKNOWN_TRIAGE.value
         )
 
         # Risk band
@@ -1255,9 +1215,7 @@ class CommsCommitmentsEngine:
         actions = []
 
         # Overdue threads
-        overdue = [
-            t for t in hot_list if t.response_status == ResponseStatus.OVERDUE.value
-        ]
+        overdue = [t for t in hot_list if t.response_status == ResponseStatus.OVERDUE.value]
 
         for thread in overdue[:3]:
             actions.append(
@@ -1548,8 +1506,7 @@ class CommsCommitmentsEngine:
             "summary": thread.summary,
             "evidence": {
                 "linked_objects": [
-                    {"type": o.type, "id": o.id, "label": o.label}
-                    for o in thread.linked_objects
+                    {"type": o.type, "id": o.id, "label": o.label} for o in thread.linked_objects
                 ],
                 "gates": {
                     "data_integrity": self.data_integrity,
@@ -1604,9 +1561,7 @@ def generate_comms_commitments(
     from .scoring import Horizon, Mode
 
     mode_enum = Mode(mode) if mode in [m.value for m in Mode] else Mode.OPS_HEAD
-    horizon_enum = (
-        Horizon(horizon) if horizon in [h.value for h in Horizon] else Horizon.TODAY
-    )
+    horizon_enum = Horizon(horizon) if horizon in [h.value for h in Horizon] else Horizon.TODAY
 
     engine = CommsCommitmentsEngine(mode=mode_enum, horizon=horizon_enum)
     return engine.generate(selected_thread_id=selected_thread_id, expanded=expanded)

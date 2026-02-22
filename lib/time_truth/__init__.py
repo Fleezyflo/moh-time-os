@@ -1,5 +1,5 @@
 """
-Time Truth Module (Tier 0)
+Time Truth Module
 
 The foundation layer of Time OS. All other tiers depend on this.
 
@@ -16,7 +16,6 @@ Invariants:
 """
 
 from .block_manager import BlockManager
-from .brief import generate_time_brief, get_time_truth_status
 from .calendar_sync import CalendarSync
 from .rollover import Rollover
 from .scheduler import Scheduler
@@ -26,6 +25,4 @@ __all__ = [
     "CalendarSync",
     "Scheduler",
     "Rollover",
-    "generate_time_brief",
-    "get_time_truth_status",
 ]

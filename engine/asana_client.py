@@ -6,9 +6,7 @@ from typing import Any
 
 import requests
 
-CONFIG_PATH = os.path.join(
-    os.path.dirname(__file__), "..", "config", ".credentials.json"
-)
+CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", ".credentials.json")
 ASANA_API_BASE = "https://app.asana.com/api/1.0"
 
 
@@ -30,6 +28,7 @@ def asana_get(endpoint: str, params: dict | None = None) -> dict[str, Any]:
             "Authorization": f"Bearer {pat}",
             "Accept": "application/json",
         },
+        timeout=30,
     )
 
     if resp.status_code != 200:
@@ -62,12 +61,16 @@ def get_project(project_gid: str) -> dict:
 
 
 def list_tasks_in_project(
-    project_gid: str, *, completed: bool | None = None
+    project_gid: str, *, completed: bool | None = None, opt_fields: str = None
 ) -> list[dict]:
     """List tasks in a project."""
-    params = {
-        "opt_fields": "name,completed,due_on,assignee,assignee.name,tags,tags.name"
-    }
+    params = {}
+    if opt_fields:
+        params["opt_fields"] = opt_fields
+    else:
+        params["opt_fields"] = (
+            "name,completed,completed_at,due_on,due_at,assignee,assignee.name,tags,tags.name,notes,created_at,modified_at"
+        )
     if completed is not None:
         params["completed_since"] = "now" if not completed else None
 
@@ -100,9 +103,7 @@ def search_tasks(workspace_gid: str, query: str) -> list[dict]:
 def get_user_task_list(user_gid: str, workspace_gid: str) -> list[dict]:
     """Get user's task list (My Tasks)."""
     # First get the user task list gid
-    data = asana_get(
-        f"users/{user_gid}/user_task_list", params={"workspace": workspace_gid}
-    )
+    data = asana_get(f"users/{user_gid}/user_task_list", params={"workspace": workspace_gid})
     task_list_gid = data.get("data", {}).get("gid")
 
     if not task_list_gid:
@@ -114,6 +115,75 @@ def get_user_task_list(user_gid: str, workspace_gid: str) -> list[dict]:
         params={"opt_fields": "name,completed,due_on,projects,projects.name"},
     )
     return tasks_data.get("data", [])
+
+
+def get_task_detail(task_gid: str, opt_fields: str = None) -> dict:
+    """Get full task details with expanded fields."""
+    params = {}
+    if opt_fields:
+        params["opt_fields"] = opt_fields
+    else:
+        params["opt_fields"] = (
+            "name,completed,completed_at,due_on,due_at,assignee,assignee.name,assignee.gid,"
+            "tags,tags.name,notes,created_at,modified_at,custom_fields,custom_fields.name,"
+            "custom_fields.type,custom_fields.display_value,memberships,memberships.section,"
+            "memberships.section.name,num_subtasks,dependencies,attachments"
+        )
+    data = asana_get(f"tasks/{task_gid}", params=params)
+    return data.get("data", {})
+
+
+def list_subtasks(task_gid: str, opt_fields: str = None) -> list[dict]:
+    """List subtasks for a task."""
+    params = {}
+    if opt_fields:
+        params["opt_fields"] = opt_fields
+    else:
+        params["opt_fields"] = "name,completed,due_on,assignee,assignee.name,assignee.gid"
+    data = asana_get(f"tasks/{task_gid}/subtasks", params=params)
+    return data.get("data", [])
+
+
+def list_stories(task_gid: str, opt_fields: str = None) -> list[dict]:
+    """List stories (comments + system events) for a task."""
+    params = {}
+    if opt_fields:
+        params["opt_fields"] = opt_fields
+    else:
+        params["opt_fields"] = "type,text,created_by,created_by.name,created_at"
+    data = asana_get(f"tasks/{task_gid}/stories", params=params)
+    return data.get("data", [])
+
+
+def list_task_dependencies(task_gid: str) -> list[dict]:
+    """List task dependencies (what this task depends on)."""
+    data = asana_get(f"tasks/{task_gid}/dependencies", params={"opt_fields": "gid,name,completed"})
+    return data.get("data", [])
+
+
+def list_task_attachments(task_gid: str) -> list[dict]:
+    """List attachments for a task."""
+    params = {"opt_fields": "gid,name,download_url,host,size,created_at"}
+    data = asana_get(f"tasks/{task_gid}/attachments", params=params)
+    return data.get("data", [])
+
+
+def list_portfolios(workspace_gid: str, owner_gid: str = None) -> list[dict]:
+    """List portfolios in a workspace."""
+    params = {"workspace": workspace_gid}
+    if owner_gid:
+        params["owner"] = owner_gid
+    data = asana_get("portfolios", params=params)
+    return data.get("data", [])
+
+
+def list_goals(workspace_gid: str, owner_gid: str = None) -> list[dict]:
+    """List goals in a workspace."""
+    params = {"workspace": workspace_gid}
+    if owner_gid:
+        params["owner"] = owner_gid
+    data = asana_get("goals", params=params)
+    return data.get("data", [])
 
 
 if __name__ == "__main__":

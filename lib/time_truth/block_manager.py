@@ -1,5 +1,5 @@
 """
-Block Manager - Core time block operations for Tier 0 (Time Truth).
+Block Manager - Core time block operations for Time Truth.
 
 Manages the creation, assignment, and validation of time blocks.
 Enforces invariants:
@@ -74,8 +74,12 @@ class BlockManager:
     # Default lanes
     LANES = ["ops", "creative", "client_comms", "admin", "deep_work"]
 
-    def __init__(self, store=None):
-        self.store = store or get_store()
+    def __init__(self, store=None, db_path=None):
+        if isinstance(store, str):
+            # Handle case where store is actually a db_path (from TruthCycle)
+            db_path = store
+            store = None
+        self.store = store or get_store(db_path)
 
     def get_available_blocks(self, date: str, lane: str = None) -> list[TimeBlock]:
         """
@@ -132,9 +136,7 @@ class BlockManager:
             (success, message)
         """
         # Get block
-        block_row = self.store.query(
-            "SELECT * FROM time_blocks WHERE id = ?", [block_id]
-        )
+        block_row = self.store.query("SELECT * FROM time_blocks WHERE id = ?", [block_id])
         if not block_row:
             return False, "Block not found"
 
@@ -171,9 +173,7 @@ class BlockManager:
             [task_id, now, block_id],
         )
 
-        self.store.update(
-            "tasks", task_id, {"scheduled_block_id": block_id, "updated_at": now}
-        )
+        self.store.update("tasks", task_id, {"scheduled_block_id": block_id, "updated_at": now})
 
         return True, f"Task scheduled in block {block_id}"
 
@@ -196,9 +196,7 @@ class BlockManager:
         )
 
         # Clear task
-        self.store.update(
-            "tasks", task_id, {"scheduled_block_id": None, "updated_at": now}
-        )
+        self.store.update("tasks", task_id, {"scheduled_block_id": None, "updated_at": now})
 
         return True, f"Task unscheduled from block {block_id}"
 
@@ -363,9 +361,7 @@ class BlockManager:
 
         # Gap after last block until work end
         while current < work_end:
-            block_size = min(
-                self.DEFAULT_BLOCK_SIZE, (work_end - current).total_seconds() / 60
-            )
+            block_size = min(self.DEFAULT_BLOCK_SIZE, (work_end - current).total_seconds() / 60)
             if block_size < 30:
                 break
 

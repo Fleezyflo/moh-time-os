@@ -90,9 +90,7 @@ class EntityLinkService:
 
         link_id = self._generate_id("lnk")
         status = (
-            "confirmed"
-            if (auto_confirm and confidence >= self.HIGH_CONFIDENCE)
-            else "proposed"
+            "confirmed" if (auto_confirm and confidence >= self.HIGH_CONFIDENCE) else "proposed"
         )
 
         conn = self._get_conn()
@@ -570,9 +568,7 @@ class EntityLinkService:
                 WHERE status != 'rejected'
                 GROUP BY to_entity_type ORDER BY COUNT(*) DESC
             """)
-            stats["links_by_entity_type"] = {
-                row[0]: row[1] for row in cursor.fetchall()
-            }
+            stats["links_by_entity_type"] = {row[0]: row[1] for row in cursor.fetchall()}
 
             # Link counts by method
             cursor.execute("""
@@ -595,9 +591,7 @@ class EntityLinkService:
                 FROM entity_links WHERE status != 'rejected'
                 GROUP BY band
             """)
-            stats["links_by_confidence_band"] = {
-                row[0]: row[1] for row in cursor.fetchall()
-            }
+            stats["links_by_confidence_band"] = {row[0]: row[1] for row in cursor.fetchall()}
 
             # Fix data queue
             cursor.execute("""

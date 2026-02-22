@@ -397,11 +397,6 @@
     },
     {
       "method": "GET",
-      "path": "/api/time/brief",
-      "source": "api/server.py"
-    },
-    {
-      "method": "GET",
       "path": "/api/time/summary",
       "source": "api/server.py"
     },
@@ -875,12 +870,20 @@
       "source": "collectors/calendar.py"
     },
     {
+      "name": "chat",
+      "source": "collectors/chat.py"
+    },
+    {
       "name": "gmail",
       "source": "collectors/gmail.py"
     },
     {
       "name": "recorder",
       "source": "collectors/recorder.py"
+    },
+    {
+      "name": "resilience",
+      "source": "collectors/resilience.py"
     },
     {
       "name": "tasks",
@@ -909,20 +912,68 @@
       "source": "migrations/v4_milestone1_truth_proof.py"
     },
     {
-      "name": "brands",
-      "source": "v5/migrations/001_create_v5_schema.sql"
+      "name": "asana_attachments",
+      "source": "lib/db.py"
     },
     {
-      "name": "calendar_events",
-      "source": "v5/migrations/001_create_v5_schema.sql"
+      "name": "asana_custom_fields",
+      "source": "lib/db.py"
     },
     {
-      "name": "calendar_sync_state",
-      "source": "v5/migrations/001_create_v5_schema.sql"
+      "name": "asana_goals",
+      "source": "lib/db.py"
+    },
+    {
+      "name": "asana_portfolios",
+      "source": "lib/db.py"
+    },
+    {
+      "name": "asana_sections",
+      "source": "lib/db.py"
+    },
+    {
+      "name": "asana_stories",
+      "source": "lib/db.py"
+    },
+    {
+      "name": "asana_subtasks",
+      "source": "lib/db.py"
+    },
+    {
+      "name": "asana_task_dependencies",
+      "source": "lib/db.py"
+    },
+    {
+      "name": "calendar_attendees",
+      "source": "lib/db.py"
+    },
+    {
+      "name": "calendar_recurrence_rules",
+      "source": "lib/db.py"
+    },
+    {
+      "name": "chat_attachments",
+      "source": "lib/db.py"
+    },
+    {
+      "name": "chat_reactions",
+      "source": "lib/db.py"
+    },
+    {
+      "name": "chat_space_members",
+      "source": "lib/db.py"
+    },
+    {
+      "name": "chat_space_metadata",
+      "source": "lib/db.py"
     },
     {
       "name": "clients",
       "source": "lib/db.py"
+    },
+    {
+      "name": "cost_snapshots",
+      "source": "migrations/v31_intelligence_wiring.py"
     },
     {
       "name": "couplings",
@@ -953,16 +1004,16 @@
       "source": "migrations/v4_milestone1_truth_proof.py"
     },
     {
-      "name": "gchat_messages",
-      "source": "v5/migrations/001_create_v5_schema.sql"
+      "name": "gmail_attachments",
+      "source": "lib/db.py"
     },
     {
-      "name": "gchat_sync_state",
-      "source": "v5/migrations/001_create_v5_schema.sql"
+      "name": "gmail_labels",
+      "source": "lib/db.py"
     },
     {
-      "name": "gemini_notes",
-      "source": "v5/migrations/001_create_v5_schema.sql"
+      "name": "gmail_participants",
+      "source": "lib/db.py"
     },
     {
       "name": "identity_claims",
@@ -985,6 +1036,14 @@
       "source": "lib/db.py"
     },
     {
+      "name": "intelligence_events",
+      "source": "migrations/v31_intelligence_wiring.py"
+    },
+    {
+      "name": "intelligence_events_archive",
+      "source": "migrations/v31_intelligence_wiring.py"
+    },
+    {
       "name": "invoices",
       "source": "lib/db.py"
     },
@@ -997,24 +1056,12 @@
       "source": "lib/db.py"
     },
     {
-      "name": "issues_v5",
-      "source": "v5/migrations/001_create_v5_schema.sql"
-    },
-    {
-      "name": "migrations",
-      "source": "v5/migrations/001_create_v5_schema.sql"
-    },
-    {
       "name": "org_settings",
       "source": "migrations/v29_org_settings.py"
     },
     {
-      "name": "people",
-      "source": "v5/migrations/001_create_v5_schema.sql"
-    },
-    {
-      "name": "projects_v5",
-      "source": "v5/migrations/001_create_v5_schema.sql"
+      "name": "pattern_snapshots",
+      "source": "migrations/v31_intelligence_wiring.py"
     },
     {
       "name": "protocol_violations",
@@ -1033,14 +1080,6 @@
       "source": "migrations/v4_milestone4_intersections_reports_policy.py"
     },
     {
-      "name": "retainer_cycles",
-      "source": "v5/migrations/001_create_v5_schema.sql"
-    },
-    {
-      "name": "retainers",
-      "source": "v5/migrations/001_create_v5_schema.sql"
-    },
-    {
       "name": "retention_rules",
       "source": "migrations/v4_milestone4_intersections_reports_policy.py"
     },
@@ -1049,39 +1088,43 @@
       "source": "migrations/v30_score_history.py"
     },
     {
+      "name": "signal_outcomes",
+      "source": "migrations/v33_intelligence_depth.py"
+    },
+    {
+      "name": "signal_state",
+      "source": "migrations/v32_signal_lifecycle.py"
+    },
+    {
       "name": "signals_v29",
       "source": "lib/db.py"
     },
     {
-      "name": "signals_v5",
-      "source": "v5/migrations/001_create_v5_schema.sql"
+      "name": "xero_bank_transactions",
+      "source": "lib/db.py"
     },
     {
-      "name": "task_versions",
-      "source": "v5/migrations/001_create_v5_schema.sql"
+      "name": "xero_contacts",
+      "source": "lib/db.py"
     },
     {
-      "name": "tasks_v5",
-      "source": "v5/migrations/001_create_v5_schema.sql"
+      "name": "xero_credit_notes",
+      "source": "lib/db.py"
     },
     {
-      "name": "xero_invoices",
-      "source": "v5/migrations/001_create_v5_schema.sql"
+      "name": "xero_line_items",
+      "source": "lib/db.py"
     },
     {
-      "name": "xero_payments",
-      "source": "v5/migrations/001_create_v5_schema.sql"
-    },
-    {
-      "name": "xero_sync_state",
-      "source": "v5/migrations/001_create_v5_schema.sql"
+      "name": "xero_tax_rates",
+      "source": "lib/db.py"
     }
   ],
   "generated_by": "scripts/generate_system_map.py",
   "summary": {
-    "api_routes_count": 172,
-    "collectors_count": 7,
-    "db_tables_count": 46,
+    "api_routes_count": 171,
+    "collectors_count": 9,
+    "db_tables_count": 56,
     "ui_routes_count": 18
   },
   "ui_api_calls": [],

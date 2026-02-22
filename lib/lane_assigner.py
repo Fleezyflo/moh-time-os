@@ -165,11 +165,7 @@ def assign_lane(task: dict, project: dict = None) -> str:
             return lane
 
         # Check keyword match in title
-        if (
-            "keywords" in rule
-            and rule["keywords"]
-            and keyword_match(title, rule["keywords"])
-        ):
+        if "keywords" in rule and rule["keywords"] and keyword_match(title, rule["keywords"]):
             return lane
 
         # Check tag match
@@ -191,7 +187,7 @@ def run_assignment():
 
     # Get all tasks with their projects
     cursor.execute("""
-        SELECT t.id, t.title, t.source, t.tags, t.lane,
+        SELECT t.id, t.title, t.source, t.tags, t.lane_id AS lane,
                p.name as project_name, p.is_internal
         FROM tasks t
         LEFT JOIN projects p ON t.project_id = p.id
@@ -225,7 +221,7 @@ def run_assignment():
 
         if new_lane != task["lane"]:
             cursor.execute(
-                "UPDATE tasks SET lane = ?, updated_at = datetime('now') WHERE id = ?",
+                "UPDATE tasks SET lane_id = ?, updated_at = datetime('now') WHERE id = ?",
                 [new_lane, task["id"]],
             )
             changed += 1

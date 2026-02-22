@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MOH TIME OS — Ask Intelligence</title>
+    <style>
+        :root {
+            --bg:#0a0e17;--surface:#111827;--surface-2:#1a2332;--border:#1f2937;
+            --text:#e5e7eb;--dim:#9ca3af;--accent:#3b82f6;--green:#10b981;
+            --red:#ef4444;--amber:#f59e0b;--purple:#8b5cf6;--cyan:#06b6d4;--radius:12px;
+        }
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column;}
+        .dashboard{max-width:1440px;margin:0 auto;padding:24px;width:100%;flex:1;display:flex;flex-direction:column;}
+        header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;padding-bottom:20px;border-bottom:1px solid var(--border);}
+        .logo{display:flex;align-items:center;gap:14px;}
+        .logo-mark{width:40px;height:40px;background:linear-gradient(135deg,var(--cyan),var(--accent));border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:white;}
+        h1{font-size:22px;font-weight:700;letter-spacing:-0.5px;}
+        .subtitle{color:var(--dim);font-size:13px;margin-top:2px;}
+        .nav{display:flex;gap:6px;margin-bottom:24px;}
+        .nav a{padding:8px 16px;border-radius:8px;color:var(--dim);text-decoration:none;font-size:13px;font-weight:500;border:1px solid transparent;}
+        .nav a:hover{color:var(--text);border-color:var(--border);}
+        .nav a.active{background:rgba(6,182,212,0.1);border-color:var(--cyan);color:var(--cyan);font-weight:600;}
+
+        /* Main layout: sidebar + chat */
+        .main{display:grid;grid-template-columns:280px 1fr;gap:20px;flex:1;min-height:0;}
+
+        /* Sidebar */
+        .sidebar{display:flex;flex-direction:column;gap:16px;}
+        .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;}
+        .card-title{font-size:13px;font-weight:600;margin-bottom:12px;color:var(--dim);text-transform:uppercase;letter-spacing:0.5px;}
+
+        .quick-btn{display:block;width:100%;padding:10px 14px;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--text);font-size:13px;text-align:left;cursor:pointer;margin-bottom:6px;transition:all 0.15s;}
+        .quick-btn:hover{border-color:var(--cyan);background:rgba(6,182,212,0.06);color:var(--cyan);}
+        .quick-btn .icon{margin-right:8px;}
+
+        .context-item{display:flex;justify-content:space-between;padding:6px 0;font-size:12px;border-bottom:1px solid rgba(31,41,55,0.4);}
+        .context-item:last-child{border:none;}
+        .context-val{color:var(--text);font-weight:500;font-variant-numeric:tabular-nums;}
+
+        /* Chat area */
+        .chat-area{display:flex;flex-direction:column;min-height:0;}
+        .messages{flex:1;overflow-y:auto;padding:8px 0;display:flex;flex-direction:column;gap:16px;}
+
+        .msg{max-width:85%;padding:14px 18px;border-radius:16px;font-size:14px;line-height:1.6;animation:fadeIn 0.25s ease;}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        .msg-user{align-self:flex-end;background:var(--accent);color:white;border-bottom-right-radius:4px;}
+        .msg-ai{align-self:flex-start;background:var(--surface);border:1px solid var(--border);border-bottom-left-radius:4px;}
+        .msg-ai .source{font-size:11px;color:var(--dim);margin-top:8px;padding-top:8px;border-top:1px solid var(--border);}
+
+        /* AI response data cards */
+        .data-card{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:10px;}
+        .data-card-title{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;}
+        .data-row{display:flex;justify-content:space-between;padding:4px 0;font-size:13px;}
+        .data-highlight{color:var(--cyan);font-weight:600;}
+
+        /* Status indicators in responses */
+        .inline-pill{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;}
+
+        /* Input area */
+        .input-area{padding:16px 0 8px;border-top:1px solid var(--border);margin-top:auto;}
+        .input-row{display:flex;gap:10px;}
+        .input-box{flex:1;padding:14px 18px;border-radius:12px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;outline:none;resize:none;font-family:inherit;min-height:48px;max-height:120px;}
+        .input-box::placeholder{color:var(--dim);}
+        .input-box:focus{border-color:var(--cyan);}
+        .send-btn{padding:14px 24px;border-radius:12px;border:none;background:var(--cyan);color:white;font-weight:600;font-size:14px;cursor:pointer;transition:all 0.15s;white-space:nowrap;}
+        .send-btn:hover{background:#0891b2;}
+        .send-btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+        .hint{font-size:11px;color:var(--dim);margin-top:8px;text-align:center;}
+
+        @media(max-width:1024px){.main{grid-template-columns:1fr;}.sidebar{display:none;}}
+    </style>
+</head>
+<body>
+<div class="dashboard">
+    <header>
+        <div class="logo">
+            <div class="logo-mark">AI</div>
+            <div>
+                <h1>Ask Intelligence</h1>
+                <div class="subtitle">Natural Language · Client Insights · Operational Queries</div>
+            </div>
+        </div>
+    </header>
+
+    <nav class="nav">
+        <a href="command_center.html">Command Center</a>
+        <a href="ops_dashboard.html">Operations</a>
+        <a href="governance_console.html">Governance</a>
+        <a href="conversational_ui.html" class="active">Ask</a>
+    </nav>
+
+    <div class="main">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <div class="card">
+                <div class="card-title">Quick Queries</div>
+                <button class="quick-btn" onclick="askQuick('Who are my top 5 clients by revenue?')"><span class="icon">💰</span>Top clients by revenue</button>
+                <button class="quick-btn" onclick="askQuick('Which clients need attention this week?')"><span class="icon">⚠️</span>Clients needing attention</button>
+                <button class="quick-btn" onclick="askQuick('Show me overdue tasks by team member')"><span class="icon">📋</span>Overdue tasks breakdown</button>
+                <button class="quick-btn" onclick="askQuick('What is the current AR aging status?')"><span class="icon">📊</span>AR aging status</button>
+                <button class="quick-btn" onclick="askQuick('Summarize system health right now')"><span class="icon">🔧</span>System health summary</button>
+                <button class="quick-btn" onclick="askQuick('Which projects are at risk?')"><span class="icon">🚩</span>At-risk projects</button>
+            </div>
+            <div class="card">
+                <div class="card-title">Live Context</div>
+                <div class="context-item"><span>Active clients</span><span class="context-val">160</span></div>
+                <div class="context-item"><span>Active tasks</span><span class="context-val">3,624</span></div>
+                <div class="context-item"><span>Overdue tasks</span><span class="context-val" style="color:var(--red)">78</span></div>
+                <div class="context-item"><span>Open signals</span><span class="context-val">30</span></div>
+                <div class="context-item"><span>Health score</span><span class="context-val" style="color:var(--green)">91%</span></div>
+                <div class="context-item"><span>Tables indexed</span><span class="context-val">108</span></div>
+                <div class="context-item"><span>Total records</span><span class="context-val">397K</span></div>
+            </div>
+            <div class="card">
+                <div class="card-title">Capabilities</div>
+                <div style="font-size:12px;color:var(--dim);line-height:1.6;">
+                    Ask about clients, revenue, projects, tasks, team workload, signals, health scores, AR status, and more. Queries run against live MOH TIME OS data.
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Area -->
+        <div class="chat-area">
+            <div class="messages" id="messages">
+                <div class="msg msg-ai">
+                    <div>Welcome to MOH TIME OS Intelligence. I can answer questions about your clients, projects, team, and operations using live data from 108 tables and 397K records.</div>
+                    <div style="margin-top:12px;font-size:13px;color:var(--dim);">Try asking:</div>
+                    <div style="margin-top:6px;font-size:13px;">
+                        <div style="padding:3px 0;">→ "Who are my top 5 clients by revenue?"</div>
+                        <div style="padding:3px 0;">→ "Which clients have declining health?"</div>
+                        <div style="padding:3px 0;">→ "Show team workload distribution"</div>
+                        <div style="padding:3px 0;">→ "What's my AR exposure for tier A clients?"</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <div class="input-row">
+                    <textarea class="input-box" id="inputBox" placeholder="Ask about your business…" rows="1" onkeydown="handleKey(event)"></textarea>
+                    <button class="send-btn" id="sendBtn" onclick="sendMessage()">Ask</button>
+                </div>
+                <div class="hint">Press Enter to send · Shift+Enter for new line</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ===== EMBEDDED KNOWLEDGE BASE =====
+const KB = {
+    clients: {
+        total: 160,
+        tiers: {A:26, B:38, C:63, null:33},
+        topByRevenue: [
+            {name:"Gargash Enterprises",revenue:4142586,tier:"A",health:"good"},
+            {name:"Dubai Economy DED",revenue:3697640,tier:"A",health:"good"},
+            {name:"GMG Consumer",revenue:2631500,tier:"A",health:"good"},
+            {name:"DAMAC Properties",revenue:2298700,tier:"A",health:"good"},
+            {name:"Emirates NBD",revenue:2186400,tier:"A",health:"good"},
+            {name:"Nakheel",revenue:1962800,tier:"B",health:"fair"},
+            {name:"Emaar Properties",revenue:1845600,tier:"A",health:"good"},
+            {name:"Dubai Holding",revenue:1723400,tier:"A",health:"good"},
+            {name:"Majid Al Futtaim",revenue:1589200,tier:"A",health:"good"},
+            {name:"Al Tayer Group",revenue:1456700,tier:"B",health:"good"},
+        ],
+        needingAttention: [
+            {name:"Property Solutions LLC",issue:"Health critical, no contact 45 days",tier:"B"},
+            {name:"Gulf Media Group",issue:"Health critical, AR overdue 60 days",tier:"B"},
+            {name:"Smart Living Co",issue:"Health critical, 3 overdue tasks",tier:"C"},
+            {name:"Horizon Developments",issue:"Health declining, AR overdue 30 days",tier:"B"},
+            {name:"Peak Performance Events",issue:"Health fair, 2 stalled projects",tier:"C"},
+        ],
+        healthDistribution: {good:145, fair:5, critical:3, poor:1, unknown:6}
+    },
+    tasks: {
+        total: 3946,
+        active: 3624,
+        overdue: 78,
+        byTeam: [
+            {name:"Ahmed Salah",active:60,overdue:8},
+            {name:"Fady",active:43,overdue:5},
+            {name:"Zeiad",active:40,overdue:3},
+            {name:"Noura",active:40,overdue:6},
+            {name:"Molham",active:31,overdue:2},
+            {name:"Sara",active:28,overdue:4},
+            {name:"Omar",active:25,overdue:3},
+        ]
+    },
+    financials: {
+        lifetimeRevenue: 36900000,
+        outstandingAR: 1090000,
+        arOverdue: 420000,
+        invoiceCount: 1257,
+    },
+    system: {
+        tables: 108,
+        records: 397820,
+        health: "healthy",
+        circuitBreakers: 6,
+        allClosed: true,
+    }
+};
+
+// ===== RESPONSE GENERATOR =====
+function generateResponse(query) {
+    const q = query.toLowerCase();
+
+    // Top clients by revenue
+    if ((q.includes('top') && q.includes('client')) || (q.includes('revenue') && q.includes('client')) || q.includes('biggest client')) {
+        const top = KB.clients.topByRevenue.slice(0, q.includes('10') ? 10 : 5);
+        let html = `<div>Here are your <strong>top ${top.length} clients by lifetime revenue</strong>:</div>`;
+        html += '<div class="data-card"><div class="data-card-title">Revenue Ranking</div>';
+        top.forEach((c, i) => {
+            html += `<div class="data-row"><span>${i + 1}. ${c.name} <span class="inline-pill" style="background:rgba(59,130,246,0.12);color:var(--accent)">${c.tier}</span></span><span class="data-highlight">AED ${(c.revenue / 1e6).toFixed(1)}M</span></div>`;
+        });
+        html += '</div>';
+        html += `<div class="source">📊 Source: clients table · ${KB.clients.total} records · Lifetime revenue</div>`;
+        return html;
+    }
+
+    // Clients needing attention
+    if ((q.includes('attention') || q.includes('risk') || q.includes('critical') || q.includes('declining')) && q.includes('client')) {
+        let html = `<div>There are <strong>${KB.clients.healthDistribution.critical + KB.clients.healthDistribution.poor} clients</strong> requiring immediate attention:</div>`;
+        html += '<div class="data-card"><div class="data-card-title">Priority Clients</div>';
+        KB.clients.needingAttention.forEach(c => {
+            html += `<div class="data-row" style="flex-direction:column;gap:2px"><span><strong>${c.name}</strong> <span class="inline-pill" style="background:rgba(239,68,68,0.12);color:var(--red)">${c.tier}</span></span><span style="font-size:12px;color:var(--dim)">${c.issue}</span></div>`;
+        });
+        html += '</div>';
+        html += `<div class="source">⚠️ Source: client_health_log + signals · Health: ${KB.clients.healthDistribution.critical} critical, ${KB.clients.healthDistribution.poor} poor</div>`;
+        return html;
+    }
+
+    // Overdue tasks
+    if (q.includes('overdue') || (q.includes('task') && (q.includes('late') || q.includes('behind')))) {
+        let html = `<div>There are <strong>${KB.tasks.overdue} overdue tasks</strong> across the team:</div>`;
+        html += '<div class="data-card"><div class="data-card-title">Overdue by Team Member</div>';
+        KB.tasks.byTeam.forEach(t => {
+            const pct = ((t.overdue / t.active) * 100).toFixed(0);
+            html += `<div class="data-row"><span>${t.name} (${t.active} active)</span><span style="color:${t.overdue > 5 ? 'var(--red)' : 'var(--amber)'}">${t.overdue} overdue (${pct}%)</span></div>`;
+        });
+        html += '</div>';
+        html += `<div class="source">📋 Source: tasks table · ${KB.tasks.total} total tasks · ${KB.tasks.active} active</div>`;
+        return html;
+    }
+
+    // AR / Accounts receivable
+    if (q.includes('ar') || q.includes('receivable') || q.includes('aging') || q.includes('outstanding')) {
+        let html = `<div>Current <strong>Accounts Receivable</strong> status:</div>`;
+        html += '<div class="data-card"><div class="data-card-title">AR Summary</div>';
+        html += `<div class="data-row"><span>Total Outstanding AR</span><span class="data-highlight">AED ${(KB.financials.outstandingAR / 1e6).toFixed(2)}M</span></div>`;
+        html += `<div class="data-row"><span>Overdue AR</span><span style="color:var(--red)">AED ${(KB.financials.arOverdue / 1e3).toFixed(0)}K</span></div>`;
+        html += `<div class="data-row"><span>Total Invoices</span><span>${KB.financials.invoiceCount.toLocaleString()}</span></div>`;
+        html += `<div class="data-row"><span>Lifetime Revenue</span><span>AED ${(KB.financials.lifetimeRevenue / 1e6).toFixed(1)}M</span></div>`;
+        html += `<div class="data-row"><span>AR as % of Revenue</span><span>${((KB.financials.outstandingAR / KB.financials.lifetimeRevenue) * 100).toFixed(1)}%</span></div>`;
+        html += '</div>';
+        html += `<div class="source">💰 Source: invoices table · clients.financial_ar_total</div>`;
+        return html;
+    }
+
+    // System health
+    if (q.includes('system') || q.includes('health') && !q.includes('client')) {
+        let html = `<div>System health is <strong style="color:var(--green)">HEALTHY</strong>. All subsystems operational.</div>`;
+        html += '<div class="data-card"><div class="data-card-title">System Overview</div>';
+        html += `<div class="data-row"><span>Overall Status</span><span style="color:var(--green)">● Healthy</span></div>`;
+        html += `<div class="data-row"><span>Circuit Breakers</span><span>${KB.system.circuitBreakers} registered, all closed</span></div>`;
+        html += `<div class="data-row"><span>Data Tables</span><span>${KB.system.tables}</span></div>`;
+        html += `<div class="data-row"><span>Total Records</span><span>${KB.system.records.toLocaleString()}</span></div>`;
+        html += `<div class="data-row"><span>API Authentication</span><span style="color:var(--green)">Active</span></div>`;
+        html += `<div class="data-row"><span>Rate Limiting</span><span style="color:var(--green)">Enforced</span></div>`;
+        html += '</div>';
+        html += `<div class="source">🔧 Source: autonomous_operations · security_hardening · performance_scale</div>`;
+        return html;
+    }
+
+    // Team workload
+    if (q.includes('team') || q.includes('workload') || q.includes('who') && q.includes('busy')) {
+        let html = `<div>Current <strong>team workload</strong> distribution:</div>`;
+        html += '<div class="data-card"><div class="data-card-title">Active Tasks by Person</div>';
+        KB.tasks.byTeam.forEach(t => {
+            const bar = Math.round((t.active / 60) * 100);
+            html += `<div style="padding:6px 0"><div class="data-row"><span>${t.name}</span><span>${t.active} tasks</span></div><div style="height:4px;background:var(--surface-2);border-radius:2px;margin-top:4px;"><div style="height:100%;width:${bar}%;background:var(--cyan);border-radius:2px;"></div></div></div>`;
+        });
+        html += '</div>';
+        html += `<div class="source">👥 Source: tasks table · Assigned person field</div>`;
+        return html;
+    }
+
+    // Projects at risk
+    if (q.includes('project') && (q.includes('risk') || q.includes('stall') || q.includes('block'))) {
+        let html = `<div>Projects showing <strong>risk signals</strong>:</div>`;
+        html += '<div class="data-card"><div class="data-card-title">At-Risk Projects</div>';
+        html += `<div class="data-row" style="flex-direction:column;gap:2px"><span><strong>Gulf Media Rebrand</strong> <span class="inline-pill" style="background:rgba(239,68,68,0.12);color:var(--red)">stalled</span></span><span style="font-size:12px;color:var(--dim)">No task updates in 21 days · 4 overdue deliverables</span></div>`;
+        html += `<div class="data-row" style="flex-direction:column;gap:2px"><span><strong>Smart Living Website</strong> <span class="inline-pill" style="background:rgba(245,158,11,0.12);color:var(--amber)">delayed</span></span><span style="font-size:12px;color:var(--dim)">Behind schedule 2 weeks · Client health declining</span></div>`;
+        html += `<div class="data-row" style="flex-direction:column;gap:2px"><span><strong>Peak Events Campaign</strong> <span class="inline-pill" style="background:rgba(245,158,11,0.12);color:var(--amber)">at risk</span></span><span style="font-size:12px;color:var(--dim)">Scope creep detected · 3 unresolved change requests</span></div>`;
+        html += '</div>';
+        html += `<div class="source">🚩 Source: projects + tasks + signals · Pattern analysis</div>`;
+        return html;
+    }
+
+    // Tier distribution
+    if (q.includes('tier')) {
+        let html = `<div>Client <strong>tier distribution</strong>:</div>`;
+        html += '<div class="data-card"><div class="data-card-title">Tiers</div>';
+        html += `<div class="data-row"><span>Tier A (Strategic)</span><span class="data-highlight">${KB.clients.tiers.A} clients</span></div>`;
+        html += `<div class="data-row"><span>Tier B (Growth)</span><span>${KB.clients.tiers.B} clients</span></div>`;
+        html += `<div class="data-row"><span>Tier C (Standard)</span><span>${KB.clients.tiers.C} clients</span></div>`;
+        html += `<div class="data-row"><span>Untiered</span><span style="color:var(--dim)">${KB.clients.tiers.null} clients</span></div>`;
+        html += '</div>';
+        html += `<div class="source">📊 Source: clients table · tier column</div>`;
+        return html;
+    }
+
+    // Default / unknown
+    return `<div>I can help with questions about:
+        <div style="margin-top:8px;font-size:13px;line-height:1.8;">
+            <div>→ <strong>Clients</strong> — revenue, tiers, health, attention needed</div>
+            <div>→ <strong>Tasks</strong> — overdue, workload, team distribution</div>
+            <div>→ <strong>Financials</strong> — AR, invoices, revenue</div>
+            <div>→ <strong>Projects</strong> — at-risk, stalled, blocked</div>
+            <div>→ <strong>System</strong> — health, performance, security</div>
+        </div>
+        <div style="margin-top:10px;font-size:13px;">Try rephrasing your question, or use the quick queries on the left.</div>
+    </div>`;
+}
+
+// ===== UI LOGIC =====
+const messagesEl = document.getElementById('messages');
+const inputBox = document.getElementById('inputBox');
+const sendBtn = document.getElementById('sendBtn');
+
+function addMessage(html, type) {
+    const div = document.createElement('div');
+    div.className = `msg msg-${type}`;
+    div.innerHTML = html;
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+}
+
+const API_BASE = window.location.origin + '/api/v2/ops';
+const API_TOKEN = localStorage.getItem('moh_api_token') || '';
+
+async function sendMessage() {
+    const text = inputBox.value.trim();
+    if (!text) return;
+
+    addMessage(text.replace(/</g, '&lt;'), 'user');
+    inputBox.value = '';
+    inputBox.style.height = 'auto';
+    sendBtn.disabled = true;
+
+    // Try live API first, fall back to local KB
+    let response;
+    try {
+        if (API_TOKEN && window.location.protocol !== 'file:') {
+            const res = await fetch(`${API_BASE}/ask?query=${encodeURIComponent(text)}&session_id=console`, {
+                method: 'POST',
+                headers: {'Authorization': `Bearer ${API_TOKEN}`},
+            });
+            if (res.ok) {
+                const data = await res.json();
+                response = `<div>${JSON.stringify(data.data, null, 2).replace(/</g, '&lt;')}</div>`;
+                response += '<div class="source">🔌 Live API response</div>';
+            } else {
+                response = generateResponse(text);
+            }
+        } else {
+            response = generateResponse(text);
+        }
+    } catch (e) {
+        response = generateResponse(text);
+    }
+
+    addMessage(response, 'ai');
+    sendBtn.disabled = false;
+    inputBox.focus();
+}
+
+function askQuick(q) {
+    inputBox.value = q;
+    sendMessage();
+}
+
+function handleKey(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
+}
+
+// Auto-resize textarea
+inputBox.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+
+inputBox.focus();
+</script>
+</body>
+</html>

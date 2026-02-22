@@ -45,8 +45,12 @@ class HealthCalculator:
     AT_RISK_THRESHOLD = 50
     WARNING_THRESHOLD = 70
 
-    def __init__(self, store=None):
-        self.store = store or get_store()
+    def __init__(self, store=None, db_path=None):
+        if isinstance(store, str):
+            # Handle case where store is actually a db_path
+            db_path = store
+            store = None
+        self.store = store or get_store(db_path)
 
     def compute_health_score(self, client_id: str) -> ClientHealth:
         """
@@ -98,11 +102,7 @@ class HealthCalculator:
 
         # Total health score
         total_score = int(
-            completion_score
-            + overdue_score
-            + activity_score
-            + commitment_score
-            + project_score
+            completion_score + overdue_score + activity_score + commitment_score + project_score
         )
         total_score = max(0, min(100, total_score))
 

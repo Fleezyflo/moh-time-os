@@ -32,6 +32,51 @@
         "title": "ApprovalAction",
         "type": "object"
       },
+      "ApproveRequest": {
+        "description": "Request to approve an action.",
+        "properties": {
+          "additional_context": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Additional Context"
+          },
+          "approved_by": {
+            "description": "Who is approving (user_id)",
+            "title": "Approved By",
+            "type": "string"
+          }
+        },
+        "required": [
+          "approved_by"
+        ],
+        "title": "ApproveRequest",
+        "type": "object"
+      },
+      "BatchProposalRequest": {
+        "description": "Request to batch propose multiple actions.",
+        "properties": {
+          "actions": {
+            "description": "List of actions to propose",
+            "items": {
+              "$ref": "#/components/schemas/ProposalRequest"
+            },
+            "title": "Actions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "actions"
+        ],
+        "title": "BatchProposalRequest",
+        "type": "object"
+      },
       "BlockerRequest": {
         "properties": {
           "blocker_id": {
@@ -148,6 +193,72 @@
           "state"
         ],
         "title": "ChangeIssueStateRequest",
+        "type": "object"
+      },
+      "ChatWebhookRequest": {
+        "description": "Incoming Chat webhook event.",
+        "properties": {
+          "eventTime": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Event timestamp",
+            "title": "Eventtime"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Message data",
+            "title": "Message"
+          },
+          "space": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Space info",
+            "title": "Space"
+          },
+          "type": {
+            "description": "Event type: MESSAGE, ADDED_TO_SPACE, REMOVED_FROM_SPACE, etc.",
+            "title": "Type",
+            "type": "string"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "User who triggered event",
+            "title": "User"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "ChatWebhookRequest",
         "type": "object"
       },
       "ClientUpdate": {
@@ -419,6 +530,19 @@
         "title": "EscalateRequest",
         "type": "object"
       },
+      "ExecuteRequest": {
+        "description": "Request to execute an action.",
+        "properties": {
+          "dry_run": {
+            "default": false,
+            "description": "Simulate execution without side effects",
+            "title": "Dry Run",
+            "type": "boolean"
+          }
+        },
+        "title": "ExecuteRequest",
+        "type": "object"
+      },
       "FeedbackRequest": {
         "properties": {
           "comment": {
@@ -529,6 +653,73 @@
         "title": "InboxActionRequest",
         "type": "object"
       },
+      "InteractiveActionRequest": {
+        "description": "Incoming interactive action (button click on card).",
+        "properties": {
+          "action": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Action details with actionMethodName and parameters",
+            "title": "Action"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Message containing the card",
+            "title": "Message"
+          },
+          "space": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Space info",
+            "title": "Space"
+          },
+          "type": {
+            "description": "Should be 'CARD_CLICKED' or similar",
+            "title": "Type",
+            "type": "string"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "User who clicked",
+            "title": "User"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "InteractiveActionRequest",
+        "type": "object"
+      },
       "IssueTransitionRequest": {
         "properties": {
           "action": {
@@ -613,6 +804,143 @@
           "note"
         ],
         "title": "NoteAdd",
+        "type": "object"
+      },
+      "PaginatedResponse": {
+        "description": "Standard paginated response model.",
+        "properties": {
+          "data": {
+            "description": "Items on this page",
+            "items": {},
+            "title": "Data",
+            "type": "array"
+          },
+          "has_next": {
+            "description": "Whether there is a next page",
+            "title": "Has Next",
+            "type": "boolean"
+          },
+          "has_prev": {
+            "description": "Whether there is a previous page",
+            "title": "Has Prev",
+            "type": "boolean"
+          },
+          "page": {
+            "description": "Current page number (1-indexed)",
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "description": "Items per page",
+            "title": "Page Size",
+            "type": "integer"
+          },
+          "total": {
+            "description": "Total number of items",
+            "title": "Total",
+            "type": "integer"
+          },
+          "total_pages": {
+            "description": "Total number of pages",
+            "title": "Total Pages",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "data",
+          "total",
+          "page",
+          "page_size",
+          "total_pages",
+          "has_next",
+          "has_prev"
+        ],
+        "title": "PaginatedResponse",
+        "type": "object"
+      },
+      "ProposalRequest": {
+        "description": "Request to propose an action.",
+        "properties": {
+          "action_type": {
+            "description": "Action type, e.g., task_create",
+            "title": "Action Type",
+            "type": "string"
+          },
+          "confidence_score": {
+            "default": 0.8,
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Confidence Score",
+            "type": "number"
+          },
+          "idempotency_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idempotency Key"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "description": "Action data",
+            "title": "Payload",
+            "type": "object"
+          },
+          "risk_level": {
+            "default": "medium",
+            "description": "low|medium|high|critical",
+            "title": "Risk Level",
+            "type": "string"
+          },
+          "source": {
+            "default": "manual",
+            "description": "signal|proposal|manual|scheduled",
+            "title": "Source",
+            "type": "string"
+          },
+          "target_entity": {
+            "description": "Entity type, e.g., task, calendar",
+            "title": "Target Entity",
+            "type": "string"
+          },
+          "target_id": {
+            "description": "ID of entity being affected",
+            "title": "Target Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action_type",
+          "target_entity",
+          "target_id",
+          "payload"
+        ],
+        "title": "ProposalRequest",
+        "type": "object"
+      },
+      "RejectRequest": {
+        "description": "Request to reject an action.",
+        "properties": {
+          "reason": {
+            "description": "Reason for rejection",
+            "title": "Reason",
+            "type": "string"
+          },
+          "rejected_by": {
+            "description": "Who is rejecting (user_id)",
+            "title": "Rejected By",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rejected_by",
+          "reason"
+        ],
+        "title": "RejectRequest",
         "type": "object"
       },
       "ResolveFixDataRequest": {
@@ -973,6 +1301,399 @@
           }
         },
         "summary": "Root"
+      }
+    },
+    "/api/actions/batch": {
+      "post": {
+        "description": "Batch propose multiple actions.",
+        "operationId": "batch_propose_api_actions_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchProposalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Batch Propose Api Actions Batch Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Batch Propose",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/api/actions/history": {
+      "get": {
+        "description": "Get action execution history.",
+        "operationId": "get_action_history_api_actions_history_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "entity_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "action_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Action Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Action History Api Actions History Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Action History",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/api/actions/pending": {
+      "get": {
+        "description": "Get pending actions awaiting approval.",
+        "operationId": "get_pending_actions_api_actions_pending_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "action_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Action Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Pending Actions Api Actions Pending Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Pending Actions",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/api/actions/propose": {
+      "post": {
+        "description": "Propose a new action for approval.",
+        "operationId": "propose_action_api_actions_propose_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProposalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Propose Action Api Actions Propose Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Propose Action",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/api/actions/{action_id}/approve": {
+      "post": {
+        "description": "Approve a pending action.",
+        "operationId": "approve_action_api_actions__action_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "title": "Action Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApproveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Approve Action Api Actions  Action Id  Approve Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Approve Action",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/api/actions/{action_id}/execute": {
+      "post": {
+        "description": "Execute an approved action.",
+        "operationId": "execute_action_api_actions__action_id__execute_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "title": "Action Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecuteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Execute Action Api Actions  Action Id  Execute Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Execute Action",
+        "tags": [
+          "actions"
+        ]
+      }
+    },
+    "/api/actions/{action_id}/reject": {
+      "post": {
+        "description": "Reject a pending action.",
+        "operationId": "reject_action_api_actions__action_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "action_id",
+            "required": true,
+            "schema": {
+              "title": "Action Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Reject Action Api Actions  Action Id  Reject Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reject Action",
+        "tags": [
+          "actions"
+        ]
       }
     },
     "/api/admin/seed-identities": {
@@ -1713,6 +2434,94 @@
           }
         },
         "summary": "Get Capacity Utilization"
+      }
+    },
+    "/api/chat/interactive": {
+      "post": {
+        "description": "Handle interactive card button clicks.\n\nWhen user clicks a button on a card, Google Chat sends an interactive action event.\nThe action contains actionMethodName and parameters.",
+        "operationId": "handle_interactive_action_api_chat_interactive_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InteractiveActionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Handle Interactive Action Api Chat Interactive Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Handle Interactive Action",
+        "tags": [
+          "chat"
+        ]
+      }
+    },
+    "/api/chat/webhook": {
+      "post": {
+        "description": "Receive and process Chat webhook events.\n\nHandles:\n- MESSAGE events (including slash commands starting with /)\n- ADDED_TO_SPACE events\n- REMOVED_FROM_SPACE events\n- Other Chat events\n\nFor slash commands, routes to SlashCommandHandler.",
+        "operationId": "handle_webhook_api_chat_webhook_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatWebhookRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Handle Webhook Api Chat Webhook Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Handle Webhook",
+        "tags": [
+          "chat"
+        ]
       }
     },
     "/api/clients": {
@@ -2618,8 +3427,15 @@
             "name": "client_id",
             "required": false,
             "schema": {
-              "title": "Client Id",
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Client Id"
             }
           },
           {
@@ -2627,8 +3443,15 @@
             "name": "member_id",
             "required": false,
             "schema": {
-              "title": "Member Id",
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Member Id"
             }
           }
         ],
@@ -2874,8 +3697,15 @@
             "name": "client_id",
             "required": false,
             "schema": {
-              "title": "Client Id",
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Client Id"
             }
           },
           {
@@ -2883,8 +3713,15 @@
             "name": "member_id",
             "required": false,
             "schema": {
-              "title": "Member Id",
-              "type": "string"
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Member Id"
             }
           }
         ],
@@ -3828,6 +4665,96 @@
         "summary": "Get Governance Status"
       }
     },
+    "/api/governance/audit-log": {
+      "get": {
+        "description": "Query the audit log for governance operations.\n\nReturns all operations on a subject or of a specific action type.",
+        "operationId": "query_audit_log_api_governance_audit_log_get",
+        "parameters": [
+          {
+            "description": "Filter by data subject",
+            "in": "query",
+            "name": "subject",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by data subject",
+              "title": "Subject"
+            }
+          },
+          {
+            "description": "Filter by action type",
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by action type",
+              "title": "Action"
+            }
+          },
+          {
+            "description": "Filter by timestamp (ISO format)",
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by timestamp (ISO format)",
+              "title": "Since"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Query Audit Log Api Governance Audit Log Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Query Audit Log",
+        "tags": [
+          "Governance"
+        ]
+      }
+    },
     "/api/governance/emergency-brake": {
       "delete": {
         "description": "Release emergency brake.",
@@ -3882,6 +4809,230 @@
         "summary": "Activate Emergency Brake"
       }
     },
+    "/api/governance/export": {
+      "post": {
+        "description": "Request bulk data export.\n\nReturns request_id to check status later.",
+        "operationId": "request_data_export_api_governance_export_post",
+        "parameters": [
+          {
+            "description": "Tables to export",
+            "in": "query",
+            "name": "tables",
+            "required": true,
+            "schema": {
+              "description": "Tables to export",
+              "items": {
+                "type": "string"
+              },
+              "title": "Tables",
+              "type": "array"
+            }
+          },
+          {
+            "description": "Export format: json, csv, jsonl",
+            "in": "query",
+            "name": "format",
+            "required": false,
+            "schema": {
+              "default": "json",
+              "description": "Export format: json, csv, jsonl",
+              "title": "Format",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Anonymize PII columns",
+            "in": "query",
+            "name": "anonymize_pii",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Anonymize PII columns",
+              "title": "Anonymize Pii",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Who requested the export",
+            "in": "query",
+            "name": "requested_by",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Who requested the export",
+              "title": "Requested By"
+            }
+          },
+          {
+            "description": "Reason for export",
+            "in": "query",
+            "name": "reason",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Reason for export",
+              "title": "Reason"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Request Data Export Api Governance Export Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Request Data Export",
+        "tags": [
+          "Governance"
+        ]
+      }
+    },
+    "/api/governance/export-schema/{table}": {
+      "get": {
+        "description": "Get schema for a specific table.",
+        "operationId": "get_table_schema_api_governance_export_schema__table__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "table",
+            "required": true,
+            "schema": {
+              "title": "Table",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Table Schema Api Governance Export Schema  Table  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Table Schema",
+        "tags": [
+          "Governance"
+        ]
+      }
+    },
+    "/api/governance/export/{request_id}": {
+      "get": {
+        "description": "Check export status and get download link.",
+        "operationId": "get_export_status_api_governance_export__request_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Export Status Api Governance Export  Request Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Export Status",
+        "tags": [
+          "Governance"
+        ]
+      }
+    },
+    "/api/governance/exportable-tables": {
+      "get": {
+        "description": "List available tables for export with metadata.",
+        "operationId": "list_exportable_tables_api_governance_exportable_tables_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Exportable Tables Api Governance Exportable Tables Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "List Exportable Tables",
+        "tags": [
+          "Governance"
+        ]
+      }
+    },
     "/api/governance/history": {
       "get": {
         "description": "Get governance action history.",
@@ -3919,6 +5070,265 @@
           }
         },
         "summary": "Get Governance History"
+      }
+    },
+    "/api/governance/sar": {
+      "get": {
+        "description": "List all subject access requests with optional status filter.",
+        "operationId": "list_subject_access_requests_api_governance_sar_get",
+        "parameters": [
+          {
+            "description": "Filter by status",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by status",
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Subject Access Requests Api Governance Sar Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Subject Access Requests",
+        "tags": [
+          "Governance"
+        ]
+      },
+      "post": {
+        "description": "Create a new subject access request.\n\nGDPR compliance: Articles 15 (access), 17 (deletion), 16 (rectification), 20 (portability).\n\nReturns request_id for tracking.",
+        "operationId": "create_subject_access_request_api_governance_sar_post",
+        "parameters": [
+          {
+            "description": "Email, name, or ID of data subject",
+            "in": "query",
+            "name": "subject_identifier",
+            "required": true,
+            "schema": {
+              "description": "Email, name, or ID of data subject",
+              "title": "Subject Identifier",
+              "type": "string"
+            }
+          },
+          {
+            "description": "access, deletion, rectification, or portability",
+            "in": "query",
+            "name": "request_type",
+            "required": true,
+            "schema": {
+              "description": "access, deletion, rectification, or portability",
+              "title": "Request Type",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Who is making the request",
+            "in": "query",
+            "name": "requested_by",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Who is making the request",
+              "title": "Requested By"
+            }
+          },
+          {
+            "description": "Reason for the request",
+            "in": "query",
+            "name": "reason",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Reason for the request",
+              "title": "Reason"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Subject Access Request Api Governance Sar Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Subject Access Request",
+        "tags": [
+          "Governance"
+        ]
+      }
+    },
+    "/api/governance/sar/{request_id}": {
+      "get": {
+        "description": "Get status of a subject access request.",
+        "operationId": "get_subject_access_request_api_governance_sar__request_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Subject Access Request Api Governance Sar  Request Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Subject Access Request",
+        "tags": [
+          "Governance"
+        ]
+      }
+    },
+    "/api/governance/sar/{request_id}/fulfill": {
+      "post": {
+        "description": "Fulfill a subject access request.\n\nSupports:\n- find: Search for all subject data\n- export: Export subject data to file\n- delete: Delete subject data (dry-run by default)\n- anonymize: Anonymize subject data instead of delete\n\nArgs:\n    request_id: The SAR request ID\n    action: What to do (find, export, delete, anonymize)\n    dry_run: If true, only simulate (default true for destructive ops)\n\nReturns:\n    Details of the action result",
+        "operationId": "fulfill_subject_access_request_api_governance_sar__request_id__fulfill_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "title": "Request Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "find, export, delete, or anonymize",
+            "in": "query",
+            "name": "action",
+            "required": true,
+            "schema": {
+              "description": "find, export, delete, or anonymize",
+              "title": "Action",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Only simulate the action",
+            "in": "query",
+            "name": "dry_run",
+            "required": false,
+            "schema": {
+              "default": true,
+              "description": "Only simulate the action",
+              "title": "Dry Run",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Fulfill Subject Access Request Api Governance Sar  Request Id  Fulfill Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Fulfill Subject Access Request",
+        "tags": [
+          "Governance"
+        ]
       }
     },
     "/api/governance/{domain}": {
@@ -5476,7 +6886,7 @@
     },
     "/api/tasks/link": {
       "post": {
-        "description": "Bulk link tasks to projects/clients.",
+        "description": "Bulk link tasks to projects/clients.\n\nAccepts JSON body: {\"links\": [{\"task_id\": str, \"project_id\": str?, \"client_id\": str?}]}\nReturns results per task with success/failure status.",
         "operationId": "bulk_link_tasks_api_tasks_link_post",
         "responses": {
           "200": {
@@ -6009,61 +7419,6 @@
           }
         },
         "summary": "Get Time Blocks"
-      }
-    },
-    "/api/time/brief": {
-      "get": {
-        "description": "Get a brief time overview.",
-        "operationId": "get_time_brief_api_time_brief_get",
-        "parameters": [
-          {
-            "in": "query",
-            "name": "date",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "Date"
-            }
-          },
-          {
-            "in": "query",
-            "name": "format",
-            "required": false,
-            "schema": {
-              "default": "markdown",
-              "title": "Format",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Get Time Brief"
       }
     },
     "/api/time/schedule": {
@@ -7086,6 +8441,157 @@
         ]
       }
     },
+    "/api/v2/events/history": {
+      "get": {
+        "description": "Get recent event history.\n\nReturns the last N events (default 100).\nUseful for initial state sync or when SSE unavailable.",
+        "operationId": "get_event_history_api_v2_events_history_get",
+        "parameters": [
+          {
+            "description": "Maximum events to return",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "description": "Maximum events to return",
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Event History",
+        "tags": [
+          "Events"
+        ]
+      }
+    },
+    "/api/v2/events/publish": {
+      "post": {
+        "description": "Publish a test event to the stream.\n\nFor testing/demo purposes. In production, events are published\nby the system's internal event producers.",
+        "operationId": "publish_event_api_v2_events_publish_post",
+        "parameters": [
+          {
+            "description": "Type of event",
+            "in": "query",
+            "name": "event_type",
+            "required": true,
+            "schema": {
+              "description": "Type of event",
+              "title": "Event Type",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Event message",
+            "in": "query",
+            "name": "message",
+            "required": true,
+            "schema": {
+              "description": "Event message",
+              "title": "Message",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Optional: severity level",
+            "in": "query",
+            "name": "severity",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Optional: severity level",
+              "title": "Severity"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Publish Event",
+        "tags": [
+          "Events"
+        ]
+      }
+    },
+    "/api/v2/events/stream": {
+      "get": {
+        "description": "Server-Sent Events endpoint for real-time data push.\n\nReturns SSE stream with events:\n- signal_new: New signal detected\n- resolution_update: Resolution queue item changed\n- metric_refresh: Dashboard metrics updated\n- system_status: Heartbeat/connection status\n\nKeep-alive heartbeat sent every 30 seconds.",
+        "operationId": "stream_events_api_v2_events_stream_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Stream Events",
+        "tags": [
+          "Events"
+        ]
+      }
+    },
     "/api/v2/evidence/{entity_type}/{entity_id}": {
       "get": {
         "description": "GET /api/v2/evidence/{entity_type}/{entity_id}",
@@ -7567,7 +9073,7 @@
     },
     "/api/v2/intelligence/briefing": {
       "get": {
-        "description": "Get daily briefing summary.\n\nReturns structured briefing with:\n- Summary counts (immediate, this_week, monitor)\n- Critical items list\n- Attention items list\n- Watching items list\n- Portfolio health\n- Top proposal headline",
+        "description": "Get daily briefing summary.\n\nReturns structured briefing with:\n- Summary counts (immediate, this_week, monitor)\n- Critical items list\n- Attention items list\n- Watching items list\n- Portfolio health\n- Top proposal headline\n\nCached for 300 seconds (5 minutes).",
         "operationId": "daily_briefing_api_v2_intelligence_briefing_get",
         "responses": {
           "200": {
@@ -8249,7 +9755,7 @@
     },
     "/api/v2/intelligence/portfolio/overview": {
       "get": {
-        "description": "Get portfolio overview with all clients and their operational metrics.\n\nReturns clients with project_count, total_tasks, active_tasks,\ninvoice_count, total_invoiced, total_outstanding, etc.",
+        "description": "Get portfolio overview with all clients and their operational metrics.\n\nReturns clients with project_count, total_tasks, active_tasks,\ninvoice_count, total_invoiced, total_outstanding, etc.\n\nCached for 120 seconds.",
         "operationId": "portfolio_overview_api_v2_intelligence_portfolio_overview_get",
         "parameters": [
           {
@@ -8794,7 +10300,7 @@
     },
     "/api/v2/intelligence/scores/record": {
       "post": {
-        "description": "Record current scores for all entities.\n\nThis endpoint triggers score recording for trend tracking.\nShould be called once per day (e.g., via cron).\n\nReturns counts of recorded scores by entity type.",
+        "description": "Record current scores for all entities.\n\nThis endpoint triggers score recording for trend tracking.\nShould be called once per day (e.g., via cron).\n\nReturns counts of recorded scores by entity type.\n\nCache invalidation: Clears all intelligence:* cache entries after recording.",
         "operationId": "record_scores_api_v2_intelligence_scores_record_post",
         "responses": {
           "200": {
@@ -9104,7 +10610,7 @@
     },
     "/api/v2/intelligence/signals/summary": {
       "get": {
-        "description": "Get signal summary (counts by severity and state).",
+        "description": "Get signal summary (counts by severity and state).\n\nCached for 60 seconds.",
         "operationId": "signals_summary_api_v2_intelligence_signals_summary_get",
         "responses": {
           "200": {
@@ -9154,7 +10660,7 @@
     },
     "/api/v2/intelligence/snapshot": {
       "get": {
-        "description": "Get complete intelligence snapshot.\n\nRuns the full intelligence pipeline:\n- Scores all entities\n- Detects all signals\n- Detects all patterns\n- Generates and ranks proposals\n- Produces daily briefing\n\nThis is a heavy endpoint (~45s). Use targeted endpoints for faster responses.",
+        "description": "Get complete intelligence snapshot.\n\nRuns the full intelligence pipeline:\n- Scores all entities\n- Detects all signals\n- Detects all patterns\n- Generates and ranks proposals\n- Produces daily briefing\n\nThis is a heavy endpoint (~45s). Use targeted endpoints for faster responses.\nCached for 60 seconds.",
         "operationId": "intelligence_snapshot_api_v2_intelligence_snapshot_get",
         "responses": {
           "200": {
@@ -9683,6 +11189,250 @@
         "summary": "Run Snooze Expiry Job",
         "tags": [
           "Spec v2.9"
+        ]
+      }
+    },
+    "/api/v2/paginated/clients": {
+      "get": {
+        "description": "Get paginated list of clients.\n\nQuery parameters:\n- page: Page number (default 1)\n- page_size: Items per page (default 50, max 500)\n\nFalls back to demo data if live DB is unavailable.",
+        "operationId": "list_clients_paginated_api_v2_paginated_clients_get",
+        "parameters": [
+          {
+            "description": "Page number",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Page number",
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Items per page",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Items per page",
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Clients Paginated",
+        "tags": [
+          "Pagination"
+        ]
+      }
+    },
+    "/api/v2/paginated/invoices": {
+      "get": {
+        "description": "Get paginated list of invoices.\n\nQuery parameters:\n- page: Page number (default 1)\n- page_size: Items per page (default 50, max 500)\n\nFalls back to demo data if live DB is unavailable.",
+        "operationId": "list_invoices_paginated_api_v2_paginated_invoices_get",
+        "parameters": [
+          {
+            "description": "Page number",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Page number",
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Items per page",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Items per page",
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Invoices Paginated",
+        "tags": [
+          "Pagination"
+        ]
+      }
+    },
+    "/api/v2/paginated/signals": {
+      "get": {
+        "description": "Get paginated list of signals.\n\nQuery parameters:\n- page: Page number (default 1)\n- page_size: Items per page (default 50, max 500)\n\nFalls back to demo data if live DB is unavailable.",
+        "operationId": "list_signals_paginated_api_v2_paginated_signals_get",
+        "parameters": [
+          {
+            "description": "Page number",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Page number",
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Items per page",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Items per page",
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Signals Paginated",
+        "tags": [
+          "Pagination"
+        ]
+      }
+    },
+    "/api/v2/paginated/tasks": {
+      "get": {
+        "description": "Get paginated list of tasks.\n\nQuery parameters:\n- page: Page number (default 1)\n- page_size: Items per page (default 50, max 500)\n\nFalls back to demo data if live DB is unavailable.",
+        "operationId": "list_tasks_paginated_api_v2_paginated_tasks_get",
+        "parameters": [
+          {
+            "description": "Page number",
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "description": "Page number",
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "Items per page",
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Items per page",
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Tasks Paginated",
+        "tags": [
+          "Pagination"
         ]
       }
     },

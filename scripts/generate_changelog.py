@@ -58,12 +58,14 @@ def get_commits(since_tag: str | None = None) -> list[dict]:
             continue
         parts = line.split("|", 3)
         if len(parts) == 4:
-            commits.append({
-                "hash": parts[0][:8],
-                "subject": parts[1],
-                "author": parts[2],
-                "date": parts[3],
-            })
+            commits.append(
+                {
+                    "hash": parts[0][:8],
+                    "subject": parts[1],
+                    "author": parts[2],
+                    "date": parts[3],
+                }
+            )
 
     return commits
 
@@ -103,7 +105,7 @@ def parse_commits(commits: list[dict]) -> dict[str, list[dict]]:
 def format_changelog(grouped: dict[str, list[dict]], version: str = "Unreleased") -> str:
     """Format grouped commits as markdown."""
     lines = [
-        f"# Changelog\n",
+        "# Changelog\n",
         f"## [{version}] - {datetime.now().strftime('%Y-%m-%d')}\n",
     ]
 

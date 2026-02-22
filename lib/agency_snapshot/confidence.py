@@ -44,6 +44,10 @@ class TrustState:
     finance_ar_coverage_pct: float = 0.0
     commitment_ready_pct: float = 0.0
 
+    # System health computed from gates
+    confidence_level: str = "healthy"  # healthy | degraded | blocked
+    top_risks: list[dict] = None
+
     # Collector staleness (hours since last sync)
     collector_staleness: dict[str, float] = None
     last_refresh_at: str = ""
@@ -56,6 +60,8 @@ class TrustState:
                 "tasks_hours": 0,
                 "xero_hours": 0,
             }
+        if self.top_risks is None:
+            self.top_risks = []
 
     def to_dict(self) -> dict:
         """Convert to snapshot format."""
@@ -66,6 +72,8 @@ class TrustState:
             "client_coverage_pct": round(self.client_coverage_pct, 1),
             "finance_ar_coverage_pct": round(self.finance_ar_coverage_pct, 1),
             "commitment_ready_pct": round(self.commitment_ready_pct, 1),
+            "confidence_level": self.confidence_level,
+            "top_risks": self.top_risks,
             "collector_staleness": self.collector_staleness,
             "last_refresh_at": self.last_refresh_at,
         }
@@ -133,6 +141,9 @@ class ConfidenceModel:
         # Get last refresh
         last_refresh = self._query_one("SELECT MAX(created_at) as last FROM cycle_logs")
 
+        # Compute confidence level and top risks
+        confidence_level, top_risks = self._compute_system_health(gates)
+
         return TrustState(
             data_integrity=gates.get("data_integrity", False),
             project_brand_required=gates.get("project_brand_required", False),
@@ -140,6 +151,8 @@ class ConfidenceModel:
             client_coverage_pct=gates.get("client_coverage_pct", 0),
             finance_ar_coverage_pct=gates.get("finance_ar_coverage_pct", 0),
             commitment_ready_pct=gates.get("commitment_ready_pct", 0),
+            confidence_level=confidence_level,
+            top_risks=top_risks,
             collector_staleness=staleness,
             last_refresh_at=last_refresh.get("last", "") if last_refresh else "",
         )
@@ -186,9 +199,7 @@ class ConfidenceModel:
 
         # Check data integrity (blocking for all)
         if not trust.data_integrity:
-            return ConfidenceResult(
-                level=Confidence.LOW, why_low=["Data integrity check failed"]
-            )
+            return ConfidenceResult(level=Confidence.LOW, why_low=["Data integrity check failed"])
 
         # Domain-specific checks
         if domain == "delivery":
@@ -203,15 +214,11 @@ class ConfidenceModel:
 
         elif domain == "cash":
             if trust.finance_ar_coverage_pct < self.AR_COVERAGE_THRESHOLD * 100:
-                why_low.append(
-                    f"AR data coverage at {trust.finance_ar_coverage_pct:.0f}%"
-                )
+                why_low.append(f"AR data coverage at {trust.finance_ar_coverage_pct:.0f}%")
 
         elif domain == "comms":
             if trust.commitment_ready_pct < self.COMMITMENT_THRESHOLD * 100:
-                why_low.append(
-                    f"Commitment extraction at {trust.commitment_ready_pct:.0f}%"
-                )
+                why_low.append(f"Commitment extraction at {trust.commitment_ready_pct:.0f}%")
 
         # Check collector staleness
         staleness_checks = {
@@ -264,3 +271,95 @@ class ConfidenceModel:
             partial["comms"] = ["body_text coverage low"]
 
         return partial
+
+    def _compute_system_health(self, gates: dict) -> tuple[str, list[dict]]:
+        """
+        Compute system health confidence level and top risks from gates.
+
+        Returns: (confidence_level, top_risks)
+        - confidence_level: "healthy" | "degraded" | "blocked"
+        - top_risks: list of dicts with risk info (max 5)
+        """
+        # Determine confidence based on gate status
+        if not gates.get("data_integrity", False):
+            confidence = "blocked"
+        elif (
+            not gates.get("project_brand_required", False)
+            or not gates.get("project_brand_consistency", False)
+            or not gates.get("finance_ar_clean", False)
+            or not gates.get("capacity_baseline", False)
+        ):
+            confidence = "degraded"
+        elif (
+            gates.get("client_coverage_pct", 0) < 80
+            or gates.get("finance_ar_coverage_pct", 0) < 95
+            or gates.get("commitment_ready_pct", 0) < 50
+        ):
+            confidence = "degraded"
+        else:
+            confidence = "healthy"
+
+        # Collect top risks
+        risks = []
+
+        # Data integrity risk
+        if not gates.get("data_integrity", False):
+            risks.append(
+                {
+                    "type": "data_integrity",
+                    "title": "Data integrity check failed",
+                    "impact": "BLOCKING",
+                }
+            )
+
+        # Project brand risk
+        if not gates.get("project_brand_required", False):
+            risks.append(
+                {
+                    "type": "project_brand",
+                    "title": "Some projects missing brand/client chain",
+                    "impact": "HIGH",
+                }
+            )
+
+        # Client coverage risk
+        if gates.get("client_coverage_pct", 0) < 80:
+            risks.append(
+                {
+                    "type": "client_coverage",
+                    "title": f"Client coverage at {gates.get('client_coverage_pct', 0):.0f}%",
+                    "impact": "MED",
+                }
+            )
+
+        # AR coverage risk
+        if gates.get("finance_ar_coverage_pct", 0) < 95:
+            risks.append(
+                {
+                    "type": "ar_coverage",
+                    "title": f"AR data coverage at {gates.get('finance_ar_coverage_pct', 0):.0f}%",
+                    "impact": "HIGH",
+                }
+            )
+
+        # Commitment extraction risk
+        if gates.get("commitment_ready_pct", 0) < 50:
+            risks.append(
+                {
+                    "type": "commitment_ready",
+                    "title": f"Commitment extraction at {gates.get('commitment_ready_pct', 0):.0f}%",
+                    "impact": "MED",
+                }
+            )
+
+        # Capacity baseline risk
+        if not gates.get("capacity_baseline", False):
+            risks.append(
+                {
+                    "type": "capacity_baseline",
+                    "title": "Capacity baseline not set for all lanes",
+                    "impact": "HIGH",
+                }
+            )
+
+        return confidence, risks[:5]  # Max 5 risks

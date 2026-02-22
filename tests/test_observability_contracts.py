@@ -12,8 +12,9 @@ Run with: pytest tests/test_observability_contracts.py -v
 """
 
 import sqlite3
-import pytest
 from datetime import datetime
+
+import pytest
 
 
 class TestRequestIdInfrastructure:
@@ -91,7 +92,7 @@ class TestTraceparentSupport:
 
     def test_create_traceparent(self):
         """traceparent header can be created."""
-        from lib.observability import create_traceparent, generate_trace_id, generate_span_id
+        from lib.observability import create_traceparent, generate_span_id, generate_trace_id
 
         trace_id = generate_trace_id()
         span_id = generate_span_id()
@@ -135,7 +136,7 @@ class TestLogSchema:
             level=LogLevel.INFO,
             message="Test message",
             logger="test_logger",
-            request_id="log-test-123"
+            request_id="log-test-123",
         )
 
         serialized = entry.to_dict()
@@ -151,7 +152,7 @@ class TestLogSchema:
             level=LogLevel.INFO,
             message="Test message",
             logger="test_logger",
-            trace_id="trace-abc123"
+            trace_id="trace-abc123",
         )
 
         serialized = entry.to_dict()
@@ -166,7 +167,7 @@ class TestLogSchema:
             timestamp=datetime.now(),
             level=LogLevel.ERROR,
             message="Error occurred",
-            logger="api.endpoint"
+            logger="api.endpoint",
         )
 
         serialized = entry.to_dict()
@@ -182,23 +183,26 @@ class TestObservabilityExports:
     def test_request_context_exported(self):
         """RequestContext class is exported."""
         from lib.observability import RequestContext
+
         assert RequestContext is not None
 
     def test_request_id_functions_exported(self):
         """Request ID functions are exported."""
         from lib.observability import get_request_id, set_request_id
+
         assert callable(get_request_id)
         assert callable(set_request_id)
 
     def test_trace_functions_exported(self):
         """Trace functions are exported."""
         from lib.observability import (
-            parse_traceparent,
             create_traceparent,
-            generate_trace_id,
             generate_span_id,
+            generate_trace_id,
             get_trace_id,
+            parse_traceparent,
         )
+
         assert callable(parse_traceparent)
         assert callable(create_traceparent)
         assert callable(generate_trace_id)
@@ -212,11 +216,13 @@ class TestSpecRouterRequestIdHandling:
     def test_get_request_id_dependency_exists(self):
         """spec_router has get_request_id dependency function."""
         from api.spec_router import get_request_id
+
         assert callable(get_request_id)
 
     def test_generate_request_id_exists(self):
         """generate_request_id function exists."""
         from lib.safety import generate_request_id
+
         assert callable(generate_request_id)
 
         # Verify format
@@ -230,10 +236,11 @@ class TestAuditRequestIdIntegration:
 
     def test_audit_event_has_request_id_field(self):
         """AuditEvent dataclass has request_id field."""
-        from lib.audit import AuditEvent
-
         # Check the dataclass has request_id field
         import dataclasses
+
+        from lib.audit import AuditEvent
+
         fields = {f.name for f in dataclasses.fields(AuditEvent)}
         assert "request_id" in fields
 
@@ -253,7 +260,7 @@ class TestAuditRequestIdIntegration:
                 event_type="test_event",
                 entity_type="test",
                 entity_id="entity-1",
-                payload={"data": "value"}
+                payload={"data": "value"},
             )
 
         assert event.request_id == "audit-test-123"
@@ -265,10 +272,11 @@ class TestSafetyContextRequestId:
 
     def test_write_context_data_has_request_id_field(self):
         """WriteContextData has request_id field."""
-        from lib.safety.context import WriteContextData
-
         # Check the dataclass has request_id field
         import dataclasses
+
+        from lib.safety.context import WriteContextData
+
         fields = {f.name for f in dataclasses.fields(WriteContextData)}
         assert "request_id" in fields
 
@@ -281,7 +289,7 @@ class TestSafetyContextRequestId:
             actor="test_user",
             source="test",
             git_sha="abc123",
-            set_at="2026-02-11T00:00:00Z"
+            set_at="2026-02-11T00:00:00Z",
         )
 
         assert ctx.request_id == "write-ctx-123"

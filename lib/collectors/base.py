@@ -14,6 +14,7 @@ from datetime import datetime
 from typing import Any
 
 from ..state_store import StateStore, get_store
+from .resilience import CircuitBreaker, RetryConfig, retry_with_backoff
 
 
 class BaseCollector(ABC):
@@ -25,6 +26,25 @@ class BaseCollector(ABC):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.last_sync: datetime | None = None
         self.sync_interval: int = config.get("sync_interval", 300)
+
+        # Resilience infrastructure
+        self.retry_config = RetryConfig(
+            max_retries=config.get("max_retries", 3),
+            base_delay=config.get("base_delay", 1.0),
+            max_delay=config.get("max_delay", 60.0),
+            exponential_base=config.get("exponential_base", 2.0),
+        )
+        self.circuit_breaker = CircuitBreaker(
+            failure_threshold=config.get("failure_threshold", 5),
+            cooldown_seconds=config.get("cooldown_seconds", 300),
+        )
+
+        # Metrics tracking
+        self.metrics = {
+            "retries": 0,
+            "circuit_opens": 0,
+            "partial_failures": 0,
+        }
 
     @property
     @abstractmethod
@@ -58,24 +78,61 @@ class BaseCollector(ABC):
         """
         Full sync cycle: collect → transform → store.
         This is the WIRING - data flows through here.
+
+        Uses circuit breaker to prevent cascading failures and retry logic
+        with exponential backoff on transient errors.
         """
         cycle_start = datetime.now()
 
-        try:
-            # Step 1: Collect from external source
-            self.logger.info(f"Collecting from {self.source_name}")
-            raw_data = self.collect()
+        # Check circuit breaker first
+        if not self.circuit_breaker.can_execute():
+            self.logger.warning(f"Circuit breaker is {self.circuit_breaker.state}. Skipping sync.")
+            self.metrics["circuit_opens"] += 1
+            return {
+                "source": self.source_name,
+                "success": False,
+                "error": f"Circuit breaker {self.circuit_breaker.state}",
+                "timestamp": datetime.now().isoformat(),
+            }
 
-            # Step 2: Transform to canonical format
-            transformed = self.transform(raw_data)
+        try:
+            # Step 1: Collect from external source with retry
+            self.logger.info(f"Collecting from {self.source_name}")
+
+            def collect_with_retry():
+                return self.collect()
+
+            try:
+                raw_data = retry_with_backoff(collect_with_retry, self.retry_config, self.logger)
+            except Exception as e:
+                self.logger.error(f"Collect failed after retries: {e}")
+                self.circuit_breaker.record_failure()
+                self.store.update_sync_state(self.source_name, success=False, error=str(e))
+                return {
+                    "source": self.source_name,
+                    "success": False,
+                    "error": str(e),
+                    "timestamp": datetime.now().isoformat(),
+                }
+
+            # Step 2: Transform to canonical format with partial success handling
+            try:
+                transformed = self.transform(raw_data)
+            except Exception as e:
+                self.logger.warning(f"Transform failed: {e}. Attempting partial success.")
+                # If transform fails, try to store what we can
+                transformed = []
+                self.metrics["partial_failures"] += 1
+
             self.logger.info(f"Transformed {len(transformed)} items")
 
             # Step 3: Store in state (THE WIRING)
             stored = self.store.insert_many(self.target_table, transformed)
 
-            # Step 4: Update sync state
+            # Step 4: Update sync state and record success
             self.last_sync = datetime.now()
             self.store.update_sync_state(self.source_name, success=True, items=stored)
+            self.circuit_breaker.record_success()
 
             duration_ms = (datetime.now() - cycle_start).total_seconds() * 1000
 
@@ -102,6 +159,7 @@ class BaseCollector(ABC):
 
         except Exception as e:
             self.logger.error(f"Sync failed for {self.source_name}: {e}")
+            self.circuit_breaker.record_failure()
             self.store.update_sync_state(self.source_name, success=False, error=str(e))
             return {
                 "source": self.source_name,
@@ -148,7 +206,7 @@ class BaseCollector(ABC):
         try:
             # Include GOG_ACCOUNT for gog CLI commands
             env = os.environ.copy()
-            env["GOG_ACCOUNT"] = "molham@hrmny.co"
+            env["GOG_ACCOUNT"] = os.environ.get("MOH_ADMIN_EMAIL", "molham@hrmny.co")
 
             # Validate command exists (first element)
             if not cmd or not shutil.which(cmd[0]):

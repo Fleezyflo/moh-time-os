@@ -51,9 +51,7 @@ class TestCashARDebtorsPredicate:
 
     def test_not_required_when_no_unpaid(self):
         """Debtors not required if no unpaid invoices."""
-        normalized = NormalizedData(
-            invoices=[{"status": "paid", "payment_date": "2024-01-01"}]
-        )
+        normalized = NormalizedData(invoices=[{"status": "paid", "payment_date": "2024-01-01"}])
         must_exist, reason = cash_ar_debtors_must_exist(normalized)
 
         assert must_exist is False

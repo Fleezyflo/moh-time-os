@@ -130,20 +130,20 @@ const TABS: { id: TabId; label: string }[] = [
 
 // Tier colors
 const TIER_COLORS: Record<Tier, string> = {
-  platinum: 'bg-purple-500 text-white',
-  gold: 'bg-yellow-500 text-black',
-  silver: 'bg-slate-400 text-black',
-  bronze: 'bg-orange-700 text-white',
-  none: 'bg-slate-600 text-slate-300',
+  platinum: 'bg-purple-500 text-[var(--white)]',
+  gold: 'bg-[var(--warning)] text-black',
+  silver: 'bg-[var(--grey-light)] text-[var(--black)]',
+  bronze: 'bg-orange-700 text-[var(--white)]',
+  none: 'bg-[var(--grey-light)] text-[var(--grey-light)]',
 };
 
 // Severity colors
 const SEVERITY_COLORS: Record<Severity, string> = {
-  critical: 'bg-red-500 text-white',
-  high: 'bg-orange-500 text-white',
-  medium: 'bg-yellow-500 text-black',
-  low: 'bg-blue-500 text-white',
-  info: 'bg-slate-500 text-white',
+  critical: 'bg-[var(--danger)] text-[var(--white)]',
+  high: 'bg-orange-500 text-[var(--white)]',
+  medium: 'bg-[var(--warning)] text-black',
+  low: 'bg-[var(--info)] text-[var(--white)]',
+  info: 'bg-slate-500 text-[var(--white)]',
 };
 
 // Issue type icons
@@ -174,15 +174,15 @@ function formatAge(isoDate: string): string {
 }
 
 function getHealthColor(score: number): string {
-  if (score >= 70) return 'text-green-400';
-  if (score >= 40) return 'text-yellow-400';
-  return 'text-red-400';
+  if (score >= 70) return 'text-[var(--success)]';
+  if (score >= 40) return 'text-[var(--warning)]';
+  return 'text-[var(--danger)]';
 }
 
 function getHealthBg(score: number): string {
-  if (score >= 70) return 'bg-green-500';
-  if (score >= 40) return 'bg-yellow-500';
-  return 'bg-red-500';
+  if (score >= 70) return 'bg-[var(--success)]';
+  if (score >= 40) return 'bg-[var(--warning)]';
+  return 'bg-[var(--danger)]';
 }
 
 export function ClientDetailSpec() {
@@ -270,8 +270,8 @@ export function ClientDetailSpec() {
   if (loading) {
     return (
       <div className="space-y-4">
-        <div className="h-32 bg-slate-800 rounded animate-pulse" />
-        <div className="h-64 bg-slate-800 rounded animate-pulse" />
+        <div className="h-32 bg-[var(--grey-dim)] rounded animate-pulse" />
+        <div className="h-64 bg-[var(--grey-dim)] rounded animate-pulse" />
       </div>
     );
   }
@@ -279,8 +279,8 @@ export function ClientDetailSpec() {
   if (error || !client) {
     return (
       <div className="p-8 text-center">
-        <p className="text-red-400">{error || 'Client not found'}</p>
-        <Link to="/clients" className="mt-4 text-blue-400 hover:underline">
+        <p className="text-[var(--danger)]">{error || 'Client not found'}</p>
+        <Link to="/clients" className="mt-4 text-[var(--info)] hover:underline">
           ← Back to Clients
         </Link>
       </div>
@@ -292,13 +292,16 @@ export function ClientDetailSpec() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="bg-slate-800 rounded-lg p-4">
-        <Link to="/clients" className="text-sm text-slate-400 hover:text-white mb-2 inline-block">
+      <div className="bg-[var(--grey-dim)] rounded-lg p-4">
+        <Link
+          to="/clients"
+          className="text-sm text-[var(--grey-light)] hover:text-[var(--white)] mb-2 inline-block"
+        >
           ← Back to Index
         </Link>
 
         <div className="flex items-center justify-between mb-3">
-          <h1 className="text-2xl font-bold text-white">{client.name}</h1>
+          <h1 className="text-2xl font-bold text-[var(--white)]">{client.name}</h1>
           <span className={`px-3 py-1 rounded text-sm font-medium ${TIER_COLORS[client.tier]}`}>
             {client.tier}
           </span>
@@ -307,13 +310,13 @@ export function ClientDetailSpec() {
         {/* Health bar */}
         <div className="mb-4">
           <div className="flex items-center justify-between text-sm mb-1">
-            <span className="text-slate-400">Health</span>
+            <span className="text-[var(--grey-light)]">Health</span>
             <span className={`font-medium ${getHealthColor(healthScore)}`}>
               {healthScore}{' '}
-              <span className="text-slate-500">({client.health_label || 'provisional'})</span>
+              <span className="text-[var(--grey)]">({client.health_label || 'provisional'})</span>
             </span>
           </div>
-          <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+          <div className="h-2 bg-[var(--grey)] rounded-full overflow-hidden">
             <div
               className={`h-full ${getHealthBg(healthScore)}`}
               style={{ width: `${Math.min(100, healthScore)}%` }}
@@ -322,15 +325,15 @@ export function ClientDetailSpec() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 border-t border-slate-700 pt-3 -mb-4 -mx-4 px-4">
+        <div className="flex gap-1 border-t border-[var(--grey)] pt-3 -mb-4 -mx-4 px-4">
           {TABS.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={`px-4 py-2 text-sm font-medium rounded-t transition-colors ${
                 activeTab === tab.id
-                  ? 'bg-slate-900 text-white'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                  ? 'bg-[var(--black)] text-[var(--white)]'
+                  : 'text-[var(--grey-light)] hover:text-[var(--white)] hover:bg-[var(--grey)]'
               }`}
             >
               {tab.label}
@@ -340,7 +343,7 @@ export function ClientDetailSpec() {
       </div>
 
       {/* Tab Content */}
-      <div className="bg-slate-800 rounded-lg p-4">
+      <div className="bg-[var(--grey-dim)] rounded-lg p-4">
         {activeTab === 'overview' && (
           <OverviewTab client={client} onIssueAction={executeIssueAction} />
         )}
@@ -375,45 +378,47 @@ function OverviewTab({ client, onIssueAction }: OverviewTabProps) {
       {/* Key Metrics */}
       <div>
         <h3 className="text-lg font-semibold mb-3">Key Metrics</h3>
-        <div className="bg-slate-900 rounded p-4 space-y-3">
+        <div className="bg-[var(--black)] rounded p-4 space-y-3">
           {/* Issued / Paid */}
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <div className="text-slate-400 text-xs mb-1">ISSUED</div>
+              <div className="text-[var(--grey-light)] text-xs mb-1">ISSUED</div>
               <div>Prior Yr: {formatCurrency(client.issued_year || 0)}</div>
               <div>YTD: {formatCurrency(client.issued_ytd || 0)}</div>
             </div>
             <div>
-              <div className="text-slate-400 text-xs mb-1">PAID</div>
+              <div className="text-[var(--grey-light)] text-xs mb-1">PAID</div>
               <div>Prior Yr: {formatCurrency(client.paid_year || 0)}</div>
               <div>YTD: {formatCurrency(client.paid_ytd || 0)}</div>
             </div>
           </div>
 
-          <div className="border-t border-slate-700 pt-3 grid grid-cols-2 gap-4 text-sm">
+          <div className="border-t border-[var(--grey)] pt-3 grid grid-cols-2 gap-4 text-sm">
             <div>AR Outstanding: {formatCurrency(client.ar_outstanding || 0)}</div>
             <div>AR Overdue: {formatCurrency(client.ar_overdue || 0)}</div>
           </div>
 
-          <div className="border-t border-slate-700 pt-3 grid grid-cols-4 gap-4 text-sm">
+          <div className="border-t border-[var(--grey)] pt-3 grid grid-cols-4 gap-4 text-sm">
             <div>
-              <div className="text-slate-400 text-xs">Engagements</div>
+              <div className="text-[var(--grey-light)] text-xs">Engagements</div>
               <div className="text-lg font-medium">{client.active_engagements || 0}</div>
             </div>
             <div>
-              <div className="text-slate-400 text-xs">Open Tasks</div>
+              <div className="text-[var(--grey-light)] text-xs">Open Tasks</div>
               <div className="text-lg font-medium">{client.open_tasks || 0}</div>
             </div>
             <div>
-              <div className="text-slate-400 text-xs">Overdue</div>
-              <div className="text-lg font-medium text-red-400">{client.tasks_overdue || 0}</div>
+              <div className="text-[var(--grey-light)] text-xs">Overdue</div>
+              <div className="text-lg font-medium text-[var(--danger)]">
+                {client.tasks_overdue || 0}
+              </div>
             </div>
             <div>
-              <div className="text-slate-400 text-xs">Signals (30d)</div>
+              <div className="text-[var(--grey-light)] text-xs">Signals (30d)</div>
               <div className="text-sm">
-                <span className="text-green-400">{client.signals_good || 0}↑</span>{' '}
-                <span className="text-slate-400">{client.signals_neutral || 0}→</span>{' '}
-                <span className="text-red-400">{client.signals_bad || 0}↓</span>
+                <span className="text-[var(--success)]">{client.signals_good || 0}↑</span>{' '}
+                <span className="text-[var(--grey-light)]">{client.signals_neutral || 0}→</span>{' '}
+                <span className="text-[var(--danger)]">{client.signals_bad || 0}↓</span>
               </div>
             </div>
           </div>
@@ -436,14 +441,14 @@ function OverviewTab({ client, onIssueAction }: OverviewTabProps) {
       {(client.recent_positive_signals?.length ?? 0) > 0 && (
         <div>
           <h3 className="text-lg font-semibold mb-3">Recent Positive Signals</h3>
-          <div className="bg-slate-900 rounded p-3 space-y-2">
+          <div className="bg-[var(--black)] rounded p-3 space-y-2">
             {client.recent_positive_signals.slice(0, 3).map((signal) => (
               <div key={signal.id} className="flex items-start gap-2 text-sm">
                 <span>🟢</span>
                 <div className="flex-1">
-                  <span className="text-white">{signal.summary}</span>
+                  <span className="text-[var(--white)]">{signal.summary}</span>
                 </div>
-                <span className="text-slate-500">{formatAge(signal.observed_at)}</span>
+                <span className="text-[var(--grey)]">{formatAge(signal.observed_at)}</span>
               </div>
             ))}
           </div>
@@ -462,33 +467,33 @@ function IssueCard({
   onAction: (id: string, action: string) => void;
 }) {
   return (
-    <div className="bg-slate-900 rounded p-3">
+    <div className="bg-[var(--black)] rounded p-3">
       <div className="flex items-start gap-2">
         <span className="text-xl">{ISSUE_TYPE_ICONS[issue.type] || '⚠️'}</span>
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs uppercase text-slate-400">{issue.type}</span>
+            <span className="text-xs uppercase text-[var(--grey-light)]">{issue.type}</span>
             <span>—</span>
-            <span className="text-white">{issue.title}</span>
+            <span className="text-[var(--white)]">{issue.title}</span>
             <span
               className={`px-1.5 py-0.5 rounded text-xs ${SEVERITY_COLORS[issue.severity || 'medium']}`}
             >
               {issue.severity || 'medium'}
             </span>
           </div>
-          <div className="text-sm text-slate-400 mb-2">
+          <div className="text-sm text-[var(--grey-light)] mb-2">
             Issue State: {issue.state}
             {issue.assigned_to && ` (assigned to ${issue.assigned_to.name})`}
           </div>
           {issue.evidence && (
-            <div className="text-sm text-slate-300 mb-2">
+            <div className="text-sm text-[var(--grey-light)] mb-2">
               Evidence: {issue.evidence.display_text}
               {issue.evidence.url && (
                 <a
                   href={issue.evidence.url}
                   target="_blank"
                   rel="noopener"
-                  className="ml-1 text-blue-400"
+                  className="ml-1 text-[var(--info)]"
                 >
                   ↗
                 </a>
@@ -500,7 +505,7 @@ function IssueCard({
               <button
                 key={action}
                 onClick={() => onAction(issue.id, action)}
-                className="px-2 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs"
+                className="px-2 py-1 bg-[var(--grey)] hover:bg-[var(--grey-light)] rounded text-xs"
               >
                 {action.charAt(0).toUpperCase() + action.slice(1)}
               </button>
@@ -516,7 +521,7 @@ function IssueCard({
 
 function EngagementsTab({ brands }: { brands: Brand[] }) {
   if (brands.length === 0) {
-    return <div className="text-center py-8 text-slate-400">No engagements</div>;
+    return <div className="text-center py-8 text-[var(--grey-light)]">No engagements</div>;
   }
 
   return (
@@ -526,26 +531,26 @@ function EngagementsTab({ brands }: { brands: Brand[] }) {
           <h3 className="text-lg font-semibold mb-3">{brand.name}</h3>
           <div className="space-y-2">
             {brand.engagements.map((eng) => (
-              <div key={eng.id} className="bg-slate-900 rounded p-3">
+              <div key={eng.id} className="bg-[var(--black)] rounded p-3">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="font-medium text-white">{eng.name}</span>
+                  <span className="font-medium text-[var(--white)]">{eng.name}</span>
                   <span
                     className={`px-2 py-0.5 rounded text-xs ${
-                      eng.type === 'retainer' ? 'bg-blue-600' : 'bg-green-600'
+                      eng.type === 'retainer' ? 'bg-blue-600' : 'bg-[var(--success)]'
                     }`}
                   >
                     {eng.type.toUpperCase()}
                   </span>
                 </div>
-                <div className="text-sm text-slate-400 mb-2">State: {eng.state}</div>
-                <div className="text-sm text-slate-300 mb-2">
+                <div className="text-sm text-[var(--grey-light)] mb-2">State: {eng.state}</div>
+                <div className="text-sm text-[var(--grey-light)] mb-2">
                   Tasks: {eng.open_tasks} open · {eng.overdue_tasks} overdue · {eng.completed_tasks}{' '}
                   completed
                 </div>
                 {eng.health_score !== null && (
                   <div className="flex items-center gap-2">
-                    <span className="text-sm text-slate-400">Health:</span>
-                    <div className="flex-1 h-2 bg-slate-700 rounded-full overflow-hidden max-w-32">
+                    <span className="text-sm text-[var(--grey-light)]">Health:</span>
+                    <div className="flex-1 h-2 bg-[var(--grey)] rounded-full overflow-hidden max-w-32">
                       <div
                         className={`h-full ${getHealthBg(eng.health_score)}`}
                         style={{ width: `${eng.health_score}%` }}
@@ -561,7 +566,7 @@ function EngagementsTab({ brands }: { brands: Brand[] }) {
                     href={eng.asana_url}
                     target="_blank"
                     rel="noopener"
-                    className="text-sm text-blue-400 mt-2 inline-block"
+                    className="text-sm text-[var(--info)] mt-2 inline-block"
                   >
                     View in Asana ↗
                   </a>
@@ -583,15 +588,15 @@ function FinancialsTab({ client }: { client: ClientDetail }) {
       {/* Summary */}
       <div>
         <h3 className="text-lg font-semibold mb-3">Summary</h3>
-        <div className="bg-slate-900 rounded p-4 grid grid-cols-2 gap-4 text-sm">
+        <div className="bg-[var(--black)] rounded p-4 grid grid-cols-2 gap-4 text-sm">
           <div>
-            <div className="text-slate-400 text-xs mb-1">ISSUED</div>
+            <div className="text-[var(--grey-light)] text-xs mb-1">ISSUED</div>
             <div>Prior Yr: {formatCurrency(client.issued_year || 0)}</div>
             <div>YTD: {formatCurrency(client.issued_ytd || 0)}</div>
             <div>Lifetime: {formatCurrency(client.issued_lifetime || 0)}</div>
           </div>
           <div>
-            <div className="text-slate-400 text-xs mb-1">PAID</div>
+            <div className="text-[var(--grey-light)] text-xs mb-1">PAID</div>
             <div>Prior Yr: {formatCurrency(client.paid_year || 0)}</div>
             <div>YTD: {formatCurrency(client.paid_ytd || 0)}</div>
             <div>Lifetime: {formatCurrency(client.paid_lifetime || 0)}</div>
@@ -602,17 +607,17 @@ function FinancialsTab({ client }: { client: ClientDetail }) {
       {/* AR Aging */}
       <div>
         <h3 className="text-lg font-semibold mb-3">AR Aging</h3>
-        <div className="bg-slate-900 rounded p-4">
+        <div className="bg-[var(--black)] rounded p-4">
           <div className="text-lg font-medium mb-3">
             Total Outstanding: {formatCurrency(client.ar_outstanding || 0)}
           </div>
           <div className="space-y-2">
             {(client.ar_aging || []).map((bucket) => (
               <div key={bucket.bucket} className="flex items-center gap-2 text-sm">
-                <div className="w-32 text-slate-400">{bucket.bucket}:</div>
+                <div className="w-32 text-[var(--grey-light)]">{bucket.bucket}:</div>
                 <div className="w-24">{formatCurrency(bucket.amount)}</div>
-                <div className="flex-1 h-3 bg-slate-700 rounded overflow-hidden">
-                  <div className="h-full bg-blue-500" style={{ width: `${bucket.pct}%` }} />
+                <div className="flex-1 h-3 bg-[var(--grey)] rounded overflow-hidden">
+                  <div className="h-full bg-[var(--info)]" style={{ width: `${bucket.pct}%` }} />
                 </div>
                 <div className="w-12 text-right">{bucket.pct}%</div>
               </div>
@@ -624,9 +629,9 @@ function FinancialsTab({ client }: { client: ClientDetail }) {
       {/* Invoices */}
       <div>
         <h3 className="text-lg font-semibold mb-3">Invoices</h3>
-        <div className="bg-slate-900 rounded overflow-hidden">
+        <div className="bg-[var(--black)] rounded overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-slate-800">
+            <thead className="bg-[var(--grey-dim)]">
               <tr>
                 <th className="text-left p-3">Invoice</th>
                 <th className="text-left p-3">Issue Date</th>
@@ -637,7 +642,7 @@ function FinancialsTab({ client }: { client: ClientDetail }) {
             </thead>
             <tbody>
               {(client.invoices || []).slice(0, 10).map((inv) => (
-                <tr key={inv.id} className="border-t border-slate-700">
+                <tr key={inv.id} className="border-t border-[var(--grey)]">
                   <td className="p-3">{inv.number}</td>
                   <td className="p-3">{inv.issue_date}</td>
                   <td className="p-3 text-right">{formatCurrency(inv.amount)}</td>
@@ -645,10 +650,10 @@ function FinancialsTab({ client }: { client: ClientDetail }) {
                     <span
                       className={`px-2 py-0.5 rounded text-xs ${
                         inv.status === 'paid'
-                          ? 'bg-green-600'
+                          ? 'bg-[var(--success)]'
                           : inv.status === 'overdue'
-                            ? 'bg-red-600'
-                            : 'bg-slate-600'
+                            ? 'bg-[var(--danger)]'
+                            : 'bg-[var(--grey-light)]'
                       }`}
                     >
                       {inv.status.toUpperCase()}
@@ -683,8 +688,8 @@ function SignalsTab({
   return (
     <div className="space-y-4">
       {/* Summary */}
-      <div className="bg-slate-900 rounded p-4">
-        <h4 className="text-sm text-slate-400 mb-2">Signal Summary (Last 30 Days)</h4>
+      <div className="bg-[var(--black)] rounded p-4">
+        <h4 className="text-sm text-[var(--grey-light)] mb-2">Signal Summary (Last 30 Days)</h4>
         <div className="flex gap-6 text-lg">
           <span>🟢 Good: {summary.good}</span>
           <span>🟡 Neutral: {summary.neutral}</span>
@@ -699,7 +704,7 @@ function SignalsTab({
             key={f}
             onClick={() => setFilter(f)}
             className={`px-3 py-1 rounded text-sm ${
-              filter === f ? 'bg-slate-600' : 'bg-slate-800'
+              filter === f ? 'bg-[var(--grey-light)]' : 'bg-[var(--grey-dim)]'
             }`}
           >
             {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -710,26 +715,26 @@ function SignalsTab({
       {/* Signals List */}
       <div className="space-y-2">
         {filtered.length === 0 ? (
-          <div className="text-center py-8 text-slate-400">No signals</div>
+          <div className="text-center py-8 text-[var(--grey-light)]">No signals</div>
         ) : (
           filtered.map((signal) => (
-            <div key={signal.id} className="bg-slate-900 rounded p-3">
+            <div key={signal.id} className="bg-[var(--black)] rounded p-3">
               <div className="flex items-start gap-2">
                 <span className="text-lg">{SENTIMENT_ICONS[signal.sentiment]}</span>
                 <div className="flex-1">
-                  <div className="flex items-center gap-2 text-sm text-slate-400 mb-1">
+                  <div className="flex items-center gap-2 text-sm text-[var(--grey-light)] mb-1">
                     <span className="uppercase">{signal.sentiment}</span>
                     <span>—</span>
                     <span>Source: {signal.source}</span>
                     <span className="ml-auto">{formatAge(signal.observed_at)}</span>
                   </div>
-                  <div className="text-white">{signal.summary}</div>
+                  <div className="text-[var(--white)]">{signal.summary}</div>
                   {signal.evidence?.url && (
                     <a
                       href={signal.evidence.url}
                       target="_blank"
                       rel="noopener"
-                      className="text-sm text-blue-400 mt-1 inline-block"
+                      className="text-sm text-[var(--info)] mt-1 inline-block"
                     >
                       View ↗
                     </a>
@@ -748,25 +753,25 @@ function SignalsTab({
 
 function TeamTab({ members }: { members: TeamMember[] }) {
   if (members.length === 0) {
-    return <div className="text-center py-8 text-slate-400">No team members</div>;
+    return <div className="text-center py-8 text-[var(--grey-light)]">No team members</div>;
   }
 
   return (
     <div className="space-y-2">
       {members.map((member) => (
-        <div key={member.id} className="bg-slate-900 rounded p-3 flex items-center gap-4">
-          <div className="w-10 h-10 bg-slate-700 rounded-full flex items-center justify-center text-lg">
+        <div key={member.id} className="bg-[var(--black)] rounded p-3 flex items-center gap-4">
+          <div className="w-10 h-10 bg-[var(--grey)] rounded-full flex items-center justify-center text-lg">
             {member.name.charAt(0)}
           </div>
           <div className="flex-1">
-            <div className="font-medium text-white">{member.name}</div>
-            <div className="text-sm text-slate-400">{member.role}</div>
-            {member.email && <div className="text-sm text-slate-500">{member.email}</div>}
+            <div className="font-medium text-[var(--white)]">{member.name}</div>
+            <div className="text-sm text-[var(--grey-light)]">{member.role}</div>
+            {member.email && <div className="text-sm text-[var(--grey)]">{member.email}</div>}
           </div>
           <div className="text-sm text-right">
             <div>{member.open_tasks} open tasks</div>
             {member.overdue_tasks > 0 && (
-              <div className="text-red-400">{member.overdue_tasks} overdue</div>
+              <div className="text-[var(--danger)]">{member.overdue_tasks} overdue</div>
             )}
           </div>
         </div>

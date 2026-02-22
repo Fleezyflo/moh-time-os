@@ -25,9 +25,7 @@ class ClientLinker:
     def __init__(self, store=None):
         self.store = store or get_store()
 
-    def link_project_to_client(
-        self, project_id: str, client_id: str
-    ) -> tuple[bool, str]:
+    def link_project_to_client(self, project_id: str, client_id: str) -> tuple[bool, str]:
         """
         Link a project to a client.
 
@@ -82,9 +80,7 @@ class ClientLinker:
 
     def unlink_project(self, project_id: str) -> tuple[bool, str]:
         """Remove project-client link."""
-        self.store.query(
-            "DELETE FROM client_projects WHERE project_id = ?", [project_id]
-        )
+        self.store.query("DELETE FROM client_projects WHERE project_id = ?", [project_id])
         return True, "Project unlinked"
 
     def auto_link_by_name(self) -> dict:
@@ -139,9 +135,7 @@ class ClientLinker:
                         break
 
             if matched_client:
-                success, msg = self.link_project_to_client(
-                    project["id"], matched_client
-                )
+                success, msg = self.link_project_to_client(project["id"], matched_client)
                 if success:
                     results["linked"] += 1
                 else:
@@ -189,9 +183,7 @@ class ClientLinker:
         """Get statistics about project-client linking."""
         total_projects = self.store.query("SELECT COUNT(*) as c FROM projects")[0]["c"]
 
-        linked_projects = self.store.query("SELECT COUNT(*) as c FROM client_projects")[
-            0
-        ]["c"]
+        linked_projects = self.store.query("SELECT COUNT(*) as c FROM client_projects")[0]["c"]
 
         total_clients = self.store.query("SELECT COUNT(*) as c FROM clients")[0]["c"]
 

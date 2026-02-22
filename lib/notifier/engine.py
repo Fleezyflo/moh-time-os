@@ -7,6 +7,7 @@ CRITICAL: Does NOT go through AI. Direct API calls only.
 
 import json
 import logging
+import os
 import uuid
 from datetime import datetime
 
@@ -34,12 +35,16 @@ class NotificationEngine:
         self.channels = {}
         channel_config = self.config.get("channels", {})
 
-        # Load Clawdbot channel if configured
-        clawdbot_cfg = channel_config.get("clawdbot", {})
-        if clawdbot_cfg.get("enabled", False):
-            from .channels.clawdbot import ClawdbotChannel
+        # Google Chat webhook — default notification channel
+        gchat_url = os.environ.get("MOH_GCHAT_WEBHOOK_URL") or channel_config.get(
+            "google_chat", {}
+        ).get("webhook_url")
 
-            self.channels["clawdbot"] = ClawdbotChannel(clawdbot_cfg)
+        if gchat_url:
+            from lib.notifier.channels.google_chat import GoogleChatChannel
+
+            dry_run = channel_config.get("google_chat", {}).get("dry_run", False)
+            self.channels["google_chat"] = GoogleChatChannel(webhook_url=gchat_url, dry_run=dry_run)
 
     async def process_pending(self) -> list[dict]:
         """
@@ -106,12 +111,24 @@ class NotificationEngine:
                 try:
                     target_channels = json.loads(channels_json)
                 except json.JSONDecodeError as e:
-                    logger.warning(
-                        f"Invalid channels JSON for notification {notif_id}: {e}"
+                    logger.warning(f"Invalid channels JSON for notification {notif_id}: {e}")
+                    results.append(
+                        {
+                            "id": notif_id,
+                            "status": "error",
+                            "error": "No notification channel configured",
+                        }
                     )
-                    target_channels = ["clawdbot"]
+                    continue
             else:
-                target_channels = ["clawdbot"]
+                results.append(
+                    {
+                        "id": notif_id,
+                        "status": "error",
+                        "error": "No notification channel configured",
+                    }
+                )
+                continue
 
             # Build message
             message = f"**{title}**"
@@ -213,12 +230,25 @@ class NotificationEngine:
                 try:
                     target_channels = json.loads(channels_json)
                 except json.JSONDecodeError as e:
-                    logger.warning(
-                        f"Invalid channels JSON for notification {notif_id}: {e}"
+                    logger.warning(f"Invalid channels JSON for notification {notif_id}: {e}")
+                    results.append(
+                        {
+                            "id": notif_id,
+                            "status": "error",
+                            "error": "No notification channel configured",
+                        }
                     )
-                    target_channels = ["clawdbot"]
+                    continue
             else:
-                target_channels = ["clawdbot"]
+                results.append(
+                    {
+                        "id": notif_id,
+                        "status": "error",
+                        "error": "No notification channel configured",
+                    }
+                )
+                continue
+
             message = f"**{title}**"
             if body:
                 message += f"\n\n{body}"
@@ -250,9 +280,7 @@ class NotificationEngine:
                                 "delivery_id": result.get("message_id"),
                             },
                         )
-                        results.append(
-                            {"id": notif_id, "channel": channel_name, "status": "sent"}
-                        )
+                        results.append({"id": notif_id, "channel": channel_name, "status": "sent"})
                     else:
                         results.append(
                             {
@@ -294,7 +322,7 @@ class NotificationEngine:
             body: Optional body text
             action_url: Optional URL for action
             action_data: Optional action data dict
-            channels: Optional list of channels ['clawdbot', 'push', 'email']
+            channels: Optional list of channels
 
         Returns:
             notification_id

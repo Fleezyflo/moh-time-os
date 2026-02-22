@@ -1,11 +1,9 @@
 """
-Commitment Truth Module (Tier 1)
+Commitment Truth Module
 
 Extracts and tracks promises/commitments from communications.
 
 Dependencies:
-- Tier 0 (Time Truth) must be stable
-
 Objects:
 - Commitment (promise made in email/chat/meeting)
 - CommitmentLink (task association)

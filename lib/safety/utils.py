@@ -6,7 +6,15 @@ import os
 import shutil
 import subprocess
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime, timezone
+
+# UTC compatibility for Python 3.10/3.11
+try:
+    from datetime import UTC  # Python 3.11+
+except ImportError:
+    import datetime as _dtmod  # noqa: F811
+
+    UTC = _dtmod.timezone.utc  # noqa
 
 
 def get_git_sha() -> str:
@@ -29,8 +37,10 @@ def get_git_sha() -> str:
         )
         if result.returncode == 0:
             return result.stdout.strip()
-    except Exception:
-        pass
+    except Exception as e:
+        import logging
+
+        logging.getLogger(__name__).debug("Failed to get git hash: %s", e)
     return "unknown"
 
 
@@ -40,7 +50,7 @@ def generate_request_id() -> str:
 
 
 def now_utc_iso() -> str:
-    """Return current UTC time in ISO format."""
+    """Return current timezone.utc time in ISO format."""
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
 
 

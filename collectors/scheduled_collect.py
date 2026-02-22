@@ -8,7 +8,7 @@ It collects data from all sources and caches it for heartbeat use.
 
 import json
 import subprocess
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timezone
 from pathlib import Path
 
 from lib import paths
@@ -78,9 +78,7 @@ def collect_gmail():
         import importlib.util
 
         collector_path = Path(__file__).parent / "gmail_multi_user.py"
-        spec = importlib.util.spec_from_file_location(
-            "gmail_multi_user", collector_path
-        )
+        spec = importlib.util.spec_from_file_location("gmail_multi_user", collector_path)
         gmail_collector = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(gmail_collector)
 
@@ -94,25 +92,6 @@ def collect_gmail():
         )
 
         return status
-    except Exception as e:
-        import traceback
-
-        print(f"   → Gmail error: {e}")
-        traceback.print_exc()
-        return {}
-
-        data = {
-            "collected_at": datetime.now(UTC).isoformat(),
-            "messages": all_messages,
-            "threads_count": len(seen_ids),
-        }
-        gmail_direct.save(data)
-        gmail_direct.save(data)
-        mark_collected("gmail")
-        print(
-            f"   → {len(data.get('messages', []))} messages from {data.get('threads_count', 0)} threads"
-        )
-        return data
     except Exception as e:
         import traceback
 
@@ -328,11 +307,7 @@ def _collect_all_impl(sources: list = None, v4_ingest: bool = True):
 
     # Run all collectors in parallel
     with ThreadPoolExecutor(max_workers=5) as executor:
-        futures = {
-            executor.submit(collectors[src]): src
-            for src in sources
-            if src in collectors
-        }
+        futures = {executor.submit(collectors[src]): src for src in sources if src in collectors}
 
         for future in as_completed(futures):
             src = futures[future]
@@ -373,25 +348,10 @@ def _collect_all_impl(sources: list = None, v4_ingest: bool = True):
         print(f"  Entity linking failed: {e}")
         results["entity_linking"] = {"error": str(e)}
 
-    # V5 Detection Pipeline: Generate signals and issues
-    try:
-        from lib.v5 import TimeOSOrchestrator, get_db
-
-        print(f"\n{'=' * 50}")
-        print("🔍 V5 Signal Detection")
-        print(f"{'=' * 50}\n")
-        db = get_db()
-        orch = TimeOSOrchestrator(db, auto_migrate=False)
-        v5_result = orch.run_full_pipeline()
-        print(f"  Signals: {v5_result['detection']['signals_detected']}")
-        print(f"  Issues: {v5_result['issue_formation']['created']}")
-        results["v5_pipeline"] = v5_result
-    except Exception as e:
-        import traceback
-
-        print(f"  V5 pipeline failed: {e}")
-        traceback.print_exc()
-        results["v5_pipeline"] = {"error": str(e)}
+    # V5 Detection Pipeline: DEPRECATED — archived in Brief 29 (VR)
+    # Signal detection now runs via lib/intelligence/engine.py
+    # See docs/audits/v4_v5_reconciliation_20260221.md
+    results["v5_pipeline"] = {"status": "deprecated", "note": "Archived in Brief 29 (VR)"}
 
     # Inbox Enrichment: Populate drill-down context for inbox items
     try:

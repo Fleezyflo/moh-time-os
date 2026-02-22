@@ -7,14 +7,15 @@ Hard rule: no mailbox scrolling. Default surface is ranked moves + threads + bre
 """
 
 import logging
+import os
 import sqlite3
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
-from enum import StrEnum
+from pathlib import Path
 from typing import Any
 
-from pathlib import Path
 from lib import paths
+from lib.compat import StrEnum
 
 logger = logging.getLogger(__name__)
 
@@ -212,7 +213,9 @@ class CommsCommitmentsPage11Engine:
         self.delta_available = False
 
         # Our email domains (for direction detection)
-        self.our_domains = ["hrmny.co", "hrmny.ae", "harmonydigital.co"]
+        self.our_domains = os.environ.get(
+            "MOH_OUR_EMAIL_DOMAINS", "hrmny.co,hrmny.ae,harmonydigital.co"
+        ).split(",")
 
         # Cache
         self._threads_cache: dict[str, ThreadUnit] = {}
@@ -289,7 +292,14 @@ class CommsCommitmentsPage11Engine:
 
         # Check delta availability
         try:
-            self.delta_available = False  # Not implemented yet
+            # Delta is available if we have a previous snapshot to compare against
+            prev_count = (
+                self._query_scalar(
+                    "SELECT COUNT(*) FROM cost_snapshots WHERE snapshot_type = 'comms_commitments'"
+                )
+                or 0
+            )
+            self.delta_available = prev_count > 0
         except Exception as e:
             logger.debug(f"Delta check failed: {e}")
             self.delta_available = False
@@ -365,9 +375,7 @@ class CommsCommitmentsPage11Engine:
         tier = None
 
         if client_id:
-            client = self._query_one(
-                "SELECT name, tier FROM clients WHERE id = ?", (client_id,)
-            )
+            client = self._query_one("SELECT name, tier FROM clients WHERE id = ?", (client_id,))
             if client:
                 client_name = client.get("name")
                 tier = client.get("tier")
@@ -409,9 +417,7 @@ class CommsCommitmentsPage11Engine:
         )
 
         # Compute confidence per §6.6
-        confidence, why_low = self._compute_thread_confidence(
-            data, direction, client_id
-        )
+        confidence, why_low = self._compute_thread_confidence(data, direction, client_id)
 
         # Get linked tasks
         linked_tasks = self._get_linked_tasks(thread_id, client_id)
@@ -462,8 +468,7 @@ class CommsCommitmentsPage11Engine:
 
         # Check if from us
         is_from_us = any(
-            d in from_domain.lower() or d in from_email.lower()
-            for d in self.our_domains
+            d in from_domain.lower() or d in from_email.lower() for d in self.our_domains
         )
 
         if is_from_us:
@@ -514,9 +519,7 @@ class CommsCommitmentsPage11Engine:
         # HIGH conditions
         if direction == Direction.INBOUND_WAITING_US and expected_response_by:
             try:
-                exp_dt = datetime.fromisoformat(
-                    expected_response_by.replace("Z", "+00:00")
-                )
+                exp_dt = datetime.fromisoformat(expected_response_by.replace("Z", "+00:00"))
                 if exp_dt.replace(tzinfo=None) < self.now:
                     return RiskBand.HIGH
             except (ValueError, TypeError, AttributeError) as e:
@@ -537,12 +540,8 @@ class CommsCommitmentsPage11Engine:
 
         if expected_response_by:
             try:
-                exp_dt = datetime.fromisoformat(
-                    expected_response_by.replace("Z", "+00:00")
-                )
-                hours_until = (
-                    exp_dt.replace(tzinfo=None) - self.now
-                ).total_seconds() / 3600
+                exp_dt = datetime.fromisoformat(expected_response_by.replace("Z", "+00:00"))
+                hours_until = (exp_dt.replace(tzinfo=None) - self.now).total_seconds() / 3600
                 if 0 < hours_until <= 12:
                     return RiskBand.MED
             except (ValueError, TypeError, AttributeError) as e:
@@ -671,12 +670,8 @@ class CommsCommitmentsPage11Engine:
         urgency = 0.3
         if expected_response_by:
             try:
-                exp_dt = datetime.fromisoformat(
-                    expected_response_by.replace("Z", "+00:00")
-                )
-                hours_until = (
-                    exp_dt.replace(tzinfo=None) - self.now
-                ).total_seconds() / 3600
+                exp_dt = datetime.fromisoformat(expected_response_by.replace("Z", "+00:00"))
+                hours_until = (exp_dt.replace(tzinfo=None) - self.now).total_seconds() / 3600
                 if hours_until <= 0:
                     urgency = 1.0  # Overdue
                 elif hours_until <= 4:
@@ -732,15 +727,11 @@ class CommsCommitmentsPage11Engine:
             reasons.append("Waiting on us")
             if expected_response_by:
                 try:
-                    exp_dt = datetime.fromisoformat(
-                        expected_response_by.replace("Z", "+00:00")
-                    )
+                    exp_dt = datetime.fromisoformat(expected_response_by.replace("Z", "+00:00"))
                     if exp_dt.replace(tzinfo=None) < self.now:
                         reasons.append("Response overdue")
                 except (ValueError, TypeError, AttributeError) as e:
-                    logger.debug(
-                        f"Could not parse expected_response_by for reasons: {e}"
-                    )
+                    logger.debug(f"Could not parse expected_response_by for reasons: {e}")
         elif direction == Direction.OUTBOUND_WAITING_THEM:
             if age_hours > 72:
                 reasons.append("Stalled >72h")
@@ -794,15 +785,11 @@ class CommsCommitmentsPage11Engine:
 
         # Compute risk band per §6.5
         status = data.get("status", "open")
-        risk_band = self._compute_commitment_risk_band(
-            status, deadline_state, confidence_band
-        )
+        risk_band = self._compute_commitment_risk_band(status, deadline_state, confidence_band)
 
         # Compute consequence_at
         consequence_at = (
-            deadline
-            if deadline_state in [DeadlineState.OVERDUE, DeadlineState.DUE_SOON]
-            else None
+            deadline if deadline_state in [DeadlineState.OVERDUE, DeadlineState.DUE_SOON] else None
         )
 
         # Build why_low
@@ -859,10 +846,7 @@ class CommsCommitmentsPage11Engine:
             return RiskBand.HIGH
         if status == "open" and deadline_state == DeadlineState.OVERDUE:
             return RiskBand.HIGH
-        if (
-            deadline_state == DeadlineState.DUE_SOON
-            and confidence_band == Confidence.HIGH
-        ):
+        if deadline_state == DeadlineState.DUE_SOON and confidence_band == Confidence.HIGH:
             return RiskBand.HIGH
 
         # MED conditions
@@ -875,9 +859,7 @@ class CommsCommitmentsPage11Engine:
     # TILES (§4 Zone B)
     # ==========================================================================
 
-    def build_tiles(
-        self, threads: list[ThreadUnit], commitments: list[CommitmentUnit]
-    ) -> dict:
+    def build_tiles(self, threads: list[ThreadUnit], commitments: list[CommitmentUnit]) -> dict:
         """Build status tiles per Zone B."""
         # High-risk threads
         high_risk = [t for t in threads if t.risk_band == RiskBand.HIGH]
@@ -885,18 +867,12 @@ class CommsCommitmentsPage11Engine:
         for t in high_risk:
             if t.expected_response_by:
                 try:
-                    exp_dt = datetime.fromisoformat(
-                        t.expected_response_by.replace("Z", "+00:00")
-                    )
-                    hours = (
-                        exp_dt.replace(tzinfo=None) - self.now
-                    ).total_seconds() / 3600
+                    exp_dt = datetime.fromisoformat(t.expected_response_by.replace("Z", "+00:00"))
+                    hours = (exp_dt.replace(tzinfo=None) - self.now).total_seconds() / 3600
                     if next_consequence is None or hours < next_consequence:
                         next_consequence = hours
                 except (ValueError, TypeError, AttributeError) as e:
-                    logger.debug(
-                        f"Could not parse expected_response_by for consequence: {e}"
-                    )
+                    logger.debug(f"Could not parse expected_response_by for consequence: {e}")
 
         # Overdue commitments
         overdue = [c for c in commitments if c.due_at_state == DeadlineState.OVERDUE]
@@ -907,17 +883,13 @@ class CommsCommitmentsPage11Engine:
         oldest_age = max((t.age_hours for t in waiting_us), default=0)
 
         # Waiting on them
-        waiting_them = [
-            t for t in threads if t.direction == Direction.OUTBOUND_WAITING_THEM
-        ]
+        waiting_them = [t for t in threads if t.direction == Direction.OUTBOUND_WAITING_THEM]
         stalled = [t for t in waiting_them if t.age_hours > 72]
 
         return {
             "high_risk_threads": {
                 "count": len(high_risk),
-                "next_consequence_hours": round(next_consequence, 1)
-                if next_consequence
-                else None,
+                "next_consequence_hours": round(next_consequence, 1) if next_consequence else None,
             },
             "overdue_commitments": {
                 "count": len(overdue),
@@ -972,10 +944,7 @@ class CommsCommitmentsPage11Engine:
     def _generate_thread_move(self, thread: ThreadUnit) -> dict | None:
         """Generate a move from a thread."""
         # Determine move type
-        if (
-            thread.risk_band == RiskBand.HIGH
-            and thread.direction == Direction.INBOUND_WAITING_US
-        ):
+        if thread.risk_band == RiskBand.HIGH and thread.direction == Direction.INBOUND_WAITING_US:
             move_type = MoveType.RESPONSE_BREACH_RESCUE
             label = f"Rescue response: {thread.subject[:30]}"
             action = {
@@ -991,10 +960,7 @@ class CommsCommitmentsPage11Engine:
                 "label": "Draft VIP response",
                 "payload": {"thread_id": thread.thread_id},
             }
-        elif (
-            thread.direction == Direction.OUTBOUND_WAITING_THEM
-            and thread.age_hours > 72
-        ):
+        elif thread.direction == Direction.OUTBOUND_WAITING_THEM and thread.age_hours > 72:
             move_type = MoveType.WAITING_ON_THEM_NUDGE
             label = f"Nudge: {thread.counterparty} ({thread.age_hours:.0f}h)"
             action = {
@@ -1017,14 +983,10 @@ class CommsCommitmentsPage11Engine:
         ttc = None
         if thread.expected_response_by:
             try:
-                exp_dt = datetime.fromisoformat(
-                    thread.expected_response_by.replace("Z", "+00:00")
-                )
+                exp_dt = datetime.fromisoformat(thread.expected_response_by.replace("Z", "+00:00"))
                 ttc = (exp_dt.replace(tzinfo=None) - self.now).total_seconds() / 3600
             except (ValueError, TypeError, AttributeError) as e:
-                logger.debug(
-                    f"Could not parse expected_response_by for time to consequence: {e}"
-                )
+                logger.debug(f"Could not parse expected_response_by for time to consequence: {e}")
 
         return {
             "move_id": f"move-thread-{thread.thread_id}",
@@ -1119,9 +1081,7 @@ class CommsCommitmentsPage11Engine:
     # LADDERS (§8)
     # ==========================================================================
 
-    def build_ladders(
-        self, threads: list[ThreadUnit], commitments: list[CommitmentUnit]
-    ) -> dict:
+    def build_ladders(self, threads: list[ThreadUnit], commitments: list[CommitmentUnit]) -> dict:
         """Build right column ladders per §8."""
         return {
             "overdue_commitments": self._build_overdue_ladder(commitments),
@@ -1138,9 +1098,7 @@ class CommsCommitmentsPage11Engine:
             if c.due_at:
                 try:
                     dl_dt = datetime.fromisoformat(c.due_at.replace("Z", "+00:00"))
-                    return (
-                        self.now - dl_dt.replace(tzinfo=None)
-                    ).total_seconds() / 3600
+                    return (self.now - dl_dt.replace(tzinfo=None)).total_seconds() / 3600
                 except (ValueError, TypeError, AttributeError):
                     pass
             return 0
@@ -1173,12 +1131,8 @@ class CommsCommitmentsPage11Engine:
         def sort_key(t):
             if t.expected_response_by:
                 try:
-                    exp_dt = datetime.fromisoformat(
-                        t.expected_response_by.replace("Z", "+00:00")
-                    )
-                    overdue = (
-                        self.now - exp_dt.replace(tzinfo=None)
-                    ).total_seconds() / 3600
+                    exp_dt = datetime.fromisoformat(t.expected_response_by.replace("Z", "+00:00"))
+                    overdue = (self.now - exp_dt.replace(tzinfo=None)).total_seconds() / 3600
                     return (1, overdue)  # Overdue first
                 except (ValueError, TypeError, AttributeError):
                     pass
@@ -1269,11 +1223,7 @@ class CommsCommitmentsPage11Engine:
         risk_reason = (
             "No deadline"
             if not thread.expected_response_by
-            else (
-                "Response overdue"
-                if thread.risk_band == RiskBand.HIGH
-                else "Response due soon"
-            )
+            else ("Response overdue" if thread.risk_band == RiskBand.HIGH else "Response due soon")
         )
 
         # Build linked commitments (max 5)

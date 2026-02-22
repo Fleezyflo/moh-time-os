@@ -9,12 +9,15 @@ Signals:
 """
 
 import logging
+import os
 from collections import Counter
 from datetime import datetime, timedelta
 
 from .state_store import get_store
 
 logger = logging.getLogger(__name__)
+
+_INTERNAL_DOMAINS = set(os.environ.get("MOH_INTERNAL_DOMAINS", "hrmny.co,hrmny.ae").split(","))
 
 
 # Thresholds from spec
@@ -66,9 +69,7 @@ def detect_task_prefixes(store, test_mode: bool = False) -> list[dict]:
 
     # Find prefixes that aren't already enrolled
     enrolled_names = set()
-    enrolled = store.query(
-        "SELECT name FROM projects WHERE enrollment_status = 'enrolled'"
-    )
+    enrolled = store.query("SELECT name FROM projects WHERE enrollment_status = 'enrolled'")
     for p in enrolled:
         enrolled_names.add(p["name"].lower().strip())
         # Also add the prefix without "Monthly"
@@ -128,7 +129,7 @@ def detect_email_clusters(store) -> list[dict]:
     domain_threads = {}
     for e in emails:
         domain = e.get("from_domain") or ""
-        if not domain or domain in ("gmail.com", "google.com", "hrmny.co"):
+        if not domain or domain in ({"gmail.com", "google.com"} | _INTERNAL_DOMAINS):
             continue
         if domain not in domain_threads:
             domain_threads[domain] = set()
@@ -221,9 +222,7 @@ def detect_xero_deposits(store) -> list[dict]:
 
         # Get enrolled project names to exclude
         enrolled_names = set()
-        enrolled = store.query(
-            "SELECT name FROM projects WHERE enrollment_status = 'enrolled'"
-        )
+        enrolled = store.query("SELECT name FROM projects WHERE enrollment_status = 'enrolled'")
         for p in enrolled:
             enrolled_names.add(p["name"].lower().strip())
 
@@ -237,9 +236,7 @@ def detect_xero_deposits(store) -> list[dict]:
                 continue
 
             # Check for recent invoices (might indicate new project)
-            recent = [
-                inv for inv in contact_invoices if inv.get("days_overdue", 999) < 30
-            ]
+            recent = [inv for inv in contact_invoices if inv.get("days_overdue", 999) < 30]
 
             if recent:
                 # Check invoice numbers/patterns for "deposit" indicators

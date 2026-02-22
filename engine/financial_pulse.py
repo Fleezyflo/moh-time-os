@@ -9,7 +9,7 @@ Just: call Xero, group by client, sort by age, flag problems.
 
 import json
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timezone
 from typing import Any
 
 from engine.xero_client import list_invoices
@@ -237,16 +237,14 @@ def render_pulse(clients: list[ClientReceivables]) -> str:
             f"⚡ {len(critical)} critical ({critical_total:,.0f} AED) • {len(warning)} warning ({warning_total:,.0f} AED)"
         )
     elif warning:
-        lines.append(
-            f"⚡ {len(warning)} items need attention ({warning_total:,.0f} AED)"
-        )
+        lines.append(f"⚡ {len(warning)} items need attention ({warning_total:,.0f} AED)")
     else:
         lines.append("⚡ Collections on track")
     lines.append("")
 
     # Additional severity splits
     watch = [c for c in clients if c.severity == "watch"]
-    current = [c for c in clients if c.severity == "current"]
+    [c for c in clients if c.severity == "current"]
 
     # Exclude internal from totals shown
     external_clients = [c for c in clients if not c.is_internal]
@@ -261,9 +259,7 @@ def render_pulse(clients: list[ClientReceivables]) -> str:
         lines.append("🔴 CRITICAL (60+ days, large amounts):")
         for client in critical:
             lines.append(f"   {client.client_name}")
-            lines.append(
-                f"      {client.total_outstanding:,.0f} AED — {client.attention_reason}"
-            )
+            lines.append(f"      {client.total_outstanding:,.0f} AED — {client.attention_reason}")
         lines.append("")
 
     # Warning section
@@ -281,9 +277,7 @@ def render_pulse(clients: list[ClientReceivables]) -> str:
         if watch_external:
             lines.append("👀 WATCH:")
             for client in watch_external[:5]:
-                lines.append(
-                    f"   • {client.client_name} — {client.total_outstanding:,.0f} AED"
-                )
+                lines.append(f"   • {client.client_name} — {client.total_outstanding:,.0f} AED")
             if len(watch_external) > 5:
                 lines.append(f"   (+{len(watch_external) - 5} more)")
             lines.append("")
@@ -298,9 +292,7 @@ def render_pulse(clients: list[ClientReceivables]) -> str:
     lines.append(f"TOTAL OUTSTANDING:  {total_outstanding:>12,.0f} AED")
     if internal_total > 0:
         lines.append(f"  ├─ External:      {external_total:>12,.0f} AED")
-        lines.append(
-            f"  └─ Internal:      {internal_total:>12,.0f} AED (reimbursements etc)"
-        )
+        lines.append(f"  └─ Internal:      {internal_total:>12,.0f} AED (reimbursements etc)")
     lines.append("")
 
     # Aging breakdown (external only)
@@ -311,23 +303,15 @@ def render_pulse(clients: list[ClientReceivables]) -> str:
         c.total_outstanding for c in external_clients if 0 < c.oldest_overdue_days <= 30
     )
     overdue_60 = sum(
-        c.total_outstanding
-        for c in external_clients
-        if 30 < c.oldest_overdue_days <= 60
+        c.total_outstanding for c in external_clients if 30 < c.oldest_overdue_days <= 60
     )
-    overdue_90 = sum(
-        c.total_outstanding for c in external_clients if c.oldest_overdue_days > 60
-    )
+    overdue_90 = sum(c.total_outstanding for c in external_clients if c.oldest_overdue_days > 60)
 
     # Calculate health indicator
     if external_total > 0:
         healthy_pct = (current_bucket + overdue_30) / external_total * 100
         health_indicator = (
-            "✓ Healthy"
-            if healthy_pct >= 70
-            else "⚠️ At Risk"
-            if healthy_pct >= 50
-            else "🔴 Poor"
+            "✓ Healthy" if healthy_pct >= 70 else "⚠️ At Risk" if healthy_pct >= 50 else "🔴 Poor"
         )
     else:
         healthy_pct = 100
@@ -356,9 +340,7 @@ def render_client_detail(client: ClientReceivables) -> str:
     severity_icons = {"critical": "🔴", "warning": "🟡", "watch": "👀", "current": "✓"}
 
     lines = []
-    lines.append(
-        f"CLIENT: {client.client_name} {severity_icons.get(client.severity, '')}"
-    )
+    lines.append(f"CLIENT: {client.client_name} {severity_icons.get(client.severity, '')}")
     lines.append("=" * 50)
     lines.append(f"Total Outstanding: {client.total_outstanding:,.0f} AED")
     lines.append(f"Oldest Overdue: {format_days(client.oldest_overdue_days)}")
@@ -384,9 +366,7 @@ def render_client_detail(client: ClientReceivables) -> str:
     return "\n".join(lines)
 
 
-def financial_pulse(
-    *, client_filter: str | None = None, verbose: bool = False
-) -> dict[str, Any]:
+def financial_pulse(*, client_filter: str | None = None, verbose: bool = False) -> dict[str, Any]:
     """
     Main entry point for financial pulse.
 
@@ -416,9 +396,7 @@ def financial_pulse(
     return {
         "as_of": datetime.now(UTC).isoformat(),
         "total_outstanding": sum(c.total_outstanding for c in clients),
-        "external_outstanding": sum(
-            c.total_outstanding for c in clients if not c.is_internal
-        ),
+        "external_outstanding": sum(c.total_outstanding for c in clients if not c.is_internal),
         "critical": [
             {
                 "client": c.client_name,
@@ -457,12 +435,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Financial Pulse — Who owes us money?")
     parser.add_argument("--client", "-c", help="Filter by client name")
-    parser.add_argument(
-        "--verbose", "-v", action="store_true", help="Show invoice detail"
-    )
-    parser.add_argument(
-        "--json", "-j", action="store_true", help="Output JSON instead of text"
-    )
+    parser.add_argument("--verbose", "-v", action="store_true", help="Show invoice detail")
+    parser.add_argument("--json", "-j", action="store_true", help="Output JSON instead of text")
 
     args = parser.parse_args()
 

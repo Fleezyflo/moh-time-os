@@ -43,8 +43,9 @@ def monkeypatch_module():
 @pytest.fixture(scope="module")
 def client(fixture_db_path, monkeypatch_module):
     """Create test client with fixture DB injected."""
-    # Redirect lib.paths.db_path to fixture DB BEFORE importing app
+    # Redirect lib.paths.db_path AND data_dir to fixture DB BEFORE importing app
     monkeypatch_module.setattr(lib.paths, "db_path", lambda: fixture_db_path)
+    monkeypatch_module.setattr(lib.paths, "data_dir", lambda: fixture_db_path.parent)
 
     # Now import and create the app (it will use the patched path)
     from api.server import app
@@ -53,42 +54,41 @@ def client(fixture_db_path, monkeypatch_module):
 
 
 class TestStubEndpoints:
-    """Tests for stub endpoints returning 501."""
+    """Tests for implemented bulk link endpoint."""
 
-    def test_bulk_link_tasks_returns_501(self, client):
-        """POST /api/tasks/link should return 501 Not Implemented."""
-        response = client.post("/api/tasks/link")
-
-        assert response.status_code == 501
-        assert "not implemented" in response.json()["detail"].lower()
+    def test_bulk_link_tasks_accepts_post(self, client):
+        """POST /api/tasks/link should accept requests and process links."""
+        response = client.post(
+            "/api/tasks/link",
+            json={"links": [{"task_id": "t1", "project_id": "p1"}]},
+        )
+        # Should return 200 with results (not 501)
+        assert response.status_code == 200
+        data = response.json()
+        assert "total" in data
+        assert "results" in data
 
 
 class TestStubHandlers:
-    """Tests for stub handlers raising NotImplementedError."""
+    """Tests for implemented Asana sync handlers."""
 
-    def test_sync_to_asana_raises_not_implemented(self):
-        """_sync_to_asana should raise NotImplementedError."""
+    def test_sync_to_asana_without_client(self):
+        """_sync_to_asana should handle missing asana_client gracefully."""
         from lib.executor.handlers.task import TaskHandler
 
         mock_store = MagicMock()
         handler = TaskHandler(mock_store)
+        # Should not raise — gracefully handles missing client
+        handler._sync_to_asana("task_123", {"title": "Test"})
 
-        with pytest.raises(NotImplementedError) as exc_info:
-            handler._sync_to_asana("task_123", {"title": "Test"})
-
-        assert "not implemented" in str(exc_info.value).lower()
-
-    def test_complete_in_asana_raises_not_implemented(self):
-        """_complete_in_asana should raise NotImplementedError."""
+    def test_complete_in_asana_without_client(self):
+        """_complete_in_asana should handle missing asana_client gracefully."""
         from lib.executor.handlers.task import TaskHandler
 
         mock_store = MagicMock()
         handler = TaskHandler(mock_store)
-
-        with pytest.raises(NotImplementedError) as exc_info:
-            handler._complete_in_asana("asana_456")
-
-        assert "not implemented" in str(exc_info.value).lower()
+        # Should not raise — gracefully handles missing client
+        handler._complete_in_asana("asana_456")
 
 
 class TestErrorPropagation:

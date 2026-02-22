@@ -5,6 +5,6 @@ Channel handlers for delivering notifications.
 Each channel sends directly via API without AI intermediary.
 """
 
-from .clawdbot import ClawdbotChannel
+from .google_chat import GoogleChatChannel
 
-__all__ = ["ClawdbotChannel"]
+__all__ = ["GoogleChatChannel"]

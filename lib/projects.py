@@ -18,9 +18,10 @@ Enrolled project management per spec 4.2:
 import json
 import logging
 from dataclasses import asdict, dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from lib import paths
+from lib.compat import UTC
 
 logger = logging.getLogger(__name__)
 
@@ -60,9 +61,7 @@ class Project:
     escalation_threshold_days: int = 3  # Escalate if no progress
 
     # Sensitivity
-    sensitivity_profile: list[str] = field(
-        default_factory=list
-    )  # e.g., ["financial", "clientVIP"]
+    sensitivity_profile: list[str] = field(default_factory=list)  # e.g., ["financial", "clientVIP"]
     approval_required: bool = False  # Require approval for actions
 
     # Archive policy
@@ -230,9 +229,7 @@ if __name__ == "__main__":
 
     if len(sys.argv) < 2:
         logger.info("Usage: projects.py <command> [args]")
-        logger.info(
-            "Commands: list, get <id>, create <name>, find <text>, archive <id>"
-        )
+        logger.info("Commands: list, get <id>, create <name>, find <text>, archive <id>")
         sys.exit(1)
 
     cmd = sys.argv[1]

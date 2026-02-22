@@ -25,15 +25,11 @@ class TestSingleRegistry:
         registry_path = PROJECT_ROOT / "lib" / "collector_registry.py"
         assert registry_path.exists(), "lib/collector_registry.py must exist"
 
-        spec = importlib.util.spec_from_file_location(
-            "collector_registry", registry_path
-        )
+        spec = importlib.util.spec_from_file_location("collector_registry", registry_path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
 
-        assert hasattr(
-            module, "COLLECTOR_REGISTRY"
-        ), "COLLECTOR_REGISTRY must be defined"
+        assert hasattr(module, "COLLECTOR_REGISTRY"), "COLLECTOR_REGISTRY must be defined"
         assert (
             len(module.COLLECTOR_REGISTRY) == 8
         ), f"Expected 8 collectors, got {len(module.COLLECTOR_REGISTRY)}"
@@ -53,9 +49,7 @@ class TestSingleRegistry:
         content = scheduled_path.read_text()
 
         assert "CollectorLock" in content, "scheduled_collect.py must use CollectorLock"
-        assert (
-            "with CollectorLock()" in content
-        ), "scheduled_collect.py must acquire lock"
+        assert "with CollectorLock()" in content, "scheduled_collect.py must acquire lock"
 
 
 class TestCanonicalRunnerAuthoritative:
@@ -67,9 +61,7 @@ class TestCanonicalRunnerAuthoritative:
         scheduled_path = PROJECT_ROOT / "collectors" / "scheduled_collect.py"
 
         # Load registry
-        spec = importlib.util.spec_from_file_location(
-            "collector_registry", registry_path
-        )
+        spec = importlib.util.spec_from_file_location("collector_registry", registry_path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         registry_sources = set(module.COLLECTOR_REGISTRY.keys())
@@ -85,9 +77,7 @@ class TestCanonicalRunnerAuthoritative:
             scheduled_sources = set()
 
         missing = scheduled_sources - registry_sources
-        assert (
-            not missing
-        ), f"Sources in scheduled_collect but not in registry: {missing}"
+        assert not missing, f"Sources in scheduled_collect but not in registry: {missing}"
 
 
 class TestLegacyBlocked:
@@ -112,8 +102,9 @@ class TestLegacyBlocked:
         import sys
 
         # Clear any cached imports - must clear all related modules
-        modules_to_clear = [k for k in list(sys.modules.keys())
-                          if "collectors" in k or "lib.collectors" in k]
+        modules_to_clear = [
+            k for k in list(sys.modules.keys()) if "collectors" in k or "lib.collectors" in k
+        ]
         for mod in modules_to_clear:
             try:
                 del sys.modules[mod]
@@ -122,6 +113,7 @@ class TestLegacyBlocked:
 
         try:
             import collectors._legacy as legacy
+
             # If import succeeds, verify __getattr__ blocks attribute access
             with pytest.raises(RuntimeError, match="deprecated"):
                 _ = legacy.anything
@@ -180,9 +172,7 @@ class TestLockfileExists:
         """CollectorLock must be defined in registry."""
         registry_path = PROJECT_ROOT / "lib" / "collector_registry.py"
 
-        spec = importlib.util.spec_from_file_location(
-            "collector_registry", registry_path
-        )
+        spec = importlib.util.spec_from_file_location("collector_registry", registry_path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
 
@@ -192,9 +182,7 @@ class TestLockfileExists:
         """CollectorLock must be a context manager."""
         registry_path = PROJECT_ROOT / "lib" / "collector_registry.py"
 
-        spec = importlib.util.spec_from_file_location(
-            "collector_registry", registry_path
-        )
+        spec = importlib.util.spec_from_file_location("collector_registry", registry_path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
 

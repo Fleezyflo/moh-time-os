@@ -287,9 +287,7 @@ class TestValidInvalidAR:
             INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
             VALUES ('inv1', 1000, '2025-01-01', 'c1', 'sent', NULL)
         """)
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client 1', 'A')"
-        )
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client 1', 'A')")
         conn.commit()
         conn.close()
 
@@ -310,9 +308,7 @@ class TestValidInvalidAR:
             INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
             VALUES ('inv2', 2000, '2025-01-01', NULL, 'sent', NULL)
         """)
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client 1', 'A')"
-        )
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client 1', 'A')")
         conn.commit()
         conn.close()
 
@@ -332,27 +328,21 @@ class TestPortfolioOrdering:
         conn = sqlite3.connect(test_db)
 
         # Client 1: All current (LOW risk)
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c1', 'Low Risk', 'A')"
-        )
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Low Risk', 'A')")
         conn.execute(f"""
             INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
             VALUES ('inv1', 10000, '{(today + timedelta(days=30)).isoformat()}', 'c1', 'sent', NULL)
         """)
 
         # Client 2: All 90+ (HIGH risk)
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c2', 'High Risk', 'B')"
-        )
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c2', 'High Risk', 'B')")
         conn.execute(f"""
             INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
             VALUES ('inv2', 10000, '{(today - timedelta(days=100)).isoformat()}', 'c2', 'overdue', NULL)
         """)
 
         # Client 3: Mixed (MED risk)
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c3', 'Med Risk', 'B')"
-        )
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c3', 'Med Risk', 'B')")
         conn.execute(f"""
             INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
             VALUES ('inv3', 5000, '{(today - timedelta(days=45)).isoformat()}', 'c3', 'overdue', NULL)
@@ -384,9 +374,7 @@ class TestInvoiceOrdering:
         today = date.today()
         conn = sqlite3.connect(test_db)
 
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c1', 'Test Client', 'A')"
-        )
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Test Client', 'A')")
 
         # Insert invoices in random order
         invoices = [
@@ -414,9 +402,7 @@ class TestInvoiceOrdering:
         expected_order = ["90+", "61-90", "31-60", "1-30", "current"]
         actual_order = [inv["aging_bucket"] for inv in invoices]
 
-        assert (
-            actual_order == expected_order
-        ), f"Expected {expected_order}, got {actual_order}"
+        assert actual_order == expected_order, f"Expected {expected_order}, got {actual_order}"
 
 
 class TestCaps:
@@ -427,9 +413,7 @@ class TestCaps:
         today = date.today()
         conn = sqlite3.connect(test_db)
 
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c1', 'Big Client', 'A')"
-        )
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Big Client', 'A')")
 
         # Insert 30 invoices
         for i in range(30):
@@ -453,9 +437,7 @@ class TestCaps:
 
         # Insert 15 clients with invoices
         for i in range(15):
-            conn.execute(
-                f"INSERT INTO clients (id, name, tier) VALUES ('c{i}', 'Client {i}', 'B')"
-            )
+            conn.execute(f"INSERT INTO clients (id, name, tier) VALUES ('c{i}', 'Client {i}', 'B')")
             conn.execute(f"""
                 INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
                 VALUES ('inv{i}', 1000, '{(today - timedelta(days=i)).isoformat()}', 'c{i}', 'sent', NULL)
@@ -477,9 +459,7 @@ class TestCaps:
 
         # Insert 35 clients with invoices
         for i in range(35):
-            conn.execute(
-                f"INSERT INTO clients (id, name, tier) VALUES ('c{i}', 'Client {i}', 'B')"
-            )
+            conn.execute(f"INSERT INTO clients (id, name, tier) VALUES ('c{i}', 'Client {i}', 'B')")
             conn.execute(f"""
                 INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
                 VALUES ('inv{i}', 1000, '{(today - timedelta(days=i)).isoformat()}', 'c{i}', 'sent', NULL)
@@ -499,9 +479,7 @@ class TestCaps:
         today = date.today()
         conn = sqlite3.connect(test_db)
 
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'A')"
-        )
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'A')")
 
         # Insert 20 overdue invoices (should generate many actions)
         for i in range(20):
@@ -526,9 +504,7 @@ class TestInvalidARActions:
     def test_missing_due_date_generates_action(self, test_db, engine):
         """Invalid AR (missing due_date) creates resolution action."""
         conn = sqlite3.connect(test_db)
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'A')"
-        )
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'A')")
         conn.execute("""
             INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
             VALUES ('inv1', 5000, NULL, 'c1', 'sent', NULL)
@@ -540,9 +516,7 @@ class TestInvalidARActions:
 
         # Check global actions for fix action
         fix_actions = [
-            a
-            for a in result["global_actions"]
-            if "missing_due_date" in a.get("label", "")
+            a for a in result["global_actions"] if "missing_due_date" in a.get("label", "")
         ]
         assert len(fix_actions) > 0, "Missing due_date should generate fix action"
 
@@ -560,9 +534,7 @@ class TestActionIdempotency:
         """Every action must have idempotency_key."""
         today = date.today()
         conn = sqlite3.connect(test_db)
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'A')"
-        )
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'A')")
         conn.execute(f"""
             INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
             VALUES ('inv1', 5000, '{(today - timedelta(days=30)).isoformat()}', 'c1', 'overdue', NULL)
@@ -573,18 +545,14 @@ class TestActionIdempotency:
         result = engine.generate()
 
         for action in result["global_actions"]:
-            assert (
-                "idempotency_key" in action
-            ), f"Action missing idempotency_key: {action}"
+            assert "idempotency_key" in action, f"Action missing idempotency_key: {action}"
             assert action["idempotency_key"], "idempotency_key should not be empty"
 
     def test_idempotency_keys_unique(self, test_db, engine):
         """Idempotency keys should be unique within a run."""
         today = date.today()
         conn = sqlite3.connect(test_db)
-        conn.execute(
-            "INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'A')"
-        )
+        conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'A')")
 
         # Create multiple invoices
         for i in range(5):
@@ -613,7 +581,7 @@ class TestDataIntegrityGate:
         result = engine.generate()
 
         # Should still return structure but trust shows integrity failed
-        assert result["meta"]["trust"]["data_integrity"] == False
+        assert not result["meta"]["trust"]["data_integrity"]
 
 
 if __name__ == "__main__":

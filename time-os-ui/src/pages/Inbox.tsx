@@ -3,17 +3,18 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import type { InboxItem, InboxCounts, InboxResponse, Severity, InboxItemType } from '../types/spec';
+import { TeamMemberPicker } from '../components/pickers';
 
 // API base for spec endpoints
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v2';
 
 // Severity colors
 const SEVERITY_COLORS: Record<Severity, string> = {
-  critical: 'bg-red-500 text-white',
-  high: 'bg-orange-500 text-white',
-  medium: 'bg-yellow-500 text-black',
-  low: 'bg-blue-500 text-white',
-  info: 'bg-slate-500 text-white',
+  critical: 'bg-[var(--danger)] text-[var(--white)]',
+  high: 'bg-orange-500 text-[var(--white)]',
+  medium: 'bg-[var(--warning)] text-black',
+  low: 'bg-[var(--info)] text-[var(--white)]',
+  info: 'bg-slate-500 text-[var(--white)]',
 };
 
 const SEVERITY_RING: Record<Severity, string> = {
@@ -240,11 +241,12 @@ export function Inbox() {
         <h1 className="text-2xl font-bold">Control Room</h1>
         {counts && (
           <div className="flex gap-4 text-sm">
-            <span className="text-slate-400">
-              Unprocessed: <span className="text-white font-medium">{counts.unprocessed}</span>
+            <span className="text-[var(--grey-light)]">
+              Unprocessed:{' '}
+              <span className="text-[var(--white)] font-medium">{counts.unprocessed}</span>
             </span>
             {counts.snoozed_returning_soon > 0 && (
-              <span className="text-yellow-400">
+              <span className="text-[var(--warning)]">
                 ⏰ {counts.snoozed_returning_soon} returning soon
               </span>
             )}
@@ -258,7 +260,7 @@ export function Inbox() {
           {/* by_severity */}
           {counts.by_severity && (
             <div className="flex items-center gap-2">
-              <span className="text-slate-400">Severity:</span>
+              <span className="text-[var(--grey-light)]">Severity:</span>
               {Object.entries(counts.by_severity).map(
                 ([sev, count]) =>
                   count > 0 && (
@@ -268,7 +270,7 @@ export function Inbox() {
                       className={`px-1.5 py-0.5 rounded ${
                         severityFilter === sev
                           ? SEVERITY_COLORS[sev as Severity]
-                          : 'bg-slate-700 text-slate-300'
+                          : 'bg-[var(--grey)] text-[var(--grey-light)]'
                       }`}
                     >
                       {sev}: {count}
@@ -280,7 +282,7 @@ export function Inbox() {
           {/* by_type */}
           {counts.by_type && (
             <div className="flex items-center gap-2">
-              <span className="text-slate-400">Type:</span>
+              <span className="text-[var(--grey-light)]">Type:</span>
               {Object.entries(counts.by_type).map(
                 ([type, count]) =>
                   count > 0 && (
@@ -289,8 +291,8 @@ export function Inbox() {
                       onClick={() => setTypeFilter(typeFilter === type ? 'all' : type)}
                       className={`px-1.5 py-0.5 rounded ${
                         typeFilter === type
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-slate-700 text-slate-300'
+                          ? 'bg-blue-600 text-[var(--white)]'
+                          : 'bg-[var(--grey)] text-[var(--grey-light)]'
                       }`}
                     >
                       {TYPE_ICONS[type as InboxItemType]} {count}
@@ -303,7 +305,7 @@ export function Inbox() {
       )}
 
       {/* Tabs */}
-      <div className="flex items-center justify-between border-b border-slate-700">
+      <div className="flex items-center justify-between border-b border-[var(--grey)]">
         <div className="flex gap-1">
           {TABS.map((tab) => {
             const countValue = counts?.[tab.countKey];
@@ -318,15 +320,15 @@ export function Inbox() {
                   px-4 py-2 text-sm font-medium rounded-t-lg transition-colors
                   ${
                     isActive
-                      ? 'bg-slate-700 text-white border-b-2 border-blue-500'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-800'
+                      ? 'bg-[var(--grey)] text-[var(--white)] border-b-2 border-blue-500'
+                      : 'text-[var(--grey-light)] hover:text-[var(--white)] hover:bg-[var(--grey-dim)]'
                   }
                 `}
               >
                 {tab.label}
                 <span
                   className={`ml-2 px-1.5 py-0.5 rounded text-xs ${
-                    isActive ? 'bg-blue-500' : 'bg-slate-600'
+                    isActive ? 'bg-[var(--info)]' : 'bg-[var(--grey-light)]'
                   }`}
                 >
                   {count}
@@ -340,14 +342,14 @@ export function Inbox() {
         <div className="flex items-center gap-2 pb-2">
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`px-2 py-1 text-sm rounded ${showFilters ? 'bg-blue-600' : 'bg-slate-700'}`}
+            className={`px-2 py-1 text-sm rounded ${showFilters ? 'bg-blue-600' : 'bg-[var(--grey)]'}`}
           >
             🔍 Filters
           </button>
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as SortOption)}
-            className="bg-slate-700 border-none rounded px-2 py-1 text-sm"
+            className="bg-[var(--grey)] border-none rounded px-2 py-1 text-sm"
           >
             {SORT_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -360,14 +362,14 @@ export function Inbox() {
 
       {/* Filters panel */}
       {showFilters && (
-        <div className="flex flex-wrap gap-3 p-3 bg-slate-800 rounded-lg">
+        <div className="flex flex-wrap gap-3 p-3 bg-[var(--grey-dim)] rounded-lg">
           {/* Type filter */}
           <div className="flex items-center gap-2">
-            <label className="text-sm text-slate-400">Type:</label>
+            <label className="text-sm text-[var(--grey-light)]">Type:</label>
             <select
               value={typeFilter}
               onChange={(e) => setTypeFilter(e.target.value)}
-              className="bg-slate-700 border-none rounded px-2 py-1 text-sm"
+              className="bg-[var(--grey)] border-none rounded px-2 py-1 text-sm"
             >
               <option value="all">All</option>
               <option value="issue">⚠️ Issue</option>
@@ -379,11 +381,11 @@ export function Inbox() {
 
           {/* Severity filter */}
           <div className="flex items-center gap-2">
-            <label className="text-sm text-slate-400">Severity:</label>
+            <label className="text-sm text-[var(--grey-light)]">Severity:</label>
             <select
               value={severityFilter}
               onChange={(e) => setSeverityFilter(e.target.value)}
-              className="bg-slate-700 border-none rounded px-2 py-1 text-sm"
+              className="bg-[var(--grey)] border-none rounded px-2 py-1 text-sm"
             >
               <option value="all">All</option>
               <option value="critical">Critical</option>
@@ -396,13 +398,13 @@ export function Inbox() {
 
           {/* Client search */}
           <div className="flex items-center gap-2">
-            <label className="text-sm text-slate-400">Client:</label>
+            <label className="text-sm text-[var(--grey-light)]">Client:</label>
             <input
               type="text"
               value={clientFilter}
               onChange={(e) => setClientFilter(e.target.value)}
               placeholder="Search client..."
-              className="bg-slate-700 border-none rounded px-2 py-1 text-sm w-40"
+              className="bg-[var(--grey)] border-none rounded px-2 py-1 text-sm w-40"
             />
           </div>
 
@@ -414,7 +416,7 @@ export function Inbox() {
                 setSeverityFilter('all');
                 setClientFilter('');
               }}
-              className="text-sm text-blue-400 hover:text-blue-300"
+              className="text-sm text-[var(--info)] hover:text-[var(--info)]"
             >
               Clear all
             </button>
@@ -426,14 +428,14 @@ export function Inbox() {
       <div className="min-h-[400px]">
         {loading ? (
           <div className="flex items-center justify-center h-64">
-            <div className="animate-pulse text-slate-400">Loading...</div>
+            <div className="animate-pulse text-[var(--grey-light)]">Loading...</div>
           </div>
         ) : error ? (
           <div className="flex items-center justify-center h-64">
-            <div className="text-red-400">{error}</div>
+            <div className="text-[var(--danger)]">{error}</div>
           </div>
         ) : displayItems.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-64 text-slate-400">
+          <div className="flex flex-col items-center justify-center h-64 text-[var(--grey-light)]">
             <span className="text-4xl mb-2">✨</span>
             <span>{items.length === 0 ? 'Nothing here' : 'No items match filters'}</span>
           </div>
@@ -483,8 +485,8 @@ function InboxCard({ item, onSelect, onAction, formatAge }: InboxCardProps) {
       onClick={onSelect}
       className={`
         p-4 rounded-lg cursor-pointer transition-all
-        bg-slate-800 hover:bg-slate-750
-        ${isUnread ? 'border-l-4 border-blue-500' : 'border-l-4 border-transparent'}
+        bg-[var(--grey-dim)] hover:bg-slate-750
+        ${isUnread ? 'border-l-4 border-[var(--info)]' : 'border-l-4 border-transparent'}
         ring-1 ${SEVERITY_RING[severity]}
       `}
     >
@@ -504,17 +506,19 @@ function InboxCard({ item, onSelect, onAction, formatAge }: InboxCardProps) {
               {severity}
             </span>
             {item.client && (
-              <span className="text-sm text-slate-400 truncate">{item.client.name}</span>
+              <span className="text-sm text-[var(--grey-light)] truncate">{item.client.name}</span>
             )}
-            <span className="text-xs text-slate-500">{formatAge(item.attention_age_start_at)}</span>
+            <span className="text-xs text-[var(--grey)]">
+              {formatAge(item.attention_age_start_at)}
+            </span>
           </div>
 
           {/* Title */}
-          <h3 className="font-medium text-white truncate">{item.title}</h3>
+          <h3 className="font-medium text-[var(--white)] truncate">{item.title}</h3>
 
           {/* Issue-specific info */}
           {item.type === 'issue' && item.issue_state && (
-            <div className="mt-1 text-xs text-slate-400">
+            <div className="mt-1 text-xs text-[var(--grey-light)]">
               {item.issue_category} · {item.issue_state}
               {item.issue_assignee && ` · Assigned to ${item.issue_assignee.name}`}
             </div>
@@ -526,7 +530,7 @@ function InboxCard({ item, onSelect, onAction, formatAge }: InboxCardProps) {
           {item.available_actions.includes('snooze') && (
             <button
               onClick={() => onAction('snooze', { snooze_days: 7 })}
-              className="p-1.5 rounded hover:bg-slate-700 text-slate-400 hover:text-white"
+              className="p-1.5 rounded hover:bg-[var(--grey)] text-[var(--grey-light)] hover:text-[var(--white)]"
               title="Snooze 7 days"
             >
               ⏰
@@ -535,7 +539,7 @@ function InboxCard({ item, onSelect, onAction, formatAge }: InboxCardProps) {
           {item.available_actions.includes('dismiss') && (
             <button
               onClick={() => onAction('dismiss')}
-              className="p-1.5 rounded hover:bg-slate-700 text-slate-400 hover:text-white"
+              className="p-1.5 rounded hover:bg-[var(--grey)] text-[var(--grey-light)] hover:text-[var(--white)]"
               title="Dismiss"
             >
               ✕
@@ -567,9 +571,9 @@ function InboxDrawer({ item, onClose, onAction, formatAge }: InboxDrawerProps) {
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
 
       {/* Drawer */}
-      <div className="relative w-full max-w-lg bg-slate-800 h-full overflow-y-auto">
+      <div className="relative w-full max-w-lg bg-[var(--grey-dim)] h-full overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-slate-800 border-b border-slate-700 p-4">
+        <div className="sticky top-0 bg-[var(--grey-dim)] border-b border-[var(--grey)] p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-xl">{TYPE_ICONS[item.type]}</span>
@@ -579,13 +583,16 @@ function InboxDrawer({ item, onClose, onAction, formatAge }: InboxDrawerProps) {
                 {severity}
               </span>
             </div>
-            <button onClick={onClose} className="p-2 rounded hover:bg-slate-700 text-slate-400">
+            <button
+              onClick={onClose}
+              className="p-2 rounded hover:bg-[var(--grey)] text-[var(--grey-light)]"
+            >
               ✕
             </button>
           </div>
-          <h2 className="mt-2 text-lg font-semibold text-white">{item.title}</h2>
+          <h2 className="mt-2 text-lg font-semibold text-[var(--white)]">{item.title}</h2>
           {item.client && (
-            <div className="mt-1 text-sm text-slate-400">
+            <div className="mt-1 text-sm text-[var(--grey-light)]">
               {item.client.name}
               {item.brand && ` · ${item.brand.name}`}
               {item.engagement && ` · ${item.engagement.name}`}
@@ -598,22 +605,24 @@ function InboxDrawer({ item, onClose, onAction, formatAge }: InboxDrawerProps) {
           {/* Meta */}
           <div className="grid grid-cols-2 gap-2 text-sm">
             <div>
-              <span className="text-slate-400">Age:</span>
-              <span className="ml-2 text-white">{formatAge(item.attention_age_start_at)}</span>
+              <span className="text-[var(--grey-light)]">Age:</span>
+              <span className="ml-2 text-[var(--white)]">
+                {formatAge(item.attention_age_start_at)}
+              </span>
             </div>
             <div>
-              <span className="text-slate-400">State:</span>
-              <span className="ml-2 text-white">{item.state}</span>
+              <span className="text-[var(--grey-light)]">State:</span>
+              <span className="ml-2 text-[var(--white)]">{item.state}</span>
             </div>
             {item.type === 'issue' && (
               <>
                 <div>
-                  <span className="text-slate-400">Category:</span>
-                  <span className="ml-2 text-white">{item.issue_category || 'N/A'}</span>
+                  <span className="text-[var(--grey-light)]">Category:</span>
+                  <span className="ml-2 text-[var(--white)]">{item.issue_category || 'N/A'}</span>
                 </div>
                 <div>
-                  <span className="text-slate-400">Issue State:</span>
-                  <span className="ml-2 text-white">{item.issue_state || 'N/A'}</span>
+                  <span className="text-[var(--grey-light)]">Issue State:</span>
+                  <span className="ml-2 text-[var(--white)]">{item.issue_state || 'N/A'}</span>
                 </div>
               </>
             )}
@@ -621,7 +630,7 @@ function InboxDrawer({ item, onClose, onAction, formatAge }: InboxDrawerProps) {
 
           {/* Evidence */}
           {item.evidence && (
-            <div className="p-3 bg-slate-700/50 rounded space-y-2">
+            <div className="p-3 bg-[var(--grey)]/50 rounded space-y-2">
               {/* Why flagged */}
               {(item.evidence.payload as { flagged_reason?: string })?.flagged_reason && (
                 <div className="flex items-center gap-2 text-xs text-amber-400">
@@ -634,14 +643,14 @@ function InboxDrawer({ item, onClose, onAction, formatAge }: InboxDrawerProps) {
 
               {/* Sender */}
               {(item.evidence.payload as { sender?: string })?.sender && (
-                <p className="text-xs text-slate-400">
+                <p className="text-xs text-[var(--grey-light)]">
                   From: {String((item.evidence.payload as { sender?: string }).sender)}
                 </p>
               )}
 
               {/* Snippet preview - only show if actual body content exists */}
               {(item.evidence.payload as { snippet?: string })?.snippet && (
-                <div className="text-sm text-slate-300 bg-slate-800/50 p-2 rounded border-l-2 border-slate-600">
+                <div className="text-sm text-[var(--grey-light)] bg-[var(--grey-dim)]/50 p-2 rounded border-l-2 border-[var(--grey-light)]">
                   {String((item.evidence.payload as { snippet?: string }).snippet)}
                 </div>
               )}
@@ -652,7 +661,7 @@ function InboxDrawer({ item, onClose, onAction, formatAge }: InboxDrawerProps) {
                   href={item.evidence.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center text-sm text-blue-400 hover:text-blue-300"
+                  className="inline-flex items-center text-sm text-[var(--info)] hover:text-[var(--info)]"
                 >
                   Open in Gmail ↗
                 </a>
@@ -662,22 +671,22 @@ function InboxDrawer({ item, onClose, onAction, formatAge }: InboxDrawerProps) {
 
           {/* Snooze info */}
           {item.state === 'snoozed' && item.snooze_until && (
-            <div className="p-3 bg-yellow-500/10 rounded border border-yellow-500/30">
+            <div className="p-3 bg-[var(--warning)]/10 rounded border border-yellow-500/30">
               <div className="flex items-center gap-2">
                 <span>⏰</span>
-                <span className="text-sm text-yellow-300">
+                <span className="text-sm text-[var(--warning)]">
                   Returns {new Date(item.snooze_until).toLocaleDateString()}
                 </span>
               </div>
               {item.snooze_reason && (
-                <p className="mt-1 text-sm text-slate-300">{item.snooze_reason}</p>
+                <p className="mt-1 text-sm text-[var(--grey-light)]">{item.snooze_reason}</p>
               )}
             </div>
           )}
 
           {/* Snooze picker */}
           {showSnoozePicker && (
-            <div className="p-3 bg-slate-700 rounded">
+            <div className="p-3 bg-[var(--grey)] rounded">
               <h4 className="text-sm font-medium mb-2">Snooze duration</h4>
               <div className="flex gap-2">
                 {[1, 3, 7, 14, 30].map((days) => (
@@ -685,7 +694,7 @@ function InboxDrawer({ item, onClose, onAction, formatAge }: InboxDrawerProps) {
                     key={days}
                     onClick={() => setSnoozeDays(days)}
                     className={`px-3 py-1 rounded text-sm ${
-                      snoozeDays === days ? 'bg-yellow-600' : 'bg-slate-600'
+                      snoozeDays === days ? 'bg-[var(--warning)]' : 'bg-[var(--grey-light)]'
                     }`}
                   >
                     {days}d
@@ -698,13 +707,13 @@ function InboxDrawer({ item, onClose, onAction, formatAge }: InboxDrawerProps) {
                     onAction('snooze', { snooze_days: snoozeDays });
                     setShowSnoozePicker(false);
                   }}
-                  className="px-3 py-1 bg-yellow-600 rounded text-sm"
+                  className="px-3 py-1 bg-[var(--warning)] rounded text-sm"
                 >
                   Confirm
                 </button>
                 <button
                   onClick={() => setShowSnoozePicker(false)}
-                  className="px-3 py-1 bg-slate-600 rounded text-sm"
+                  className="px-3 py-1 bg-[var(--grey-light)] rounded text-sm"
                 >
                   Cancel
                 </button>
@@ -714,7 +723,7 @@ function InboxDrawer({ item, onClose, onAction, formatAge }: InboxDrawerProps) {
         </div>
 
         {/* Actions */}
-        <div className="sticky bottom-0 bg-slate-800 border-t border-slate-700 p-4">
+        <div className="sticky bottom-0 bg-[var(--grey-dim)] border-t border-[var(--grey)] p-4">
           <div className="flex flex-wrap gap-2">
             {item.available_actions.map((action) => (
               <ActionButton
@@ -745,37 +754,55 @@ interface ActionButtonProps {
 
 const ACTION_LABELS: Record<string, { label: string; style: string }> = {
   tag: { label: 'Tag & Watch', style: 'bg-purple-600 hover:bg-purple-500' },
-  assign: { label: 'Assign', style: 'bg-blue-600 hover:bg-blue-500' },
-  snooze: { label: 'Snooze', style: 'bg-yellow-600 hover:bg-yellow-500' },
-  dismiss: { label: 'Dismiss', style: 'bg-slate-600 hover:bg-slate-500' },
-  link: { label: 'Link to Engagement', style: 'bg-green-600 hover:bg-green-500' },
-  create: { label: 'Create Engagement', style: 'bg-green-600 hover:bg-green-500' },
-  select: { label: 'Select Match', style: 'bg-blue-600 hover:bg-blue-500' },
-  unsnooze: { label: 'Unsnooze', style: 'bg-yellow-600 hover:bg-yellow-500' },
+  assign: { label: 'Assign', style: 'bg-blue-600 hover:bg-[var(--info)]' },
+  snooze: { label: 'Snooze', style: 'bg-[var(--warning)] hover:bg-[var(--warning)]' },
+  dismiss: { label: 'Dismiss', style: 'bg-[var(--grey-light)] hover:bg-slate-500' },
+  link: { label: 'Link to Engagement', style: 'bg-[var(--success)] hover:bg-[var(--success)]' },
+  create: { label: 'Create Engagement', style: 'bg-[var(--success)] hover:bg-[var(--success)]' },
+  select: { label: 'Select Match', style: 'bg-blue-600 hover:bg-[var(--info)]' },
+  unsnooze: { label: 'Unsnooze', style: 'bg-[var(--warning)] hover:bg-[var(--warning)]' },
 };
 
 function ActionButton({ action, onAction }: ActionButtonProps) {
   const config = ACTION_LABELS[action] || {
     label: action,
-    style: 'bg-slate-600 hover:bg-slate-500',
+    style: 'bg-[var(--grey-light)] hover:bg-slate-500',
   };
+  const [showPicker, setShowPicker] = useState(false);
 
   const handleClick = () => {
     if (action === 'assign') {
-      // TODO: Show assignee picker modal
-      const assignTo = prompt('Enter user ID to assign to:');
-      if (assignTo) {
-        onAction(action, { assign_to: assignTo });
-      }
+      setShowPicker(true);
     } else {
       onAction(action);
     }
   };
 
+  if (action === 'assign' && showPicker) {
+    return (
+      <div className="w-full">
+        <div className="mb-2 text-sm text-[var(--white)]">Select assignee:</div>
+        <TeamMemberPicker
+          onSelect={(memberId) => {
+            onAction(action, { assign_to: memberId });
+            setShowPicker(false);
+          }}
+          placeholder="Search team member..."
+        />
+        <button
+          onClick={() => setShowPicker(false)}
+          className="mt-2 px-3 py-1 text-sm rounded bg-[var(--grey-light)] hover:bg-slate-500 text-[var(--white)]"
+        >
+          Cancel
+        </button>
+      </div>
+    );
+  }
+
   return (
     <button
       onClick={handleClick}
-      className={`px-3 py-1.5 rounded text-sm font-medium text-white ${config.style}`}
+      className={`px-3 py-1.5 rounded text-sm font-medium text-[var(--white)] ${config.style}`}
     >
       {config.label}
     </button>

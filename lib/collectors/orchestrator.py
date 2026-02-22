@@ -13,6 +13,7 @@ from lib import paths
 from ..state_store import StateStore, get_store
 from .asana import AsanaCollector
 from .calendar import CalendarCollector
+from .chat import ChatCollector
 from .gmail import GmailCollector
 from .tasks import TasksCollector
 from .xero import XeroCollector
@@ -52,6 +53,7 @@ class CollectorOrchestrator:
         collector_map = {
             "tasks": TasksCollector,  # Google Tasks
             "calendar": CalendarCollector,
+            "chat": ChatCollector,
             "gmail": GmailCollector,
             "asana": AsanaCollector,
             "xero": XeroCollector,
@@ -63,6 +65,7 @@ class CollectorOrchestrator:
         core_sources = {
             "tasks": {"enabled": True, "sync_interval": 300},
             "calendar": {"enabled": True, "sync_interval": 60},
+            "chat": {"enabled": True, "sync_interval": 300},
             "gmail": {"enabled": True, "sync_interval": 120},
             "asana": {"enabled": True, "sync_interval": 300},
             "xero": {"enabled": True, "sync_interval": 300},  # AR/Invoice sync

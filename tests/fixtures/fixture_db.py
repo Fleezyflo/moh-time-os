@@ -528,10 +528,7 @@ def _seed_tables(conn: sqlite3.Connection, seed: dict[str, Any]) -> None:
     """Insert seed data into tables."""
 
     # Build person ID -> name lookup for task assignee resolution
-    person_id_to_name = {
-        person["id"]: person["name"]
-        for person in seed.get("people", [])
-    }
+    person_id_to_name = {person["id"]: person["name"] for person in seed.get("people", [])}
 
     # Clients
     for client in seed.get("clients", []):
@@ -545,8 +542,8 @@ def _seed_tables(conn: sqlite3.Connection, seed: dict[str, Any]) -> None:
                 client["name"],
                 client["name"].lower(),
                 client.get("tier", "B"),
-                client.get("health_status", "good")
-            )
+                client.get("health_status", "good"),
+            ),
         )
 
     # Brands
@@ -556,7 +553,7 @@ def _seed_tables(conn: sqlite3.Connection, seed: dict[str, Any]) -> None:
             INSERT INTO brands (id, client_id, name)
             VALUES (?, ?, ?)
             """,
-            (brand["id"], brand["client_id"], brand["name"])
+            (brand["id"], brand["client_id"], brand["name"]),
         )
 
     # Projects
@@ -573,8 +570,8 @@ def _seed_tables(conn: sqlite3.Connection, seed: dict[str, Any]) -> None:
                 project["client_id"],
                 project["brand_id"],
                 project.get("status", "active"),
-                project.get("health_status", "on_track")
-            )
+                project.get("health_status", "on_track"),
+            ),
         )
 
     # Invoices
@@ -592,8 +589,8 @@ def _seed_tables(conn: sqlite3.Connection, seed: dict[str, Any]) -> None:
                 invoice["status"],
                 invoice.get("payment_date"),
                 invoice.get("due_date"),
-                invoice.get("issue_date")
-            )
+                invoice.get("issue_date"),
+            ),
         )
 
     # Commitments
@@ -611,8 +608,8 @@ def _seed_tables(conn: sqlite3.Connection, seed: dict[str, Any]) -> None:
                 "system",
                 commitment["description"],
                 commitment["status"],
-                commitment.get("due_date")
-            )
+                commitment.get("due_date"),
+            ),
         )
 
     # People
@@ -627,8 +624,8 @@ def _seed_tables(conn: sqlite3.Connection, seed: dict[str, Any]) -> None:
                 person["name"],
                 person["name"].lower(),
                 person.get("email"),
-                "internal" if person.get("person_type") == "team" else "external"
-            )
+                "internal" if person.get("person_type") == "team" else "external",
+            ),
         )
 
     # Tasks
@@ -650,8 +647,8 @@ def _seed_tables(conn: sqlite3.Connection, seed: dict[str, Any]) -> None:
                 assignee_id,
                 task.get("project_id"),
                 task.get("client_id"),
-                task.get("due_date")
-            )
+                task.get("due_date"),
+            ),
         )
 
     # Communications
@@ -661,11 +658,7 @@ def _seed_tables(conn: sqlite3.Connection, seed: dict[str, Any]) -> None:
             INSERT INTO communications (id, subject, received_at)
             VALUES (?, ?, ?)
             """,
-            (
-                comm["id"],
-                comm.get("subject", ""),
-                comm.get("received_at")
-            )
+            (comm["id"], comm.get("subject", ""), comm.get("received_at")),
         )
 
     # Artifacts (for communication-client links)
@@ -679,8 +672,8 @@ def _seed_tables(conn: sqlite3.Connection, seed: dict[str, Any]) -> None:
                 artifact["artifact_id"],
                 artifact["type"],
                 artifact.get("source"),
-                artifact.get("occurred_at")
-            )
+                artifact.get("occurred_at"),
+            ),
         )
 
     # Entity Links (for cross-entity relationships)
@@ -695,8 +688,8 @@ def _seed_tables(conn: sqlite3.Connection, seed: dict[str, Any]) -> None:
                 link["to_entity_type"],
                 link["to_entity_id"],
                 link.get("confidence", 1.0),
-                link.get("method", "fixture")
-            )
+                link.get("method", "fixture"),
+            ),
         )
 
 

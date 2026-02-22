@@ -120,11 +120,10 @@ ENVIRONMENT_OVERRIDES = {
         "project_client_linkage": 0.50,
     },
     "current_data_model": {
-        # Current schema limitation: commitments/communications lack client_id
-        # This is a known gap - thresholds match current data reality
-        # TODO: Raise when schema supports client linkages
-        "commitment_resolution_rate": 0.0,  # Schema lacks linkage path
-        "thread_client_linkage": 0.0,  # Schema lacks client_id on communications
+        # Current schema state: commitments/communications have partial client_id linkage
+        # Thresholds reflect actual achievable levels given schema constraints
+        "commitment_resolution_rate": 0.10,  # Low linkage via task→project→client path
+        "thread_client_linkage": 0.15,  # Partial — linked where communications.client_id is set
         "invoice_validity_rate": 0.90,  # Invoices have full linkage
         "people_hours_completeness": 0.60,
         "project_client_linkage": 0.99,  # Projects fully linked

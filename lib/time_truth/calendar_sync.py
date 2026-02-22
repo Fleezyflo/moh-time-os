@@ -246,9 +246,9 @@ class CalendarSync:
         if not start_date:
             start_date = date.today().isoformat()
 
-        end_date = (
-            datetime.strptime(start_date, "%Y-%m-%d") + timedelta(days=6)
-        ).strftime("%Y-%m-%d")
+        end_date = (datetime.strptime(start_date, "%Y-%m-%d") + timedelta(days=6)).strftime(
+            "%Y-%m-%d"
+        )
 
         return self.sync_events(start_date, end_date)
 

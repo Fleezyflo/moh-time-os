@@ -13,10 +13,10 @@ Implements status model from MOH_TIME_OS_STATUS.md:
 
 import json
 import logging
-from datetime import UTC, datetime, timedelta
-from enum import StrEnum
+from datetime import datetime, timedelta, timezone
 
 from lib import paths
+from lib.compat import UTC, StrEnum
 
 from .change_bundles import create_status_change_bundle
 from .config_store import get
@@ -453,11 +453,7 @@ def detect_transitions(item: dict, signals: dict) -> list[TransitionProposal]:
         return proposals
 
     # Signal: Task normalized with next action → planned
-    if (
-        current_status == Status.NEW.value
-        and item.get("lane")
-        and item.get("recommended_action")
-    ):
+    if current_status == Status.NEW.value and item.get("lane") and item.get("recommended_action"):
         proposals.append(
             TransitionProposal(
                 item_id=item_id,
@@ -540,9 +536,7 @@ if __name__ == "__main__":
 
     if len(sys.argv) < 2:
         logger.info("Usage: status_engine.py <command> [args]")
-        logger.info(
-            "Commands: check <from> <to>, proposals, approve <index>, reject <index>"
-        )
+        logger.info("Commands: check <from> <to>, proposals, approve <index>, reject <index>")
         sys.exit(1)
 
     cmd = sys.argv[1]

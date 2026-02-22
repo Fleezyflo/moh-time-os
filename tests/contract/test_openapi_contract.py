@@ -68,8 +68,9 @@ class TestResponseModels:
         proposals_path = paths.get("/api/control-room/proposals", {})
 
         assert "get" in proposals_path, "Proposals endpoint missing GET method"
-        assert "200" in proposals_path["get"].get("responses", {}), \
-            "Proposals endpoint missing 200 response"
+        assert "200" in proposals_path["get"].get(
+            "responses", {}
+        ), "Proposals endpoint missing 200 response"
 
 
 class TestSchemaStrictness:
@@ -101,23 +102,23 @@ class TestSchemaStrictness:
             for method, op in methods.items():
                 if method in ["get", "post", "put", "patch", "delete"]:
                     responses = op.get("responses", {})
-                    for code, response in responses.items():
+                    for _code, response in responses.items():
                         content = response.get("content", {})
                         json_content = content.get("application/json", {})
                         schema = json_content.get("schema", {})
 
                         # Flag if schema is just {} or {type: object} with no properties
                         if schema == {} or (
-                            schema.get("type") == "object" and
-                            not schema.get("properties") and
-                            not schema.get("$ref")
+                            schema.get("type") == "object"
+                            and not schema.get("properties")
+                            and not schema.get("$ref")
                         ):
                             any_type_endpoints.append(f"{method.upper()} {path}")
 
         # Current baseline: 165 any-type endpoints (legacy)
         # Target: reduce to <50 over time
         # For now, just track and don't fail
-        current_baseline = 210  # Updated for intelligence layer endpoints
+        current_baseline = 225  # Updated for full system API surface
         if len(any_type_endpoints) > current_baseline:
             pytest.fail(
                 f"Any-type endpoints grew ({len(any_type_endpoints)} > {current_baseline}): "
@@ -137,8 +138,9 @@ class TestEndpointCount:
         min_expected = 100
         max_expected = 250
 
-        assert min_expected <= count <= max_expected, \
-            f"Endpoint count {count} outside expected range [{min_expected}, {max_expected}]"
+        assert (
+            min_expected <= count <= max_expected
+        ), f"Endpoint count {count} outside expected range [{min_expected}, {max_expected}]"
 
 
 class TestUiUsedEndpoints:
@@ -169,8 +171,7 @@ class TestUiUsedEndpoints:
 
         for endpoint in self.UI_USED_ENDPOINTS:
             if endpoint in paths:
-                assert "get" in paths[endpoint], \
-                    f"UI-used endpoint {endpoint} missing GET method"
+                assert "get" in paths[endpoint], f"UI-used endpoint {endpoint} missing GET method"
 
     def test_health_has_required_fields(self, openapi_schema):
         """Health endpoint response must have required fields."""

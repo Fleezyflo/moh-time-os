@@ -69,21 +69,26 @@ def generate_evidence() -> dict:
     print("📋 Checking OpenAPI diff...")
     evidence["sections"]["openapi"] = {
         "diff": get_git_diff("docs/openapi.json"),
-        "check_passed": run_cmd(["uv", "run", "python", "scripts/export_openapi.py", "--check"])[0] == 0,
+        "check_passed": run_cmd(["uv", "run", "python", "scripts/export_openapi.py", "--check"])[0]
+        == 0,
     }
 
     # Schema diff
     print("📊 Checking schema diff...")
     evidence["sections"]["schema"] = {
         "diff": get_git_diff("docs/schema.sql"),
-        "check_passed": run_cmd(["uv", "run", "python", "scripts/export_schema.py", "--check"])[0] == 0,
+        "check_passed": run_cmd(["uv", "run", "python", "scripts/export_schema.py", "--check"])[0]
+        == 0,
     }
 
     # System map diff
     print("🗺️  Checking system-map diff...")
     evidence["sections"]["system_map"] = {
         "diff": get_git_diff("docs/system-map.json"),
-        "check_passed": run_cmd(["uv", "run", "python", "scripts/generate_system_map.py", "--check"])[0] == 0,
+        "check_passed": run_cmd(
+            ["uv", "run", "python", "scripts/generate_system_map.py", "--check"]
+        )[0]
+        == 0,
     }
 
     # UI bundle report
