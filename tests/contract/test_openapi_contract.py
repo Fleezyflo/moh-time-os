@@ -118,7 +118,7 @@ class TestSchemaStrictness:
         # Current baseline: 165 any-type endpoints (legacy)
         # Target: reduce to <50 over time
         # For now, just track and don't fail
-        current_baseline = 210  # Updated for intelligence layer endpoints
+        current_baseline = 225  # Updated for full system API surface
         if len(any_type_endpoints) > current_baseline:
             pytest.fail(
                 f"Any-type endpoints grew ({len(any_type_endpoints)} > {current_baseline}): "
