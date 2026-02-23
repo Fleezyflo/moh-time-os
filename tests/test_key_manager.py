@@ -13,17 +13,18 @@ Tests cover:
 - Legacy INTEL_API_TOKEN compatibility
 """
 
-import os
+import asyncio
+import contextlib
 import sqlite3
 import tempfile
-from datetime import datetime, timedelta
+import time
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from lib import store
-from lib.security import KeyInfo, KeyManager, KeyRole
+from lib.security import KeyManager, KeyRole
 
 
 @pytest.fixture
@@ -56,10 +57,8 @@ def temp_db():
     yield db_path
 
     # Cleanup
-    try:
+    with contextlib.suppress(OSError):
         db_path.unlink()
-    except OSError:
-        pass  # Cleanup is best-effort
 
 
 @pytest.fixture
@@ -76,7 +75,7 @@ class TestKeyGeneration:
 
     def test_key_format(self, key_manager):
         """Keys have correct format: mtos_ prefix + 32 hex chars."""
-        key, _ = key_manager.create_key("test", KeyRole.VIEWER)
+        key, _info = key_manager.create_key("test", KeyRole.VIEWER)
 
         assert key.startswith("mtos_")
         assert len(key) == len("mtos_") + 32
@@ -86,9 +85,9 @@ class TestKeyGeneration:
 
     def test_key_uniqueness(self, key_manager):
         """Each generated key is unique."""
-        key1, _ = key_manager.create_key("key1", KeyRole.VIEWER)
-        key2, _ = key_manager.create_key("key2", KeyRole.OPERATOR)
-        key3, _ = key_manager.create_key("key3", KeyRole.ADMIN)
+        key1, _info1 = key_manager.create_key("key1", KeyRole.VIEWER)
+        key2, _info2 = key_manager.create_key("key2", KeyRole.OPERATOR)
+        key3, _info3 = key_manager.create_key("key3", KeyRole.ADMIN)
 
         assert key1 != key2 != key3
 
@@ -118,14 +117,14 @@ class TestKeyHashing:
 
     def test_hash_is_sha256(self, key_manager):
         """Key hash is SHA-256 (64 hex chars)."""
-        key, _ = key_manager.create_key("test", KeyRole.VIEWER)
+        key, _info = key_manager.create_key("test", KeyRole.VIEWER)
         key_hash = KeyManager._hash_key(key)
 
         # SHA-256 produces 64 hex characters
         assert len(key_hash) == 64
         assert all(c in "0123456789abcdef" for c in key_hash)
 
-    def test_same_key_same_hash(self, key_manager):
+    def test_same_key_same_hash(self):
         """Same key always produces same hash."""
         key = "mtos_abc123def456"
         hash1 = KeyManager._hash_key(key)
@@ -133,7 +132,7 @@ class TestKeyHashing:
 
         assert hash1 == hash2
 
-    def test_different_keys_different_hashes(self, key_manager):
+    def test_different_keys_different_hashes(self):
         """Different keys produce different hashes."""
         key1 = "mtos_abc123def456"
         key2 = "mtos_xyz789uvw012"
@@ -160,7 +159,7 @@ class TestKeyLifecycle:
 
     def test_validate_valid_key(self, key_manager):
         """Valid key validates successfully."""
-        key, _ = key_manager.create_key("test", KeyRole.VIEWER)
+        key, _info = key_manager.create_key("test", KeyRole.VIEWER)
 
         info = key_manager.validate_key(key)
 
@@ -208,7 +207,7 @@ class TestKeyLifecycle:
 
     def test_create_with_custom_created_by(self, key_manager):
         """Create key with custom created_by field."""
-        key, info = key_manager.create_key("test", KeyRole.VIEWER, created_by="user_123")
+        _key, info = key_manager.create_key("test", KeyRole.VIEWER, created_by="user_123")
 
         assert info.created_by == "user_123"
 
@@ -226,11 +225,12 @@ class TestKeyExpiration:
 
     def test_create_with_expiration(self, key_manager):
         """Create key with expiration."""
-        key, info = key_manager.create_key("test", KeyRole.VIEWER, expires_in_days=90)
+        _key, info = key_manager.create_key("test", KeyRole.VIEWER, expires_in_days=90)
 
         assert info.expires_at is not None
-        expires = datetime.fromisoformat(info.expires_at.replace("Z", "+00:00"))
-        now = datetime.utcnow().replace(tzinfo=expires.tzinfo)
+        raw = info.expires_at.replace("Z", "+00:00")
+        expires = datetime.fromisoformat(raw)
+        now = datetime.now(tz=timezone.utc)
         delta = (expires - now).days
 
         # Should be approximately 90 days
@@ -241,7 +241,7 @@ class TestKeyExpiration:
         key, info = key_manager.create_key("test", KeyRole.VIEWER, expires_in_days=1)
 
         # Manually set expiration to past
-        past_time = (datetime.utcnow() - timedelta(hours=1)).isoformat() + "Z"
+        past_time = (datetime.now(tz=timezone.utc) - timedelta(hours=1)).isoformat()
         conn = sqlite3.connect(str(temp_db))
         conn.execute("UPDATE api_keys SET expires_at = ? WHERE id = ?", (past_time, info.id))
         conn.commit()
@@ -251,7 +251,7 @@ class TestKeyExpiration:
 
     def test_non_expiring_key(self, key_manager):
         """Key without expiration never expires."""
-        key, info = key_manager.create_key("test", KeyRole.VIEWER, expires_in_days=None)
+        _key, info = key_manager.create_key("test", KeyRole.VIEWER, expires_in_days=None)
 
         assert info.expires_at is None
         assert not info.is_expired()
@@ -307,7 +307,7 @@ class TestKeyRotation:
         result = key_manager.rotate_key(info1.id)
 
         assert result is not None
-        key2, info2 = result
+        key2, _info2 = result
 
         # Old key should not validate
         assert key_manager.validate_key(key1) is None
@@ -321,24 +321,25 @@ class TestKeyRotation:
 
     def test_rotate_key_new_name(self, key_manager):
         """Rotating key can update name."""
-        key1, info1 = key_manager.create_key("old_name", KeyRole.VIEWER)
+        _key1, info1 = key_manager.create_key("old_name", KeyRole.VIEWER)
 
         result = key_manager.rotate_key(info1.id, new_name="new_name")
 
-        key2, info2 = result
+        _key2, info2 = result
         assert info2.name == "new_name"
 
     def test_rotate_key_new_expiration(self, key_manager):
         """Rotating key can update expiration."""
-        key1, info1 = key_manager.create_key("test", KeyRole.VIEWER, expires_in_days=30)
+        _key1, info1 = key_manager.create_key("test", KeyRole.VIEWER, expires_in_days=30)
 
         result = key_manager.rotate_key(info1.id, expires_in_days=90)
 
-        key2, info2 = result
+        _key2, info2 = result
         assert info2.expires_at is not None
 
-        expires = datetime.fromisoformat(info2.expires_at.replace("Z", "+00:00"))
-        now = datetime.utcnow().replace(tzinfo=expires.tzinfo)
+        raw = info2.expires_at.replace("Z", "+00:00")
+        expires = datetime.fromisoformat(raw)
+        now = datetime.now(tz=timezone.utc)
         delta = (expires - now).days
 
         # Should be approximately 90 days
@@ -346,7 +347,7 @@ class TestKeyRotation:
 
     def test_rotate_inactive_key_fails(self, key_manager):
         """Cannot rotate an inactive key."""
-        key, info = key_manager.create_key("test", KeyRole.VIEWER)
+        _key, info = key_manager.create_key("test", KeyRole.VIEWER)
         key_manager.revoke_key(info.id)
 
         result = key_manager.rotate_key(info.id)
@@ -368,9 +369,9 @@ class TestListKeys:
 
     def test_list_keys(self, key_manager):
         """List returns all active keys."""
-        key1, _ = key_manager.create_key("key1", KeyRole.VIEWER)
-        key2, _ = key_manager.create_key("key2", KeyRole.OPERATOR)
-        key3, _ = key_manager.create_key("key3", KeyRole.ADMIN)
+        _key1, _ = key_manager.create_key("key1", KeyRole.VIEWER)
+        _key2, _ = key_manager.create_key("key2", KeyRole.OPERATOR)
+        _key3, _ = key_manager.create_key("key3", KeyRole.ADMIN)
 
         keys = key_manager.list_keys()
 
@@ -392,8 +393,8 @@ class TestListKeys:
 
     def test_list_excludes_revoked(self, key_manager):
         """List excludes revoked keys by default."""
-        key1, info1 = key_manager.create_key("active", KeyRole.VIEWER)
-        key2, info2 = key_manager.create_key("revoked", KeyRole.VIEWER)
+        _key1, _info1 = key_manager.create_key("active", KeyRole.VIEWER)
+        _key2, info2 = key_manager.create_key("revoked", KeyRole.VIEWER)
 
         key_manager.revoke_key(info2.id)
 
@@ -404,8 +405,8 @@ class TestListKeys:
 
     def test_list_includes_revoked(self, key_manager):
         """List can include revoked keys with active_only=False."""
-        key1, info1 = key_manager.create_key("active", KeyRole.VIEWER)
-        key2, info2 = key_manager.create_key("revoked", KeyRole.VIEWER)
+        _key1, _info1 = key_manager.create_key("active", KeyRole.VIEWER)
+        _key2, info2 = key_manager.create_key("revoked", KeyRole.VIEWER)
 
         key_manager.revoke_key(info2.id)
 
@@ -417,9 +418,9 @@ class TestListKeys:
 
     def test_list_sorted_by_creation(self, key_manager):
         """List is sorted by creation time (newest first)."""
-        key1, _ = key_manager.create_key("key1", KeyRole.VIEWER)
-        key2, _ = key_manager.create_key("key2", KeyRole.VIEWER)
-        key3, _ = key_manager.create_key("key3", KeyRole.VIEWER)
+        _key1, _ = key_manager.create_key("key1", KeyRole.VIEWER)
+        _key2, _ = key_manager.create_key("key2", KeyRole.VIEWER)
+        _key3, _ = key_manager.create_key("key3", KeyRole.VIEWER)
 
         keys = key_manager.list_keys()
 
@@ -449,7 +450,7 @@ class TestGetKeyInfo:
 class TestLastUsedTracking:
     """Test last_used_at tracking."""
 
-    def test_last_used_updated_on_validation(self, key_manager, temp_db):
+    def test_last_used_updated_on_validation(self, key_manager):
         """last_used_at is updated when key is validated."""
         key, info = key_manager.create_key("test", KeyRole.VIEWER)
 
@@ -460,17 +461,15 @@ class TestLastUsedTracking:
         validated_info = key_manager.validate_key(key)
         assert validated_info.last_used_at is not None
 
-    def test_multiple_validations_update_last_used(self, key_manager, temp_db):
+    def test_multiple_validations_update_last_used(self, key_manager):
         """Multiple validations update last_used_at each time."""
-        key, info = key_manager.create_key("test", KeyRole.VIEWER)
+        key, _info = key_manager.create_key("test", KeyRole.VIEWER)
 
         # First validation
         info1 = key_manager.validate_key(key)
         first_used = info1.last_used_at
 
         # Validate again after a brief delay
-        import time
-
         time.sleep(0.01)  # Small delay to ensure timestamp differs
 
         info2 = key_manager.validate_key(key)
@@ -508,9 +507,6 @@ class TestAuthIntegration:
 
     def test_require_auth_always_passes(self):
         """require_auth is a passthrough — always returns a token."""
-        import asyncio
-        from unittest.mock import MagicMock
-
         from api.auth import require_auth
 
         request = MagicMock()
@@ -582,7 +578,7 @@ class TestMetadataExposure:
 
     def test_key_info_no_hash_attribute(self, key_manager):
         """KeyInfo never includes key_hash."""
-        key, info = key_manager.create_key("test", KeyRole.VIEWER)
+        _key, info = key_manager.create_key("test", KeyRole.VIEWER)
 
         assert not hasattr(info, "key_hash")
         assert "key_hash" not in info.__dict__
