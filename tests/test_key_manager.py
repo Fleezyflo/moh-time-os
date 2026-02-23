@@ -514,7 +514,11 @@ class TestAuthIntegration:
         from api.auth import require_auth
 
         request = MagicMock()
-        result = asyncio.get_event_loop().run_until_complete(require_auth(request, None))
+        loop = asyncio.new_event_loop()
+        try:
+            result = loop.run_until_complete(require_auth(request, None))
+        finally:
+            loop.close()
         assert result == "local"
         assert request.state.role == "owner"
 

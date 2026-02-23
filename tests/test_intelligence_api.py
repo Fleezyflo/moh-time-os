@@ -66,10 +66,10 @@ class TestSignalCatalog:
     """Signal catalog doesn't need DB."""
 
     def test_signal_catalog_has_all_signals(self):
-        """signal_catalog should have all 21 signals."""
+        """signal_catalog should have all 22 signals."""
         from lib.intelligence.signals import SIGNAL_CATALOG
 
-        assert len(SIGNAL_CATALOG) == 21
+        assert len(SIGNAL_CATALOG) == 22
 
     def test_signal_catalog_structure(self):
         """Each signal should have required fields."""
