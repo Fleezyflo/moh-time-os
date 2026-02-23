@@ -111,7 +111,7 @@ class TestCreateBackup:
                     mock_datetime.now.return_value.strftime.return_value = "20240115_120000"
                     try:
                         create_backup(label="test-label")
-                    except Exception:
+                    except:
                         pass  # Error is ok for this mock test
 
     @patch("lib.backup.DB_PATH")
@@ -161,7 +161,7 @@ class TestCreateBackup:
                 # Should log warning but continue
                 try:
                     create_backup()
-                except Exception:
+                except:
                     pass  # Non-critical error
 
 
@@ -280,12 +280,12 @@ class TestGetLatestBackup:
     @patch("lib.backup.list_backups")
     def test_get_latest_backup_returns_most_recent(self, mock_list):
         """get_latest_backup should return the first (most recent) backup."""
-        path = Path("/tmp/backup_newest.db")  # nosec B108  # noqa: S108
+        path = Path("/tmp/backup_newest.db")
         mtime = datetime.now()
 
         mock_list.return_value = [
             (path, mtime, 1024),
-            (Path("/tmp/backup_old.db"), mtime - timedelta(days=1), 1024),  # nosec B108  # noqa: S108
+            (Path("/tmp/backup_old.db"), mtime - timedelta(days=1), 1024),
         ]
 
         result = get_latest_backup()
@@ -320,7 +320,7 @@ class TestRestoreBackup:
         backup_file = tmp_path / "backup.db"
         backup_file.write_text("backup content")
 
-        mock_db_path.value = Path("/tmp/live.db")  # nosec B108  # noqa: S108
+        mock_db_path.value = Path("/tmp/live.db")
         mock_db_exists.return_value = False
         mock_checkpoint.return_value = None
 
@@ -340,9 +340,9 @@ class TestRestoreBackup:
         backup_file = tmp_path / "backup.db"
         backup_file.write_text("backup content")
 
-        mock_db_path.value = Path("/tmp/live.db")  # nosec B108  # noqa: S108
+        mock_db_path.value = Path("/tmp/live.db")
         mock_db_exists.return_value = True
-        mock_create_backup.return_value = Path("/tmp/safety.db")  # nosec B108  # noqa: S108
+        mock_create_backup.return_value = Path("/tmp/safety.db")
 
         restore_backup(backup_file, create_safety_backup=True)
 
@@ -359,7 +359,7 @@ class TestRestoreBackup:
         backup_file = tmp_path / "backup.db"
         backup_file.write_text("backup content")
 
-        mock_db_path.value = Path("/tmp/live.db")  # nosec B108  # noqa: S108
+        mock_db_path.value = Path("/tmp/live.db")
         mock_db_exists.return_value = False
 
         result = restore_backup(backup_file)
@@ -408,7 +408,7 @@ class TestRestoreLatest:
     @patch("lib.backup.restore_backup")
     def test_restore_latest_uses_most_recent(self, mock_restore, mock_get_latest):
         """restore_latest should restore most recent backup."""
-        latest_path = Path("/tmp/latest_backup.db")  # nosec B108  # noqa: S108
+        latest_path = Path("/tmp/latest_backup.db")
         mock_get_latest.return_value = latest_path
         mock_restore.return_value = True
 
@@ -429,7 +429,7 @@ class TestPruneBackups:
     @patch("lib.backup.list_backups")
     def test_prune_backups_keeps_recent(self, mock_list):
         """prune_backups should keep the N most recent backups."""
-        paths = [Path(f"/tmp/backup_{i}.db") for i in range(10)]  # nosec B108  # noqa: S108
+        paths = [Path(f"/tmp/backup_{i}.db") for i in range(10)]
         times = [datetime.now() - timedelta(days=i) for i in range(10)]
         sizes = [1024] * 10
 
@@ -444,7 +444,7 @@ class TestPruneBackups:
     @patch("lib.backup.list_backups")
     def test_prune_backups_default_keep_seven(self, mock_list):
         """prune_backups should default to keeping 7 backups."""
-        paths = [Path(f"/tmp/backup_{i}.db") for i in range(10)]  # nosec B108  # noqa: S108
+        paths = [Path(f"/tmp/backup_{i}.db") for i in range(10)]
         times = [datetime.now() - timedelta(days=i) for i in range(10)]
         sizes = [1024] * 10
 
@@ -459,10 +459,10 @@ class TestPruneBackups:
     @patch("lib.backup.list_backups")
     def test_prune_backups_handles_permission_error(self, mock_list):
         """prune_backups should handle deletion errors gracefully."""
-        path = Path("/tmp/backup_old.db")  # nosec B108  # noqa: S108
+        path = Path("/tmp/backup_old.db")
         mock_list.return_value = [
             (path, datetime.now() - timedelta(days=10), 1024),
-            (Path("/tmp/backup_new.db"), datetime.now(), 1024),  # nosec B108  # noqa: S108
+            (Path("/tmp/backup_new.db"), datetime.now(), 1024),
         ]
 
         with patch.object(Path, "unlink", side_effect=PermissionError("Access denied")):
@@ -491,7 +491,7 @@ class TestBackupStatus:
     @patch("lib.backup.list_backups")
     def test_backup_status_formats_backup_list(self, mock_list):
         """backup_status should format backup information."""
-        paths = [Path(f"/tmp/backup_{i}.db") for i in range(3)]  # nosec B108  # noqa: S108
+        paths = [Path(f"/tmp/backup_{i}.db") for i in range(3)]
         times = [datetime.now() - timedelta(hours=i) for i in range(3)]
         sizes = [1024 * (i + 1) for i in range(3)]
 

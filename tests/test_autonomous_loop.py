@@ -33,7 +33,7 @@ def loop():
         patch("lib.autonomous_loop.NotificationEngine"),
         patch.object(AutonomousLoop, "_load_notification_config", return_value={}),
     ):
-        loop = AutonomousLoop(config_path="/tmp/test_config")  # nosec B108  # noqa: S108
+        loop = AutonomousLoop(config_path="/tmp/test_config")
 
         # Set up basic mocks
         loop.store = Mock()
@@ -321,7 +321,7 @@ class TestErrorHandling:
         with patch.object(loop.collectors, "sync_all", side_effect=Exception("Network error")):
             try:
                 loop.run_cycle()
-            except Exception:
+            except:
                 pass
 
             # Cycle count should have incremented

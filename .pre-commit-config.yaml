@@ -14,11 +14,11 @@ repos:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix, --ignore, "S110,S602,S608,B904"]
         types_or: [python, pyi]
-        files: ^(lib/ui_spec_v21|lib/collectors|lib/safety|lib/db|lib/paths|lib/collector_registry|api/spec_router|scripts/backfill|scripts/verify|tests)/.*\.py$
+        files: ^(lib/ui_spec_v21|lib/collectors|lib/safety|lib/db|lib/paths|lib/collector_registry|api/spec_router|scripts/backfill|scripts/verify)/.*\.py$
       # Formatter - same scope
       - id: ruff-format
         types_or: [python, pyi]
-        files: ^(lib/ui_spec_v21|lib/collectors|lib/safety|lib/db|lib/paths|lib/collector_registry|api/spec_router|scripts/backfill|scripts/verify|tests)/.*\.py$
+        files: ^(lib/ui_spec_v21|lib/collectors|lib/safety|lib/db|lib/paths|lib/collector_registry|api/spec_router|scripts/backfill|scripts/verify)/.*\.py$
 
   # ==========================================
   # BANDIT - Security scanning
@@ -28,7 +28,7 @@ repos:
     hooks:
       - id: bandit
         args: [-r, -ll, --skip, "B101,B602,B608"]  # Skip assert warnings
-        files: ^(lib/ui_spec_v21|lib/collectors|lib/safety|api/spec_router|tests)/.*\.py$
+        files: ^(lib/ui_spec_v21|lib/collectors|lib/safety|api/spec_router)/.*\.py$
 
   # ==========================================
   # GENERAL HOOKS

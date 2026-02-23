@@ -61,7 +61,7 @@ class TestCostToServeEngineInit:
 
     def test_init_with_explicit_db_path(self, mock_query_engine):
         """Engine accepts optional db_path parameter."""
-        db_path = Path("/tmp/test.db")  # nosec B108  # noqa: S108
+        db_path = Path("/tmp/test.db")
         with patch(
             "lib.intelligence.cost_to_serve.get_engine", return_value=mock_query_engine
         ) as mock_get:
