@@ -1113,6 +1113,7 @@ name = "moh-time-os"
 version = "1.0.0"
 source = { editable = "." }
 dependencies = [
+    { name = "bandit" },
     { name = "click" },
     { name = "cryptography" },
     { name = "fastapi" },
@@ -1121,36 +1122,25 @@ dependencies = [
     { name = "google-auth" },
     { name = "google-auth-httplib2" },
     { name = "httpx" },
-    { name = "pydantic" },
-    { name = "pyyaml" },
-    { name = "rich" },
-    { name = "uvicorn" },
-]
-
-[package.optional-dependencies]
-dev = [
-    { name = "bandit" },
-    { name = "httpx" },
     { name = "hypothesis" },
     { name = "mutmut" },
     { name = "mypy" },
     { name = "pip-audit" },
     { name = "pre-commit" },
+    { name = "pydantic" },
     { name = "pytest" },
     { name = "pytest-cov" },
+    { name = "pyyaml" },
+    { name = "rich" },
     { name = "ruff" },
     { name = "semgrep" },
+    { name = "uvicorn" },
     { name = "vulture" },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "semgrep" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "bandit", marker = "extra == 'dev'", specifier = ">=1.7.0" },
+    { name = "bandit", specifier = ">=1.7.0" },
     { name = "click", specifier = ">=8.0.0" },
     { name = "cryptography", specifier = ">=42.0.0" },
     { name = "fastapi", specifier = ">=0.100.0" },
@@ -1159,26 +1149,21 @@ requires-dist = [
     { name = "google-auth", specifier = ">=2.20.0" },
     { name = "google-auth-httplib2", specifier = ">=0.1.0" },
     { name = "httpx", specifier = ">=0.27.0" },
-    { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27.0" },
-    { name = "hypothesis", marker = "extra == 'dev'", specifier = ">=6.0.0" },
-    { name = "mutmut", marker = "extra == 'dev'", specifier = ">=2.4.0" },
-    { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.8.0" },
-    { name = "pip-audit", marker = "extra == 'dev'", specifier = ">=2.0.0" },
-    { name = "pre-commit", marker = "extra == 'dev'", specifier = ">=3.0.0" },
+    { name = "hypothesis", specifier = ">=6.0.0" },
+    { name = "mutmut", specifier = ">=2.4.0" },
+    { name = "mypy", specifier = ">=1.8.0" },
+    { name = "pip-audit", specifier = ">=2.0.0" },
+    { name = "pre-commit", specifier = ">=3.0.0" },
     { name = "pydantic", specifier = ">=2.0.0" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0.0" },
-    { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=4.0.0" },
+    { name = "pytest", specifier = ">=8.0.0" },
+    { name = "pytest-cov", specifier = ">=4.0.0" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "rich", specifier = ">=13.0.0" },
-    { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.4.0" },
-    { name = "semgrep", marker = "extra == 'dev'", specifier = "==1.151.0" },
+    { name = "ruff", specifier = ">=0.4.0" },
+    { name = "semgrep", specifier = "==1.151.0" },
     { name = "uvicorn", specifier = ">=0.22.0" },
-    { name = "vulture", marker = "extra == 'dev'", specifier = ">=2.0.0" },
+    { name = "vulture", specifier = ">=2.0.0" },
 ]
-provides-extras = ["dev"]
-
-[package.metadata.requires-dev]
-dev = [{ name = "semgrep", specifier = "==1.151.0" }]
 
 [[package]]
 name = "msgpack"
