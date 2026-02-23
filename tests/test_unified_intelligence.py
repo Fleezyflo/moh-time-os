@@ -181,7 +181,7 @@ def test_intelligence_layer_instantiation():
 
 def test_intelligence_layer_with_db_path():
     """Test IntelligenceLayer instantiation with custom db_path."""
-    db_path = Path("/tmp/test.db")
+    db_path = Path("/tmp/test.db")  # nosec B108  # noqa: S108
     layer = IntelligenceLayer(db_path=db_path)
     assert layer.db_path == db_path
 

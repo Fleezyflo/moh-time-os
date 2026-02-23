@@ -2,7 +2,7 @@
 
 import sqlite3
 import tempfile
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 
 import pytest
 import yaml
@@ -109,7 +109,7 @@ class TestCheckCollectorHealth:
 
     def test_healthy_collector(self, schedule_file, health_db):
         # Insert a recent run for asana (within 2x30 = 60 minutes)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         recent = (now - timedelta(minutes=20)).isoformat()
 
         conn = sqlite3.connect(health_db)
@@ -125,7 +125,7 @@ class TestCheckCollectorHealth:
 
     def test_stale_collector(self, schedule_file, health_db):
         # Insert an old run for gmail (> 2x15 = 30 minutes ago)
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         old = (now - timedelta(minutes=120)).isoformat()
 
         conn = sqlite3.connect(health_db)
@@ -141,19 +141,19 @@ class TestCheckCollectorHealth:
         assert "gmail" in stale_names
 
     def test_never_run_collector(self, schedule_file, health_db):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         report = check_collector_health(health_db, schedule_file, now=now)
         # All enabled collectors should be in never_run since DB is empty
         assert set(report["never_run"]) == {"asana", "gmail", "calendar", "chat", "xero"}
 
     def test_disabled_collector(self, schedule_file, health_db):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         report = check_collector_health(health_db, schedule_file, now=now)
         assert "drive" in report["disabled"]
 
     def test_failed_runs_ignored(self, schedule_file, health_db):
         # Only failed runs — collector should be in never_run
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         recent = (now - timedelta(minutes=5)).isoformat()
 
         conn = sqlite3.connect(health_db)
@@ -168,7 +168,7 @@ class TestCheckCollectorHealth:
         assert "asana" in report["never_run"]
 
     def test_stale_includes_timing_details(self, schedule_file, health_db):
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         # Xero: interval=360, multiplier=2, threshold=720m. Use 800m to be clearly stale.
         old = (now - timedelta(minutes=800)).isoformat()
 
@@ -201,7 +201,12 @@ class TestFormatHealthReport:
         report = {
             "healthy": ["asana"],
             "stale": [
-                {"name": "gmail", "last_run": "2026-01-01T00:00:00", "expected_interval_minutes": 15, "stale_minutes": 120}
+                {
+                    "name": "gmail",
+                    "last_run": "2026-01-01T00:00:00",
+                    "expected_interval_minutes": 15,
+                    "stale_minutes": 120,
+                }
             ],
             "never_run": ["chat"],
             "disabled": ["drive"],
@@ -220,15 +225,16 @@ class TestLaunchdPlist:
 
     def test_plist_exists(self):
         from pathlib import Path
+
         plist = Path(__file__).parent.parent / "com.mohtimeos.api.plist"
         assert plist.exists(), "LaunchAgent plist missing"
 
     def test_plist_has_required_keys(self):
-        from pathlib import Path
         import xml.etree.ElementTree as ET
+        from pathlib import Path
 
         plist = Path(__file__).parent.parent / "com.mohtimeos.api.plist"
-        tree = ET.parse(plist)
+        tree = ET.parse(plist)  # nosec B314  # noqa: S314
         root = tree.getroot()
         # Find dict element
         dict_elem = root.find("dict")
@@ -239,11 +245,11 @@ class TestLaunchdPlist:
         assert "KeepAlive" in keys
 
     def test_plist_label_correct(self):
-        from pathlib import Path
         import xml.etree.ElementTree as ET
+        from pathlib import Path
 
         plist = Path(__file__).parent.parent / "com.mohtimeos.api.plist"
-        tree = ET.parse(plist)
+        tree = ET.parse(plist)  # nosec B314  # noqa: S314
         root = tree.getroot()
         dict_elem = root.find("dict")
         children = list(dict_elem)

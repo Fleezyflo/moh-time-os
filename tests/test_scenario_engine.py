@@ -79,7 +79,7 @@ class TestScenarioEngineInit:
 
     def test_init_with_explicit_db_path(self, mock_query_engine, mock_cost_engine):
         """Engine accepts optional db_path parameter."""
-        db_path = Path("/tmp/test.db")
+        db_path = Path("/tmp/test.db")  # nosec B108  # noqa: S108
         with patch(
             "lib.intelligence.scenario_engine.get_engine", return_value=mock_query_engine
         ) as mock_get:

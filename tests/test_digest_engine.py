@@ -31,7 +31,7 @@ def setup_notifications():
         conn.execute("DELETE FROM digest_history")
         try:
             conn.execute("DELETE FROM notifications")
-        except:
+        except Exception:
             pass
 
         conn.execute("""
