@@ -12,9 +12,8 @@ Usage:
 import logging
 import sqlite3
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime, timezone
 from pathlib import Path
-from typing import Optional
 
 from lib.paths import db_path as canonical_db_path
 
@@ -73,14 +72,14 @@ DEFAULT_LANE = {
 }
 
 
-def _get_db_path(db_path: Optional[str] = None) -> str:
+def _get_db_path(db_path: str | None = None) -> str:
     if db_path:
         return str(db_path)
     return str(canonical_db_path())
 
 
 def bootstrap_lanes(
-    db_path: Optional[str] = None,
+    db_path: str | None = None,
     dry_run: bool = False,
 ) -> dict:
     """
@@ -97,7 +96,7 @@ def bootstrap_lanes(
     conn = sqlite3.connect(db)
     conn.row_factory = sqlite3.Row
 
-    now = datetime.now(timezone.utc).isoformat()
+    now = datetime.now(UTC).isoformat()
 
     # Get unique lanes from team_members
     rows = conn.execute(
@@ -159,7 +158,7 @@ def bootstrap_lanes(
 
 
 def assign_tasks_to_lanes(
-    db_path: Optional[str] = None,
+    db_path: str | None = None,
     dry_run: bool = False,
 ) -> dict:
     """
@@ -175,9 +174,7 @@ def assign_tasks_to_lanes(
     conn.row_factory = sqlite3.Row
 
     # Ensure lane_id column exists
-    columns = [
-        r[1] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()
-    ]
+    columns = [r[1] for r in conn.execute("PRAGMA table_info(tasks)").fetchall()]
     if "lane_id" not in columns:
         if not dry_run:
             conn.execute("ALTER TABLE tasks ADD COLUMN lane_id TEXT")
@@ -197,8 +194,7 @@ def assign_tasks_to_lanes(
 
     # Get tasks with assignees
     tasks = conn.execute(
-        "SELECT rowid, assignee FROM tasks "
-        "WHERE assignee IS NOT NULL AND assignee != ''"
+        "SELECT rowid, assignee FROM tasks WHERE assignee IS NOT NULL AND assignee != ''"
     ).fetchall()
 
     assigned = 0
@@ -232,7 +228,7 @@ def assign_tasks_to_lanes(
     }
 
 
-def lane_load_report(db_path: Optional[str] = None) -> dict:
+def lane_load_report(db_path: str | None = None) -> dict:
     """
     Generate per-lane workload report.
 
@@ -293,11 +289,13 @@ def lane_load_report(db_path: Optional[str] = None) -> dict:
                 (member_name,),
             ).fetchone()[0]
 
-            member_details.append({
-                "name": member_name,
-                "task_count": task_count,
-                "overdue_count": overdue_count,
-            })
+            member_details.append(
+                {
+                    "name": member_name,
+                    "task_count": task_count,
+                    "overdue_count": overdue_count,
+                }
+            )
 
             lane_total += task_count
             lane_overdue += overdue_count
@@ -311,18 +309,20 @@ def lane_load_report(db_path: Optional[str] = None) -> dict:
         else:
             lane_active = lane_total  # Approximate if no lane_id column
 
-        result_lanes.append({
-            "lane_id": lane_id,
-            "name": lane_name,
-            "display_name": lane["display_name"],
-            "weekly_hours": lane["weekly_hours"],
-            "buffer_pct": lane["buffer_pct"],
-            "team_count": len(member_names),
-            "total_tasks": lane_total,
-            "active_tasks": lane_active,
-            "overdue_tasks": lane_overdue,
-            "members": member_details,
-        })
+        result_lanes.append(
+            {
+                "lane_id": lane_id,
+                "name": lane_name,
+                "display_name": lane["display_name"],
+                "weekly_hours": lane["weekly_hours"],
+                "buffer_pct": lane["buffer_pct"],
+                "team_count": len(member_names),
+                "total_tasks": lane_total,
+                "active_tasks": lane_active,
+                "overdue_tasks": lane_overdue,
+                "members": member_details,
+            }
+        )
 
         total_people += len(member_names)
         total_tasks_in_lanes += lane_total
@@ -340,7 +340,7 @@ def lane_load_report(db_path: Optional[str] = None) -> dict:
 
 
 def full_bootstrap(
-    db_path: Optional[str] = None,
+    db_path: str | None = None,
     dry_run: bool = False,
 ) -> dict:
     """Run full bootstrap: create lanes + assign tasks."""
@@ -370,7 +370,9 @@ if __name__ == "__main__":
     print(f"\nLanes created: {result['lanes']['created']}")
     print(f"Lanes skipped: {result['lanes']['skipped']}")
     for lane in result["lanes"]["lanes"]:
-        print(f"  {lane['name']}: {lane['display_name']} ({lane['weekly_hours']}h/wk, {lane['buffer_pct']*100:.0f}% buffer)")
+        print(
+            f"  {lane['name']}: {lane['display_name']} ({lane['weekly_hours']}h/wk, {lane['buffer_pct'] * 100:.0f}% buffer)"
+        )
 
     print(f"\nTasks assigned: {result['assignments']['assigned']}")
     print(f"Tasks unmatched: {result['assignments']['unmatched']}")
@@ -380,6 +382,8 @@ if __name__ == "__main__":
         report = lane_load_report()
         print(json.dumps(report["summary"], indent=2))
         for lane in report["lanes"]:
-            print(f"\n  {lane['display_name']}: {lane['team_count']} people, {lane['total_tasks']} tasks ({lane['overdue_tasks']} overdue)")
+            print(
+                f"\n  {lane['display_name']}: {lane['team_count']} people, {lane['total_tasks']} tasks ({lane['overdue_tasks']} overdue)"
+            )
             for m in lane["members"]:
                 print(f"    {m['name']}: {m['task_count']} tasks ({m['overdue_count']} overdue)")
