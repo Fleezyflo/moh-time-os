@@ -96,7 +96,7 @@ class ClientEndpoints:
 
         cursor = self.conn.execute(
             """
-            SELECT MAX(issue_date) FROM invoices
+            SELECT MAX(issued_at) FROM invoices
             WHERE client_id = ? AND status != 'voided'
         """,
             (client_id,),
@@ -133,8 +133,8 @@ class ClientEndpoints:
         # Get all clients with invoice data
         cursor = self.conn.execute("""
             SELECT c.id, c.name, c.tier,
-                   MAX(i.issue_date) as last_invoice_date,
-                   MIN(i.issue_date) as first_invoice_date
+                   MAX(i.issued_at) as last_invoice_date,
+                   MIN(i.issued_at) as first_invoice_date
             FROM clients c
             LEFT JOIN invoices i ON c.id = i.client_id AND i.status != 'voided'
             GROUP BY c.id
@@ -457,11 +457,11 @@ class ClientEndpoints:
         cursor = self.conn.execute(
             """
             SELECT
-                SUM(CASE WHEN strftime('%Y', issue_date) = ? THEN amount ELSE 0 END) as issued_prior_year,
-                SUM(CASE WHEN issue_date >= ? THEN amount ELSE 0 END) as issued_ytd,
-                SUM(CASE WHEN issue_date >= ? THEN amount ELSE 0 END) as issued_last_12m,
-                SUM(CASE WHEN issue_date BETWEEN ? AND ? THEN amount ELSE 0 END) as issued_prev_12m,
-                SUM(amount) as issued_lifetime
+                SUM(CASE WHEN strftime('%Y', issued_at) = ? THEN total ELSE 0 END) as issued_prior_year,
+                SUM(CASE WHEN issued_at >= ? THEN total ELSE 0 END) as issued_ytd,
+                SUM(CASE WHEN issued_at >= ? THEN total ELSE 0 END) as issued_last_12m,
+                SUM(CASE WHEN issued_at BETWEEN ? AND ? THEN total ELSE 0 END) as issued_prev_12m,
+                SUM(total) as issued_lifetime
             FROM invoices
             WHERE client_id = ? AND status != 'voided'
         """,
@@ -480,11 +480,11 @@ class ClientEndpoints:
         cursor = self.conn.execute(
             """
             SELECT
-                SUM(CASE WHEN strftime('%Y', issue_date) = ? AND status = 'paid' THEN amount ELSE 0 END) as paid_prior_year,
-                SUM(CASE WHEN issue_date >= ? AND status = 'paid' THEN amount ELSE 0 END) as paid_ytd,
-                SUM(CASE WHEN issue_date >= ? AND status = 'paid' THEN amount ELSE 0 END) as paid_last_12m,
-                SUM(CASE WHEN issue_date BETWEEN ? AND ? AND status = 'paid' THEN amount ELSE 0 END) as paid_prev_12m,
-                SUM(CASE WHEN status = 'paid' THEN amount ELSE 0 END) as paid_lifetime
+                SUM(CASE WHEN strftime('%Y', issued_at) = ? AND status = 'paid' THEN total ELSE 0 END) as paid_prior_year,
+                SUM(CASE WHEN issued_at >= ? AND status = 'paid' THEN total ELSE 0 END) as paid_ytd,
+                SUM(CASE WHEN issued_at >= ? AND status = 'paid' THEN total ELSE 0 END) as paid_last_12m,
+                SUM(CASE WHEN issued_at BETWEEN ? AND ? AND status = 'paid' THEN total ELSE 0 END) as paid_prev_12m,
+                SUM(CASE WHEN status = 'paid' THEN total ELSE 0 END) as paid_lifetime
             FROM invoices
             WHERE client_id = ?
         """,
@@ -503,8 +503,8 @@ class ClientEndpoints:
         cursor = self.conn.execute(
             """
             SELECT
-                SUM(CASE WHEN status IN ('sent', 'overdue') THEN amount ELSE 0 END) as ar_outstanding,
-                SUM(CASE WHEN status = 'overdue' THEN amount ELSE 0 END) as ar_overdue
+                SUM(CASE WHEN status IN ('sent', 'overdue') THEN total ELSE 0 END) as ar_outstanding,
+                SUM(CASE WHEN status = 'overdue' THEN total ELSE 0 END) as ar_overdue
             FROM invoices
             WHERE client_id = ?
         """,
@@ -677,10 +677,10 @@ class ClientEndpoints:
         """Get last N invoices."""
         cursor = self.conn.execute(
             """
-            SELECT id, number, issue_date, amount, status
+            SELECT id, source_id as number, issued_at, total as amount, status
             FROM invoices
             WHERE client_id = ? AND status != 'voided'
-            ORDER BY issue_date DESC
+            ORDER BY issued_at DESC
             LIMIT ?
         """,
             (client_id, limit),
@@ -691,7 +691,7 @@ class ClientEndpoints:
         """Get last invoice date."""
         cursor = self.conn.execute(
             """
-            SELECT MAX(issue_date) FROM invoices
+            SELECT MAX(issued_at) FROM invoices
             WHERE client_id = ? AND status != 'voided'
         """,
             (client_id,),
@@ -703,7 +703,7 @@ class ClientEndpoints:
         """Get first invoice date."""
         cursor = self.conn.execute(
             """
-            SELECT MIN(issue_date) FROM invoices
+            SELECT MIN(issued_at) FROM invoices
             WHERE client_id = ? AND status != 'voided'
         """,
             (client_id,),
@@ -798,10 +798,10 @@ class FinancialsEndpoints:
 
         cursor = self.conn.execute(
             """
-            SELECT id, number, issue_date, due_date, amount, status
+            SELECT id, source_id as number, issued_at, due_at as due_date, total as amount, status
             FROM invoices
             WHERE client_id = ?
-            ORDER BY issue_date DESC
+            ORDER BY issued_at DESC
         """,
             (client_id,),
         )
@@ -862,7 +862,7 @@ class FinancialsEndpoints:
         """Get AR aging breakdown."""
         cursor = self.conn.execute(
             """
-            SELECT due_date, amount, status
+            SELECT due_at as due_date, total as amount, status
             FROM invoices
             WHERE client_id = ? AND status IN ('sent', 'overdue')
         """,

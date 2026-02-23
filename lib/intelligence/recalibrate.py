@@ -40,14 +40,14 @@ PRIORITY_WEIGHTS = {
 }
 
 
-def _get_db_path(db_path: Optional[str] = None) -> str:
+def _get_db_path(db_path: str | None = None) -> str:
     """Resolve database path."""
     if db_path:
         return str(db_path)
     return str(canonical_db_path())
 
 
-def signal_distribution_report(db_path: Optional[str] = None) -> dict:
+def signal_distribution_report(db_path: str | None = None) -> dict:
     """
     Report severity distribution of active signals.
 
@@ -147,7 +147,7 @@ def _recalibrate_ar_aging(value_json: str) -> str:
 
 
 def recalibrate_active_signals(
-    db_path: Optional[str] = None,
+    db_path: str | None = None,
     dry_run: bool = False,
 ) -> dict:
     """
@@ -245,7 +245,7 @@ def recalibrate_active_signals(
 
 
 def update_priority_weights(
-    db_path: Optional[str] = None,
+    db_path: str | None = None,
     dry_run: bool = False,
 ) -> dict:
     """
@@ -268,12 +268,14 @@ def update_priority_weights(
         category = row["category"]
         new_weight = PRIORITY_WEIGHTS.get(category, old_weight)
 
-        updates.append({
-            "signal_type": row["signal_type"],
-            "category": category,
-            "old_weight": old_weight,
-            "new_weight": new_weight,
-        })
+        updates.append(
+            {
+                "signal_type": row["signal_type"],
+                "category": category,
+                "old_weight": old_weight,
+                "new_weight": new_weight,
+            }
+        )
 
     if not dry_run:
         for u in updates:
@@ -289,7 +291,7 @@ def update_priority_weights(
 
 
 def full_recalibration(
-    db_path: Optional[str] = None,
+    db_path: str | None = None,
     dry_run: bool = False,
 ) -> dict:
     """
@@ -332,7 +334,7 @@ if __name__ == "__main__":
             print(f"  {sev}: {cnt}")
         print(f"  Critical %: {sr['after']['critical_pct']}%")
 
-    print(f"\n--- Changes ---")
+    print("\n--- Changes ---")
     for k, v in sr["changes"].items():
         print(f"  {k}: {v}")
 

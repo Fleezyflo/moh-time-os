@@ -13,20 +13,21 @@ Usage:
 
 import logging
 import sqlite3
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
 import yaml
 
-from lib.paths import db_path as canonical_db_path, project_root
+from lib.paths import db_path as canonical_db_path
+from lib.paths import project_root
 
 logger = logging.getLogger(__name__)
 
 SCHEDULE_PATH = project_root() / "config" / "sync_schedule.yaml"
 
 
-def load_schedule(path: Optional[str] = None) -> dict:
+def load_schedule(path: str | None = None) -> dict:
     """
     Load sync schedule from YAML config.
 
@@ -73,20 +74,16 @@ def load_schedule(path: Optional[str] = None) -> dict:
     return {"schedules": schedules}
 
 
-def get_enabled_collectors(path: Optional[str] = None) -> list[str]:
+def get_enabled_collectors(path: str | None = None) -> list[str]:
     """Return list of enabled collector names from schedule config."""
     schedule = load_schedule(path)
-    return [
-        name
-        for name, cfg in schedule["schedules"].items()
-        if cfg["enabled"]
-    ]
+    return [name for name, cfg in schedule["schedules"].items() if cfg["enabled"]]
 
 
 def check_collector_health(
-    db_path: Optional[str] = None,
-    schedule_path: Optional[str] = None,
-    now: Optional[datetime] = None,
+    db_path: str | None = None,
+    schedule_path: str | None = None,
+    now: datetime | None = None,
 ) -> dict:
     """
     Check health of all enabled collectors.
@@ -109,7 +106,7 @@ def check_collector_health(
         }
     """
     schedule = load_schedule(schedule_path)
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
 
     # Get last run times from cycle_logs or state_tracker
     last_runs = _get_last_run_times(db_path)
@@ -133,12 +130,14 @@ def check_collector_health(
         age = now - last_run
 
         if age > max_age:
-            stale.append({
-                "name": name,
-                "last_run": last_run.isoformat(),
-                "expected_interval_minutes": cfg["interval_minutes"],
-                "stale_minutes": int(age.total_seconds() / 60),
-            })
+            stale.append(
+                {
+                    "name": name,
+                    "last_run": last_run.isoformat(),
+                    "expected_interval_minutes": cfg["interval_minutes"],
+                    "stale_minutes": int(age.total_seconds() / 60),
+                }
+            )
         else:
             healthy.append(name)
 
@@ -151,7 +150,7 @@ def check_collector_health(
     }
 
 
-def _get_last_run_times(db_path: Optional[str] = None) -> dict[str, datetime]:
+def _get_last_run_times(db_path: str | None = None) -> dict[str, datetime]:
     """
     Get last successful run time for each collector from the database.
 
@@ -176,7 +175,7 @@ def _get_last_run_times(db_path: Optional[str] = None) -> dict[str, datetime]:
             try:
                 ts = datetime.fromisoformat(row["last_run"])
                 if ts.tzinfo is None:
-                    ts = ts.replace(tzinfo=timezone.utc)
+                    ts = ts.replace(tzinfo=UTC)
                 last_runs[row["source"]] = ts
             except (ValueError, TypeError):
                 pass
@@ -196,7 +195,7 @@ def _get_last_run_times(db_path: Optional[str] = None) -> dict[str, datetime]:
                 try:
                     ts = datetime.fromisoformat(row["last_run"])
                     if ts.tzinfo is None:
-                        ts = ts.replace(tzinfo=timezone.utc)
+                        ts = ts.replace(tzinfo=UTC)
                     last_runs[row["source"]] = ts
                 except (ValueError, TypeError):
                     pass

@@ -3,7 +3,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { Issue } from '../types/api';
 import type { IssueState } from '../lib/api';
 import { priorityLabel } from '../lib/priority';
-import { useToast } from './Toast';
+import { useToast } from './notifications';
 
 interface IssueDrawerProps {
   issue: Issue | null;

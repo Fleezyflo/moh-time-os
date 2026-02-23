@@ -25,8 +25,9 @@ import logging
 import os
 from typing import Optional
 
-from fastapi import Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import BaseModel
 
 from lib.security import KeyManager
 
@@ -229,3 +230,60 @@ async def optional_auth(
 def is_auth_enabled() -> bool:
     """Check if authentication is configured."""
     return bool(_get_token_from_env())
+
+
+# ── Auth Router (token exchange endpoint) ──────────────────────────
+
+
+class TokenRequest(BaseModel):
+    """Request body for token exchange."""
+
+    api_key: str
+
+
+class TokenResponse(BaseModel):
+    """Response body for token exchange."""
+
+    token: str
+    role: str
+    user_id: str
+
+
+auth_router = APIRouter(tags=["auth"])
+
+
+@auth_router.post("/auth/token", response_model=TokenResponse)
+async def exchange_token(body: TokenRequest) -> TokenResponse:
+    """
+    Exchange an API key for a bearer token.
+
+    In legacy mode (INTEL_API_TOKEN set), validates the key matches.
+    In multi-key mode, validates against the database.
+    If no auth is configured, accepts any key (dev mode).
+    """
+    api_key = body.api_key
+
+    # Legacy mode: validate against INTEL_API_TOKEN
+    expected = _get_token_from_env()
+    if expected:
+        import secrets
+
+        if not secrets.compare_digest(api_key, expected):
+            raise HTTPException(status_code=401, detail="Invalid API key")
+        return TokenResponse(token=api_key, role="owner", user_id="molham")
+
+    # Multi-key mode: validate against database
+    manager = _get_key_manager()
+    if manager:
+        # Check if any keys actually exist in the database
+        existing_keys = manager.list_keys(active_only=True)
+        if existing_keys:
+            key_info = manager.validate_key(api_key)
+            if not key_info:
+                raise HTTPException(status_code=401, detail="Invalid API key")
+            return TokenResponse(token=api_key, role=key_info.role.value, user_id=key_info.name)
+        # No keys in DB — fall through to dev mode
+
+    # No auth configured (dev mode): accept any key
+    logger.warning("Auth not configured — accepting any API key (dev mode)")
+    return TokenResponse(token=api_key, role="owner", user_id="molham")

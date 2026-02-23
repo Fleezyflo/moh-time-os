@@ -93,14 +93,16 @@ UI_DIR = paths.app_home() / "time-os-ui" / "dist"
 # Mount spec-compliant endpoints at /api/v2
 # These implement CLIENT-UI-SPEC-v2.9.md using lib/ui_spec_v21 modules
 from api.action_router import router as action_router  # noqa: E402
+from api.auth import auth_router  # noqa: E402
 from api.chat_webhook_router import router as chat_webhook_router  # noqa: E402
 from api.export_router import export_router  # noqa: E402
-from api.governance_router import governance_router  # noqa: E402, I001
-from api.intelligence_router import intelligence_router  # noqa: E402, I001
+from api.governance_router import governance_router  # noqa: E402
+from api.intelligence_router import intelligence_router  # noqa: E402
 from api.paginated_router import paginated_router  # noqa: E402
 from api.spec_router import spec_router  # noqa: E402
 from api.sse_router import sse_router  # noqa: E402
 
+app.include_router(auth_router, prefix="/api/v2")
 app.include_router(spec_router, prefix="/api/v2")
 app.include_router(intelligence_router, prefix="/api/v2/intelligence")
 app.include_router(sse_router, prefix="/api/v2")
