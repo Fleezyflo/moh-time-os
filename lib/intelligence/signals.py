@@ -161,6 +161,28 @@ SIG_CLIENT_COMM_DROP = SignalDefinition(
     fast_eval=False,  # Requires 2 period queries per client
 )
 
+SIG_CLIENT_NEGLECTED = SignalDefinition(
+    id="sig_client_neglected",
+    name="Client Neglected",
+    description="No communication with this client for an extended period. They may feel forgotten.",
+    category=SignalCategory.THRESHOLD,
+    entity_type="client",
+    severity=SignalSeverity.WARNING,
+    conditions={
+        "type": "threshold",
+        "metric": "days_since_last_comm",
+        "operator": "gt",
+        "value": 21,  # 3 weeks with zero contact
+        "query_function": "entity_links_recency",
+    },
+    implied_action="Reach out to this client. A quick check-in prevents relationships from going cold.",
+    evidence_template="No communication in {current_value} days (threshold: {threshold_value} days).",
+    cooldown_hours=168,  # Weekly re-fire at most
+    escalation_after_days=14,
+    escalation_to=SignalSeverity.CRITICAL,
+    fast_eval=True,  # Single batch query
+)
+
 SIG_CLIENT_OVERDUE_TASKS = SignalDefinition(
     id="sig_client_overdue_tasks",
     name="Client Overdue Tasks",
@@ -601,6 +623,7 @@ SIG_CLIENT_HIDDEN_COST = SignalDefinition(
 SIGNAL_CATALOG: dict[str, SignalDefinition] = {
     # Threshold signals
     "sig_client_comm_drop": SIG_CLIENT_COMM_DROP,
+    "sig_client_neglected": SIG_CLIENT_NEGLECTED,
     "sig_client_overdue_tasks": SIG_CLIENT_OVERDUE_TASKS,
     "sig_client_invoice_aging": SIG_CLIENT_INVOICE_AGING,
     "sig_client_score_critical": SIG_CLIENT_SCORE_CRITICAL,
@@ -880,6 +903,7 @@ class DetectionCache:
         self._task_summaries = {}
         self._metrics_cache = {}
         self._overdue_counts = None  # Batch-loaded overdue task counts
+        self._last_comm_days = None  # Batch-loaded days since last communication
 
     @property
     def clients(self) -> list:
@@ -948,6 +972,39 @@ class DetectionCache:
         self._overdue_counts = {row["client_id"]: row["overdue_count"] for row in cursor.fetchall()}
         conn.close()
 
+    def get_days_since_last_comm(self, client_id: str) -> int | None:
+        """Get days since last communication for a client (batch loaded on first access)."""
+        if self._last_comm_days is None:
+            self._load_last_comm_days()
+        return self._last_comm_days.get(client_id)
+
+    def _load_last_comm_days(self):
+        """Batch load days-since-last-communication for all clients in one query."""
+        import sqlite3
+
+        from lib import paths
+
+        db = self.db_path or paths.db_path()
+        conn = sqlite3.connect(str(db))
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT
+                el.to_entity_id AS client_id,
+                CAST(julianday('now') - julianday(MAX(el.created_at)) AS INTEGER) AS days_since
+            FROM entity_links el
+            WHERE el.to_entity_type = 'client'
+            GROUP BY el.to_entity_id
+        """)
+
+        self._last_comm_days = {row["client_id"]: row["days_since"] for row in cursor.fetchall()}
+
+        # For clients with zero entity_links, they won't appear in this dict.
+        # We'll return None for them in get_days_since_last_comm, and the evaluator
+        # will treat missing data as "no communication ever" = 999 days.
+        conn.close()
+
     def get_client_metrics(self, client_id: str, since: str, until: str) -> dict:
         key = f"{client_id}:{since}:{until}"
         if key not in self._metrics_cache:
@@ -1003,6 +1060,12 @@ def _evaluate_threshold(
                 current_value = recent.get("communications_count", 0)
                 # Normalize baseline to 30-day equivalent
                 baseline_value = baseline_period.get("communications_count", 0) / 2
+
+            elif metric == "days_since_last_comm":
+                # Use batch-loaded last-communication recency
+                days = cache.get_days_since_last_comm(entity_id)
+                # None means no communication ever recorded — treat as very neglected
+                current_value = days if days is not None else 999
 
             elif metric == "overdue_tasks":
                 # Use batch-loaded overdue counts (single query for all clients)

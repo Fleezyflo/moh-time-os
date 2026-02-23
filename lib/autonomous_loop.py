@@ -208,6 +208,19 @@ class AutonomousLoop:
                 logger.info(f"  Queued {total_queued} items for resolution")
 
             # ═══════════════════════════════════════
+            # PHASE 1a5: AUTO-RESOLUTION
+            # Attempt to fix data quality issues automatically
+            # ═══════════════════════════════════════
+            logger.info("▶ Phase 1a5: AUTO-RESOLUTION")
+            auto_resolve_results = self._auto_resolve()
+            results["phases"]["auto_resolution"] = auto_resolve_results
+            if auto_resolve_results.get("auto_resolved", 0) > 0:
+                logger.info(
+                    f"  Auto-resolved {auto_resolve_results['auto_resolved']}"
+                    f"/{auto_resolve_results['total_scanned']} items"
+                )
+
+            # ═══════════════════════════════════════
             # PHASE 1b-1e: TRUTH MODULES
             # SKIP if project_brand_required or project_brand_consistency fails
             # ═══════════════════════════════════════
@@ -806,6 +819,33 @@ class AutonomousLoop:
         except Exception as e:
             logger.error(f"Resolution queue error: {e}")
             return {"error": str(e)}
+
+    def _auto_resolve(self) -> dict:
+        """
+        Run auto-resolution on pending queue items.
+
+        Attempts to fix data quality issues (unlinked projects, missing clients,
+        missing due dates) automatically using rule-based matching.
+        """
+        results = {"total_scanned": 0, "auto_resolved": 0, "escalated": 0, "failed": 0}
+
+        try:
+            from lib.intelligence.auto_resolution import AutoResolutionEngine
+
+            engine = AutoResolutionEngine(db_path=self.store.db_path)
+            report = engine.scan_and_resolve()
+
+            results["total_scanned"] = report.total_scanned
+            results["auto_resolved"] = report.auto_resolved
+            results["escalated"] = report.escalated
+            results["failed"] = report.failed
+            results["duration_ms"] = report.duration_ms
+
+        except Exception as e:
+            logger.error(f"Auto-resolution error: {e}")
+            results["error"] = str(e)
+
+        return results
 
     def _process_time_truth(self) -> dict:
         """

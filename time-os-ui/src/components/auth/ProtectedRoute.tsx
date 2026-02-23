@@ -1,18 +1,6 @@
-// Protected route wrapper that redirects to login if not authenticated
+// Protected route — passthrough for single-user system
 import type { ReactNode } from 'react';
-import { useAuth } from './AuthContext';
-import { LoginScreen } from './LoginScreen';
 
-interface ProtectedRouteProps {
-  children: ReactNode;
-}
-
-export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated } = useAuth();
-
-  if (!isAuthenticated) {
-    return <LoginScreen />;
-  }
-
+export function ProtectedRoute({ children }: { children: ReactNode }) {
   return <>{children}</>;
 }

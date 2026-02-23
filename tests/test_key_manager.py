@@ -58,8 +58,8 @@ def temp_db():
     # Cleanup
     try:
         db_path.unlink()
-    except Exception:
-        pass
+    except OSError:
+        pass  # Cleanup is best-effort
 
 
 @pytest.fixture
@@ -504,34 +504,19 @@ class TestKeyInfoDataclass:
 
 
 class TestAuthIntegration:
-    """Test integration with auth.py."""
+    """Test integration with auth.py (passthrough for single-user system)."""
 
-    def test_auth_with_valid_key(self):
-        """Valid API key authenticates successfully."""
+    def test_require_auth_always_passes(self):
+        """require_auth is a passthrough — always returns a token."""
+        import asyncio
         from unittest.mock import MagicMock
 
-        from api.auth import _get_token_from_request, require_auth
+        from api.auth import require_auth
 
-        # This test would require mocking Request and ensuring
-        # the key manager validates keys correctly
-        pass
-
-    def test_legacy_mode_with_env_var(self):
-        """Legacy INTEL_API_TOKEN mode still works."""
-        from api.auth import _get_token_from_env
-
-        with patch.dict(os.environ, {"INTEL_API_TOKEN": "test_token"}):
-            token = _get_token_from_env()
-            assert token == "test_token"
-
-    def test_legacy_mode_priority(self):
-        """INTEL_API_TOKEN takes priority over multi-key mode."""
-        with patch.dict(os.environ, {"INTEL_API_TOKEN": "test_token"}):
-            from api.auth import _get_key_manager
-
-            manager = _get_key_manager()
-            # Should be None when legacy mode is active
-            assert manager is None
+        request = MagicMock()
+        result = asyncio.get_event_loop().run_until_complete(require_auth(request, None))
+        assert result == "local"
+        assert request.state.role == "owner"
 
 
 class TestEdgeCases:

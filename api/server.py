@@ -456,73 +456,62 @@ async def mark_commitment_done(commitment_id: str):
 
 
 @app.get("/api/capacity/lanes")
-async def get_capacity_lanes():
+async def get_capacity_lanes_endpoint():
     """Get capacity lanes configuration."""
-    from lib.time_truth import get_capacity_lanes
+    from lib.capacity_truth import CapacityCalculator
 
-    lanes = get_capacity_lanes(store)
+    calc = CapacityCalculator(store)
+    lanes = calc.get_lanes()
     return {"lanes": lanes}
 
 
 @app.get("/api/capacity/utilization")
-async def get_capacity_utilization(start_date: str | None = None, end_date: str | None = None):
+async def get_capacity_utilization(lane_id: str | None = None, target_date: str | None = None):
     """Get capacity utilization metrics."""
-    from datetime import date
+    from lib.capacity_truth import CapacityCalculator
 
-    from lib.time_truth import CalendarSync
-
-    if not start_date:
-        start_date = date.today().isoformat()
-    if not end_date:
-        end_date = (date.today() + timedelta(days=7)).isoformat()
-
-    cs = CalendarSync(store)
-    utilization = cs.get_utilization(start_date, end_date)  # type: ignore[attr-defined] # TODO: get_utilization doesn't exist on CalendarSync
-
-    return {"start_date": start_date, "end_date": end_date, "utilization": utilization}
+    calc = CapacityCalculator(store)
+    if lane_id:
+        util = calc.get_lane_utilization(lane_id, target_date=target_date)
+        return {"utilization": util}
+    return calc.get_capacity_summary(target_date=target_date)
 
 
 @app.get("/api/capacity/forecast")
-async def get_capacity_forecast(days: int = 7):
+async def get_capacity_forecast(lane_id: str = "default", days: int = 7):
     """Get capacity forecast for upcoming days."""
-    from datetime import date
+    from lib.capacity_truth import CapacityCalculator
 
-    from lib.time_truth import Scheduler
-
-    scheduler = Scheduler(store)
-    forecasts = []
-
-    for i in range(days):
-        day = date.today() + timedelta(days=i)
-        forecast = scheduler.get_day_forecast(day.isoformat())  # type: ignore[attr-defined] # TODO: get_day_forecast doesn't exist on Scheduler
-        forecasts.append(forecast)
-
-    return {"days": days, "forecasts": forecasts}
+    calc = CapacityCalculator(store)
+    forecasts = calc.forecast_capacity(lane_id, days_ahead=days)
+    return {"lane_id": lane_id, "days": days, "forecasts": forecasts}
 
 
 @app.get("/api/capacity/debt")
 async def get_capacity_debt(lane: str | None = None):
     """Get capacity debt (overcommitments)."""
-    from lib.time_truth import get_capacity_debt  # type: ignore[attr-defined]
+    from lib.capacity_truth import DebtTracker
 
-    return get_capacity_debt(store, lane=lane)
+    tracker = DebtTracker(store)
+    return tracker.get_debt_report(lane=lane)
 
 
-@app.post("/api/capacity/debt/accrue")
+@app.post("/api/capacity/debt/accrue", status_code=501)
 async def accrue_debt(hours: float | None = None):
-    """Record accrued capacity debt."""
-    from lib.time_truth import accrue_capacity_debt  # type: ignore[attr-defined]
+    """Record accrued capacity debt. Not yet implemented."""
+    return JSONResponse(
+        status_code=501,
+        content={"detail": "Capacity debt accrual not yet implemented"},
+    )
 
-    return accrue_capacity_debt(store, hours=hours)
 
-
-@app.post("/api/capacity/debt/{debt_id}/resolve")
+@app.post("/api/capacity/debt/{debt_id}/resolve", status_code=501)
 async def resolve_debt(debt_id: str):
-    """Resolve a capacity debt item."""
-    from lib.time_truth import resolve_capacity_debt  # type: ignore[attr-defined]
-
-    success = resolve_capacity_debt(store, debt_id)
-    return {"success": success, "debt_id": debt_id}
+    """Resolve a capacity debt item. Not yet implemented."""
+    return JSONResponse(
+        status_code=501,
+        content={"detail": "Capacity debt resolution not yet implemented"},
+    )
 
 
 # ==== Clients Endpoints ====
@@ -2915,16 +2904,22 @@ async def get_events(hours: int = 24):
 @app.get("/api/day/{date}")
 async def get_day_analysis(date: str | None = None):
     """Get analysis for a specific day."""
-    target = datetime.fromisoformat(date) if date else datetime.now()
-    return analyzers.time.analyze_day(target)  # type: ignore[attr-defined]
+    from datetime import date as date_type
+
+    from lib.time_truth import CalendarSync
+
+    target = date if date else date_type.today().isoformat()
+    cs = CalendarSync(store)
+    return cs.get_day_summary(target)
 
 
 @app.get("/api/week")
 async def get_week_analysis():
     """Get analysis for the current week."""
-    from lib.time_truth import get_week_analysis
+    from lib.time_truth import CalendarSync
 
-    return get_week_analysis(store)
+    cs = CalendarSync(store)
+    return cs.ensure_blocks_for_week()
 
 
 @app.get("/api/emails")
