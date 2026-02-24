@@ -8,7 +8,7 @@ Endpoints:
 
 import json
 import logging
-from typing import Optional
+from typing import Any, Optional
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
@@ -66,7 +66,16 @@ class InteractiveActionRequest(BaseModel):
     )
 
 
-@router.post("/webhook")
+class ChatWebhookResponse(BaseModel):
+    """Google Chat webhook response — text reply or card payload."""
+
+    text: str | None = None
+    cardsV2: list[Any] | None = None
+
+    model_config = {"extra": "allow"}
+
+
+@router.post("/webhook", response_model=ChatWebhookResponse)
 async def handle_webhook(request: ChatWebhookRequest) -> dict:
     """
     Receive and process Chat webhook events.
@@ -145,7 +154,7 @@ async def handle_webhook(request: ChatWebhookRequest) -> dict:
         return {"text": f"Error: {str(e)[:100]}"}
 
 
-@router.post("/interactive")
+@router.post("/interactive", response_model=ChatWebhookResponse)
 async def handle_interactive_action(request: InteractiveActionRequest) -> dict:
     """
     Handle interactive card button clicks.

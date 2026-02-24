@@ -115,10 +115,9 @@ class TestSchemaStrictness:
                         ):
                             any_type_endpoints.append(f"{method.upper()} {path}")
 
-        # Current baseline: 165 any-type endpoints (legacy)
-        # Target: reduce to <50 over time
-        # For now, just track and don't fail
-        current_baseline = 234  # Updated: +9 intelligence/mutation routes (dict envelope)
+        # Baseline after response_model sweep: added Pydantic models to 270 endpoints
+        # Remaining any-type: non-JSON responses (PlainText, SSE, FileResponse, 501 stubs)
+        current_baseline = 10  # Should be near 0 after response_model sweep
         if len(any_type_endpoints) > current_baseline:
             pytest.fail(
                 f"Any-type endpoints grew ({len(any_type_endpoints)} > {current_baseline}): "

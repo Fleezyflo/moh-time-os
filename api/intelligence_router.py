@@ -20,6 +20,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from api.auth import require_auth
+from api.response_models import IntelligenceResponse
 from lib.cache import cache_invalidate, cached, get_cache
 from lib.query_engine import QueryEngine
 
@@ -67,7 +68,7 @@ def _error_response(message: str, code: str = "ERROR") -> dict:
 # =============================================================================
 
 
-@intelligence_router.get("/portfolio/overview")
+@intelligence_router.get("/portfolio/overview", response_model=IntelligenceResponse)
 @cached(
     ttl=120, key_func=lambda order_by, desc: f"intelligence:portfolio:overview:{order_by}:{desc}"
 )
@@ -92,7 +93,7 @@ def portfolio_overview(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/portfolio/risks")
+@intelligence_router.get("/portfolio/risks", response_model=IntelligenceResponse)
 def portfolio_risks(
     overdue_threshold: int = Query(5, description="Min overdue tasks to flag project"),
     aging_threshold: int = Query(30, description="Days overdue to flag invoice"),
@@ -118,7 +119,7 @@ def portfolio_risks(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/portfolio/trajectory")
+@intelligence_router.get("/portfolio/trajectory", response_model=IntelligenceResponse)
 def portfolio_trajectory(
     window_days: int = Query(30, description="Size of each time window in days"),
     num_windows: int = Query(6, description="Number of windows to analyze"),
@@ -155,7 +156,7 @@ def portfolio_trajectory(
 # =============================================================================
 
 
-@intelligence_router.get("/clients/{client_id}/profile")
+@intelligence_router.get("/clients/{client_id}/profile", response_model=IntelligenceResponse)
 def client_profile(client_id: str):
     """
     Get deep operational profile for a client.
@@ -176,7 +177,7 @@ def client_profile(client_id: str):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/clients/{client_id}/tasks")
+@intelligence_router.get("/clients/{client_id}/tasks", response_model=IntelligenceResponse)
 def client_tasks(client_id: str):
     """
     Get task summary for a client.
@@ -193,7 +194,7 @@ def client_tasks(client_id: str):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/clients/{client_id}/communication")
+@intelligence_router.get("/clients/{client_id}/communication", response_model=IntelligenceResponse)
 def client_communication(
     client_id: str,
     since: str | None = Query(None, description="Start date (ISO format)"),
@@ -213,7 +214,7 @@ def client_communication(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/clients/{client_id}/trajectory")
+@intelligence_router.get("/clients/{client_id}/trajectory", response_model=IntelligenceResponse)
 def client_trajectory(
     client_id: str,
     window_days: int = Query(30, description="Size of each time window in days"),
@@ -241,7 +242,7 @@ def client_trajectory(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/clients/{client_id}/compare")
+@intelligence_router.get("/clients/{client_id}/compare", response_model=IntelligenceResponse)
 def client_compare(
     client_id: str,
     period_a_start: str = Query(..., description="Period A start date (ISO)"),
@@ -274,7 +275,7 @@ def client_compare(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/clients/compare")
+@intelligence_router.get("/clients/compare", response_model=IntelligenceResponse)
 def clients_compare(
     period_a_start: str = Query(..., description="Period A start date (ISO)"),
     period_a_end: str = Query(..., description="Period A end date (ISO)"),
@@ -309,7 +310,7 @@ def clients_compare(
 # =============================================================================
 
 
-@intelligence_router.get("/team/distribution")
+@intelligence_router.get("/team/distribution", response_model=IntelligenceResponse)
 def team_distribution():
     """
     Get team load distribution.
@@ -326,7 +327,7 @@ def team_distribution():
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/team/capacity")
+@intelligence_router.get("/team/capacity", response_model=IntelligenceResponse)
 def team_capacity():
     """
     Get team capacity overview.
@@ -343,7 +344,7 @@ def team_capacity():
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/team/{person_id}/profile")
+@intelligence_router.get("/team/{person_id}/profile", response_model=IntelligenceResponse)
 def team_person_profile(person_id: str):
     """
     Get operational profile for a person.
@@ -364,7 +365,7 @@ def team_person_profile(person_id: str):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/team/{person_id}/trajectory")
+@intelligence_router.get("/team/{person_id}/trajectory", response_model=IntelligenceResponse)
 def team_person_trajectory(
     person_id: str,
     window_days: int = Query(30, description="Size of each time window in days"),
@@ -396,7 +397,7 @@ def team_person_trajectory(
 # =============================================================================
 
 
-@intelligence_router.get("/projects/{project_id}/state")
+@intelligence_router.get("/projects/{project_id}/state", response_model=IntelligenceResponse)
 def project_state(project_id: str):
     """
     Get operational state of a project.
@@ -417,7 +418,7 @@ def project_state(project_id: str):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/projects/health")
+@intelligence_router.get("/projects/health", response_model=IntelligenceResponse)
 def projects_health(
     min_tasks: int = Query(1, description="Minimum tasks to include project"),
 ):
@@ -441,7 +442,7 @@ def projects_health(
 # =============================================================================
 
 
-@intelligence_router.get("/financial/aging")
+@intelligence_router.get("/financial/aging", response_model=IntelligenceResponse)
 def financial_aging():
     """
     Get invoice aging report.
@@ -463,7 +464,7 @@ def financial_aging():
 # =============================================================================
 
 
-@intelligence_router.get("/snapshot")
+@intelligence_router.get("/snapshot", response_model=IntelligenceResponse)
 @cached(ttl=60, key_func=lambda: "intelligence:snapshot:full")
 def intelligence_snapshot():
     """
@@ -489,7 +490,7 @@ def intelligence_snapshot():
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/critical")
+@intelligence_router.get("/critical", response_model=IntelligenceResponse)
 def critical_items():
     """
     Get critical items only (IMMEDIATE urgency proposals).
@@ -507,7 +508,7 @@ def critical_items():
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/briefing")
+@intelligence_router.get("/briefing", response_model=IntelligenceResponse)
 @cached(ttl=300, key_func=lambda: "intelligence:briefing:daily")
 def daily_briefing():
     """
@@ -551,7 +552,7 @@ def daily_briefing():
 # =============================================================================
 
 
-@intelligence_router.get("/signals")
+@intelligence_router.get("/signals", response_model=IntelligenceResponse)
 def list_signals(
     quick: bool = Query(True, description="Use quick mode (sample portfolio)"),
 ):
@@ -570,7 +571,7 @@ def list_signals(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/signals/summary")
+@intelligence_router.get("/signals/summary", response_model=IntelligenceResponse)
 @cached(ttl=60, key_func=lambda: "intelligence:signals:summary")
 def signals_summary():
     """
@@ -588,7 +589,7 @@ def signals_summary():
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/signals/active")
+@intelligence_router.get("/signals/active", response_model=IntelligenceResponse)
 def active_signals(
     entity_type: str | None = Query(None, description="Filter by entity type"),
     entity_id: str | None = Query(None, description="Filter by entity ID"),
@@ -606,7 +607,7 @@ def active_signals(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/signals/history")
+@intelligence_router.get("/signals/history", response_model=IntelligenceResponse)
 def signal_history(
     entity_type: str = Query(..., description="Entity type (client, project, person)"),
     entity_id: str = Query(..., description="Entity ID"),
@@ -651,7 +652,7 @@ def export_signals():
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/signals/thresholds")
+@intelligence_router.get("/signals/thresholds", response_model=IntelligenceResponse)
 def get_thresholds():
     """
     Get current threshold configuration for all signals.
@@ -671,7 +672,7 @@ def get_thresholds():
 # =============================================================================
 
 
-@intelligence_router.get("/patterns")
+@intelligence_router.get("/patterns", response_model=IntelligenceResponse)
 def list_patterns():
     """
     Detect all active patterns.
@@ -693,7 +694,7 @@ def list_patterns():
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/patterns/catalog")
+@intelligence_router.get("/patterns/catalog", response_model=IntelligenceResponse)
 def pattern_catalog():
     """
     Get pattern library (all defined patterns with detection logic).
@@ -726,7 +727,7 @@ def pattern_catalog():
 # =============================================================================
 
 
-@intelligence_router.get("/proposals")
+@intelligence_router.get("/proposals", response_model=IntelligenceResponse)
 def list_proposals(
     limit: int = Query(20, description="Max proposals to return"),
     urgency: str | None = Query(
@@ -786,7 +787,7 @@ def list_proposals(
 # =============================================================================
 
 
-@intelligence_router.get("/scores/client/{client_id}")
+@intelligence_router.get("/scores/client/{client_id}", response_model=IntelligenceResponse)
 def client_score(client_id: str):
     """
     Get scorecard for a client.
@@ -807,7 +808,7 @@ def client_score(client_id: str):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/scores/project/{project_id}")
+@intelligence_router.get("/scores/project/{project_id}", response_model=IntelligenceResponse)
 def project_score(project_id: str):
     """
     Get scorecard for a project.
@@ -828,7 +829,7 @@ def project_score(project_id: str):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/scores/person/{person_id}")
+@intelligence_router.get("/scores/person/{person_id}", response_model=IntelligenceResponse)
 def person_score(person_id: str):
     """
     Get scorecard for a person.
@@ -849,7 +850,7 @@ def person_score(person_id: str):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/scores/portfolio")
+@intelligence_router.get("/scores/portfolio", response_model=IntelligenceResponse)
 def portfolio_score():
     """
     Get portfolio scorecard.
@@ -875,7 +876,7 @@ def portfolio_score():
 # =============================================================================
 
 
-@intelligence_router.get("/scores/{entity_type}/{entity_id}/history")
+@intelligence_router.get("/scores/{entity_type}/{entity_id}/history", response_model=IntelligenceResponse)
 def score_history(
     entity_type: str,
     entity_id: str,
@@ -908,7 +909,7 @@ def score_history(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/scores/history/summary")
+@intelligence_router.get("/scores/history/summary", response_model=IntelligenceResponse)
 def score_history_summary():
     """
     Get summary of score history data collection.
@@ -926,7 +927,7 @@ def score_history_summary():
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.post("/scores/record")
+@intelligence_router.post("/scores/record", response_model=IntelligenceResponse)
 @cache_invalidate("intelligence:*")
 def record_scores():
     """
@@ -954,7 +955,7 @@ def record_scores():
 # =============================================================================
 
 
-@intelligence_router.get("/entity/client/{client_id}")
+@intelligence_router.get("/entity/client/{client_id}", response_model=IntelligenceResponse)
 def client_intelligence(client_id: str):
     """
     Get complete intelligence for a client.
@@ -976,7 +977,7 @@ def client_intelligence(client_id: str):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/entity/person/{person_id}")
+@intelligence_router.get("/entity/person/{person_id}", response_model=IntelligenceResponse)
 def person_intelligence(person_id: str):
     """
     Get complete intelligence for a person.
@@ -997,7 +998,7 @@ def person_intelligence(person_id: str):
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/entity/portfolio")
+@intelligence_router.get("/entity/portfolio", response_model=IntelligenceResponse)
 def portfolio_intelligence():
     """
     Get portfolio-level intelligence.
@@ -1023,7 +1024,7 @@ def portfolio_intelligence():
 # =============================================================================
 
 
-@intelligence_router.get("/changes")
+@intelligence_router.get("/changes", response_model=IntelligenceResponse)
 def detect_changes():
     """
     Run change detection and return delta report.

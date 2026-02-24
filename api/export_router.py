@@ -14,6 +14,7 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
+from api.response_models import DetailResponse
 from lib.governance.data_export import DataExporter, ExportFormat, ExportRequest
 from lib.paths import data_dir
 
@@ -32,7 +33,7 @@ db_path = data_dir() / "moh_time_os.db"
 _exports = {}
 
 
-@export_router.post("/export")
+@export_router.post("/export", response_model=DetailResponse)
 def request_data_export(
     tables: list[str] = Query(..., description="Tables to export"),
     format: str = Query("json", description="Export format: json, csv, jsonl"),
@@ -88,7 +89,7 @@ def request_data_export(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@export_router.get("/export/{request_id}")
+@export_router.get("/export/{request_id}", response_model=DetailResponse)
 def get_export_status(request_id: str) -> dict:
     """
     Check export status and get download link.
@@ -119,7 +120,7 @@ def get_export_status(request_id: str) -> dict:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@export_router.get("/exportable-tables")
+@export_router.get("/exportable-tables", response_model=DetailResponse)
 def list_exportable_tables() -> dict:
     """
     List available tables for export with metadata.
@@ -138,7 +139,7 @@ def list_exportable_tables() -> dict:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@export_router.get("/export-schema/{table}")
+@export_router.get("/export-schema/{table}", response_model=DetailResponse)
 def get_table_schema(table: str) -> dict:
     """
     Get schema for a specific table.

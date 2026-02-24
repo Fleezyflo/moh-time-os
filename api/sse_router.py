@@ -30,6 +30,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
 from api.auth import require_auth
+from api.response_models import DetailResponse
 
 logger = logging.getLogger(__name__)
 
@@ -216,7 +217,7 @@ async def stream_events() -> StreamingResponse:
         raise HTTPException(status_code=500, detail="Failed to establish SSE stream") from e
 
 
-@sse_router.get("/events/history")
+@sse_router.get("/events/history", response_model=DetailResponse)
 def get_event_history(limit: int = Query(100, description="Maximum events to return")):
     """
     Get recent event history.
@@ -246,7 +247,7 @@ def get_event_history(limit: int = Query(100, description="Maximum events to ret
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@sse_router.post("/events/publish")
+@sse_router.post("/events/publish", response_model=DetailResponse)
 async def publish_event(
     event_type: str = Query(..., description="Type of event"),
     message: str = Query(..., description="Event message"),

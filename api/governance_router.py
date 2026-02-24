@@ -13,6 +13,7 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
 
+from api.response_models import DetailResponse
 from lib.governance.subject_access import SubjectAccessManager
 from lib.paths import data_dir
 
@@ -31,7 +32,7 @@ db_path = data_dir() / "moh_time_os.db"
 _manager = SubjectAccessManager(str(db_path))
 
 
-@governance_router.post("/sar")
+@governance_router.post("/sar", response_model=DetailResponse)
 def create_subject_access_request(
     subject_identifier: str = Query(..., description="Email, name, or ID of data subject"),
     request_type: str = Query(..., description="access, deletion, rectification, or portability"),
@@ -76,7 +77,7 @@ def create_subject_access_request(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@governance_router.get("/sar/{request_id}")
+@governance_router.get("/sar/{request_id}", response_model=DetailResponse)
 def get_subject_access_request(request_id: str) -> dict:
     """Get status of a subject access request."""
     try:
@@ -104,7 +105,7 @@ def get_subject_access_request(request_id: str) -> dict:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@governance_router.get("/sar")
+@governance_router.get("/sar", response_model=DetailResponse)
 def list_subject_access_requests(
     status: str | None = Query(None, description="Filter by status"),
 ) -> dict:
@@ -133,7 +134,7 @@ def list_subject_access_requests(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@governance_router.post("/sar/{request_id}/fulfill")
+@governance_router.post("/sar/{request_id}/fulfill", response_model=DetailResponse)
 def fulfill_subject_access_request(
     request_id: str,
     action: str = Query(..., description="find, export, delete, or anonymize"),
@@ -223,7 +224,7 @@ def fulfill_subject_access_request(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@governance_router.get("/audit-log")
+@governance_router.get("/audit-log", response_model=DetailResponse)
 def query_audit_log(
     subject: str | None = Query(None, description="Filter by data subject"),
     action: str | None = Query(None, description="Filter by action type"),

@@ -17,6 +17,22 @@ from contextlib import contextmanager
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel
 
+from api.response_models import (
+    ClientIndexResponse,
+    DetailResponse,
+    EngagementListResponse,
+    FixDataResponse,
+    HealthResponse,
+    InboxCountsResponse,
+    InboxRecentResponse,
+    InboxResponse,
+    IntelligenceResponse,
+    InvoiceListResponse,
+    ListResponse,
+    MutationResponse,
+    SignalListResponse,
+    TeamInvolvementResponse,
+)
 from lib import paths
 from lib.ui_spec_v21.endpoints import (
     ClientEndpoints,
@@ -114,7 +130,7 @@ class IssueTransitionRequest(BaseModel):
 # ==== Client Endpoints (§7.1-7.3, 7.9) ====
 
 
-@spec_router.get("/clients")
+@spec_router.get("/clients", response_model=ClientIndexResponse)
 async def get_clients(
     status: str | None = Query(None, description="Filter by status: active|recently_active|cold"),
     tier: str | None = Query(None, description="Filter by tier"),
@@ -144,7 +160,7 @@ async def get_clients(
         conn.close()
 
 
-@spec_router.get("/clients/{client_id}")
+@spec_router.get("/clients/{client_id}", response_model=DetailResponse)
 async def get_client_detail(
     client_id: str,
     include: str | None = Query(None, description="Comma-separated sections to include"),
@@ -169,7 +185,7 @@ async def get_client_detail(
         conn.close()
 
 
-@spec_router.get("/clients/{client_id}/snapshot")
+@spec_router.get("/clients/{client_id}/snapshot", response_model=DetailResponse)
 async def get_client_snapshot(
     client_id: str,
     context_issue_id: str | None = Query(None),
@@ -198,7 +214,7 @@ async def get_client_snapshot(
 # ==== Financials Endpoints (§7.5) ====
 
 
-@spec_router.get("/clients/{client_id}/invoices")
+@spec_router.get("/clients/{client_id}/invoices", response_model=InvoiceListResponse)
 async def get_client_invoices(
     client_id: str,
     status: str | None = Query(None, description="Filter by status"),
@@ -218,7 +234,7 @@ async def get_client_invoices(
         conn.close()
 
 
-@spec_router.get("/clients/{client_id}/ar-aging")
+@spec_router.get("/clients/{client_id}/ar-aging", response_model=DetailResponse)
 async def get_client_ar_aging(client_id: str):
     """
     GET /api/v2/clients/:id/ar-aging
@@ -236,7 +252,7 @@ async def get_client_ar_aging(client_id: str):
 # ==== Inbox Endpoints (§7.10) ====
 
 
-@spec_router.get("/inbox")
+@spec_router.get("/inbox", response_model=InboxResponse)
 async def get_inbox(
     state: str | None = Query(None, description="Filter by state: proposed|snoozed"),
     type: str | None = Query(
@@ -286,7 +302,7 @@ async def get_inbox(
         conn.close()
 
 
-@spec_router.get("/inbox/recent")
+@spec_router.get("/inbox/recent", response_model=InboxRecentResponse)
 async def get_inbox_recent(
     days: int = Query(7, ge=1, le=90, description="Number of days to look back"),
     state: str | None = Query(
@@ -313,7 +329,7 @@ async def get_inbox_recent(
         conn.close()
 
 
-@spec_router.get("/inbox/counts")
+@spec_router.get("/inbox/counts", response_model=InboxCountsResponse)
 async def get_inbox_counts():
     """
     GET /api/v2/inbox/counts
@@ -328,7 +344,7 @@ async def get_inbox_counts():
         conn.close()
 
 
-@spec_router.post("/inbox/{item_id}/action")
+@spec_router.post("/inbox/{item_id}/action", response_model=MutationResponse)
 async def execute_inbox_action(
     item_id: str,
     request: InboxActionRequest,
@@ -369,7 +385,7 @@ async def execute_inbox_action(
         return result
 
 
-@spec_router.post("/inbox/{item_id}/read")
+@spec_router.post("/inbox/{item_id}/read", response_model=MutationResponse)
 async def mark_inbox_read(
     item_id: str,
     actor: str = Query(..., description="User ID marking as read"),
@@ -394,7 +410,7 @@ async def mark_inbox_read(
 # ==== Issue Endpoints (§7.6) ====
 
 
-@spec_router.get("/issues")
+@spec_router.get("/issues", response_model=ListResponse)
 async def get_issues(
     client_id: str | None = Query(None, description="Filter by client"),
     state: str | None = Query(None, description="Filter by state"),
@@ -465,7 +481,7 @@ async def get_issues(
         conn.close()
 
 
-@spec_router.get("/issues/{issue_id}")
+@spec_router.get("/issues/{issue_id}", response_model=DetailResponse)
 async def get_issue(issue_id: str):
     """
     GET /api/v2/issues/:id
@@ -491,7 +507,7 @@ async def get_issue(issue_id: str):
         conn.close()
 
 
-@spec_router.post("/issues/{issue_id}/transition")
+@spec_router.post("/issues/{issue_id}/transition", response_model=MutationResponse)
 async def transition_issue(
     issue_id: str,
     request: IssueTransitionRequest,
@@ -535,7 +551,7 @@ async def transition_issue(
 # ==== Signals Endpoints (§7.7) ====
 
 
-@spec_router.get("/clients/{client_id}/signals")
+@spec_router.get("/clients/{client_id}/signals", response_model=SignalListResponse)
 async def get_client_signals(
     client_id: str,
     sentiment: str | None = Query(None, description="Filter: good|neutral|bad|all"),
@@ -632,7 +648,7 @@ async def get_client_signals(
 # ==== Team Endpoints (§7.8) ====
 
 
-@spec_router.get("/clients/{client_id}/team")
+@spec_router.get("/clients/{client_id}/team", response_model=TeamInvolvementResponse)
 async def get_client_team(client_id: str, days: int = Query(30, ge=1, le=365)):
     """
     GET /api/v2/clients/:id/team
@@ -682,7 +698,7 @@ async def get_client_team(client_id: str, days: int = Query(30, ge=1, le=365)):
         conn.close()
 
 
-@spec_router.get("/team")
+@spec_router.get("/team", response_model=ListResponse)
 async def get_team():
     """
     GET /api/v2/team
@@ -737,7 +753,7 @@ async def get_team():
 # ==== Engagement Endpoints (§7.4, §7.11) ====
 
 
-@spec_router.get("/engagements")
+@spec_router.get("/engagements", response_model=EngagementListResponse)
 async def get_engagements(
     client_id: str | None = Query(None),
     state: str | None = Query(None),
@@ -816,7 +832,7 @@ async def get_engagements(
         conn.close()
 
 
-@spec_router.get("/engagements/{engagement_id}")
+@spec_router.get("/engagements/{engagement_id}", response_model=DetailResponse)
 async def get_engagement(engagement_id: str):
     """
     GET /api/v2/engagements/:id
@@ -858,7 +874,7 @@ class EngagementTransitionRequest(BaseModel):
     note: str | None = None
 
 
-@spec_router.post("/engagements/{engagement_id}/transition")
+@spec_router.post("/engagements/{engagement_id}/transition", response_model=MutationResponse)
 async def transition_engagement(
     engagement_id: str, request: EngagementTransitionRequest, actor: str = Query("user")
 ):
@@ -899,7 +915,7 @@ async def transition_engagement(
 # ==== Health Check ====
 
 
-@spec_router.get("/health")
+@spec_router.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint."""
     conn = get_db()
@@ -916,7 +932,7 @@ async def health_check():
 # ==== Scheduled Jobs ====
 
 
-@spec_router.post("/jobs/snooze-expiry")
+@spec_router.post("/jobs/snooze-expiry", response_model=MutationResponse)
 async def run_snooze_expiry_job():
     """
     Run snooze expiry job.
@@ -947,7 +963,7 @@ async def run_snooze_expiry_job():
         conn.close()
 
 
-@spec_router.post("/jobs/regression-watch")
+@spec_router.post("/jobs/regression-watch", response_model=MutationResponse)
 async def run_regression_watch_job():
     """
     Run regression watch expiry job.
@@ -976,7 +992,7 @@ async def run_regression_watch_job():
 # ==== Alias Endpoints for Frontend Compatibility ====
 
 
-@spec_router.get("/priorities")
+@spec_router.get("/priorities", response_model=ListResponse)
 async def get_priorities_v2(limit: int = Query(20), context: str | None = Query(None)):
     """
     GET /api/v2/priorities
@@ -1006,7 +1022,7 @@ async def get_priorities_v2(limit: int = Query(20), context: str | None = Query(
         conn.close()
 
 
-@spec_router.get("/projects")
+@spec_router.get("/projects", response_model=ListResponse)
 async def get_projects_v2(limit: int = Query(50), status: str | None = Query(None)):
     """
     GET /api/v2/projects
@@ -1042,7 +1058,7 @@ async def get_projects_v2(limit: int = Query(50), status: str | None = Query(Non
         conn.close()
 
 
-@spec_router.get("/events")
+@spec_router.get("/events", response_model=ListResponse)
 async def get_events_v2(
     start_date: str | None = Query(None),
     end_date: str | None = Query(None),
@@ -1083,7 +1099,7 @@ async def get_events_v2(
         conn.close()
 
 
-@spec_router.get("/invoices")
+@spec_router.get("/invoices", response_model=ListResponse)
 async def get_invoices_v2(
     status: str | None = Query(None),
     client_id: str | None = Query(None),
@@ -1125,7 +1141,7 @@ async def get_invoices_v2(
         conn.close()
 
 
-@spec_router.get("/proposals")
+@spec_router.get("/proposals", response_model=ListResponse)
 async def get_proposals_v2(
     limit: int = Query(20),
     status: str = Query("open"),
@@ -1181,7 +1197,7 @@ async def get_proposals_v2(
         conn.close()
 
 
-@spec_router.get("/watchers")
+@spec_router.get("/watchers", response_model=ListResponse)
 async def get_watchers_v2(hours: int = Query(24)):
     """
     GET /api/v2/watchers
@@ -1210,7 +1226,7 @@ async def get_watchers_v2(hours: int = Query(24)):
         conn.close()
 
 
-@spec_router.get("/couplings")
+@spec_router.get("/couplings", response_model=ListResponse)
 async def get_couplings_v2(
     anchor_type: str | None = Query(None),
     anchor_id: str | None = Query(None),
@@ -1271,7 +1287,7 @@ async def get_couplings_v2(
         conn.close()
 
 
-@spec_router.get("/fix-data")
+@spec_router.get("/fix-data", response_model=FixDataResponse)
 async def get_fix_data_v2():
     """
     GET /api/v2/fix-data
@@ -1355,7 +1371,7 @@ def _intel_error(message: str, params: dict | None = None) -> dict:
     }
 
 
-@spec_router.get("/intelligence/critical")
+@spec_router.get("/intelligence/critical", response_model=IntelligenceResponse)
 async def get_critical_items():
     """
     GET /api/v2/intelligence/critical
@@ -1372,7 +1388,7 @@ async def get_critical_items():
         return _intel_error(str(e))
 
 
-@spec_router.get("/intelligence/briefing")
+@spec_router.get("/intelligence/briefing", response_model=IntelligenceResponse)
 async def get_briefing():
     """
     GET /api/v2/intelligence/briefing
@@ -1418,7 +1434,7 @@ async def get_briefing():
         return _intel_error(str(e))
 
 
-@spec_router.get("/intelligence/signals")
+@spec_router.get("/intelligence/signals", response_model=IntelligenceResponse)
 async def get_intelligence_signals(
     quick: bool = Query(True, description="Quick detection mode"),
 ):
@@ -1441,7 +1457,7 @@ async def get_intelligence_signals(
         return _intel_error(str(e))
 
 
-@spec_router.get("/intelligence/signals/summary")
+@spec_router.get("/intelligence/signals/summary", response_model=IntelligenceResponse)
 async def get_intelligence_signal_summary():
     """
     GET /api/v2/intelligence/signals/summary
@@ -1458,7 +1474,7 @@ async def get_intelligence_signal_summary():
         return _intel_error(str(e))
 
 
-@spec_router.get("/intelligence/signals/active")
+@spec_router.get("/intelligence/signals/active", response_model=IntelligenceResponse)
 async def get_intelligence_active_signals(
     entity_type: str | None = Query(None),
     entity_id: str | None = Query(None),
@@ -1478,7 +1494,7 @@ async def get_intelligence_active_signals(
         return _intel_error(str(e))
 
 
-@spec_router.get("/intelligence/signals/history")
+@spec_router.get("/intelligence/signals/history", response_model=IntelligenceResponse)
 async def get_intelligence_signal_history(
     entity_type: str = Query(...),
     entity_id: str = Query(...),
@@ -1504,7 +1520,7 @@ async def get_intelligence_signal_history(
         return _intel_error(str(e))
 
 
-@spec_router.get("/intelligence/patterns")
+@spec_router.get("/intelligence/patterns", response_model=IntelligenceResponse)
 async def get_intelligence_patterns():
     """
     GET /api/v2/intelligence/patterns
@@ -1524,7 +1540,7 @@ async def get_intelligence_patterns():
         return _intel_error(str(e))
 
 
-@spec_router.get("/intelligence/patterns/catalog")
+@spec_router.get("/intelligence/patterns/catalog", response_model=IntelligenceResponse)
 async def get_intelligence_pattern_catalog():
     """
     GET /api/v2/intelligence/patterns/catalog
@@ -1556,7 +1572,7 @@ async def get_intelligence_pattern_catalog():
         return _intel_error(str(e))
 
 
-@spec_router.get("/intelligence/proposals")
+@spec_router.get("/intelligence/proposals", response_model=IntelligenceResponse)
 async def get_intelligence_proposals(
     limit: int = Query(20, ge=1, le=100),
     urgency: str | None = Query(None, description="Filter by urgency: immediate|this_week|monitor"),
@@ -1594,7 +1610,7 @@ async def get_intelligence_proposals(
         return _intel_error(str(e))
 
 
-@spec_router.get("/intelligence/scores/client/{client_id}")
+@spec_router.get("/intelligence/scores/client/{client_id}", response_model=IntelligenceResponse)
 async def get_client_score(client_id: str):
     """
     GET /api/v2/intelligence/scores/client/:id
@@ -1612,7 +1628,7 @@ async def get_client_score(client_id: str):
         return _intel_error(str(e))
 
 
-@spec_router.get("/intelligence/scores/project/{project_id}")
+@spec_router.get("/intelligence/scores/project/{project_id}", response_model=IntelligenceResponse)
 async def get_project_score(project_id: str):
     """
     GET /api/v2/intelligence/scores/project/:id
@@ -1630,7 +1646,7 @@ async def get_project_score(project_id: str):
         return _intel_error(str(e))
 
 
-@spec_router.get("/intelligence/scores/person/{person_id}")
+@spec_router.get("/intelligence/scores/person/{person_id}", response_model=IntelligenceResponse)
 async def get_person_score(person_id: str):
     """
     GET /api/v2/intelligence/scores/person/:id
@@ -1648,7 +1664,7 @@ async def get_person_score(person_id: str):
         return _intel_error(str(e))
 
 
-@spec_router.get("/intelligence/scores/portfolio")
+@spec_router.get("/intelligence/scores/portfolio", response_model=IntelligenceResponse)
 async def get_portfolio_score():
     """
     GET /api/v2/intelligence/scores/portfolio
@@ -1666,7 +1682,7 @@ async def get_portfolio_score():
         return _intel_error(str(e))
 
 
-@spec_router.get("/intelligence/entity/client/{client_id}")
+@spec_router.get("/intelligence/entity/client/{client_id}", response_model=IntelligenceResponse)
 async def get_client_intelligence(client_id: str):
     """
     GET /api/v2/intelligence/entity/client/:id
@@ -1683,7 +1699,7 @@ async def get_client_intelligence(client_id: str):
         return _intel_error(str(e))
 
 
-@spec_router.get("/intelligence/entity/person/{person_id}")
+@spec_router.get("/intelligence/entity/person/{person_id}", response_model=IntelligenceResponse)
 async def get_person_intelligence(person_id: str):
     """
     GET /api/v2/intelligence/entity/person/:id
@@ -1700,7 +1716,7 @@ async def get_person_intelligence(person_id: str):
         return _intel_error(str(e))
 
 
-@spec_router.get("/intelligence/entity/portfolio")
+@spec_router.get("/intelligence/entity/portfolio", response_model=IntelligenceResponse)
 async def get_portfolio_intelligence():
     """
     GET /api/v2/intelligence/entity/portfolio
@@ -1717,7 +1733,7 @@ async def get_portfolio_intelligence():
         return _intel_error(str(e))
 
 
-@spec_router.get("/intelligence/projects/{project_id}/state")
+@spec_router.get("/intelligence/projects/{project_id}/state", response_model=IntelligenceResponse)
 async def get_project_state(project_id: str):
     """
     GET /api/v2/intelligence/projects/:id/state
@@ -1739,7 +1755,7 @@ async def get_project_state(project_id: str):
         return _intel_error(str(e))
 
 
-@spec_router.get("/intelligence/clients/{client_id}/profile")
+@spec_router.get("/intelligence/clients/{client_id}/profile", response_model=IntelligenceResponse)
 async def get_client_profile(client_id: str):
     """
     GET /api/v2/intelligence/clients/:id/profile
@@ -1761,7 +1777,7 @@ async def get_client_profile(client_id: str):
         return _intel_error(str(e))
 
 
-@spec_router.get("/intelligence/team/{person_id}/profile")
+@spec_router.get("/intelligence/team/{person_id}/profile", response_model=IntelligenceResponse)
 async def get_person_profile(person_id: str):
     """
     GET /api/v2/intelligence/team/:id/profile
@@ -1783,7 +1799,7 @@ async def get_person_profile(person_id: str):
         return _intel_error(str(e))
 
 
-@spec_router.get("/intelligence/clients/{client_id}/trajectory")
+@spec_router.get("/intelligence/clients/{client_id}/trajectory", response_model=IntelligenceResponse)
 async def get_client_trajectory(
     client_id: str,
     window_days: int = Query(30, ge=7, le=90),
@@ -1810,7 +1826,7 @@ async def get_client_trajectory(
         return _intel_error(str(e))
 
 
-@spec_router.get("/intelligence/team/{person_id}/trajectory")
+@spec_router.get("/intelligence/team/{person_id}/trajectory", response_model=IntelligenceResponse)
 async def get_person_trajectory(
     person_id: str,
     window_days: int = Query(30, ge=7, le=90),
@@ -1883,7 +1899,7 @@ class IssueStateChangeRequest(BaseModel):
     actor: str = "system"
 
 
-@spec_router.post("/proposals/{proposal_id}/snooze")
+@spec_router.post("/proposals/{proposal_id}/snooze", response_model=MutationResponse)
 async def snooze_proposal(proposal_id: str, request: SnoozeRequest):
     """
     POST /api/v2/proposals/:id/snooze
@@ -1912,7 +1928,7 @@ async def snooze_proposal(proposal_id: str, request: SnoozeRequest):
         conn.close()
 
 
-@spec_router.post("/proposals/{proposal_id}/dismiss")
+@spec_router.post("/proposals/{proposal_id}/dismiss", response_model=MutationResponse)
 async def dismiss_proposal(proposal_id: str, request: DismissRequest):
     """
     POST /api/v2/proposals/:id/dismiss
@@ -1938,7 +1954,7 @@ async def dismiss_proposal(proposal_id: str, request: DismissRequest):
         conn.close()
 
 
-@spec_router.post("/watchers/{watcher_id}/dismiss")
+@spec_router.post("/watchers/{watcher_id}/dismiss", response_model=MutationResponse)
 async def dismiss_watcher(watcher_id: str, request: WatcherDismissRequest):
     """
     POST /api/v2/watchers/:id/dismiss
@@ -1964,7 +1980,7 @@ async def dismiss_watcher(watcher_id: str, request: WatcherDismissRequest):
         conn.close()
 
 
-@spec_router.post("/watchers/{watcher_id}/snooze")
+@spec_router.post("/watchers/{watcher_id}/snooze", response_model=MutationResponse)
 async def snooze_watcher(watcher_id: str, request: WatcherSnoozeRequest):
     """
     POST /api/v2/watchers/:id/snooze
@@ -1993,7 +2009,7 @@ async def snooze_watcher(watcher_id: str, request: WatcherSnoozeRequest):
         conn.close()
 
 
-@spec_router.post("/fix-data/{item_type}/{item_id}/resolve")
+@spec_router.post("/fix-data/{item_type}/{item_id}/resolve", response_model=MutationResponse)
 async def resolve_fix_data(item_type: str, item_id: str, request: FixDataResolveRequest):
     """
     POST /api/v2/fix-data/:type/:id/resolve
@@ -2028,7 +2044,7 @@ async def resolve_fix_data(item_type: str, item_id: str, request: FixDataResolve
         conn.close()
 
 
-@spec_router.post("/issues")
+@spec_router.post("/issues", response_model=MutationResponse)
 async def create_issue_from_proposal(request: CreateIssueRequest):
     """
     POST /api/v2/issues
@@ -2091,7 +2107,7 @@ async def create_issue_from_proposal(request: CreateIssueRequest):
         conn.close()
 
 
-@spec_router.post("/issues/{issue_id}/notes")
+@spec_router.post("/issues/{issue_id}/notes", response_model=MutationResponse)
 async def add_issue_note(issue_id: str, request: IssueNoteRequest):
     """
     POST /api/v2/issues/:id/notes
@@ -2131,7 +2147,7 @@ async def add_issue_note(issue_id: str, request: IssueNoteRequest):
 # The backend has POST /issues/:id/transition — these aliases bridge the gap.
 
 
-@spec_router.patch("/issues/{issue_id}/resolve")
+@spec_router.patch("/issues/{issue_id}/resolve", response_model=MutationResponse)
 async def resolve_issue(issue_id: str, request: IssueResolveRequest):
     """
     PATCH /api/v2/issues/:id/resolve
@@ -2166,7 +2182,7 @@ async def resolve_issue(issue_id: str, request: IssueResolveRequest):
         conn.close()
 
 
-@spec_router.patch("/issues/{issue_id}/state")
+@spec_router.patch("/issues/{issue_id}/state", response_model=MutationResponse)
 async def change_issue_state(issue_id: str, request: IssueStateChangeRequest):
     """
     PATCH /api/v2/issues/:id/state
@@ -2217,7 +2233,7 @@ async def change_issue_state(issue_id: str, request: IssueStateChangeRequest):
         conn.close()
 
 
-@spec_router.get("/evidence/{entity_type}/{entity_id}")
+@spec_router.get("/evidence/{entity_type}/{entity_id}", response_model=ListResponse)
 async def get_evidence_v2(entity_type: str, entity_id: str):
     """
     GET /api/v2/evidence/{entity_type}/{entity_id}

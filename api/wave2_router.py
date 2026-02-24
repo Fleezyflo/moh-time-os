@@ -26,6 +26,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import PlainTextResponse
 
 from api.auth import require_auth
+from api.response_models import IntelligenceResponse
 from lib import paths
 
 logger = logging.getLogger(__name__)
@@ -52,7 +53,7 @@ def _wrap(data, params=None):
 # =============================================================================
 
 
-@wave2_router.get("/dashboard/command-center")
+@wave2_router.get("/dashboard/command-center", response_model=IntelligenceResponse)
 def dashboard_command_center():
     """Command center view — top-level agency health."""
     try:
@@ -71,7 +72,7 @@ def dashboard_command_center():
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@wave2_router.get("/dashboard/full")
+@wave2_router.get("/dashboard/full", response_model=IntelligenceResponse)
 def dashboard_full():
     """Full dashboard index — all views combined."""
     try:
@@ -96,7 +97,7 @@ def dashboard_full():
 # =============================================================================
 
 
-@wave2_router.post("/ask")
+@wave2_router.post("/ask", response_model=IntelligenceResponse)
 def conversational_query(
     query: str = Query(..., description="Natural language question"),
     session_id: str = Query("default", description="Session ID for context"),
@@ -123,7 +124,7 @@ def conversational_query(
 # =============================================================================
 
 
-@wave2_router.get("/notifications/decide")
+@wave2_router.get("/notifications/decide", response_model=IntelligenceResponse)
 def notification_decide(
     entity_type: str = Query(..., description="Entity type"),
     entity_id: str = Query(..., description="Entity ID"),
@@ -149,7 +150,7 @@ def notification_decide(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@wave2_router.get("/notifications/fatigue")
+@wave2_router.get("/notifications/fatigue", response_model=IntelligenceResponse)
 def notification_fatigue(
     entity_id: str = Query("", description="Entity filter"),
 ):
@@ -172,7 +173,7 @@ def notification_fatigue(
 # =============================================================================
 
 
-@wave2_router.get("/predict/health/{entity_id}")
+@wave2_router.get("/predict/health/{entity_id}", response_model=IntelligenceResponse)
 def predict_health(
     entity_id: str,
     entity_type: str = Query("client", description="Entity type"),
@@ -200,7 +201,7 @@ def predict_health(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@wave2_router.get("/predict/warnings")
+@wave2_router.get("/predict/warnings", response_model=IntelligenceResponse)
 def predict_warnings(
     entity_type: str = Query("client", description="Entity type"),
     entity_id: str = Query("", description="Entity ID"),
@@ -227,7 +228,7 @@ def predict_warnings(
 # =============================================================================
 
 
-@wave2_router.get("/attention/summary")
+@wave2_router.get("/attention/summary", response_model=IntelligenceResponse)
 def attention_summary(
     entity_type: str = Query("", description="Entity type filter"),
     days: int = Query(7, description="Window in days"),
@@ -247,7 +248,7 @@ def attention_summary(
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@wave2_router.get("/attention/neglected")
+@wave2_router.get("/attention/neglected", response_model=IntelligenceResponse)
 def attention_neglected(
     entity_type: str = Query("client", description="Entity type"),
     threshold_days: int = Query(14, description="Days without attention"),
@@ -276,7 +277,7 @@ def attention_neglected(
 # =============================================================================
 
 
-@wave2_router.get("/ops/health")
+@wave2_router.get("/ops/health", response_model=IntelligenceResponse)
 def ops_system_health():
     """Get autonomous operations system health."""
     try:
@@ -295,7 +296,7 @@ def ops_system_health():
 # =============================================================================
 
 
-@wave2_router.get("/perf/cache-stats")
+@wave2_router.get("/perf/cache-stats", response_model=IntelligenceResponse)
 def perf_cache_stats():
     """Get cache performance stats."""
     try:
@@ -308,7 +309,7 @@ def perf_cache_stats():
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@wave2_router.get("/perf/baselines")
+@wave2_router.get("/perf/baselines", response_model=IntelligenceResponse)
 def perf_baselines():
     """Get performance baselines."""
     try:
@@ -327,7 +328,7 @@ def perf_baselines():
 # =============================================================================
 
 
-@wave2_router.get("/governance/catalog")
+@wave2_router.get("/governance/catalog", response_model=IntelligenceResponse)
 def governance_catalog():
     """Get data classification catalog."""
     try:
@@ -340,7 +341,7 @@ def governance_catalog():
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@wave2_router.get("/governance/compliance")
+@wave2_router.get("/governance/compliance", response_model=IntelligenceResponse)
 def governance_compliance():
     """Generate compliance report."""
     try:
@@ -354,7 +355,7 @@ def governance_compliance():
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@wave2_router.get("/governance/retention")
+@wave2_router.get("/governance/retention", response_model=IntelligenceResponse)
 def governance_retention():
     """Get retention policy summary."""
     try:
