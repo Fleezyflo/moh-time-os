@@ -912,66 +912,6 @@
       "source": "migrations/v4_milestone1_truth_proof.py"
     },
     {
-      "name": "asana_attachments",
-      "source": "lib/db.py"
-    },
-    {
-      "name": "asana_custom_fields",
-      "source": "lib/db.py"
-    },
-    {
-      "name": "asana_goals",
-      "source": "lib/db.py"
-    },
-    {
-      "name": "asana_portfolios",
-      "source": "lib/db.py"
-    },
-    {
-      "name": "asana_sections",
-      "source": "lib/db.py"
-    },
-    {
-      "name": "asana_stories",
-      "source": "lib/db.py"
-    },
-    {
-      "name": "asana_subtasks",
-      "source": "lib/db.py"
-    },
-    {
-      "name": "asana_task_dependencies",
-      "source": "lib/db.py"
-    },
-    {
-      "name": "calendar_attendees",
-      "source": "lib/db.py"
-    },
-    {
-      "name": "calendar_recurrence_rules",
-      "source": "lib/db.py"
-    },
-    {
-      "name": "chat_attachments",
-      "source": "lib/db.py"
-    },
-    {
-      "name": "chat_reactions",
-      "source": "lib/db.py"
-    },
-    {
-      "name": "chat_space_members",
-      "source": "lib/db.py"
-    },
-    {
-      "name": "chat_space_metadata",
-      "source": "lib/db.py"
-    },
-    {
-      "name": "clients",
-      "source": "lib/db.py"
-    },
-    {
       "name": "cost_snapshots",
       "source": "migrations/v31_intelligence_wiring.py"
     },
@@ -996,24 +936,8 @@
       "source": "migrations/v4_milestone1_truth_proof.py"
     },
     {
-      "name": "events",
-      "source": "lib/db.py"
-    },
-    {
       "name": "fix_data_queue",
       "source": "migrations/v4_milestone1_truth_proof.py"
-    },
-    {
-      "name": "gmail_attachments",
-      "source": "lib/db.py"
-    },
-    {
-      "name": "gmail_labels",
-      "source": "lib/db.py"
-    },
-    {
-      "name": "gmail_participants",
-      "source": "lib/db.py"
     },
     {
       "name": "identity_claims",
@@ -1029,11 +953,11 @@
     },
     {
       "name": "inbox_items_v29",
-      "source": "lib/db.py"
+      "source": "migrations/v29_full_schema.py"
     },
     {
       "name": "inbox_suppression_rules_v29",
-      "source": "lib/db.py"
+      "source": "migrations/v29_full_schema.py"
     },
     {
       "name": "intelligence_events",
@@ -1044,16 +968,12 @@
       "source": "migrations/v31_intelligence_wiring.py"
     },
     {
-      "name": "invoices",
-      "source": "lib/db.py"
-    },
-    {
       "name": "issue_transitions_v29",
-      "source": "lib/db.py"
+      "source": "migrations/v29_full_schema.py"
     },
     {
       "name": "issues_v29",
-      "source": "lib/db.py"
+      "source": "migrations/v29_full_schema.py"
     },
     {
       "name": "org_settings",
@@ -1097,34 +1017,14 @@
     },
     {
       "name": "signals_v29",
-      "source": "lib/db.py"
-    },
-    {
-      "name": "xero_bank_transactions",
-      "source": "lib/db.py"
-    },
-    {
-      "name": "xero_contacts",
-      "source": "lib/db.py"
-    },
-    {
-      "name": "xero_credit_notes",
-      "source": "lib/db.py"
-    },
-    {
-      "name": "xero_line_items",
-      "source": "lib/db.py"
-    },
-    {
-      "name": "xero_tax_rates",
-      "source": "lib/db.py"
+      "source": "migrations/v29_full_schema.py"
     }
   ],
   "generated_by": "scripts/generate_system_map.py",
   "summary": {
     "api_routes_count": 171,
     "collectors_count": 9,
-    "db_tables_count": 56,
+    "db_tables_count": 31,
     "ui_routes_count": 18
   },
   "ui_api_calls": [],
