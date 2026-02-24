@@ -2238,7 +2238,7 @@
     },
     "/api/capacity/debt/accrue": {
       "post": {
-        "description": "Record accrued capacity debt.",
+        "description": "Record accrued capacity debt. Not yet implemented.",
         "operationId": "accrue_debt_api_capacity_debt_accrue_post",
         "parameters": [
           {
@@ -2259,14 +2259,6 @@
           }
         ],
         "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
           "422": {
             "content": {
               "application/json": {
@@ -2276,6 +2268,14 @@
               }
             },
             "description": "Validation Error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
           }
         },
         "summary": "Accrue Debt"
@@ -2283,7 +2283,7 @@
     },
     "/api/capacity/debt/{debt_id}/resolve": {
       "post": {
-        "description": "Resolve a capacity debt item.",
+        "description": "Resolve a capacity debt item. Not yet implemented.",
         "operationId": "resolve_debt_api_capacity_debt__debt_id__resolve_post",
         "parameters": [
           {
@@ -2297,14 +2297,6 @@
           }
         ],
         "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
           "422": {
             "content": {
               "application/json": {
@@ -2314,6 +2306,14 @@
               }
             },
             "description": "Validation Error"
+          },
+          "501": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
           }
         },
         "summary": "Resolve Debt"
@@ -2324,6 +2324,16 @@
         "description": "Get capacity forecast for upcoming days.",
         "operationId": "get_capacity_forecast_api_capacity_forecast_get",
         "parameters": [
+          {
+            "in": "query",
+            "name": "lane_id",
+            "required": false,
+            "schema": {
+              "default": "default",
+              "title": "Lane Id",
+              "type": "string"
+            }
+          },
           {
             "in": "query",
             "name": "days",
@@ -2361,7 +2371,7 @@
     "/api/capacity/lanes": {
       "get": {
         "description": "Get capacity lanes configuration.",
-        "operationId": "get_capacity_lanes_api_capacity_lanes_get",
+        "operationId": "get_capacity_lanes_endpoint_api_capacity_lanes_get",
         "responses": {
           "200": {
             "content": {
@@ -2372,7 +2382,7 @@
             "description": "Successful Response"
           }
         },
-        "summary": "Get Capacity Lanes"
+        "summary": "Get Capacity Lanes Endpoint"
       }
     },
     "/api/capacity/utilization": {
@@ -2382,7 +2392,7 @@
         "parameters": [
           {
             "in": "query",
-            "name": "start_date",
+            "name": "lane_id",
             "required": false,
             "schema": {
               "anyOf": [
@@ -2393,12 +2403,12 @@
                   "type": "null"
                 }
               ],
-              "title": "Start Date"
+              "title": "Lane Id"
             }
           },
           {
             "in": "query",
-            "name": "end_date",
+            "name": "target_date",
             "required": false,
             "schema": {
               "anyOf": [
@@ -2409,7 +2419,7 @@
                   "type": "null"
                 }
               ],
-              "title": "End Date"
+              "title": "Target Date"
             }
           }
         ],

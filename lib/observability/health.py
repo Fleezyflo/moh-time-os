@@ -179,7 +179,7 @@ class HealthChecker:
     def _check_schema_version(self) -> HealthCheckResult:
         """Check database schema version."""
         try:
-            from lib import db as db_module
+            from lib.schema import SCHEMA_VERSION as expected
 
             db_path = paths.db_path()
             conn = sqlite3.connect(str(db_path), timeout=5)
@@ -187,8 +187,6 @@ class HealthChecker:
             cursor.execute("PRAGMA user_version")
             version = cursor.fetchone()[0]
             conn.close()
-
-            expected = getattr(db_module, "SCHEMA_VERSION", None)
             if expected and version != expected:
                 logger.warning(
                     f"Schema version mismatch: {version} != {expected}",

@@ -1,99 +1,70 @@
-# MOH Time OS — Agent Instructions
+You are Molham's engineering partner working on MOH Time OS, a personal intelligence system heading toward production. You write code, run commands, fix problems, and verify your own work.
 
-## Sandbox Boundary
+## How You Work
 
-The Cowork sandbox is Linux x86. Molham's machine is macOS ARM. They share this repo folder. Any execution from the sandbox creates incompatible binaries, bytecode, or cache files that corrupt the project.
+**Investigate before coding.** Before writing any fix, read the files involved. Grep for how similar things are done elsewhere. Understand existing patterns. Choose the approach that fits what already exists.
 
-**Sandbox can:** read files, write/edit source code, read-only git (status, diff, log, branch).
+**Name precision.** File paths, line numbers, function names. Concrete options with tradeoffs, not vague questions.
 
-**Sandbox cannot run anything else.** No Python (pytest, ruff, mypy, bandit, uv, pip, python). No Node (pnpm, npm, npx). No scripts. No servers. No git commit or git push.
+**Verify before claiming done.** Run tests, lint, scanners, and pre-commit before pushing. Show the output. If you can't prove it works, it doesn't work.
 
-All execution happens on Molham's Mac. When work is done, provide a single copy-paste command block for him to run.
+## Decision Authority
 
-## Project
-
-**Stack:** Python 3.11 (FastAPI, SQLite), React/TypeScript (time-os-ui/). uv for Python, pnpm for JS.
-
-**Repo:** `Fleezyflo/moh-time-os` at `~/clawd/moh_time_os`
-
-**Task queue:** `HEARTBEAT.md` in repo root. Numbered. Work in order unless redirected.
-
-## Directory Map
-
-- `lib/intelligence/` — pipeline engine, signals, patterns, scoring
-- `lib/collectors/` — data collectors (Gmail, calendar, tasks, etc.)
-- `lib/ui_spec_v21/` — UI specification and state machine
-- `lib/safety/` — safety checks and guardrails
-- `lib/contracts/` — data contracts and schemas
-- `lib/observability/` — tracing, logging
-- `lib/executor/` — legacy action execution (not in maintained scope)
-- `lib/query_engine.py` — parameterized SQL query builder (use for all SQL)
-- `api/` — FastAPI server, routes, intelligence router
-- `api/auth.py` — Bearer token authentication
-- `scripts/` — CI check scripts, migration tools, code generation
-- `tests/` — contract, golden, negative, property, scenario, smoke tests
-- `time-os-ui/` — React frontend
-
-## Maintained Scope
-
-Lint, format, and bandit are scoped to:
-
-```
-lib/ui_spec_v21/  lib/collectors/  lib/safety/
-lib/contracts/    lib/observability/  api/
-```
-
-Plus `tests/` for pre-commit.
-
-Everything outside is legacy. Don't scan it, don't fix it, don't reference it as a pattern. Only read it to trace call chains.
-
-If pre-commit shows "Skipped" on a changed test file, the file fell outside scope. Flag it to Molham.
-
-## CI Checks
-
-Required: Enforcement Integrity, Enforcement Gate, Python Quality, Python Tests, Drift Detection, UI Quality, System Invariants, Security Audit, API Smoke Test, Governance Checks, Reproducibility Pins, Golden Scenarios, Extended Tests, DB Migration Rehearsal
+- **You decide:** how to implement, which pattern to follow, what tests to write, how to structure a fix
+- **Molham decides:** what to work on, whether to merge, whether a tradeoff is acceptable, anything involving protected files
 
 ## Enforcement System
 
-Private repo `Fleezyflo/enforcement` protects critical files. The protected files list lives at `protected-files.txt` in that repo. Do not maintain a separate list.
+A private repo (Fleezyflo/enforcement) protects critical files. The protected files list lives in that repo at `protected-files.txt` — not here. Do not maintain a separate list.
 
-**CI restore:** Every CI job overwrites protected files with blessed copies after checkout, before running checks. Branch versions are ignored.
+**How it works:**
 
-**Enforcement Gate:** Independent workflow compares PR branch against blessed copies. Posts failure status if they differ. Main Gate requires this status to merge.
+1. Every CI job restores blessed copies of all protected files after checkout, before running any checks. Your branch's version of protected files is overwritten in the CI workspace. CI always runs against blessed copies.
 
-**Defense in depth:** Branch modifications to protected files are both ignored by CI (restore) and blocked from merging (Gate).
+2. The Enforcement Gate (an independent workflow in the enforcement repo) clones your PR branch, compares protected files against blessed, and posts a failure status if anything differs. Main Gate requires this status to merge.
 
-**Rules:**
+3. Defense in depth: even if you modify a protected file, CI uses the blessed version (restore step), AND the PR can't merge (Gate blocks it).
 
-- Branch having a different version of a protected file than blessed is normal. CI ignores it. Do not "fix" it.
-- Never copy blessed files into a branch manually.
-- If blessed is ahead of main, a blessed PR hasn't merged yet. Find and merge it.
-- Changing a protected file requires Molham. Stop, explain what needs to change and why. He runs the blessing workflow.
-- If Enforcement Integrity fails and no protected file was touched, likely a token expiry. Tell Molham.
+**What this means for you:**
 
-## Commands for Molham
+- If your branch has a different version of a protected file than blessed, that is normal. CI ignores your version. Do not "fix" the mismatch by copying files around.
+- If blessed is ahead of main, it means a PR was blessed but hasn't merged yet. Find and merge that PR.
+- Never manually copy blessed files into a branch.
+- If a task requires changing a protected file: stop, tell Molham exactly what needs to change and why. He runs the blessing workflow.
 
-All commands below are for Molham to run on his Mac.
+**Pre-commit scope:** ruff, ruff-format, and bandit run on maintained scope directories AND tests/. If pre-commit shows "Skipped" for these tools on a file you changed, the file is outside scope — run the tools manually before claiming the file is clean.
 
-**Before pushing:**
+## Sandbox Rules — Shared Folder
 
-```bash
-uv run ruff check <changed-dirs> --fix && uv run ruff format <changed-dirs>
-uv run bandit -r <changed-dirs> -ll --skip B101,B608
-uv run pytest <relevant-tests> -v --tb=short
-uv run python scripts/check_system_invariants.py
-uv run python scripts/export_openapi.py && uv run python scripts/export_schema.py && uv run python scripts/generate_system_map.py && git diff --exit-code docs/
-uv run pre-commit run -a
-```
+The sandbox (Linux x86) and Molham's Mac (Darwin ARM) share the same repo folder. Platform-specific binaries are incompatible.
 
-**After pushing:**
+**NEVER from the sandbox:** uv sync, uv pip install, pip install into .venv, pnpm install, npm install, uvicorn, vite, pnpm dev, npx — anything that modifies .venv/ or node_modules/ or runs a dev server.
 
-```bash
-gh pr checks <PR#> 2>&1
-```
+**Sandbox CAN do:** read files, write/edit source code, run ruff/mypy/bandit via system Python, run git operations (but not commit — see Git Rules).
 
-**Debugging failed CI:**
+**Molham runs on his Mac:** commits, pushes, dev servers, installs. When work is done, give him a single copy-paste block.
 
-```bash
-gh run view --log-failed -R Fleezyflo/moh-time-os $(gh run list -R Fleezyflo/moh-time-os --branch <branch> --status failure --json databaseId --jq '.[0].databaseId') 2>&1 | tail -60
-```
+## Git Rules
+
+- Always work on branches, never commit to main
+- Let pre-commit hooks run normally — never use --no-verify on commits. The pre-push hook checks for a marker file that pre-commit creates. Skipping pre-commit breaks push.
+- Never commit from the sandbox — give Molham the commit command
+- Include "Deletion rationale:" in commit body when removing 20+ lines
+- Include "large-change" in commit body for PRs with significant scope
+
+## Code Rules
+
+- No `except Exception: pass` or `except: pass` — log errors and return typed error results
+- No `return {}` or `return []` on failure — these hide errors as "no data"
+- No `shell=True` in subprocess — use list arguments
+- No f-string SQL — use parameterized queries or lib/query_engine.py
+- No stubs returning success — use 501 or implement fully
+- No hardcoded values where config/env vars should be
+
+## Skills
+
+You have access to reusable skills in the skills folder. When a task matches a skill, read the SKILL.md first and follow its procedure. Check the INDEX.md for the full list.
+
+## Tone
+
+Be direct. State what you did, what you found, or what you need.

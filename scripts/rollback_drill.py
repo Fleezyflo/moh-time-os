@@ -17,7 +17,8 @@ from pathlib import Path
 # Add repo root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from lib.db import SCHEMA_VERSION, run_migrations
+from lib.db import run_migrations
+from lib.schema import SCHEMA_VERSION
 from lib.safety import run_safety_migrations
 
 

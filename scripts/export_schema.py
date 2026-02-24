@@ -51,24 +51,14 @@ def get_db_schema(db_path: Path) -> str:
 
 
 def get_expected_schema() -> str:
-    """Get schema from lib/db.py SCHEMA constant or migration files."""
-    # Try to get from v5 migration
-    v5_schema = Path("lib/v5/migrations/001_create_v5_schema.sql")
-    if v5_schema.exists():
-        return v5_schema.read_text()
+    """Get expected schema from lib/schema TABLES declaration."""
+    from lib.schema import TABLES
+    from lib.schema_engine import _build_create_sql
 
-    # Fallback: extract from running db module
-    from lib import db as db_module
-
-    if hasattr(db_module, "SCHEMA"):
-        return db_module.SCHEMA
-
-    # Fallback: extract from REQUIRED_TABLES dict in db module
-    if hasattr(db_module, "REQUIRED_TABLES"):
-        tables = db_module.REQUIRED_TABLES
-        return "\n\n".join(sql.strip() for sql in tables.values()) + "\n"
-
-    raise RuntimeError("Could not find schema definition")
+    statements = []
+    for table_name, table_def in TABLES.items():
+        statements.append(_build_create_sql(table_name, table_def))
+    return "\n\n".join(statements) + "\n"
 
 
 def main() -> int:

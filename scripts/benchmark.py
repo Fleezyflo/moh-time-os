@@ -134,7 +134,7 @@ def run_benchmarks() -> list[BenchmarkResult]:
         import sqlite3
         import tempfile
 
-        from lib.db import init_db
+        from lib.db import run_migrations
         from lib.safety.schema import SchemaAssertion
 
         # Create temp DB
@@ -144,7 +144,7 @@ def run_benchmarks() -> list[BenchmarkResult]:
         os.close(fd)
 
         conn = sqlite3.connect(path)
-        init_db(conn)
+        run_migrations(conn)
 
         assertion = SchemaAssertion(conn)
         result = benchmark(
