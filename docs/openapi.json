@@ -344,6 +344,24 @@
         "title": "ClientUpdate",
         "type": "object"
       },
+      "CreateIssueRequest": {
+        "properties": {
+          "actor": {
+            "default": "system",
+            "title": "Actor",
+            "type": "string"
+          },
+          "proposal_id": {
+            "title": "Proposal Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "proposal_id"
+        ],
+        "title": "CreateIssueRequest",
+        "type": "object"
+      },
       "DelegateAction": {
         "properties": {
           "note": {
@@ -412,6 +430,17 @@
           }
         },
         "title": "DismissProposalRequest",
+        "type": "object"
+      },
+      "DismissRequest": {
+        "properties": {
+          "reason": {
+            "default": "Dismissed by user",
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "title": "DismissRequest",
         "type": "object"
       },
       "DismissWatcherRequest": {
@@ -572,6 +601,22 @@
         "title": "FeedbackRequest",
         "type": "object"
       },
+      "FixDataResolveRequest": {
+        "properties": {
+          "actor": {
+            "default": "system",
+            "title": "Actor",
+            "type": "string"
+          },
+          "resolution": {
+            "default": "manually_resolved",
+            "title": "Resolution",
+            "type": "string"
+          }
+        },
+        "title": "FixDataResolveRequest",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -718,6 +763,69 @@
           "type"
         ],
         "title": "InteractiveActionRequest",
+        "type": "object"
+      },
+      "IssueNoteRequest": {
+        "properties": {
+          "actor": {
+            "default": "system",
+            "title": "Actor",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "IssueNoteRequest",
+        "type": "object"
+      },
+      "IssueResolveRequest": {
+        "properties": {
+          "actor": {
+            "default": "system",
+            "title": "Actor",
+            "type": "string"
+          },
+          "resolution": {
+            "default": "manually_resolved",
+            "title": "Resolution",
+            "type": "string"
+          }
+        },
+        "title": "IssueResolveRequest",
+        "type": "object"
+      },
+      "IssueStateChangeRequest": {
+        "properties": {
+          "actor": {
+            "default": "system",
+            "title": "Actor",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "title": "IssueStateChangeRequest",
         "type": "object"
       },
       "IssueTransitionRequest": {
@@ -984,6 +1092,17 @@
           }
         },
         "title": "SnoozeProposalRequest",
+        "type": "object"
+      },
+      "SnoozeRequest": {
+        "properties": {
+          "days": {
+            "default": 7,
+            "title": "Days",
+            "type": "integer"
+          }
+        },
+        "title": "SnoozeRequest",
         "type": "object"
       },
       "SnoozeWatcherRequest": {
@@ -1269,6 +1388,33 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "WatcherDismissRequest": {
+        "properties": {
+          "actor": {
+            "default": "system",
+            "title": "Actor",
+            "type": "string"
+          }
+        },
+        "title": "WatcherDismissRequest",
+        "type": "object"
+      },
+      "WatcherSnoozeRequest": {
+        "properties": {
+          "actor": {
+            "default": "system",
+            "title": "Actor",
+            "type": "string"
+          },
+          "hours": {
+            "default": 24,
+            "title": "Hours",
+            "type": "integer"
+          }
+        },
+        "title": "WatcherSnoozeRequest",
         "type": "object"
       }
     },
@@ -8672,6 +8818,66 @@
         ]
       }
     },
+    "/api/v2/fix-data/{item_type}/{item_id}/resolve": {
+      "post": {
+        "description": "POST /api/v2/fix-data/:type/:id/resolve\n\nResolve a fix-data item (identity conflict or ambiguous link).",
+        "operationId": "resolve_fix_data_api_v2_fix_data__item_type___item_id__resolve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_type",
+            "required": true,
+            "schema": {
+              "title": "Item Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixDataResolveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resolve Fix Data",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
     "/api/v2/health": {
       "get": {
         "description": "Health check endpoint.",
@@ -11041,6 +11247,44 @@
         "tags": [
           "Spec v2.9"
         ]
+      },
+      "post": {
+        "description": "POST /api/v2/issues\n\nCreate an issue from a proposal.",
+        "operationId": "create_issue_from_proposal_api_v2_issues_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateIssueRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Issue From Proposal",
+        "tags": [
+          "Spec v2.9"
+        ]
       }
     },
     "/api/v2/issues/{issue_id}": {
@@ -11079,6 +11323,159 @@
           }
         },
         "summary": "Get Issue",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
+    "/api/v2/issues/{issue_id}/notes": {
+      "post": {
+        "description": "POST /api/v2/issues/:id/notes\n\nAdd a note to an issue.",
+        "operationId": "add_issue_note_api_v2_issues__issue_id__notes_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "issue_id",
+            "required": true,
+            "schema": {
+              "title": "Issue Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueNoteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Issue Note",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
+    "/api/v2/issues/{issue_id}/resolve": {
+      "patch": {
+        "description": "PATCH /api/v2/issues/:id/resolve\n\nResolves an issue. Translates to the existing transition logic.",
+        "operationId": "resolve_issue_api_v2_issues__issue_id__resolve_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "issue_id",
+            "required": true,
+            "schema": {
+              "title": "Issue Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueResolveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resolve Issue",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
+    "/api/v2/issues/{issue_id}/state": {
+      "patch": {
+        "description": "PATCH /api/v2/issues/:id/state\n\nChanges issue state. Maps to the existing transition logic.",
+        "operationId": "change_issue_state_api_v2_issues__issue_id__state_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "issue_id",
+            "required": true,
+            "schema": {
+              "title": "Issue Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueStateChangeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change Issue State",
         "tags": [
           "Spec v2.9"
         ]
@@ -11640,6 +12037,108 @@
         ]
       }
     },
+    "/api/v2/proposals/{proposal_id}/dismiss": {
+      "post": {
+        "description": "POST /api/v2/proposals/:id/dismiss\n\nDismiss a proposal.",
+        "operationId": "dismiss_proposal_api_v2_proposals__proposal_id__dismiss_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DismissRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dismiss Proposal",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
+    "/api/v2/proposals/{proposal_id}/snooze": {
+      "post": {
+        "description": "POST /api/v2/proposals/:id/snooze\n\nSnooze a proposal for N days.",
+        "operationId": "snooze_proposal_api_v2_proposals__proposal_id__snooze_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SnoozeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Snooze Proposal",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
     "/api/v2/team": {
       "get": {
         "description": "GET /api/v2/team\n\nReturns all team members with workload metrics.",
@@ -11697,6 +12196,108 @@
           }
         },
         "summary": "Get Watchers V2",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
+    "/api/v2/watchers/{watcher_id}/dismiss": {
+      "post": {
+        "description": "POST /api/v2/watchers/:id/dismiss\n\nDismiss a watcher.",
+        "operationId": "dismiss_watcher_api_v2_watchers__watcher_id__dismiss_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "watcher_id",
+            "required": true,
+            "schema": {
+              "title": "Watcher Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WatcherDismissRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dismiss Watcher",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
+    "/api/v2/watchers/{watcher_id}/snooze": {
+      "post": {
+        "description": "POST /api/v2/watchers/:id/snooze\n\nSnooze a watcher for N hours.",
+        "operationId": "snooze_watcher_api_v2_watchers__watcher_id__snooze_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "watcher_id",
+            "required": true,
+            "schema": {
+              "title": "Watcher Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WatcherSnoozeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Snooze Watcher",
         "tags": [
           "Spec v2.9"
         ]

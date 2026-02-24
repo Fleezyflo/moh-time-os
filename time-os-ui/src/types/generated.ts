@@ -3345,6 +3345,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/fix-data/{item_type}/{item_id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resolve Fix Data
+         * @description POST /api/v2/fix-data/:type/:id/resolve
+         *
+         *     Resolve a fix-data item (identity conflict or ambiguous link).
+         */
+        post: operations["resolve_fix_data_api_v2_fix_data__item_type___item_id__resolve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/health": {
         parameters: {
             query?: never;
@@ -4447,7 +4469,13 @@ export interface paths {
          */
         get: operations["get_issues_api_v2_issues_get"];
         put?: never;
-        post?: never;
+        /**
+         * Create Issue From Proposal
+         * @description POST /api/v2/issues
+         *
+         *     Create an issue from a proposal.
+         */
+        post: operations["create_issue_from_proposal_api_v2_issues_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4474,6 +4502,72 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v2/issues/{issue_id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Issue Note
+         * @description POST /api/v2/issues/:id/notes
+         *
+         *     Add a note to an issue.
+         */
+        post: operations["add_issue_note_api_v2_issues__issue_id__notes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/issues/{issue_id}/resolve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Resolve Issue
+         * @description PATCH /api/v2/issues/:id/resolve
+         *
+         *     Resolves an issue. Translates to the existing transition logic.
+         */
+        patch: operations["resolve_issue_api_v2_issues__issue_id__resolve_patch"];
+        trace?: never;
+    };
+    "/api/v2/issues/{issue_id}/state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change Issue State
+         * @description PATCH /api/v2/issues/:id/state
+         *
+         *     Changes issue state. Maps to the existing transition logic.
+         */
+        patch: operations["change_issue_state_api_v2_issues__issue_id__state_patch"];
         trace?: never;
     };
     "/api/v2/issues/{issue_id}/transition": {
@@ -4714,6 +4808,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/proposals/{proposal_id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dismiss Proposal
+         * @description POST /api/v2/proposals/:id/dismiss
+         *
+         *     Dismiss a proposal.
+         */
+        post: operations["dismiss_proposal_api_v2_proposals__proposal_id__dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/proposals/{proposal_id}/snooze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Snooze Proposal
+         * @description POST /api/v2/proposals/:id/snooze
+         *
+         *     Snooze a proposal for N days.
+         */
+        post: operations["snooze_proposal_api_v2_proposals__proposal_id__snooze_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/team": {
         parameters: {
             query?: never;
@@ -4750,6 +4888,50 @@ export interface paths {
         get: operations["get_watchers_v2_api_v2_watchers_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/watchers/{watcher_id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dismiss Watcher
+         * @description POST /api/v2/watchers/:id/dismiss
+         *
+         *     Dismiss a watcher.
+         */
+        post: operations["dismiss_watcher_api_v2_watchers__watcher_id__dismiss_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/watchers/{watcher_id}/snooze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Snooze Watcher
+         * @description POST /api/v2/watchers/:id/snooze
+         *
+         *     Snooze a watcher for N hours.
+         */
+        post: operations["snooze_watcher_api_v2_watchers__watcher_id__snooze_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4929,6 +5111,16 @@ export interface components {
             /** Trend */
             trend?: string | null;
         };
+        /** CreateIssueRequest */
+        CreateIssueRequest: {
+            /**
+             * Actor
+             * @default system
+             */
+            actor: string;
+            /** Proposal Id */
+            proposal_id: string;
+        };
         /** DelegateAction */
         DelegateAction: {
             /** Note */
@@ -4947,6 +5139,14 @@ export interface components {
         };
         /** DismissProposalRequest */
         DismissProposalRequest: {
+            /**
+             * Reason
+             * @default Dismissed by user
+             */
+            reason: string;
+        };
+        /** DismissRequest */
+        DismissRequest: {
             /**
              * Reason
              * @default Dismissed by user
@@ -5009,6 +5209,19 @@ export interface components {
             /** Rating */
             rating: number;
         };
+        /** FixDataResolveRequest */
+        FixDataResolveRequest: {
+            /**
+             * Actor
+             * @default system
+             */
+            actor: string;
+            /**
+             * Resolution
+             * @default manually_resolved
+             */
+            resolution: string;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -5067,6 +5280,41 @@ export interface components {
             user?: {
                 [key: string]: unknown;
             } | null;
+        };
+        /** IssueNoteRequest */
+        IssueNoteRequest: {
+            /**
+             * Actor
+             * @default system
+             */
+            actor: string;
+            /** Text */
+            text: string;
+        };
+        /** IssueResolveRequest */
+        IssueResolveRequest: {
+            /**
+             * Actor
+             * @default system
+             */
+            actor: string;
+            /**
+             * Resolution
+             * @default manually_resolved
+             */
+            resolution: string;
+        };
+        /** IssueStateChangeRequest */
+        IssueStateChangeRequest: {
+            /**
+             * Actor
+             * @default system
+             */
+            actor: string;
+            /** Reason */
+            reason?: string | null;
+            /** State */
+            state: string;
         };
         /** IssueTransitionRequest */
         IssueTransitionRequest: {
@@ -5234,6 +5482,14 @@ export interface components {
              */
             days: number;
         };
+        /** SnoozeRequest */
+        SnoozeRequest: {
+            /**
+             * Days
+             * @default 7
+             */
+            days: number;
+        };
         /** SnoozeWatcherRequest */
         SnoozeWatcherRequest: {
             /**
@@ -5323,6 +5579,27 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
+        };
+        /** WatcherDismissRequest */
+        WatcherDismissRequest: {
+            /**
+             * Actor
+             * @default system
+             */
+            actor: string;
+        };
+        /** WatcherSnoozeRequest */
+        WatcherSnoozeRequest: {
+            /**
+             * Actor
+             * @default system
+             */
+            actor: string;
+            /**
+             * Hours
+             * @default 24
+             */
+            hours: number;
         };
     };
     responses: never;
@@ -10320,6 +10597,42 @@ export interface operations {
             };
         };
     };
+    resolve_fix_data_api_v2_fix_data__item_type___item_id__resolve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_type: string;
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FixDataResolveRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     health_check_api_v2_health_get: {
         parameters: {
             query?: never;
@@ -11679,6 +11992,39 @@ export interface operations {
             };
         };
     };
+    create_issue_from_proposal_api_v2_issues_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateIssueRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_issue_api_v2_issues__issue_id__get: {
         parameters: {
             query?: never;
@@ -11689,6 +12035,111 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_issue_note_api_v2_issues__issue_id__notes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                issue_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueNoteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    resolve_issue_api_v2_issues__issue_id__resolve_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                issue_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueResolveRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    change_issue_state_api_v2_issues__issue_id__state_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                issue_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IssueStateChangeRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -12024,6 +12475,76 @@ export interface operations {
             };
         };
     };
+    dismiss_proposal_api_v2_proposals__proposal_id__dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DismissRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    snooze_proposal_api_v2_proposals__proposal_id__snooze_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SnoozeRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_team_api_v2_team_get: {
         parameters: {
             query?: never;
@@ -12054,6 +12575,76 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dismiss_watcher_api_v2_watchers__watcher_id__dismiss_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                watcher_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WatcherDismissRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    snooze_watcher_api_v2_watchers__watcher_id__snooze_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                watcher_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WatcherSnoozeRequest"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
