@@ -57,7 +57,8 @@ class TestFreshDBBoot:
 
     def test_fresh_boot_sets_schema_version(self, temp_db):
         """Fresh boot sets schema version pragma."""
-        from lib.db import SCHEMA_VERSION, run_migrations
+        from lib.db import run_migrations
+        from lib.schema import SCHEMA_VERSION
 
         conn = sqlite3.connect(temp_db)
         conn.row_factory = sqlite3.Row
@@ -197,7 +198,8 @@ class TestUpgrade:
 
     def test_upgrade_from_old_schema(self, old_schema_db):
         """Migrations upgrade from older schema to current."""
-        from lib.db import SCHEMA_VERSION, run_migrations
+        from lib.db import run_migrations
+        from lib.schema import SCHEMA_VERSION
 
         # Verify old version
         conn = sqlite3.connect(old_schema_db)

@@ -499,7 +499,7 @@ export interface paths {
         put?: never;
         /**
          * Accrue Debt
-         * @description Record accrued capacity debt.
+         * @description Record accrued capacity debt. Not yet implemented.
          */
         post: operations["accrue_debt_api_capacity_debt_accrue_post"];
         delete?: never;
@@ -519,7 +519,7 @@ export interface paths {
         put?: never;
         /**
          * Resolve Debt
-         * @description Resolve a capacity debt item.
+         * @description Resolve a capacity debt item. Not yet implemented.
          */
         post: operations["resolve_debt_api_capacity_debt__debt_id__resolve_post"];
         delete?: never;
@@ -556,10 +556,10 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Get Capacity Lanes
+         * Get Capacity Lanes Endpoint
          * @description Get capacity lanes configuration.
          */
-        get: operations["get_capacity_lanes_api_capacity_lanes_get"];
+        get: operations["get_capacity_lanes_endpoint_api_capacity_lanes_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -6034,15 +6034,6 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -6050,6 +6041,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description Successful Response */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
         };
@@ -6065,15 +6065,6 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                };
-            };
             /** @description Validation Error */
             422: {
                 headers: {
@@ -6083,11 +6074,21 @@ export interface operations {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
+            /** @description Successful Response */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
         };
     };
     get_capacity_forecast_api_capacity_forecast_get: {
         parameters: {
             query?: {
+                lane_id?: string;
                 days?: number;
             };
             header?: never;
@@ -6116,7 +6117,7 @@ export interface operations {
             };
         };
     };
-    get_capacity_lanes_api_capacity_lanes_get: {
+    get_capacity_lanes_endpoint_api_capacity_lanes_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -6139,8 +6140,8 @@ export interface operations {
     get_capacity_utilization_api_capacity_utilization_get: {
         parameters: {
             query?: {
-                start_date?: string | null;
-                end_date?: string | null;
+                lane_id?: string | null;
+                target_date?: string | null;
             };
             header?: never;
             path?: never;

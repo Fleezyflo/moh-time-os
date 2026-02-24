@@ -54,7 +54,7 @@ def cmd_priorities(args):
     if not queue:
         print("Priority queue not computed. Running analysis...")
         analyzers = AnalyzerOrchestrator(store=store)
-        queue = analyzers.priority.analyze()
+        queue = analyzers.priority_analyzer.analyze()
 
     limit = int(args[0]) if args else 10
 
@@ -88,7 +88,7 @@ def cmd_today(args):
     analyzers = AnalyzerOrchestrator(store=store)
 
     # Get day analysis
-    day = analyzers.time.analyze_day()
+    day = analyzers.time_analyzer.analyze_day()
 
     print_header(f"TODAY: {day['date']}")
 

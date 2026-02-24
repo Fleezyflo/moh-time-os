@@ -29,26 +29,7 @@ def setup_notifications():
         # Clear any previous test data
         conn.execute("DELETE FROM digest_queue")
         conn.execute("DELETE FROM digest_history")
-        try:
-            conn.execute("DELETE FROM notifications")
-        except:
-            pass
-
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS notifications (
-                id TEXT PRIMARY KEY,
-                type TEXT,
-                priority TEXT,
-                severity TEXT,
-                title TEXT,
-                body TEXT,
-                action_url TEXT,
-                action_data TEXT,
-                channels TEXT,
-                created_at TEXT,
-                sent_at TEXT
-            )
-        """)
+        conn.execute("DELETE FROM notifications")
 
         # Add test notifications with unique IDs
         now = datetime.now().isoformat()
@@ -56,28 +37,22 @@ def setup_notifications():
         id2 = str(uuid.uuid4())
         id3 = str(uuid.uuid4())
 
+        notif_sql = """
+            INSERT OR IGNORE INTO notifications
+                (id, type, priority, title, body, action_url, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """
         conn.execute(
-            """
-            INSERT OR IGNORE INTO notifications VALUES
-            (?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, NULL)
-        """,
-            (id1, "proposal", "high", "high", "New Proposal", "Test proposal", None, now),
+            notif_sql,
+            (id1, "proposal", "high", "New Proposal", "Test proposal", None, now),
         )
-
         conn.execute(
-            """
-            INSERT OR IGNORE INTO notifications VALUES
-            (?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, NULL)
-        """,
-            (id2, "issue", "high", "medium", "Bug Report", "Test issue", None, now),
+            notif_sql,
+            (id2, "issue", "high", "Bug Report", "Test issue", None, now),
         )
-
         conn.execute(
-            """
-            INSERT OR IGNORE INTO notifications VALUES
-            (?, ?, ?, ?, ?, ?, ?, NULL, NULL, ?, NULL)
-        """,
-            (id3, "watcher", "normal", "low", "Pattern Alert", "Test pattern", None, now),
+            notif_sql,
+            (id3, "watcher", "normal", "Pattern Alert", "Test pattern", None, now),
         )
 
 

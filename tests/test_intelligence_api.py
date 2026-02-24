@@ -17,7 +17,7 @@ from tests.fixtures.fixture_db import create_fixture_db
 def db_path():
     """Create fixture DB for testing (file-based, returns Path)."""
     # Create temp file
-    fd, path = tempfile.mkstemp(suffix=".db")
+    _fd, path = tempfile.mkstemp(suffix=".db")
     db_file = Path(path)
 
     # Create fixture DB at that path
@@ -49,7 +49,7 @@ class TestPatternCatalog:
         """Each pattern should have required fields."""
         from lib.intelligence.patterns import PATTERN_LIBRARY
 
-        for _pat_id, pat in PATTERN_LIBRARY.items():
+        for pat in PATTERN_LIBRARY.values():
             assert pat.id is not None
             assert pat.name is not None
             assert pat.pattern_type is not None
@@ -66,16 +66,16 @@ class TestSignalCatalog:
     """Signal catalog doesn't need DB."""
 
     def test_signal_catalog_has_all_signals(self):
-        """signal_catalog should have all 21 signals."""
+        """signal_catalog should have all 22 signals."""
         from lib.intelligence.signals import SIGNAL_CATALOG
 
-        assert len(SIGNAL_CATALOG) == 21
+        assert len(SIGNAL_CATALOG) == 22
 
     def test_signal_catalog_structure(self):
         """Each signal should have required fields."""
         from lib.intelligence.signals import SIGNAL_CATALOG
 
-        for _sig_id, sig in SIGNAL_CATALOG.items():
+        for sig in SIGNAL_CATALOG.values():
             assert sig.id is not None
             assert sig.name is not None
             assert sig.category is not None

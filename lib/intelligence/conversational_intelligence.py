@@ -11,13 +11,23 @@ Brief 25 (CI), Tasks CI-1.1 through CI-3.1
 signals, trajectory, communications, and interaction history.
 """
 
+import json
 import logging
+import os
 import re
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 logger = logging.getLogger(__name__)
+
+# Optional LLM support — enhances intent classification when available
+try:
+    import anthropic
+
+    HAS_ANTHROPIC = True
+except ImportError:
+    HAS_ANTHROPIC = False
 
 
 # Intent types
@@ -268,7 +278,12 @@ def classify_intent(query: str) -> ClassifiedIntent:
                 _extract_action_from_query(query_lower, result)
                 return result
 
-    # Fallback: unknown intent
+    # Regex didn't match — try LLM classification if available
+    llm_result = _classify_with_llm(query)
+    if llm_result and llm_result.intent_type != INTENT_UNKNOWN:
+        return llm_result
+
+    # Final fallback: unknown intent
     result = ClassifiedIntent(
         intent_type=INTENT_UNKNOWN,
         confidence=0.3,
@@ -276,6 +291,88 @@ def classify_intent(query: str) -> ClassifiedIntent:
     )
     _extract_entities_from_query(query_lower, result)
     return result
+
+
+_LLM_CLASSIFY_PROMPT = """Classify this user query about their business into one intent type.
+Return ONLY a JSON object with these fields:
+- intent_type: one of entity_lookup, metric_query, comparison, prediction, action_request, history_lookup, ranked_summary
+- entities: list of entity names mentioned (client names, project names, people names)
+- metrics: list of metric keywords (revenue, utilization, health, etc.)
+- timeframe: one of today, yesterday, this_week, last_week, this_month, last_month, this_quarter, last_quarter, this_year, or empty string
+- action: for action_request only — one of email, task, meeting, follow_up, invoice, report, or empty string
+
+Query: {query}
+
+JSON:"""
+
+
+def _classify_with_llm(query: str) -> ClassifiedIntent | None:
+    """
+    Classify intent using Claude Haiku for ambiguous queries.
+
+    Returns None if LLM is unavailable or errors — caller falls back to regex.
+    """
+    if not HAS_ANTHROPIC:
+        return None
+
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
+        return None
+
+    try:
+        client = anthropic.Anthropic(api_key=api_key)
+        response = client.messages.create(
+            model="claude-3-haiku-20240307",
+            max_tokens=256,
+            messages=[
+                {
+                    "role": "user",
+                    "content": _LLM_CLASSIFY_PROMPT.format(query=query[:500]),
+                }
+            ],
+        )
+
+        result_text = response.content[0].text.strip()
+
+        # Parse JSON from response
+        parsed = None
+        if result_text.startswith("{"):
+            parsed = json.loads(result_text)
+        else:
+            match = re.search(r"\{.*\}", result_text, re.DOTALL)
+            if match:
+                parsed = json.loads(match.group())
+
+        if not parsed:
+            return None
+
+        intent_type = parsed.get("intent_type", INTENT_UNKNOWN)
+        # Validate intent type
+        valid_intents = {
+            INTENT_ENTITY_LOOKUP,
+            INTENT_METRIC_QUERY,
+            INTENT_COMPARISON,
+            INTENT_PREDICTION,
+            INTENT_ACTION_REQUEST,
+            INTENT_HISTORY_LOOKUP,
+            INTENT_RANKED_SUMMARY,
+        }
+        if intent_type not in valid_intents:
+            intent_type = INTENT_UNKNOWN
+
+        return ClassifiedIntent(
+            intent_type=intent_type,
+            confidence=0.9,
+            raw_query=query,
+            extracted_entities=parsed.get("entities", []),
+            extracted_metrics=parsed.get("metrics", []),
+            extracted_action=parsed.get("action", ""),
+            extracted_timeframe=parsed.get("timeframe", ""),
+        )
+
+    except Exception as e:
+        logger.debug("LLM classification failed, using regex fallback: %s", e)
+        return None
 
 
 def _extract_entities_from_query(query: str, result: ClassifiedIntent) -> None:

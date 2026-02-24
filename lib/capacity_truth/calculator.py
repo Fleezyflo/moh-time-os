@@ -88,7 +88,7 @@ class CapacityCalculator:
             daily_hours=daily_hours,
         )
 
-    def get_lane_utilization(self, lane_id: str, target_date: str = None) -> LaneUtilization:
+    def get_lane_utilization(self, lane_id: str, target_date: str | None = None) -> LaneUtilization:
         """
         Calculate utilization for a lane on a specific date.
 
@@ -178,7 +178,7 @@ class CapacityCalculator:
 
         return result[0]["total"] or 0
 
-    def get_capacity_summary(self, target_date: str = None) -> dict:
+    def get_capacity_summary(self, target_date: str | None = None) -> dict:
         """
         Get a summary of capacity across all lanes.
         """
