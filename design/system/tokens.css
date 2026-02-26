@@ -15,15 +15,18 @@
   --info: #0a84ff;
 
   /* Neutral Colors */
-  --black: #000000;
-  --white: #ffffff;
-  --grey: #333333;
-  --grey-light: #555555;
-  --grey-dim: #1a1a1a;
+  --black: #0f172a;
+  --white: #f1f5f9;
+  --grey: #334155;
+  --grey-light: #94a3b8;
+  --grey-mid: #475569;
+  --grey-muted: #64748b;
+  --grey-subtle: #cbd5e1;
+  --grey-dim: #1e293b;
 
   /* Brand Colors */
-  --accent: #ff3d00;
-  --accent-dim: #ff3d0066;
+  --accent: #3b82f6;
+  --accent-dim: #3b82f666;
 
   /* Extended Palette (aliases) */
   --green: #00ff88;
@@ -93,9 +96,9 @@
   --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
 
   /* Borders */
-  --border: 1px solid #333333;
-  --border-hover: 1px solid #555555;
-  --border-active: 1px solid #ff3d00;
+  --border: 1px solid #334155;
+  --border-hover: 1px solid #94a3b8;
+  --border-active: 1px solid #3b82f6;
 
   /* ========================================
      ANIMATION TOKENS
@@ -509,7 +512,7 @@
 }
 
 .btn--primary:hover:not(:disabled) {
-  background: #ff5522;
+  background: #2563eb;
 }
 
 .btn--primary:focus {
