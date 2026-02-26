@@ -5,8 +5,9 @@ Aggregates signals from Financial Pulse, Tasks, Calendar, and Chat
 to produce a prioritized list of items that need attention.
 """
 
+import logging
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from .gogcli import run_gog
 
@@ -81,8 +82,7 @@ def _check_financial_pulse(account: str, config_dir: str) -> list[Alert]:
                     )
                 )
     except Exception:
-        # Financial pulse not available or errored — skip silently
-        pass
+        logging.getLogger(__name__).debug("Financial pulse unavailable", exc_info=True)
 
     return alerts
 
@@ -133,7 +133,9 @@ def _check_tasks_overdue(account: str) -> list[Alert]:
                                 }
                             )
                     except Exception:
-                        pass
+                        logging.getLogger(__name__).debug(
+                            "Bad task due date: %s", due, exc_info=True
+                        )
 
         if len(overdue_tasks) > 10:
             alerts.append(
@@ -156,7 +158,7 @@ def _check_tasks_overdue(account: str) -> list[Alert]:
                 )
             )
     except Exception:
-        pass
+        logging.getLogger(__name__).debug("Tasks overdue check failed", exc_info=True)
 
     return alerts
 
@@ -227,6 +229,9 @@ def _check_chat_urgent(account: str, hours: int = 4) -> list[Alert]:
                         if msg_dt < cutoff:
                             continue  # Skip old messages
                     except Exception:
+                        logging.getLogger(__name__).debug(
+                            "Bad message createTime: %s", create_time, exc_info=True
+                        )
                         continue
 
                 text = m.get("text") or m.get("formattedText") or ""
@@ -277,7 +282,7 @@ def _check_chat_urgent(account: str, hours: int = 4) -> list[Alert]:
             )
 
     except Exception:
-        pass
+        logging.getLogger(__name__).debug("Chat urgent check failed", exc_info=True)
 
     return alerts
 
@@ -321,7 +326,9 @@ def _check_calendar_workload(account: str) -> list[Alert]:
                     day = start[:10]
                     hours_by_day[day] = hours_by_day.get(day, 0) + hours
                 except Exception:
-                    pass
+                    logging.getLogger(__name__).debug(
+                        "Bad calendar event time: %s", start, exc_info=True
+                    )
 
         overloaded = [(d, h) for d, h in hours_by_day.items() if h > 7]
 
@@ -337,7 +344,7 @@ def _check_calendar_workload(account: str) -> list[Alert]:
                 )
             )
     except Exception:
-        pass
+        logging.getLogger(__name__).debug("Calendar workload check failed", exc_info=True)
 
     return alerts
 

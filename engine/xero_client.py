@@ -1,6 +1,7 @@
 """Xero API client with OAuth2 refresh token flow."""
 
 import json
+import logging
 import os
 from dataclasses import dataclass
 from typing import Any
@@ -36,7 +37,7 @@ def load_credentials() -> XeroCredentials:
                 cache = json.load(f)
                 access_token = cache.get("access_token")
         except Exception:
-            pass
+            logging.getLogger(__name__).debug("Token cache read failed", exc_info=True)
 
     return XeroCredentials(
         client_id=xero["client_id"],

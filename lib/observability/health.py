@@ -8,10 +8,8 @@ import sqlite3
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from enum import Enum
-from pathlib import Path
-from typing import Optional
 
 from lib import paths
 
@@ -438,7 +436,7 @@ class HealthChecker:
                                         "age_hours": round(age.total_seconds() / 3600, 2),
                                     }
                                 )
-                        except (sqlite3.Error, ValueError, OSError) as e:  # noqa: S110
+                        except (sqlite3.Error, ValueError, OSError) as e:
                             logger.error("_check_bundle_health failed: %s", e, exc_info=True)
                             raise  # re-raise after logging
 

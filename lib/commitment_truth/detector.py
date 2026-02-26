@@ -9,9 +9,9 @@ Uses regex patterns and heuristics to identify:
 
 import logging
 import re
+import sqlite3
 from dataclasses import dataclass
 from datetime import date, timedelta
-import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -238,7 +238,7 @@ def extract_deadline(text: str) -> str | None:
             elif pattern_type == "asap":
                 return today.isoformat()
 
-        except (sqlite3.Error, ValueError, OSError):  # noqa: S112 — best-effort date pattern matching, skip unparseable
+        except (sqlite3.Error, ValueError, OSError):
             continue
 
     return None

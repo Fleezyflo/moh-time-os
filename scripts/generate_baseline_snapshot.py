@@ -5,7 +5,7 @@ Task: SYSPREP 0.1 — Baseline Snapshot
 """
 
 import json
-import os
+import logging
 import re
 import sqlite3
 import subprocess
@@ -13,6 +13,8 @@ import sys
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 # Paths
 REPO_ROOT = Path(__file__).parent.parent
@@ -58,7 +60,7 @@ def get_table_inventory(db_path: Path) -> dict:
                     {"name": col[1], "type": col[2], "notnull": bool(col[3]), "pk": bool(col[5])}
                 )
         except Exception:
-            pass
+            logger.debug("Failed to read columns for %s", table_name, exc_info=True)
 
         # Get indexes
         indexes = []
@@ -67,7 +69,7 @@ def get_table_inventory(db_path: Path) -> dict:
             for idx in idx_cursor.fetchall():
                 indexes.append(idx[1])
         except Exception:
-            pass
+            logger.debug("Failed to read indexes for %s", table_name, exc_info=True)
 
         tables.append(
             {
@@ -120,7 +122,7 @@ def build_import_index(repo_root: Path) -> dict:
                 module = match.group(1)
                 import_index[module].append(rel_path)
         except Exception:
-            pass
+            logger.debug("Failed to parse imports in %s", rel_path, exc_info=True)
 
     return dict(import_index)
 
@@ -147,6 +149,7 @@ def get_module_inventory(repo_root: Path, lib_dirs: list, import_index: dict) ->
                 content = py_file.read_text(errors="ignore")
                 line_count = len(content.splitlines())
             except Exception:
+                logger.debug("Failed to read %s", py_file, exc_info=True)
                 continue
 
             # Compute module names for import search
@@ -264,6 +267,7 @@ def get_ui_inventory(ui_dir: Path) -> dict:
                 rel_path = file_path.relative_to(ui_dir.parent.parent)
                 content = file_path.read_text(errors="ignore")
             except Exception:
+                logger.debug("Failed to read %s", file_path, exc_info=True)
                 continue
 
             # Find exported components

@@ -112,6 +112,7 @@ def exchange_code_for_tokens(client_id: str, client_secret: str, auth_code: str)
             "client_secret": client_secret,
         },
         headers={"Content-Type": "application/x-www-form-urlencoded"},
+        timeout=30,
     )
 
     if resp.status_code != 200:
@@ -125,6 +126,7 @@ def get_tenant_id(access_token: str) -> str:
     resp = requests.get(
         XERO_CONNECTIONS_URL,
         headers={"Authorization": f"Bearer {access_token}"},
+        timeout=30,
     )
 
     if resp.status_code != 200:

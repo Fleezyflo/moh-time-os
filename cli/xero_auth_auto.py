@@ -112,6 +112,7 @@ def main():
             "client_id": client_id,
             "client_secret": client_secret,
         },
+        timeout=30,
     )
 
     if resp.status_code != 200:
@@ -125,6 +126,7 @@ def main():
     conn_resp = requests.get(
         XERO_CONNECTIONS_URL,
         headers={"Authorization": f"Bearer {tokens['access_token']}"},
+        timeout=30,
     )
 
     if conn_resp.status_code != 200:

@@ -5,6 +5,7 @@ Bypasses gog CLI to avoid IPv6 timeout issues.
 """
 
 import json
+import logging
 import socket
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
@@ -129,7 +130,9 @@ def collect_chat_full(
                 all_messages.extend(msgs)
                 mentions.extend(ments)
             except Exception:
-                pass
+                logging.getLogger(__name__).debug(
+                    "Space fetch failed: %s", futures[future].get("name", "?"), exc_info=True
+                )
 
             if (i + 1) % 10 == 0:
                 print(f"   Processed {i + 1}/{len(spaces)} spaces...")

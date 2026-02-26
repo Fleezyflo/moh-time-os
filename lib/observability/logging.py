@@ -7,7 +7,7 @@ import logging
 import os
 import sqlite3
 import sys
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from .context import get_request_id
@@ -156,7 +156,7 @@ class CorrelationIdMiddleware:
             if key.lower() == b"x-request-id":
                 try:
                     request_id = value.decode("utf-8")
-                except (ValueError, OSError) as e:  # noqa: S110
+                except (ValueError, OSError) as e:
                     logger = logging.getLogger(__name__)
                     logger.error("__call__ failed: %s", e, exc_info=True)
                     raise  # re-raise after logging

@@ -10,8 +10,8 @@ Provides deterministic anonymization so:
 import hashlib
 import logging
 import re
-from typing import Any
 import sqlite3
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -129,7 +129,7 @@ class Anonymizer:
                     if "://" in value_str:
                         scheme, rest = value_str.split("://", 1)
                         return f"{scheme}://anonymized-{self._hash(rest)[:8]}.example.com"
-                except (sqlite3.Error, ValueError, OSError) as e:  # noqa: S110 — falls through to fallback return
+                except (sqlite3.Error, ValueError, OSError) as e:
                     logger.error("handler failed: %s", e, exc_info=True)
                     raise  # re-raise after logging
                 return f"https://anonymized-{self._hash(value_str)[:8]}.example.com"

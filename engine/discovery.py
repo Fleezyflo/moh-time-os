@@ -1,10 +1,11 @@
 import json
+import logging
 import os
 import re
 import uuid
 from collections import Counter
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from lib import paths
@@ -179,7 +180,9 @@ def run_discovery(db_path: str, cfg: DiscoveryConfig) -> dict[str, Any]:
                         hours_by_day[day_str] = hours_by_day.get(day_str, 0) + hours
                         by_weekday[sd.weekday()] += 1
                     except Exception:
-                        pass
+                        logging.getLogger(__name__).debug(
+                            "Bad event timestamp: s=%s en=%s", s, en, exc_info=True
+                        )
 
             # Compute workload windows
             for day_str, total_hours in hours_by_day.items():
@@ -187,7 +190,9 @@ def run_discovery(db_path: str, cfg: DiscoveryConfig) -> dict[str, Any]:
                     dt = datetime.fromisoformat(day_str)
                     hours_by_weekday[dt.weekday()].append(total_hours)
                 except Exception:
-                    pass
+                    logging.getLogger(__name__).debug(
+                        "Bad day_str for weekday: %s", day_str, exc_info=True
+                    )
 
             avg_hours_by_weekday = {}
             weekday_names = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]

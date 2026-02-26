@@ -5,12 +5,14 @@ Task: SYSPREP 0.3 — Schema Audit
 """
 
 import json
+import logging
 import re
 import sqlite3
-import subprocess
 from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).parent.parent
 DATA_DIR = REPO_ROOT / "data"
@@ -63,7 +65,7 @@ def build_table_reference_index() -> dict:
                 rel_path = str(py_file.relative_to(REPO_ROOT))
                 all_py_content[rel_path] = py_file.read_text(errors="ignore")
             except Exception:
-                pass
+                logger.debug("Failed to read %s", py_file, exc_info=True)
 
     return all_py_content
 
