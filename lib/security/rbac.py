@@ -30,7 +30,7 @@ from enum import Enum
 
 from fastapi import HTTPException, Request
 
-from lib.compat import StrEnum
+from enum import StrEnum
 
 logger = logging.getLogger(__name__)
 

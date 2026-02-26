@@ -15,6 +15,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Optional
 
+from lib.db import validate_identifier
+
 if TYPE_CHECKING:
     from lib.governance.data_catalog import DataCatalog
 
@@ -266,9 +268,9 @@ class DataClassifier:
     def _get_table_schema(self, table: str) -> list[str]:
         """Get list of column names for a table."""
         try:
+            safe_table = validate_identifier(table)
             conn = self._get_connection()
-            # Note: PRAGMA table_info does not accept parameters
-            cursor = conn.execute(f"PRAGMA table_info([{table}])")
+            cursor = conn.execute(f"PRAGMA table_info({safe_table})")  # noqa: S608
             columns = [row[1] for row in cursor.fetchall()]
             conn.close()
             return columns
@@ -279,8 +281,10 @@ class DataClassifier:
     def _get_sample_values(self, table: str, column: str, limit: int = 5) -> list:
         """Get sample values from a column for pattern analysis."""
         try:
+            safe_table = validate_identifier(table)
+            safe_col = validate_identifier(column)
             conn = self._get_connection()
-            cursor = conn.execute(f"SELECT [{column}] FROM [{table}] LIMIT ?", (limit,))
+            cursor = conn.execute(f'SELECT "{safe_col}" FROM {safe_table} LIMIT ?', (limit,))  # noqa: S608
             values = [row[0] for row in cursor.fetchall() if row[0] is not None]
             conn.close()
             return values

@@ -454,7 +454,7 @@ def run_migration():
             logger.info("\n✗ Migration rolled back due to errors")
             return False
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         conn.rollback()
         logger.info(f"\n✗ Migration failed: {e}")
         raise

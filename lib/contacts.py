@@ -18,7 +18,7 @@ from typing import Any
 
 _INTERNAL_DOMAINS = os.environ.get("MOH_INTERNAL_DOMAINS", "hrmny.co,hrmny.ae").split(",")
 
-from .entities import (
+from .entities import (  # noqa: E402 — after env setup
     Person,
     create_person,
     find_client,

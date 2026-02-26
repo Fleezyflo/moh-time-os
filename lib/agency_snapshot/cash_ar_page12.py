@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from lib import paths
-from lib.compat import StrEnum
+from enum import StrEnum
 
 logger = logging.getLogger(__name__)
 
@@ -272,7 +272,7 @@ class CashARPage12Engine:
         except ImportError:
             # Gates module not available - use defaults (optional dependency)
             logger.debug("Gates module not available, using default trust state")
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             # Gates evaluation failed - this indicates a real problem
             logger.warning(f"Gates evaluation failed, using defaults: {e}")
 

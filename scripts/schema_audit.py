@@ -197,7 +197,7 @@ def classify_tables(tables: list, py_content_index: dict) -> dict:
             classifications["EMPTY-ORPHAN"].append(table)
 
     # Process version groups to identify legacy tables
-    for base_name, versions in version_groups.items():
+    for _base_name, versions in version_groups.items():
         if len(versions) > 1:
             # Sort by version number descending
             sorted_versions = sorted(versions, key=lambda x: x[1], reverse=True)

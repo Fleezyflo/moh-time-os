@@ -16,7 +16,8 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from lib import paths
-from lib.compat import UTC, StrEnum
+from datetime import UTC
+from enum import StrEnum
 
 from .change_bundles import create_status_change_bundle
 from .config_store import get
@@ -284,7 +285,7 @@ def _execute_transition(proposal: TransitionProposal) -> bool:
         conn.commit()
         conn.close()
         return True
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.info(f"Error executing transition: {e}")
         return False
 

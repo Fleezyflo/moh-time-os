@@ -86,11 +86,8 @@ class MoveExecutor:
                     "success": False,
                     "error": f"Unknown action type: {action_type}",
                 }
-        except sqlite3.Error as e:
-            logger.error(f"Database error executing move {move.get('id')}: {e}", exc_info=True)
-            result = {"success": False, "error": f"Database error: {e}"}
-        except Exception as e:
-            logger.error(f"Unexpected error executing move {move.get('id')}: {e}", exc_info=True)
+        except (sqlite3.Error, ValueError, OSError) as e:
+            logger.error(f"Error executing move {move.get('id')}: {e}", exc_info=True)
             result = {"success": False, "error": str(e)}
 
         self._log_decision(move.get("id", "unknown"), "execute", result)
@@ -128,17 +125,11 @@ class MoveExecutor:
                 "title": move["title"],
                 "due_date": due_date,
             }
-        except sqlite3.Error as e:
-            logger.error(
-                f"Database error creating task for move {move.get('id')}: {e}",
-                exc_info=True,
-            )
-            result = {"success": False, "error": f"Database error: {e}"}
         except (KeyError, TypeError) as e:
             logger.warning(f"Invalid move data for task creation: {e}")
             result = {"success": False, "error": f"Invalid move data: {e}"}
-        except Exception as e:
-            logger.error(f"Unexpected error creating task: {e}", exc_info=True)
+        except (sqlite3.Error, ValueError, OSError) as e:
+            logger.error(f"Error creating task: {e}", exc_info=True)
             result = {"success": False, "error": str(e)}
         finally:
             conn.close()

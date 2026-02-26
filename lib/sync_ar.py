@@ -6,6 +6,7 @@ from datetime import date, datetime
 from typing import Any
 
 from .entities import find_client, list_clients, update_client
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -143,7 +144,7 @@ def sync_ar_to_clients() -> dict[str, Any]:
 
     try:
         ar_data = get_ar_by_contact()
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
         result["errors"].append(f"Failed to get AR data: {e}")
         return result
 
@@ -184,7 +185,7 @@ def sync_ar_to_clients() -> dict[str, Any]:
 
             result["updated"] += 1
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             result["errors"].append(f"{contact_name}: {e}")
 
     # Count clients with no AR (set to Current, keep tier C)

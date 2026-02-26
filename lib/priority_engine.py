@@ -13,7 +13,7 @@ import json
 import logging
 from datetime import date, datetime, timedelta, timezone
 
-from lib.compat import UTC
+from datetime import UTC
 
 from .config_store import get
 

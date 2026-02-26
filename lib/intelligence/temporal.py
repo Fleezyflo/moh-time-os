@@ -26,6 +26,7 @@ from typing import Optional
 import yaml
 
 from lib import paths
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -151,7 +152,7 @@ class BusinessCalendar:
         try:
             with open(config_path) as f:
                 return yaml.safe_load(f) or {}
-        except Exception as exc:
+        except (sqlite3.Error, ValueError, OSError) as exc:
             logger.error("Failed to load business calendar config: %s", exc)
             return {}
 

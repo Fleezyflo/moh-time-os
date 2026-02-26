@@ -27,9 +27,10 @@ from enum import Enum
 from pathlib import Path
 from typing import Optional
 
-from lib.compat import StrEnum
+from enum import StrEnum
 from lib.intelligence.cost_to_serve import CostToServeEngine
 from lib.query_engine import QueryEngine, get_engine
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -281,7 +282,7 @@ class ScenarioEngine:
                 capacity_impact_pct=-task_pct,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error modeling client loss for {client_id}: {e}", exc_info=True)
             return None
 
@@ -423,7 +424,7 @@ class ScenarioEngine:
                 capacity_impact_pct=task_gain_pct,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error modeling client addition: {e}", exc_info=True)
             return None
 
@@ -500,7 +501,7 @@ class ScenarioEngine:
                 logger.error(f"Unknown change_type: {change_type}")
                 return None
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error modeling resource change for {person_name}: {e}", exc_info=True)
             return None
 
@@ -795,7 +796,7 @@ class ScenarioEngine:
             if (
                 cost_profile
                 and hasattr(cost_profile, "efficiency_ratio")
-                and isinstance(cost_profile.efficiency_ratio, (int, float))
+                and isinstance(cost_profile.efficiency_ratio, int | float)
             ):
                 if cost_profile.efficiency_ratio < 1000:
                     risk_factors.append("Already low-margin client: pricing flexibility limited")
@@ -820,7 +821,7 @@ class ScenarioEngine:
             if (
                 cost_profile
                 and hasattr(cost_profile, "efficiency_ratio")
-                and isinstance(cost_profile.efficiency_ratio, (int, float))
+                and isinstance(cost_profile.efficiency_ratio, int | float)
             ):
                 baseline_metrics["efficiency_ratio"] = round(cost_profile.efficiency_ratio, 2)
                 baseline_metrics["profitability_band"] = cost_profile.profitability_band
@@ -839,7 +840,7 @@ class ScenarioEngine:
             if (
                 cost_profile
                 and hasattr(cost_profile, "efficiency_ratio")
-                and isinstance(cost_profile.efficiency_ratio, (int, float))
+                and isinstance(cost_profile.efficiency_ratio, int | float)
             ):
                 new_efficiency = new_revenue / (
                     cost_profile.efficiency_ratio / (current_revenue or 1)
@@ -871,7 +872,7 @@ class ScenarioEngine:
                 capacity_impact_pct=0.0,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error modeling pricing change for {client_id}: {e}", exc_info=True)
             return None
 
@@ -966,7 +967,7 @@ class ScenarioEngine:
                 else 0,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error modeling capacity shift for {lane_id}: {e}", exc_info=True)
             return None
 
@@ -1077,7 +1078,7 @@ class ScenarioEngine:
                 capacity_impact_pct=0.0,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error modeling workload rebalance: {e}", exc_info=True)
             return None
 
@@ -1146,7 +1147,7 @@ class ScenarioEngine:
                 tradeoff_summary=tradeoff_summary,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error comparing scenarios: {e}", exc_info=True)
             return None
 

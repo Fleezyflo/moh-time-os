@@ -462,7 +462,7 @@ async def get_issues(
                     WHEN 'info' THEN 1
                 END DESC,
                 created_at ASC
-        """,
+        """,  # noqa: S608
             params,
         )
 
@@ -594,7 +594,7 @@ async def get_client_signals(
             FROM signals_v29
             WHERE {where_clause.replace("sentiment = ?", "1=1").replace("source = ?", "1=1")}
             GROUP BY sentiment, source
-        """,
+        """,  # noqa: S608
             [client_id, cutoff.isoformat()],
         )
 
@@ -614,7 +614,7 @@ async def get_client_signals(
             WHERE {where_clause}
             ORDER BY observed_at DESC
             LIMIT ? OFFSET ?
-        """,
+        """,  # noqa: S608
             params + [limit, offset],
         )
 
@@ -635,7 +635,7 @@ async def get_client_signals(
         cursor = conn.execute(
             f"""
             SELECT COUNT(*) FROM signals_v29 WHERE {where_clause}
-        """,
+        """,  # noqa: S608
             params,
         )
         total = cursor.fetchone()[0]
@@ -691,9 +691,9 @@ async def get_client_team(client_id: str, days: int = Query(30, ge=1, le=365)):
             )
 
         return {"involvement": involvement, "total": len(involvement)}
-    except Exception:
-        # Table may not exist, return empty
-        return {"involvement": [], "total": 0}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
@@ -743,9 +743,9 @@ async def get_team():
             )
 
         return {"items": items, "total": len(items)}
-    except Exception as e:
-        logger.warning(f"Team endpoint error: {e}")
-        return {"items": [], "total": 0, "error": str(e)}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
@@ -796,7 +796,7 @@ async def get_engagements(
             WHERE {where_clause}
             ORDER BY updated_at DESC
             LIMIT ? OFFSET ?
-        """,
+        """,  # noqa: S608
             params + [limit, offset],
         )
 
@@ -814,7 +814,7 @@ async def get_engagements(
         cursor = conn.execute(
             f"""
             SELECT COUNT(*) FROM engagements WHERE {where_clause}
-        """,
+        """,  # noqa: S608
             params,
         )
         total = cursor.fetchone()[0]
@@ -825,9 +825,9 @@ async def get_engagements(
             "limit": limit,
             "offset": offset,
         }
-    except Exception:
-        # Table may not exist
-        return {"engagements": [], "total": 0, "limit": limit, "offset": offset}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
@@ -923,8 +923,8 @@ async def health_check():
         cursor = conn.execute("SELECT 1")
         cursor.fetchone()
         return {"status": "healthy", "spec_version": "v2.9", "timestamp": now_iso()}
-    except Exception as e:
-        raise HTTPException(status_code=503, detail=str(e))
+    except (sqlite3.Error, ValueError) as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
     finally:
         conn.close()
 
@@ -1012,12 +1012,12 @@ async def get_priorities_v2(limit: int = Query(20), context: str | None = Query(
             ORDER BY t.priority DESC, t.due_date ASC NULLS LAST
             LIMIT ?
         """
-        cursor = conn.execute(query, (limit,))
+        cursor = conn.execute(query, (limit,))  # noqa: S608
         items = [dict(row) for row in cursor.fetchall()]
         return {"items": items, "total": len(items)}
-    except Exception as e:
-        logger.warning(f"Priorities endpoint error: {e}")
-        return {"items": [], "total": 0}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("get_priorities_v2 failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
@@ -1046,14 +1046,14 @@ async def get_projects_v2(limit: int = Query(50), status: str | None = Query(Non
             WHERE {" AND ".join(where)}
             ORDER BY p.updated_at DESC NULLS LAST
             LIMIT ?
-        """
+        """  # noqa: S608
         params.append(limit)
-        cursor = conn.execute(query, params)
+        cursor = conn.execute(query, params)  # noqa: S608
         items = [dict(row) for row in cursor.fetchall()]
         return {"items": items, "total": len(items)}
-    except Exception as e:
-        logger.warning(f"Projects endpoint error: {e}")
-        return {"items": [], "total": 0}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("get_projects_v2 failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
@@ -1087,14 +1087,14 @@ async def get_events_v2(
             WHERE {" AND ".join(where)}
             ORDER BY start_time ASC
             LIMIT ?
-        """
+        """  # noqa: S608
         params.append(limit)
-        cursor = conn.execute(query, params)
+        cursor = conn.execute(query, params)  # noqa: S608
         items = [dict(row) for row in cursor.fetchall()]
         return {"items": items, "total": len(items)}
-    except Exception as e:
-        logger.warning(f"Events endpoint error: {e}")
-        return {"items": [], "total": 0}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
@@ -1129,14 +1129,14 @@ async def get_invoices_v2(
             WHERE {" AND ".join(where)}
             ORDER BY issue_date DESC NULLS LAST
             LIMIT ?
-        """
+        """  # noqa: S608
         params.append(limit)
-        cursor = conn.execute(query, params)
+        cursor = conn.execute(query, params)  # noqa: S608
         items = [dict(row) for row in cursor.fetchall()]
         return {"items": items, "total": len(items)}
-    except Exception as e:
-        logger.warning(f"Invoices endpoint error: {e}")
-        return {"items": [], "total": 0}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
@@ -1173,9 +1173,9 @@ async def get_proposals_v2(
             WHERE {" AND ".join(where)}
             ORDER BY score DESC
             LIMIT ?
-        """
+        """  # noqa: S608
         params.append(limit)
-        cursor = conn.execute(query, params)
+        cursor = conn.execute(query, params)  # noqa: S608
         items = []
         for row in cursor.fetchall():
             item = dict(row)
@@ -1190,9 +1190,9 @@ async def get_proposals_v2(
             item["ui_exposure_level"] = "normal"
             items.append(item)
         return {"items": items, "total": len(items)}
-    except Exception as e:
-        logger.warning(f"Proposals endpoint error: {e}")
-        return {"items": [], "total": 0}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
@@ -1219,9 +1219,9 @@ async def get_watchers_v2(hours: int = Query(24)):
         )
         items = [dict(row) for row in cursor.fetchall()]
         return {"items": items, "total": len(items)}
-    except Exception as e:
-        logger.warning(f"Watchers endpoint error: {e}")
-        return {"items": [], "total": 0}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("get_watchers_v2 failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
@@ -1251,7 +1251,7 @@ async def get_couplings_v2(
             WHERE {" AND ".join(where)}
             ORDER BY strength DESC
             LIMIT 50
-        """,
+        """,  # noqa: S608
             params,
         )
         items = []
@@ -1280,9 +1280,9 @@ async def get_couplings_v2(
 
             items.append(item)
         return {"items": items, "total": len(items)}
-    except Exception as e:
-        logger.warning(f"Couplings endpoint error: {e}")
-        return {"items": [], "total": 0}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
@@ -1320,14 +1320,9 @@ async def get_fix_data_v2():
             "missing_mappings": [],
             "total": len(identity_conflicts) + len(ambiguous_links),
         }
-    except Exception as e:
-        logger.warning(f"Fix-data endpoint error: {e}")
-        return {
-            "identity_conflicts": [],
-            "ambiguous_links": [],
-            "missing_mappings": [],
-            "total": 0,
-        }
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
@@ -1383,7 +1378,7 @@ async def get_critical_items():
 
         items = _get_critical()
         return _intel_response(items)
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Intelligence critical items error: {e}", exc_info=True)
         return _intel_error(str(e))
 
@@ -1429,7 +1424,7 @@ async def get_briefing():
             ),
         }
         return _intel_response(result)
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Intelligence briefing error: {e}", exc_info=True)
         return _intel_error(str(e))
 
@@ -1452,7 +1447,7 @@ async def get_intelligence_signals(
             {"signals": signals, "total_signals": len(signals)},
             params={"quick": quick},
         )
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Intelligence signals error: {e}", exc_info=True)
         return _intel_error(str(e))
 
@@ -1469,7 +1464,7 @@ async def get_intelligence_signal_summary():
 
         summary = get_signal_summary()
         return _intel_response(summary)
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Intelligence signal summary error: {e}", exc_info=True)
         return _intel_error(str(e))
 
@@ -1489,7 +1484,7 @@ async def get_intelligence_active_signals(
 
         signals = get_active_signals(entity_type=entity_type, entity_id=entity_id)
         return _intel_response(signals, params={"entity_type": entity_type, "entity_id": entity_id})
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Intelligence active signals error: {e}", exc_info=True)
         return _intel_error(str(e))
 
@@ -1515,7 +1510,7 @@ async def get_intelligence_signal_history(
             limited,
             params={"entity_type": entity_type, "entity_id": entity_id, "limit": limit},
         )
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Intelligence signal history error: {e}", exc_info=True)
         return _intel_error(str(e))
 
@@ -1535,7 +1530,7 @@ async def get_intelligence_patterns():
         return _intel_response(
             {"patterns": patterns, "total_detected": len(patterns)},
         )
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Intelligence patterns error: {e}", exc_info=True)
         return _intel_error(str(e))
 
@@ -1567,7 +1562,7 @@ async def get_intelligence_pattern_catalog():
                 }
             )
         return _intel_response(catalog)
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Intelligence pattern catalog error: {e}", exc_info=True)
         return _intel_error(str(e))
 
@@ -1605,7 +1600,7 @@ async def get_intelligence_proposals(
             results.append(item)
 
         return _intel_response(results[:limit], params={"limit": limit, "urgency": urgency})
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Intelligence proposals error: {e}", exc_info=True)
         return _intel_error(str(e))
 
@@ -1623,7 +1618,7 @@ async def get_client_score(client_id: str):
         scorecard = score_client(client_id)
         scorecard["computed_at"] = now_iso()
         return _intel_response(scorecard)
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Intelligence client score error: {e}", exc_info=True)
         return _intel_error(str(e))
 
@@ -1641,7 +1636,7 @@ async def get_project_score(project_id: str):
         scorecard = score_project(project_id)
         scorecard["computed_at"] = now_iso()
         return _intel_response(scorecard)
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Intelligence project score error: {e}", exc_info=True)
         return _intel_error(str(e))
 
@@ -1659,7 +1654,7 @@ async def get_person_score(person_id: str):
         scorecard = score_person(person_id)
         scorecard["computed_at"] = now_iso()
         return _intel_response(scorecard)
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Intelligence person score error: {e}", exc_info=True)
         return _intel_error(str(e))
 
@@ -1677,7 +1672,7 @@ async def get_portfolio_score():
         scorecard = score_portfolio()
         scorecard["computed_at"] = now_iso()
         return _intel_response(scorecard)
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Intelligence portfolio score error: {e}", exc_info=True)
         return _intel_error(str(e))
 
@@ -1694,7 +1689,7 @@ async def get_client_intelligence(client_id: str):
 
         intel = _get_client_intel(client_id)
         return _intel_response(intel)
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Intelligence client entity error: {e}", exc_info=True)
         return _intel_error(str(e))
 
@@ -1711,7 +1706,7 @@ async def get_person_intelligence(person_id: str):
 
         intel = _get_person_intel(person_id)
         return _intel_response(intel)
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Intelligence person entity error: {e}", exc_info=True)
         return _intel_error(str(e))
 
@@ -1728,7 +1723,7 @@ async def get_portfolio_intelligence():
 
         intel = _get_portfolio_intel()
         return _intel_response(intel)
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Intelligence portfolio entity error: {e}", exc_info=True)
         return _intel_error(str(e))
 
@@ -1750,7 +1745,7 @@ async def get_project_state(project_id: str):
         return _intel_response(state)
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Intelligence project state error: {e}", exc_info=True)
         return _intel_error(str(e))
 
@@ -1772,7 +1767,7 @@ async def get_client_profile(client_id: str):
         return _intel_response(profile)
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Intelligence client profile error: {e}", exc_info=True)
         return _intel_error(str(e))
 
@@ -1794,12 +1789,14 @@ async def get_person_profile(person_id: str):
         return _intel_response(profile)
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Intelligence person profile error: {e}", exc_info=True)
         return _intel_error(str(e))
 
 
-@spec_router.get("/intelligence/clients/{client_id}/trajectory", response_model=IntelligenceResponse)
+@spec_router.get(
+    "/intelligence/clients/{client_id}/trajectory", response_model=IntelligenceResponse
+)
 async def get_client_trajectory(
     client_id: str,
     window_days: int = Query(30, ge=7, le=90),
@@ -1821,7 +1818,7 @@ async def get_client_trajectory(
             trajectory,
             params={"window_days": window_days, "num_windows": num_windows},
         )
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Intelligence client trajectory error: {e}", exc_info=True)
         return _intel_error(str(e))
 
@@ -1848,7 +1845,7 @@ async def get_person_trajectory(
             trajectory,
             params={"window_days": window_days, "num_windows": num_windows},
         )
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Intelligence person trajectory error: {e}", exc_info=True)
         return _intel_error(str(e))
 
@@ -1921,9 +1918,9 @@ async def snooze_proposal(proposal_id: str, request: SnoozeRequest):
         return {"success": True, "proposal_id": proposal_id, "snoozed_until": snooze_until}
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Snooze proposal error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
@@ -1947,9 +1944,9 @@ async def dismiss_proposal(proposal_id: str, request: DismissRequest):
         return {"success": True, "proposal_id": proposal_id}
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Dismiss proposal error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
@@ -1973,9 +1970,9 @@ async def dismiss_watcher(watcher_id: str, request: WatcherDismissRequest):
         return {"success": True, "watcher_id": watcher_id}
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Dismiss watcher error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
@@ -2002,9 +1999,9 @@ async def snooze_watcher(watcher_id: str, request: WatcherSnoozeRequest):
         return {"success": True, "watcher_id": watcher_id, "snoozed_until": snooze_until}
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Snooze watcher error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
@@ -2037,9 +2034,9 @@ async def resolve_fix_data(item_type: str, item_id: str, request: FixDataResolve
         return {"success": True, "item_type": item_type, "item_id": item_id}
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Resolve fix-data error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
@@ -2100,9 +2097,9 @@ async def create_issue_from_proposal(request: CreateIssueRequest):
         }
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Create issue error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
@@ -2135,9 +2132,9 @@ async def add_issue_note(issue_id: str, request: IssueNoteRequest):
         return {"success": True, "note_id": note_id}
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Add issue note error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
@@ -2175,9 +2172,9 @@ async def resolve_issue(issue_id: str, request: IssueResolveRequest):
         }
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Resolve issue error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
@@ -2226,9 +2223,9 @@ async def change_issue_state(issue_id: str, request: IssueStateChangeRequest):
         }
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Change issue state error: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
@@ -2254,8 +2251,8 @@ async def get_evidence_v2(entity_type: str, entity_id: str):
         )
         items = [dict(row) for row in cursor.fetchall()]
         return {"items": items, "total": len(items)}
-    except Exception as e:
-        logger.warning(f"Evidence endpoint error: {e}")
-        return {"items": [], "total": 0}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("get_evidence_v2 failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()

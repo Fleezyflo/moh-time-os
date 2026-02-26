@@ -19,6 +19,7 @@ import threading
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
+import sqlite3
 
 # =============================================================================
 # ERROR TRACKING - Pattern detection errors are tracked, not swallowed
@@ -668,11 +669,11 @@ if _validation_errors:
 # PATTERN DETECTION - Helper Computations
 # =============================================================================
 
-import logging
-import math
-import statistics
-from datetime import datetime, timedelta
-from pathlib import Path
+import logging  # noqa: E402 — conditional import
+import math  # noqa: E402 — conditional import
+import statistics  # noqa: E402 — conditional import
+from datetime import datetime, timedelta  # noqa: E402 — conditional import
+from pathlib import Path  # noqa: E402 — conditional import
 
 logger = logging.getLogger(__name__)
 
@@ -761,7 +762,7 @@ def _compute_correlation(series_a: list[float], series_b: list[float]) -> float 
             return None
 
         return numerator / denominator
-    except Exception:
+    except (sqlite3.Error, ValueError, OSError):
         return None
 
 
@@ -1074,7 +1075,7 @@ def _detect_concentration(
 
             return None
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.warning(f"Error detecting concentration pattern {pattern_def.id}: {e}")
         return None
 
@@ -1249,7 +1250,7 @@ def _detect_cascade(
                 confidence="high",
             )
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.warning(f"Error detecting cascade pattern {pattern_def.id}: {e}")
         return None
 
@@ -1388,7 +1389,7 @@ def _detect_degradation(
                 confidence="high" if avg_load > threshold else "medium",
             )
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.warning(f"Error detecting degradation pattern {pattern_def.id}: {e}")
         return None
 
@@ -1485,7 +1486,7 @@ def _detect_drift(
                 confidence="medium",
             )
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.warning(f"Error detecting drift pattern {pattern_def.id}: {e}")
         return None
 
@@ -1611,7 +1612,7 @@ def _detect_correlation(
                 confidence="high" if len(overlap) >= 3 else "medium",
             )
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.warning(f"Error detecting correlation pattern {pattern_def.id}: {e}")
         return None
 
@@ -1661,7 +1662,7 @@ def detect_all_patterns(db_path: Path | None = None) -> dict:
             evidence = detect_pattern(pattern_def, db_path)
             if evidence:
                 all_detected.append(evidence.to_dict())
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.warning(f"Error detecting pattern {pattern_id}: {e}", exc_info=True)
             error_collector.add(
                 PatternDetectionError(

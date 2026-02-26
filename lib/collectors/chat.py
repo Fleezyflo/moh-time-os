@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from .base import BaseCollector
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,7 @@ class ChatCollector(BaseCollector):
             creds = creds.with_subject(user)
             self._service = build("chat", "v1", credentials=creds)
             return self._service
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             self.logger.error(f"Failed to get Chat service: {e}")
             raise
 
@@ -107,7 +108,7 @@ class ChatCollector(BaseCollector):
                     members = self._list_members(service, space_name)
                     if members:
                         space_members_by_space[space_name] = members
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     self.logger.debug(f"Failed to fetch members for {space_name}: {e}")
 
             return {
@@ -117,7 +118,7 @@ class ChatCollector(BaseCollector):
                 "space_members_by_space": space_members_by_space,
             }
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             self.logger.error(f"Chat collection failed: {e}")
             return {
                 "messages": [],
@@ -136,7 +137,7 @@ class ChatCollector(BaseCollector):
                 return list(results.get("spaces", []))
             finally:
                 socket.setdefaulttimeout(old_timeout)
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             self.logger.warning(f"Error listing spaces: {e}")
             return []
 
@@ -147,7 +148,7 @@ class ChatCollector(BaseCollector):
                 service.spaces().messages().list(parent=space_name, pageSize=max_messages).execute()
             )
             return list(results.get("messages", []))
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             self.logger.debug(f"Failed to fetch messages for {space_name}: {e}")
             return []
 
@@ -156,7 +157,7 @@ class ChatCollector(BaseCollector):
         try:
             results = service.spaces().members().list(parent=space_name, pageSize=100).execute()
             return list(results.get("memberships", []))
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             self.logger.debug(f"Failed to fetch members for {space_name}: {e}")
             return []
 
@@ -366,7 +367,7 @@ class ChatCollector(BaseCollector):
 
             try:
                 raw_data = self.collect()
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                 self.logger.error(f"Collect failed: {e}")
                 self.circuit_breaker.record_failure()
                 self.store.update_sync_state(self.source_name, success=False, error=str(e))
@@ -380,7 +381,7 @@ class ChatCollector(BaseCollector):
             # Step 2: Transform to canonical format
             try:
                 transformed_messages = self.transform(raw_data)
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                 self.logger.warning(f"Transform failed: {e}. Attempting partial success.")
                 transformed_messages = []
                 self.metrics["partial_failures"] += 1
@@ -411,7 +412,7 @@ class ChatCollector(BaseCollector):
                 try:
                     stored = self.store.insert_many("chat_reactions", reactions_rows)
                     secondary_stats["reactions"] = stored
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     self.logger.warning(f"Failed to store reactions: {e}")
 
             # Attachments
@@ -427,7 +428,7 @@ class ChatCollector(BaseCollector):
                 try:
                     stored = self.store.insert_many("chat_attachments", attachments_rows)
                     secondary_stats["attachments"] = stored
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     self.logger.warning(f"Failed to store attachments: {e}")
 
             # Space metadata
@@ -441,7 +442,7 @@ class ChatCollector(BaseCollector):
                 try:
                     stored = self.store.insert_many("chat_space_metadata", space_metadata_rows)
                     secondary_stats["space_metadata"] = stored
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     self.logger.warning(f"Failed to store space_metadata: {e}")
 
             # Space members
@@ -454,7 +455,7 @@ class ChatCollector(BaseCollector):
                 try:
                     stored = self.store.insert_many("chat_space_members", members_rows)
                     secondary_stats["space_members"] = stored
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     self.logger.warning(f"Failed to store space_members: {e}")
 
             # Step 5: Update sync state and record success
@@ -475,7 +476,7 @@ class ChatCollector(BaseCollector):
                 "timestamp": self.last_sync.isoformat(),
             }
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             self.logger.error(f"Sync failed for {self.source_name}: {e}")
             self.circuit_breaker.record_failure()
             self.store.update_sync_state(self.source_name, success=False, error=str(e))

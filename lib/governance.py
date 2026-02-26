@@ -14,6 +14,7 @@ import yaml
 from lib import paths
 
 from .state_store import StateStore, get_store
+import sqlite3
 
 
 class DomainMode(Enum):
@@ -262,14 +263,8 @@ class GovernanceEngine:
                 "updated_at": self._last_reset.isoformat() if self._last_reset else None,
                 "notes": ["Emergency brake active"] if self._emergency_brake_active else [],
             }
-        except Exception:
-            # Fallback if anything goes wrong - never raise
-            return {
-                "ok": False,
-                "counts": {},
-                "updated_at": None,
-                "notes": ["Governance status unavailable"],
-            }
+        except (sqlite3.Error, ValueError, OSError):
+            raise  # was silently swallowed
 
 
 # Singleton

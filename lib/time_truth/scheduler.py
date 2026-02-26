@@ -12,6 +12,7 @@ from datetime import date
 from lib.state_store import get_store
 from lib.time_truth.block_manager import BlockManager
 from lib.time_truth.calendar_sync import CalendarSync
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -298,8 +299,8 @@ class Scheduler:
                     issues.append(
                         f"Capacity invariant violated: lane '{lane}' at {util_pct}% (exceeds 100%)"
                     )
-        except Exception:
-            pass  # Capacity module may not be available
+        except (sqlite3.Error, ValueError, OSError):
+            logger.debug("Capacity module not available for invariant check")
 
         # Calculate stats
         protected_count = 0

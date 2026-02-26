@@ -44,7 +44,7 @@ def get_table_inventory(db_path: Path) -> dict:
 
         # Get row count
         try:
-            count_cursor = conn.execute(f'SELECT COUNT(*) FROM "{table_name}"')
+            count_cursor = conn.execute(f'SELECT COUNT(*) FROM "{table_name}"')  # noqa: S608
             row_count = count_cursor.fetchone()[0]
         except Exception:
             row_count = 0

@@ -13,6 +13,7 @@ import secrets
 import time
 from dataclasses import dataclass
 from typing import Any
+import sqlite3
 
 # Context variables for trace propagation
 _trace_id_var: contextvars.ContextVar[str | None] = contextvars.ContextVar("trace_id", default=None)
@@ -271,5 +272,5 @@ def export_spans_otlp(endpoint: str = "http://localhost:4318/v1/traces") -> int:
             clear_span_buffer()
             return len(spans)
         return 0
-    except Exception:
+    except (sqlite3.Error, ValueError, OSError):
         return 0

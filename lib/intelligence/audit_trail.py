@@ -177,7 +177,7 @@ class AuditTrail:
             params.append(limit)
 
             rows = conn.execute(
-                f"SELECT * FROM intelligence_audit {where} ORDER BY created_at DESC LIMIT ?",
+                f"SELECT * FROM intelligence_audit {where} ORDER BY created_at DESC LIMIT ?",  # noqa: S608
                 params,
             ).fetchall()
 

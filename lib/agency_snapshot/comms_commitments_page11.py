@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from lib import paths
-from lib.compat import StrEnum
+from enum import StrEnum
 
 logger = logging.getLogger(__name__)
 
@@ -266,7 +266,7 @@ class CommsCommitmentsPage11Engine:
             self.commitment_ready = self.commitment_ready_pct >= 50
             self.client_coverage_pct = gates.get("client_coverage_pct", 100.0)
             self.client_coverage = self.client_coverage_pct >= 80
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.warning(f"Could not evaluate gates: {e}")
 
         # Compute comms coverage
@@ -300,7 +300,7 @@ class CommsCommitmentsPage11Engine:
                 or 0
             )
             self.delta_available = prev_count > 0
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.debug(f"Delta check failed: {e}")
             self.delta_available = False
 

@@ -14,6 +14,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TypeVar
+import sqlite3
 
 T = TypeVar("T")
 
@@ -174,7 +175,7 @@ def retry_with_backoff(
     for attempt in range(config.max_retries + 1):
         try:
             return func()
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             last_error = e
 
             if attempt < config.max_retries:

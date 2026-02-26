@@ -15,8 +15,9 @@ import logging
 from datetime import datetime, timedelta, timezone
 
 from lib import paths
-from lib.compat import UTC
+from datetime import UTC
 from lib.state_tracker import filter_new_items, mark_surfaced
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -220,8 +221,8 @@ def process_heartbeat() -> tuple[bool, str]:
             today_items = due_today_fn() if due_today_fn else []
             if today_items:
                 alerts.append(f"📋 **{len(today_items)} items due today**")
-        except Exception:
-            pass  # Database might not be initialized
+        except (sqlite3.Error, ValueError, OSError):
+            logger.debug("Database not initialized for heartbeat alerts")
 
     # Fallback: check Google Tasks for overdue (if no Time OS)
     if not TIME_OS_DB_AVAILABLE:

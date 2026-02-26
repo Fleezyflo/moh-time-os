@@ -21,6 +21,7 @@ from .governance import get_governance
 from .notifier import NotificationEngine
 from .reasoner import ReasonerEngine
 from .state_store import get_store
+import sqlite3
 
 # Configure logging
 logging.basicConfig(
@@ -138,7 +139,7 @@ class AutonomousLoop:
                     logger.info(
                         f"  Extracted {commit_results['commitments_extracted']} commitments"
                     )
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 logger.warning(f"  Commitment extraction skipped: {e}")
                 results["phases"]["commitment_extraction"] = {"error": str(e)}
 
@@ -154,7 +155,7 @@ class AutonomousLoop:
                 results["phases"]["lane_assignment"] = lane_results
                 if lane_results.get("changed", 0) > 0:
                     logger.info(f"  Reassigned {lane_results['changed']} tasks to lanes")
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 logger.error(f"Lane assignment error: {e}")
                 results["phases"]["lane_assignment"] = {"error": str(e)}
 
@@ -378,7 +379,7 @@ class AutonomousLoop:
             # ═══════════════════════════════════════
             results["success"] = True
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Cycle failed: {e}", exc_info=True)
             results["success"] = False
             results["error"] = str(e)
@@ -465,7 +466,7 @@ class AutonomousLoop:
                 if health.trend == "declining":
                     results["declining_count"] += 1
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Client Truth error: {e}")
             results["error"] = str(e)
 
@@ -538,9 +539,9 @@ class AutonomousLoop:
                             data_completeness=sc.get("data_completeness", 0),
                         )
                         results["scores_recorded"] += 1
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError) as e:
                     logger.error(f"Intelligence: {entity_type} scoring failed: {e}")
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Intelligence: scoring init failed: {e}")
 
         # --- 2. Detect signals and update signal state ---
@@ -556,7 +557,7 @@ class AutonomousLoop:
                     + state_results.get("escalated", 0)
                     + state_results.get("cleared", 0)
                 )
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Intelligence: signal detection failed: {e}")
 
         # --- 3. Detect patterns and persist snapshots ---
@@ -571,12 +572,12 @@ class AutonomousLoop:
                 try:
                     snapshot = snapshot_from_pattern_evidence(p_dict)
                     pattern_persistence.record_pattern(snapshot)
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError) as e:
                     logger.error(
                         f"Intelligence: failed to persist pattern "
                         f"{p_dict.get('pattern_id', '?')}: {e}"
                     )
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Intelligence: pattern detection failed: {e}")
 
         # --- 4. Compute and persist cost-to-serve snapshots ---
@@ -598,12 +599,12 @@ class AutonomousLoop:
                         )
                         cost_persistence.record_snapshot(snapshot)
                         results["cost_snapshots"] += 1
-                    except Exception as e:
+                    except (sqlite3.Error, ValueError, OSError) as e:
                         logger.error(
                             f"Intelligence: cost snapshot failed for "
                             f"{getattr(profile, 'client_id', '?')}: {e}"
                         )
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Intelligence: cost-to-serve failed: {e}")
 
         # --- 5. Emit intelligence events for critical/warning findings ---
@@ -626,7 +627,7 @@ class AutonomousLoop:
                             )
                             event_store.publish(event)
                             results["events_emitted"] += 1
-                        except Exception as e:
+                        except (sqlite3.Error, ValueError, OSError) as e:
                             logger.error(f"Intelligence: signal event emit failed: {e}")
 
             # Events from pattern detection
@@ -637,10 +638,10 @@ class AutonomousLoop:
                         event = event_from_pattern(p_dict, change_type="detected")
                         event_store.publish(event)
                         results["events_emitted"] += 1
-                    except Exception as e:
+                    except (sqlite3.Error, ValueError, OSError) as e:
                         logger.error(f"Intelligence: pattern event emit failed: {e}")
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Intelligence: event emission failed: {e}")
 
         return results
@@ -700,7 +701,7 @@ class AutonomousLoop:
                     )
                     results["alerts_created"] += 1
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Capacity Truth error: {e}")
             results["error"] = str(e)
 
@@ -748,7 +749,7 @@ class AutonomousLoop:
             # Count untracked
             results["untracked"] = len(manager.get_untracked_commitments())
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Commitment Truth error: {e}")
             results["error"] = str(e)
 
@@ -782,7 +783,7 @@ class AutonomousLoop:
             results["communications_updated"] = norm_results.get("communications", 0)
             results["invoices_updated"] = norm_results.get("invoices", 0)
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Data normalization error: {e}")
             results["error"] = str(e)
 
@@ -799,7 +800,7 @@ class AutonomousLoop:
         try:
             evaluator = GateEvaluator()
             return evaluator.evaluate_all()
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Gate check error: {e}")
             return {"error": str(e), "data_integrity": False}
 
@@ -816,7 +817,7 @@ class AutonomousLoop:
             counts = queue.populate()
             summary = queue.get_summary()
             return {"counts": counts, "summary": summary}
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Resolution queue error: {e}")
             return {"error": str(e)}
 
@@ -841,7 +842,7 @@ class AutonomousLoop:
             results["failed"] = report.failed
             results["duration_ms"] = report.duration_ms
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Auto-resolution error: {e}")
             results["error"] = str(e)
 
@@ -884,7 +885,7 @@ class AutonomousLoop:
             results["validation_issues"] = len(validation.issues)
             results["valid"] = validation.valid
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Time Truth error: {e}")
             results["error"] = str(e)
 
@@ -1001,7 +1002,7 @@ class AutonomousLoop:
                 if dashboard_dir.exists():
                     copy(path, dashboard_dir / "snapshot.json")
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Snapshot generation error: {e}")
             results["error"] = str(e)
 

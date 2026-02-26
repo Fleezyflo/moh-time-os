@@ -8,13 +8,7 @@ import sqlite3
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta, timezone
-
-# Python 3.10 compatibility
-try:
-    from datetime import UTC
-except ImportError:
-    UTC = timezone.utc  # noqa: UP017
+from datetime import UTC, datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Optional
@@ -126,7 +120,7 @@ class HealthChecker:
             start = time.monotonic()
             try:
                 result = check_fn()
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 logger.error(f"Health check '{name}' failed with exception", exc_info=e)
                 result = HealthCheckResult(
                     name=name,
@@ -167,7 +161,7 @@ class HealthChecker:
                 latency_ms=0,
                 details={"path": str(db_path)},
             )
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error("Database health check failed", exc_info=e)
             return HealthCheckResult(
                 name="db",
@@ -206,7 +200,7 @@ class HealthChecker:
                 latency_ms=0,
                 details={"version": version},
             )
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error("Schema version check failed", exc_info=e)
             return HealthCheckResult(
                 name="schema_version",
@@ -257,7 +251,7 @@ class HealthChecker:
                 latency_ms=0,
                 details=details,
             )
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error("Disk space check failed", exc_info=e)
             return HealthCheckResult(
                 name="disk_space",
@@ -327,7 +321,7 @@ class HealthChecker:
                     latency_ms=0,
                     details={"last_run": result[0], "age_seconds": int(age_seconds)},
                 )
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 logger.error(f"Error parsing collector timestamp: {e}")
                 return HealthCheckResult(
                     name="collector_health",
@@ -335,7 +329,7 @@ class HealthChecker:
                     message=f"Error parsing collector timestamp: {e}",
                     latency_ms=0,
                 )
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error("Collector health check failed", exc_info=e)
             return HealthCheckResult(
                 name="collector_health",
@@ -382,7 +376,7 @@ class HealthChecker:
                             latency_ms=0,
                             details={"last_heartbeat": state, "age_seconds": int(age_seconds)},
                         )
-                    except Exception as e:
+                    except (sqlite3.Error, ValueError, OSError) as e:
                         logger.error(f"Error parsing daemon heartbeat: {e}")
                         return HealthCheckResult(
                             name="daemon_health",
@@ -399,7 +393,7 @@ class HealthChecker:
                     latency_ms=0,
                     details={"last_heartbeat": None},
                 )
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 logger.warning(f"Could not access daemon state: {e}")
                 # Degraded but not unhealthy - state store may not be initialized
                 return HealthCheckResult(
@@ -408,7 +402,7 @@ class HealthChecker:
                     message=f"Could not check daemon state: {e}",
                     latency_ms=0,
                 )
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error("Daemon health check failed", exc_info=e)
             return HealthCheckResult(
                 name="daemon_health",
@@ -444,8 +438,9 @@ class HealthChecker:
                                         "age_hours": round(age.total_seconds() / 3600, 2),
                                     }
                                 )
-                        except Exception:  # noqa: S110
-                            pass
+                        except (sqlite3.Error, ValueError, OSError) as e:  # noqa: S110
+                            logger.error("_check_bundle_health failed: %s", e, exc_info=True)
+                            raise  # re-raise after logging
 
                 details: dict[str, object] = {
                     "pending_count": len(pending_bundles),
@@ -470,7 +465,7 @@ class HealthChecker:
                     latency_ms=0,
                     details=details,
                 )
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 logger.error(f"Error checking bundle health: {e}")
                 return HealthCheckResult(
                     name="bundle_health",
@@ -478,7 +473,7 @@ class HealthChecker:
                     message=f"Bundle health check error: {e}",
                     latency_ms=0,
                 )
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error("Bundle health check failed", exc_info=e)
             return HealthCheckResult(
                 name="bundle_health",

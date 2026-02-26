@@ -95,7 +95,7 @@ class BaseDetector(ABC):
                 "duration_ms": duration_ms,
             }
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             duration_ms = int((time.time() - start_time) * 1000)
 
             # Log failed run

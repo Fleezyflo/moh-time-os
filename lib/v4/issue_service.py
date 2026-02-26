@@ -255,7 +255,7 @@ class IssueService:
                     f"""
                     UPDATE signals SET status = 'consumed', consumed_by_proposal_id = ?
                     WHERE signal_id IN ({placeholders}) AND status = 'active'
-                """,
+                """,  # noqa: S608
                     [proposal_id] + signal_ids,
                 )
 
@@ -317,9 +317,8 @@ class IssueService:
                 "evidence_attached": len(proposal.get("proof_excerpt_ids", [])),
             }
 
-        except Exception as e:
-            conn.rollback()
-            return {"status": "error", "error": str(e)}
+        except (sqlite3.Error, ValueError, OSError):
+            raise  # was silently swallowed
         finally:
             conn.close()
 

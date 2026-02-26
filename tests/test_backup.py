@@ -111,7 +111,7 @@ class TestCreateBackup:
                     mock_datetime.now.return_value.strftime.return_value = "20240115_120000"
                     try:
                         create_backup(label="test-label")
-                    except:
+                    except Exception:
                         pass  # Error is ok for this mock test
 
     @patch("lib.backup.DB_PATH")
@@ -161,7 +161,7 @@ class TestCreateBackup:
                 # Should log warning but continue
                 try:
                     create_backup()
-                except:
+                except Exception:
                     pass  # Non-critical error
 
 

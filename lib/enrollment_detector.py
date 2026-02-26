@@ -14,6 +14,7 @@ from collections import Counter
 from datetime import datetime, timedelta
 
 from .state_store import get_store
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -269,7 +270,7 @@ def detect_xero_deposits(store) -> list[dict]:
                         )
                         break  # One candidate per contact
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.info(f"Xero deposit detection error: {e}")
     return candidates
 

@@ -6,15 +6,8 @@ import os
 import shutil
 import subprocess
 import uuid
-from datetime import datetime, timezone
-
-# UTC compatibility for Python 3.10/3.11
-try:
-    from datetime import UTC  # Python 3.11+
-except ImportError:
-    import datetime as _dtmod  # noqa: F811
-
-    UTC = _dtmod.timezone.utc  # noqa
+from datetime import UTC, datetime, timezone
+import sqlite3
 
 
 def get_git_sha() -> str:
@@ -37,7 +30,7 @@ def get_git_sha() -> str:
         )
         if result.returncode == 0:
             return result.stdout.strip()
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         import logging
 
         logging.getLogger(__name__).debug("Failed to get git hash: %s", e)

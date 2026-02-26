@@ -186,7 +186,7 @@ def check_api(api_url: str, token: str | None) -> list[str]:
                 req.add_header("Authorization", f"Bearer {token}")
 
             try:
-                response = urllib.request.urlopen(req, timeout=10)
+                response = urllib.request.urlopen(req, timeout=10)  # nosec B310
                 status = response.getcode()
                 if status == expected_status:
                     ok(f"{path} → {status}")
@@ -224,7 +224,7 @@ def check_api(api_url: str, token: str | None) -> list[str]:
         # Stub endpoint should return 501
         req = urllib.request.Request(f"{api_url}/api/tasks/link", method="POST")
         try:
-            urllib.request.urlopen(req, timeout=10)
+            urllib.request.urlopen(req, timeout=10)  # nosec B310
             fail("POST /api/tasks/link → 200 (expected 501)")
             failures.append("stub_endpoint")
         except urllib.error.HTTPError as e:

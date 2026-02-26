@@ -822,7 +822,7 @@ class CollectorHooks:
                     stats["projects"]["processed"] += 1
                     if result.get("status") == "created":
                         stats["projects"]["created"] += 1
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError) as e:
                     log.warning(f"Failed to sync project {pid}: {e}")
 
             # Sync items (tasks) - with proper linking via internal IDs
@@ -875,7 +875,7 @@ class CollectorHooks:
                     if result.get("status") == "created":
                         stats["tasks"]["created"] += 1
                     stats["tasks"]["links_created"] += result.get("links_created", 0)
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError) as e:
                     log.warning(f"Failed to sync item {iid}: {e}")
 
             # Repair missing links for existing artifacts
@@ -1140,7 +1140,7 @@ class CollectorHooks:
                         stats["repaired"] += 1
                         stats["links_created"] += len(links)
 
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError) as e:
                     log.warning(f"Failed to repair links for artifact {artifact_id}: {e}")
                     stats["errors"] += 1
 
@@ -1330,7 +1330,7 @@ class CollectorHooks:
                         stats["links_created"] += links_created
                         stats["emails_linked"] += 1
 
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError) as e:
                     log.warning(f"Error relinking email {artifact_id}: {e}")
                     stats["errors"] += 1
 

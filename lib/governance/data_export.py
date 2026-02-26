@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any
 
 from lib.data_lifecycle import get_lifecycle_manager
+from lib.db import validate_identifier
 from lib.governance.anonymizer import Anonymizer
 
 logger = logging.getLogger(__name__)
@@ -84,7 +85,7 @@ class DataExporter:
         """Initialize exporter with database path and optional export directory."""
         self.db_path = Path(db_path)
         if export_dir is None:
-            export_dir = Path("/tmp/moh_exports")
+            export_dir = Path("/tmp/moh_exports")  # nosec B108 # noqa: S108 — local desktop app, user-owned temp dir
         self.export_dir = Path(export_dir)
         self.lifecycle = get_lifecycle_manager()
         self.anonymizer = Anonymizer()
@@ -99,12 +100,13 @@ class DataExporter:
     def _get_table_columns(self, table: str) -> list[str]:
         """Get column names for a table."""
         try:
+            safe_table = validate_identifier(table)
             conn = self._get_connection()
-            cursor = conn.execute(f"PRAGMA table_info({table})")
+            cursor = conn.execute(f"PRAGMA table_info({safe_table})")  # noqa: S608
             columns = [row[1] for row in cursor.fetchall()]
             conn.close()
             return columns
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error getting columns for {table}: {e}")
             return []
 
@@ -116,6 +118,8 @@ class DataExporter:
         columns: list[str] | None = None,
     ) -> tuple[str, list]:
         """Build SELECT query with WHERE clause."""
+        safe_table = validate_identifier(table)
+
         # Get all columns if not specified
         if not columns:
             columns = self._get_table_columns(table)
@@ -123,8 +127,8 @@ class DataExporter:
         if not columns:
             raise ValueError(f"Table '{table}' does not exist or has no columns")
 
-        col_list = ", ".join([f'"{col}"' for col in columns])
-        sql = f"SELECT {col_list} FROM {table}"
+        col_list = ", ".join([f'"{validate_identifier(col)}"' for col in columns])
+        sql = f"SELECT {col_list} FROM {safe_table}"  # noqa: S608
         params = []
 
         conditions = []
@@ -163,8 +167,8 @@ class DataExporter:
 
             try:
                 conn = self._get_connection()
-                # Use proper parameterized count query
-                cursor = conn.execute(f"SELECT COUNT(*) as count FROM {table_name}")
+                safe_name = validate_identifier(table_name)
+                cursor = conn.execute(f"SELECT COUNT(*) as count FROM {safe_name}")  # noqa: S608
                 row_count = cursor.fetchone()[0]
                 conn.close()
 
@@ -180,7 +184,7 @@ class DataExporter:
                         "classification": metadata.classification.value,
                     }
                 )
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 logger.error(f"Error listing table {table_name}: {e}")
 
         return tables
@@ -191,8 +195,9 @@ class DataExporter:
             return {"error": f"Table {table} is not exportable"}
 
         try:
+            safe_table = validate_identifier(table)
             conn = self._get_connection()
-            cursor = conn.execute(f"PRAGMA table_info({table})")
+            cursor = conn.execute(f"PRAGMA table_info({safe_table})")  # noqa: S608
 
             columns = []
             for row in cursor.fetchall():
@@ -206,7 +211,7 @@ class DataExporter:
                     }
                 )
 
-            cursor = conn.execute(f"SELECT COUNT(*) as count FROM {table}")
+            cursor = conn.execute(f"SELECT COUNT(*) as count FROM {safe_table}")  # noqa: S608
             row_count = cursor.fetchone()[0]
             conn.close()
 
@@ -218,7 +223,7 @@ class DataExporter:
                 "row_count": row_count,
                 "pii_columns": metadata.pii_columns if metadata else [],
             }
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error getting schema for {table}: {e}")
             return {"error": str(e)}
 
@@ -313,13 +318,14 @@ class DataExporter:
                 result_files[table] = file_path
 
                 # Count rows
+                safe_table = validate_identifier(table)
                 conn = self._get_connection()
-                cursor = conn.execute(f"SELECT COUNT(*) FROM {table}")
+                cursor = conn.execute(f"SELECT COUNT(*) FROM {safe_table}")  # noqa: S608
                 count = cursor.fetchone()[0]
                 conn.close()
                 total_rows += count
 
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 logger.error(f"Error exporting table {table}: {e}")
 
         # Create manifest file

@@ -15,7 +15,8 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 
 from lib import paths
-from lib.compat import UTC, StrEnum
+from datetime import UTC
+from enum import StrEnum
 
 logger = logging.getLogger(__name__)
 

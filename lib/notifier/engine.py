@@ -10,6 +10,7 @@ import logging
 import os
 import uuid
 from datetime import datetime
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -182,7 +183,7 @@ class NotificationEngine:
                             }
                         )
 
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError) as e:
                     results.append(
                         {
                             "id": notif_id,
@@ -290,7 +291,7 @@ class NotificationEngine:
                                 "error": result.get("error"),
                             }
                         )
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError) as e:
                     results.append(
                         {
                             "id": notif_id,

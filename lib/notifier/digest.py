@@ -120,7 +120,7 @@ class DigestEngine:
                     ),
                 )
             return True
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             log.error(f"Failed to queue notification: {e}")
             return False
 
@@ -210,7 +210,7 @@ class DigestEngine:
                 "summary": summary,
                 "bucket": bucket,
             }
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             log.error(f"Failed to generate digest: {e}")
             return None
 
@@ -240,7 +240,7 @@ class DigestEngine:
                         (now, user_id, notif_id, bucket),
                     )
             return True
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             log.error(f"Failed to mark as processed: {e}")
             return False
 
@@ -274,7 +274,7 @@ class DigestEngine:
                     (digest_id, user_id, bucket, digest_json, item_count, sent_time),
                 )
             return True
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             log.error(f"Failed to record digest sent: {e}")
             return False
 
@@ -304,9 +304,8 @@ class DigestEngine:
             for row in rows:
                 counts[row["bucket"]] = row["count"]
             return counts
-        except Exception as e:
-            log.error(f"Failed to get pending count: {e}")
-            return {}
+        except (sqlite3.Error, ValueError, OSError):
+            raise  # was silently swallowed
 
     def format_plaintext(self, digest: dict | None) -> str:
         """

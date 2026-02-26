@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Optional
 
 from lib.paths import data_dir
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -137,7 +138,7 @@ def _cleanup_old_snapshots():
         try:
             old.unlink()
             logger.debug(f"Cleaned up old snapshot: {old.name}")
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.warning(f"Failed to delete old snapshot {old.name}: {e}")
 
 
@@ -154,7 +155,7 @@ def load_latest_snapshot() -> IntelligenceSnapshot | None:
         with open(snapshots[0]) as f:
             data = json.load(f)
         return IntelligenceSnapshot(**data)
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.warning(f"Failed to load snapshot: {e}")
         return None
 
@@ -278,7 +279,7 @@ def run_change_detection(intel_data: dict) -> ChangeReport:
     # Save current for next run
     try:
         save_snapshot(current)
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.warning(f"Failed to save snapshot: {e}")
 
     return changes

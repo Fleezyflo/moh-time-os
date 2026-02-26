@@ -128,11 +128,9 @@ class TestBootstrapLanes:
 
     def test_null_lanes_skipped(self, test_db):
         """Team members with NULL default_lane should not create lanes."""
-        result = bootstrap_lanes(test_db)
+        _result = bootstrap_lanes(test_db)
         conn = sqlite3.connect(test_db)
-        row = conn.execute(
-            "SELECT COUNT(*) FROM capacity_lanes WHERE name IS NULL"
-        ).fetchone()
+        row = conn.execute("SELECT COUNT(*) FROM capacity_lanes WHERE name IS NULL").fetchone()
         conn.close()
         assert row[0] == 0
 
@@ -171,9 +169,7 @@ class TestAssignTasksToLanes:
         assign_tasks_to_lanes(test_db)
 
         conn = sqlite3.connect(test_db)
-        row = conn.execute(
-            "SELECT lane_id FROM tasks WHERE source_id = 't4'"
-        ).fetchone()
+        row = conn.execute("SELECT lane_id FROM tasks WHERE source_id = 't4'").fetchone()
         conn.close()
         assert row[0] == "lane_growth"
 
@@ -206,7 +202,7 @@ class TestLaneLoadReport:
         assign_tasks_to_lanes(test_db)
         report = lane_load_report(test_db)
 
-        client = next(l for l in report["lanes"] if l["name"] == "client")
+        client = next(ln for ln in report["lanes"] if ln["name"] == "client")
         assert client["team_count"] == 2  # Ahmed + Fady
         assert client["total_tasks"] == 3  # t1, t2, t3
 
@@ -215,7 +211,7 @@ class TestLaneLoadReport:
         assign_tasks_to_lanes(test_db)
         report = lane_load_report(test_db)
 
-        client = next(l for l in report["lanes"] if l["name"] == "client")
+        client = next(ln for ln in report["lanes"] if ln["name"] == "client")
         ahmed = next(m for m in client["members"] if m["name"] == "Ahmed Salah")
         assert ahmed["task_count"] == 2
         assert ahmed["overdue_count"] == 1  # t2 is overdue
@@ -225,7 +221,7 @@ class TestLaneLoadReport:
         assign_tasks_to_lanes(test_db)
         report = lane_load_report(test_db)
 
-        client = next(l for l in report["lanes"] if l["name"] == "client")
+        client = next(ln for ln in report["lanes"] if ln["name"] == "client")
         assert client["overdue_tasks"] == 1  # Only t2
 
 

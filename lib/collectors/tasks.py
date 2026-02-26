@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import Any
 
 from .base import BaseCollector
+import sqlite3
 
 
 class TasksCollector(BaseCollector):
@@ -51,7 +52,7 @@ class TasksCollector(BaseCollector):
 
             return {"tasks": all_tasks, "lists": task_lists}
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             self.logger.exception(f"Tasks collection failed: {e}")
             raise  # Propagate error to sync() which handles it properly
 

@@ -94,7 +94,7 @@ class Proposal:
 # HELPER FUNCTIONS
 # =============================================================================
 
-import uuid
+import uuid  # noqa: E402 — conditional import
 
 
 def _generate_proposal_id() -> str:
@@ -596,7 +596,7 @@ def _merge_proposals(proposals: list[Proposal]) -> list[Proposal]:
         by_entity[key].append(prop)
 
     merged = []
-    for key, group in by_entity.items():
+    for _key, group in by_entity.items():
         if len(group) == 1:
             merged.append(group[0])
         else:
@@ -689,7 +689,7 @@ def generate_proposals(
         signals_by_entity[key]["signals"].append(sig)
 
     # Create entity-level proposals
-    for key, data in signals_by_entity.items():
+    for _key, data in signals_by_entity.items():
         entity_type = data["entity_type"]
         entity_id = data["entity_id"]
         entity_name = data["entity_name"]
@@ -1079,7 +1079,7 @@ def generate_daily_briefing(proposals: list[Proposal], db_path: Path | None = No
 
     # Watching items (MONITOR headlines only)
     watching = []
-    for prop, score in monitor[:10]:
+    for prop, _score in monitor[:10]:
         watching.append(
             {
                 "headline": prop.headline,

@@ -14,7 +14,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import date, datetime, time, timedelta, timezone
 
-from lib.compat import UTC
+from datetime import UTC
 
 from .config_store import get, get_all_lanes, get_lane
 

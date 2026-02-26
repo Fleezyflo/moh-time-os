@@ -466,7 +466,7 @@ def run_migration():
         proj_sql = cursor.fetchone()[0]
         if "CHECK (type IN" in proj_sql:
             logger.info("  ✓ projects.type CHECK constraint exists")
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         conn.rollback()
         logger.info(f"\n✗ Migration failed: {e}")
         logger.info(f"  Restore from: {backup_path}")

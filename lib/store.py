@@ -180,7 +180,7 @@ def get_connection():
     try:
         yield conn
         conn.commit()
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         conn.rollback()
         log.error(f"Database error: {e}")
         raise
@@ -208,7 +208,7 @@ def table_counts() -> dict:
         counts = {}
         for table in tables:
             try:
-                count = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]  # nosec B608 — table from hardcoded list
+                count = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]  # noqa: S608
                 counts[table] = count
             except sqlite3.OperationalError:
                 counts[table] = 0
@@ -224,7 +224,7 @@ def integrity_check() -> tuple[bool, str]:
         with get_connection() as conn:
             result = conn.execute("PRAGMA integrity_check").fetchone()[0]
             return result == "ok", result
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         return False, str(e)
 
 

@@ -80,7 +80,7 @@ __all__ += [
     "GovernanceEngine",
     "get_governance",
 ]
-from lib.governance.governance_engine import (
+from lib.governance.governance_engine import (  # noqa: E402 — conditional import
     DomainMode,
     get_domain_mode,
     set_domain_mode,

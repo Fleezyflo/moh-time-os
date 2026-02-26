@@ -277,7 +277,7 @@ class DriftDetector:
             params.append(limit)
 
             rows = conn.execute(
-                f"SELECT * FROM drift_alerts {where} ORDER BY detected_at DESC LIMIT ?",
+                f"SELECT * FROM drift_alerts {where} ORDER BY detected_at DESC LIMIT ?",  # noqa: S608
                 params,
             ).fetchall()
 

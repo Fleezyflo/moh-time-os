@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import uuid4
 
-from lib.compat import StrEnum
+from enum import StrEnum
 
 from .evidence import validate_evidence
 from .suppression import SuppressionManager, check_suppression

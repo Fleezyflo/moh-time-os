@@ -277,7 +277,7 @@ class HealthCalculator:
                     SUM(CASE WHEN status IN ('done', 'completed') THEN 1 ELSE 0 END) as done
                 FROM tasks
                 WHERE project_id IN ({placeholders})
-            """,
+            """,  # noqa: S608
                 project_ids,
             )
 

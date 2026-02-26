@@ -322,7 +322,7 @@ class SnapshotAggregator:
             AND due_date < '{today_str}'
             ORDER BY days_overdue DESC
             LIMIT 5
-        """)
+        """)  # noqa: S608
 
         for task in overdue:
             score = 40 + min(task["days_overdue"] * 5, 25)
@@ -351,7 +351,7 @@ class SnapshotAggregator:
             GROUP BY p.id
             HAVING overdue_count >= 2
             LIMIT 3
-        """)
+        """)  # noqa: S608
 
         for proj in off_track:
             risks.append(
@@ -564,7 +564,7 @@ class SnapshotAggregator:
                 COUNT(CASE WHEN t.due_date BETWEEN '{today_str}' AND date('{today_str}', '+7 days') AND t.status != 'done' THEN 1 END) as due_7d_count
             FROM tasks t
             LEFT JOIN projects p ON t.project_id = p.id
-        """)
+        """)  # noqa: S608
             or {}
         )
 

@@ -11,6 +11,7 @@ import logging
 import re
 from dataclasses import dataclass
 from datetime import date, timedelta
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -237,7 +238,7 @@ def extract_deadline(text: str) -> str | None:
             elif pattern_type == "asap":
                 return today.isoformat()
 
-        except Exception:
+        except (sqlite3.Error, ValueError, OSError):  # noqa: S112 — best-effort date pattern matching, skip unparseable
             continue
 
     return None

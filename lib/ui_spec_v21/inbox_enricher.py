@@ -108,7 +108,7 @@ def enrich_with_llm(sender: str, subject: str, body: str) -> dict[str, Any]:
     except json.JSONDecodeError as e:
         logger.warning(f"Failed to parse LLM enrichment response: {e}")
         return {}
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.warning(f"LLM enrichment error: {e}")
         return {}
 
@@ -391,7 +391,7 @@ def enrich_pending_items(
             else:
                 stats["skipped"] += 1
             stats["processed"] += 1
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error enriching {item_id}: {e}")
             stats["skipped"] += 1
 

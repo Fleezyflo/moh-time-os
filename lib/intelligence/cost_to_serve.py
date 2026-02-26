@@ -28,6 +28,7 @@ from statistics import mean, quantiles
 from typing import Optional
 
 from lib.query_engine import QueryEngine, get_engine
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -227,7 +228,7 @@ class CostToServeEngine:
                     avg_task_duration = float(
                         duration_rows[0]["AVG(julianday(updated_at) - julianday(created_at))"]
                     )
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 logger.debug(f"Could not compute avg_task_duration for {client_id}: {e}")
 
             # Determine cost drivers
@@ -258,7 +259,7 @@ class CostToServeEngine:
                 cost_drivers=cost_drivers,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error computing client cost for {client_id}: {e}", exc_info=True)
             return None
 
@@ -311,7 +312,7 @@ class CostToServeEngine:
                     avg_completion_days = float(
                         duration_rows[0]["AVG(julianday(updated_at) - julianday(created_at))"]
                     )
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 logger.debug(f"Could not compute avg_completion_days for {project_id}: {e}")
 
             # Detect scope creep (if task_count is very high relative to expected)
@@ -330,7 +331,7 @@ class CostToServeEngine:
                 has_scope_creep=has_scope_creep,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error computing project cost for {project_id}: {e}", exc_info=True)
             return None
 
@@ -371,7 +372,7 @@ class CostToServeEngine:
                     percentiles_vals = quantiles(efficiency_ratios, n=4)
                     p25 = percentiles_vals[0]  # 25th percentile
                     p75 = percentiles_vals[2]  # 75th percentile
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError) as e:
                     logger.warning(f"Could not calculate percentiles: {e}")
                     p25 = sorted(efficiency_ratios)[len(efficiency_ratios) // 4]
                     p75 = sorted(efficiency_ratios)[3 * len(efficiency_ratios) // 4]
@@ -440,7 +441,7 @@ class CostToServeEngine:
                 bottom_unprofitable=bottom_unprofitable,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error computing portfolio profitability: {e}", exc_info=True)
             return None
 
@@ -508,7 +509,7 @@ class CostToServeEngine:
 
             return sorted(hidden_cost_clients, key=lambda c: c["efficiency_ratio"])
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error identifying hidden cost clients: {e}", exc_info=True)
             return []
 
@@ -546,7 +547,7 @@ class CostToServeEngine:
 
             return sorted(rankings, key=lambda r: r["efficiency_ratio"], reverse=True)
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error computing profitability ranking: {e}", exc_info=True)
             return []
 

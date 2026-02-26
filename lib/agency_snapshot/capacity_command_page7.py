@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from lib import paths
-from lib.compat import StrEnum
+from enum import StrEnum
 
 logger = logging.getLogger(__name__)
 

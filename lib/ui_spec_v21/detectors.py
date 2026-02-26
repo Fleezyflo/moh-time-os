@@ -10,7 +10,7 @@ import sqlite3
 from dataclasses import dataclass
 from uuid import uuid4
 
-from lib.compat import StrEnum
+from enum import StrEnum
 
 from .evidence import create_flagged_signal_evidence, create_invoice_evidence
 from .suppression import (
@@ -78,8 +78,9 @@ class DetectorRunner:
             result.issues_created += r.issues_created
             result.flagged_signals_created += r.flagged_signals_created
             result.suppressed_count += r.suppressed_count
-        except Exception:
-            pass  # Schema mismatch, skip
+        except (sqlite3.Error, ValueError, OSError) as e:  # noqa: S110 — best-effort invoice detection on schema mismatch
+            logger.error("run_all failed: %s", e, exc_info=True)
+            raise  # re-raise after logging
 
         # Run communications detector
         r = self.run_communications_detector()
@@ -232,9 +233,9 @@ class DetectorRunner:
                     ),
                 )
                 result.flagged_signals_created += 1
-            except Exception:
-                # Already exists or constraint violation
-                pass
+            except (sqlite3.Error, ValueError, OSError) as e:  # noqa: S110 — best-effort signal creation on constraint violation
+                logger.error("handler failed: %s", e, exc_info=True)
+                raise  # re-raise after logging
 
         return result
 

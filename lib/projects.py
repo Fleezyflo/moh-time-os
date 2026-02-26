@@ -21,7 +21,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 
 from lib import paths
-from lib.compat import UTC
+from datetime import UTC
 
 logger = logging.getLogger(__name__)
 

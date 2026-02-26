@@ -8,6 +8,7 @@ Includes built-in commands for status, tasks, signals, approvals, and briefings.
 import logging
 from collections.abc import Callable
 from typing import Any, Optional
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -367,7 +368,7 @@ class SlashCommandHandler:
                 msg = f"✓ Action {action_id} approved by {approved_by}"
             else:
                 msg = f"Could not approve action {action_id} (not found or not in pending state)"
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             logger.error(f"Error approving action {action_id}: {e}", exc_info=True)
             msg = f"Error approving action: {str(e)[:100]}"
 
@@ -406,7 +407,7 @@ class SlashCommandHandler:
                 msg = f"✓ Action {action_id} rejected by {rejected_by}: {reason}"
             else:
                 msg = f"Could not reject action {action_id} (not found or not in pending state)"
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             logger.error(f"Error rejecting action {action_id}: {e}", exc_info=True)
             msg = f"Error rejecting action: {str(e)[:100]}"
 
@@ -473,7 +474,7 @@ class SlashCommandHandler:
         try:
             response = handler(event, params)
             return response
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             logger.error(f"Error handling /{command_str}: {e}")
             return {
                 "sections": [

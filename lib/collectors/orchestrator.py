@@ -17,6 +17,7 @@ from .chat import ChatCollector
 from .gmail import GmailCollector
 from .tasks import TasksCollector
 from .xero import XeroCollector
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +88,7 @@ class CollectorOrchestrator:
                 try:
                     self.collectors[source_name] = collector_class(source_config, self.store)
                     self.logger.info(f"Initialized collector: {source_name}")
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     self.logger.error(f"Failed to initialize {source_name}: {e}")
 
     def sync_all(self) -> dict[str, Any]:
@@ -128,7 +129,7 @@ class CollectorOrchestrator:
                     }
                 }
             return {source or "all": {"success": True, "result": result}}
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             self.logger.error(f"Force sync failed: {e}")
             return {source or "all": {"success": False, "error": str(e)}}
 
@@ -157,7 +158,7 @@ class CollectorOrchestrator:
         for name, collector in self.collectors.items():
             try:
                 results[name] = collector.health_check()
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                 self.logger.warning(f"Health check failed for {name}: {e}")
                 results[name] = False
         return results

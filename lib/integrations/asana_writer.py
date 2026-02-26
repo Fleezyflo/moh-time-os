@@ -13,6 +13,7 @@ from dataclasses import dataclass, field
 from typing import Any, Optional
 
 import httpx
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -123,7 +124,7 @@ class AsanaWriter:
                 error_data = response.json()
                 if "errors" in error_data:
                     error_msg += f": {error_data['errors']}"
-            except Exception:
+            except (sqlite3.Error, ValueError, OSError, KeyError):
                 error_msg += f": {response.text[:200]}"
 
             logger.error(error_msg)
@@ -133,7 +134,7 @@ class AsanaWriter:
                 http_status=response.status_code,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             error_msg = f"Asana request failed: {str(e)}"
             logger.error(error_msg)
             return AsanaWriteResult(

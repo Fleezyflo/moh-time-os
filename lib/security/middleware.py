@@ -14,6 +14,7 @@ this middleware runs.
 """
 
 import logging
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -83,7 +84,7 @@ class RBACMiddleware:
 
         try:
             await self.app(scope, receive, send_with_rbac_check)
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error in RBAC middleware for {path}: {e}")
             raise
 

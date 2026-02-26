@@ -48,7 +48,7 @@ def load_orphans() -> list:
                     path = path_match.group(1)
                     try:
                         lines = int(parts[3].strip())
-                    except:
+                    except (ValueError, IndexError):
                         lines = 0
                     desc = parts[4].strip() if len(parts) > 4 else ""
                     orphans.append({"path": path, "lines": lines, "description": desc})

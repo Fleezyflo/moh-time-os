@@ -261,7 +261,7 @@ def migrate_communications(conn):
             response_urgency, expected_response_by, processed_at, action_taken,
             linked_task_id, age_hours
         FROM communications
-    """)
+    """)  # noqa: S608
 
     cursor.execute("DROP TABLE communications")
     cursor.execute("ALTER TABLE communications_v12 RENAME TO communications")
@@ -822,7 +822,7 @@ def run_migration():
         else:
             raise Exception("Schema verification failed")
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         conn.rollback()
         logger.info(f"\n✗ MIGRATION FAILED: {e}")
         logger.info(f"  Restore from: {backup_path}")

@@ -234,7 +234,7 @@ def run_migration():
 
         logger.info(f"✓ Created tables: {', '.join(tables)}")
         return True
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.info(f"✗ Migration failed: {e}")
         conn.rollback()
         return False

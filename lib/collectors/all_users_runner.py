@@ -14,17 +14,9 @@ import logging
 import os
 import sqlite3
 import sys
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
-
-# Python 3.11+ compatibility: UTC constant
-try:
-    from datetime import UTC  # Python 3.11+
-except ImportError:
-    import datetime as _dtmod  # noqa: F811
-
-    UTC = _dtmod.timezone.utc  # noqa
 
 from lib import paths
 
@@ -321,7 +313,7 @@ def collect_gmail_for_user(
         result["ok"] = True
         result["count"] = total_count
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
         error_str = str(e)
         result["error"] = error_str
         debug_print(f"ERROR: {error_str}")
@@ -455,7 +447,7 @@ def collect_calendar_for_user(
                     page_token = next_page_token
                     debug_print("nextPageToken present for events, continuing...")
 
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     # Some calendars may not be accessible; log and continue
                     debug_print(f"ERROR fetching events from {cal_id[:30]}...: {e}")
                     break
@@ -470,7 +462,7 @@ def collect_calendar_for_user(
         result["ok"] = True
         result["count"] = total_events
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
         error_str = str(e)
         result["error"] = error_str
         debug_print(f"ERROR: {error_str}")
@@ -621,7 +613,7 @@ def collect_chat_for_user(
                         break
                     page_token = next_page_token
 
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     debug_print(f"ERROR fetching messages from {space_name[:20]}...: {e}")
                     break
 
@@ -632,7 +624,7 @@ def collect_chat_for_user(
         result["ok"] = True
         result["count"] = total_messages
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
         error_str = str(e)
         result["error"] = error_str
         debug_print(f"ERROR: {error_str}")
@@ -739,7 +731,7 @@ def collect_drive_for_user(
         result["docs_count"] = len(doc_ids)
         result["doc_ids"] = doc_ids[:limit]  # Limit doc IDs for docs extraction
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
         error_str = str(e)
         result["error"] = error_str
         debug_print(f"ERROR: {error_str}")
@@ -794,7 +786,7 @@ def collect_docs_for_user(
 
                 debug_print(f"STATUS: 200 OK, exported doc {doc_id[:15]}... ({len(text)} chars)")
 
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                 debug_print(f"ERROR exporting doc {doc_id[:15]}...: {e}")
                 continue
 
@@ -802,7 +794,7 @@ def collect_docs_for_user(
         result["count"] = extracted_count
         result["sample_text"] = sample_text
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
         error_str = str(e)
         result["error"] = error_str
         debug_print(f"ERROR: {error_str}")

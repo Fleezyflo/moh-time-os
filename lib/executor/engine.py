@@ -13,6 +13,7 @@ from ..governance import GovernanceEngine, get_governance
 from ..notifier import NotificationEngine
 from ..state_store import StateStore, get_store
 from .handlers import CalendarHandler, EmailHandler, NotificationHandler, TaskHandler
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -163,7 +164,7 @@ class ExecutorEngine:
                 "bundle_id": bundle_id,
             }
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             error = str(e)
             logger.error(f"Action {action_id} failed: {error}")
 

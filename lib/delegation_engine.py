@@ -16,7 +16,7 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta, timezone
 
 from lib import paths
-from lib.compat import UTC
+from datetime import UTC
 
 from .config_store import get
 from .delegation_graph import Delegatee, get_delegatee

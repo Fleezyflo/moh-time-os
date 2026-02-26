@@ -32,6 +32,7 @@ from lib.intelligence.cost_to_serve import CostToServeEngine
 from lib.intelligence.patterns import detect_all_patterns
 from lib.intelligence.scenario_engine import ScenarioEngine
 from lib.intelligence.trajectory import TrajectoryEngine
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -160,7 +161,7 @@ class IntelligenceLayer:
         if self._correlation_engine is None:
             try:
                 self._correlation_engine = CorrelationEngine(self.db_path)
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 self.logger.error(f"Failed to initialize CorrelationEngine: {e}")
                 raise
         return self._correlation_engine
@@ -170,7 +171,7 @@ class IntelligenceLayer:
         if self._cost_engine is None:
             try:
                 self._cost_engine = CostToServeEngine(self.db_path)
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 self.logger.error(f"Failed to initialize CostToServeEngine: {e}")
                 raise
         return self._cost_engine
@@ -180,7 +181,7 @@ class IntelligenceLayer:
         if self._trajectory_engine is None:
             try:
                 self._trajectory_engine = TrajectoryEngine(self.db_path)
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 self.logger.error(f"Failed to initialize TrajectoryEngine: {e}")
                 raise
         return self._trajectory_engine
@@ -190,7 +191,7 @@ class IntelligenceLayer:
         if self._scenario_engine is None:
             try:
                 self._scenario_engine = ScenarioEngine(self.db_path)
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 self.logger.error(f"Failed to initialize ScenarioEngine: {e}")
                 raise
         return self._scenario_engine
@@ -225,7 +226,7 @@ class IntelligenceLayer:
                     f"Pattern detection: {pattern_results.get('total_detected', 0)} "
                     f"patterns detected"
                 )
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 self.logger.error(f"Error in pattern detection: {e}")
                 pattern_results = {"error": str(e), "patterns": []}
 
@@ -249,7 +250,7 @@ class IntelligenceLayer:
                 self.logger.info(
                     f"Correlation analysis: {len(brief.compound_risks)} compound risks identified"
                 )
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 self.logger.error(f"Error in correlation analysis: {e}")
                 correlation_brief = {"error": str(e)}
 
@@ -266,7 +267,7 @@ class IntelligenceLayer:
                     )
                 else:
                     portfolio_profitability = {"error": "Could not compute profitability"}
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 self.logger.error(f"Error in cost analysis: {e}")
                 portfolio_profitability = {"error": str(e)}
 
@@ -277,7 +278,7 @@ class IntelligenceLayer:
                 trajectories = trajectory_engine.portfolio_health_trajectory()
                 trajectory_results = [t.to_dict() for t in trajectories]
                 self.logger.info(f"Trajectory analysis: {len(trajectories)} entities analyzed")
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 self.logger.error(f"Error in trajectory analysis: {e}")
                 trajectory_results = []
 
@@ -305,7 +306,7 @@ class IntelligenceLayer:
                 cycle_duration_ms=cycle_duration_ms,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             self.logger.error(f"Critical error in intelligence cycle: {e}", exc_info=True)
             cycle_duration_ms = int((time.time() - cycle_start) * 1000)
             return IntelligenceCycleResult(
@@ -352,7 +353,7 @@ class IntelligenceLayer:
                 trajectory = trajectory_engine.client_full_trajectory(client_id)
                 if trajectory:
                     intel.trajectory = trajectory.to_dict()
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 self.logger.warning(f"Could not get trajectory for client {client_id}: {e}")
 
             # Find patterns affecting this client
@@ -371,7 +372,7 @@ class IntelligenceLayer:
                                     "severity": pattern.get("severity"),
                                 }
                             )
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 self.logger.warning(f"Could not detect patterns for client {client_id}: {e}")
 
             # Compute risk factors
@@ -396,7 +397,7 @@ class IntelligenceLayer:
                 intel.overall_score,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             self.logger.error(f"Error getting client intelligence for {client_id}: {e}")
 
         return intel
@@ -440,7 +441,7 @@ class IntelligenceLayer:
                             dashboard.declining_count += 1
                         elif traj.overall_health == "CRITICAL":
                             dashboard.at_risk_count += 1
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError) as e:
                     self.logger.warning(f"Could not compute trajectory for dashboard: {e}")
 
             # Get correlation data
@@ -471,7 +472,7 @@ class IntelligenceLayer:
                         }
                     )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             self.logger.error(f"Error generating portfolio dashboard: {e}")
 
         return dashboard
@@ -548,7 +549,7 @@ class IntelligenceLayer:
             else:
                 return {"error": f"Unknown scenario type: {scenario_type}"}
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             self.logger.error(f"Error running scenario {scenario_type}: {e}")
             return {"error": str(e)}
 
@@ -580,7 +581,7 @@ class IntelligenceLayer:
                 summary += f"{profitable}/{total_clients} clients profitable."
 
             return summary
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             self.logger.warning(f"Could not build cycle summary: {e}")
             return f"Intelligence cycle complete. Health grade: {health_grade}."
 

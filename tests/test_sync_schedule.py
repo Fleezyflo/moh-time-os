@@ -201,7 +201,12 @@ class TestFormatHealthReport:
         report = {
             "healthy": ["asana"],
             "stale": [
-                {"name": "gmail", "last_run": "2026-01-01T00:00:00", "expected_interval_minutes": 15, "stale_minutes": 120}
+                {
+                    "name": "gmail",
+                    "last_run": "2026-01-01T00:00:00",
+                    "expected_interval_minutes": 15,
+                    "stale_minutes": 120,
+                }
             ],
             "never_run": ["chat"],
             "disabled": ["drive"],
@@ -220,6 +225,7 @@ class TestLaunchdPlist:
 
     def test_plist_exists(self):
         from pathlib import Path
+
         plist = Path(__file__).parent.parent / "com.mohtimeos.api.plist"
         assert plist.exists(), "LaunchAgent plist missing"
 
@@ -228,7 +234,7 @@ class TestLaunchdPlist:
         import xml.etree.ElementTree as ET
 
         plist = Path(__file__).parent.parent / "com.mohtimeos.api.plist"
-        tree = ET.parse(plist)
+        tree = ET.parse(plist)  # noqa: S314 — trusted local plist file, not untrusted XML
         root = tree.getroot()
         # Find dict element
         dict_elem = root.find("dict")
@@ -243,7 +249,7 @@ class TestLaunchdPlist:
         import xml.etree.ElementTree as ET
 
         plist = Path(__file__).parent.parent / "com.mohtimeos.api.plist"
-        tree = ET.parse(plist)
+        tree = ET.parse(plist)  # noqa: S314 — trusted local plist file, not untrusted XML
         root = tree.getroot()
         dict_elem = root.find("dict")
         children = list(dict_elem)

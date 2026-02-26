@@ -231,7 +231,7 @@ def update_client(client_id: str, **changes) -> bool:
     values = list(updates.values()) + [client_id]
 
     with get_connection() as conn:
-        cursor = conn.execute(f"UPDATE clients SET {set_clause} WHERE id = ?", values)  # nosec B608 — validated above
+        cursor = conn.execute(f"UPDATE clients SET {set_clause} WHERE id = ?", values)  # noqa: S608
         return cursor.rowcount > 0
 
 
@@ -253,8 +253,8 @@ def list_clients(tier: str = None, health: str = None, limit: int = 500) -> list
 
     with get_connection() as conn:
         rows = conn.execute(
-            f"SELECT * FROM clients WHERE {where} ORDER BY tier, name LIMIT ?",
-            params,  # nosec B608 — where built from hardcoded conditions
+            f"SELECT * FROM clients WHERE {where} ORDER BY tier, name LIMIT ?",  # noqa: S608
+            params,
         ).fetchall()
 
         return [_row_to_client(row) for row in rows]
@@ -470,7 +470,7 @@ def update_person(person_id: str, **changes) -> bool:
     values = list(updates.values()) + [person_id]
 
     with get_connection() as conn:
-        cursor = conn.execute(f"UPDATE people SET {set_clause} WHERE id = ?", values)  # nosec B608 — validated above
+        cursor = conn.execute(f"UPDATE people SET {set_clause} WHERE id = ?", values)  # noqa: S608
         return cursor.rowcount > 0
 
 
@@ -492,8 +492,8 @@ def list_people(type: str = None, client_id: str = None, limit: int = 500) -> li
 
     with get_connection() as conn:
         rows = conn.execute(
-            f"SELECT * FROM people WHERE {where} ORDER BY name LIMIT ?",
-            params,  # nosec B608 — where built from hardcoded conditions
+            f"SELECT * FROM people WHERE {where} ORDER BY name LIMIT ?",  # noqa: S608
+            params,
         ).fetchall()
 
         return [_row_to_person(row) for row in rows]
@@ -700,7 +700,7 @@ def update_project(project_id: str, **changes) -> bool:
     values = list(updates.values()) + [project_id]
 
     with get_connection() as conn:
-        cursor = conn.execute(f"UPDATE projects SET {set_clause} WHERE id = ?", values)  # nosec B608 — validated above
+        cursor = conn.execute(f"UPDATE projects SET {set_clause} WHERE id = ?", values)  # noqa: S608
         return cursor.rowcount > 0
 
 
@@ -727,8 +727,8 @@ def list_projects(
 
     with get_connection() as conn:
         rows = conn.execute(
-            f"SELECT * FROM projects WHERE {where} ORDER BY name LIMIT ?",
-            params,  # nosec B608 — where built from hardcoded conditions
+            f"SELECT * FROM projects WHERE {where} ORDER BY name LIMIT ?",  # noqa: S608
+            params,
         ).fetchall()
 
         return [_row_to_project(row) for row in rows]

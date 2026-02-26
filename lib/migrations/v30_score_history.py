@@ -91,7 +91,7 @@ def run_migration(db_path: Path | None = None) -> dict:
 
         conn.close()
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.error(f"Migration failed: {e}")
         results["errors"].append(str(e))
 

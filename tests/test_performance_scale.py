@@ -123,7 +123,7 @@ class TestQueryOptimizer:
     def test_detect_n_plus_one(self):
         opt = QueryOptimizer()
         for i in range(5):
-            opt.log_query(f"SELECT * FROM clients WHERE id = '{i}'", 10.0)
+            opt.log_query(f"SELECT * FROM clients WHERE id = '{i}'", 10.0)  # noqa: S608
         patterns = opt.detect_n_plus_one()
         assert len(patterns) >= 1
         assert patterns[0]["count"] == 5

@@ -133,7 +133,7 @@ async def run_db_migrations_on_startup():
         if migration_result.get("columns_added"):
             logger.info(f"Migrations added columns: {migration_result['columns_added']}")
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.warning(f"DB startup check failed: {e}")
 
 
@@ -153,7 +153,7 @@ async def run_detectors_on_startup():
         )
         conn.commit()
         conn.close()
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.info(f"[WARN] Detector startup failed: {e}")
 
 
@@ -713,7 +713,7 @@ async def create_task(task: TaskCreate):
         store.insert("tasks", task_data)
         mark_applied(bundle["id"])
         return {"success": True, "task": task_data, "bundle_id": bundle["id"]}
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         mark_failed(bundle["id"], str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -831,7 +831,7 @@ async def update_task(task_id: str, task: TaskUpdate):
                 signal_svc = SignalService()
                 result = signal_svc.handle_task_completed(task_id)
                 signals_resolved = result.get("resolved_count", 0)
-            except Exception as sig_err:
+            except (sqlite3.Error, ValueError) as sig_err:
                 logger.warning(f"Failed to resolve signals for completed task {task_id}: {sig_err}")
 
         return {
@@ -842,7 +842,7 @@ async def update_task(task_id: str, task: TaskUpdate):
             "updated_fields": list(update_data.keys()),
             "signals_resolved": signals_resolved,
         }
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         mark_failed(bundle["id"], str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -896,7 +896,7 @@ async def delete_task(task_id: str):
         )
         mark_applied(bundle["id"])
         return {"success": True, "id": task_id, "bundle_id": bundle["id"]}
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         mark_failed(bundle["id"], str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -1083,7 +1083,7 @@ async def delegate_task(task_id: str, body: DelegateRequest):
 
         return result
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         mark_failed(bundle["id"], str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -1276,7 +1276,7 @@ async def escalate_task(task_id: str, body: EscalateRequest):
             "new_urgency": new_urgency,
         }
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         mark_failed(bundle["id"], str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -1313,7 +1313,7 @@ async def recall_task(task_id: str):
         store.update("tasks", task_id, update_data)
         mark_applied(bundle["id"])
         return {"success": True, "id": task_id, "bundle_id": bundle["id"]}
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         mark_failed(bundle["id"], str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -1815,39 +1815,38 @@ async def preview_cleanup(cleanup_type: str):
 async def get_team(type_filter: str | None = None):
     """Get team members with workload metrics."""
     conditions = ["1=1"]
+    params: list = []
     if type_filter:
-        conditions.append(f"p.type = '{type_filter}'")
+        conditions.append("p.type = ?")
+        params.append(type_filter)
 
-    people = store.query(f"""
-        SELECT p.*, c.name as client_name
-        FROM people p
-        LEFT JOIN clients c ON p.client_id = c.id
-        WHERE {" AND ".join(conditions)}
-        ORDER BY p.type DESC, p.name
-    """)  # noqa: S608 - conditions are hardcoded filters
+    people = store.query(
+        f"SELECT p.*, c.name as client_name FROM people p "
+        f"LEFT JOIN clients c ON p.client_id = c.id "
+        f"WHERE {' AND '.join(conditions)} ORDER BY p.type DESC, p.name",
+        params,
+    )
 
     result = []
     for p in people:
         person = dict(p)
-        name_escaped = p["name"].replace("'", "''")
+        assignee_name = p["name"]
 
         # Workload metrics
-        task_stats = store.query(f"""
-            SELECT
-                COUNT(*) as open_tasks,
-                SUM(CASE WHEN due_date < date('now') THEN 1 ELSE 0 END) as overdue_tasks,
-                SUM(CASE WHEN due_date = date('now') THEN 1 ELSE 0 END) as due_today
-            FROM tasks
-            WHERE assignee = '{name_escaped}' AND status IN ('pending', 'in_progress')
-        """)  # noqa: S608 - name_escaped is SQL-escaped above
+        task_stats = store.query(
+            "SELECT COUNT(*) as open_tasks, "
+            "SUM(CASE WHEN due_date < date('now') THEN 1 ELSE 0 END) as overdue_tasks, "
+            "SUM(CASE WHEN due_date = date('now') THEN 1 ELSE 0 END) as due_today "
+            "FROM tasks WHERE assignee = ? AND status IN ('pending', 'in_progress')",
+            [assignee_name],
+        )
 
-        completed_stats = store.query(f"""
-            SELECT COUNT(*) as completed
-            FROM tasks
-            WHERE assignee = '{name_escaped}'
-            AND status = 'completed'
-            AND updated_at >= date('now', '-7 days')
-        """)  # noqa: S608 - name_escaped is SQL-escaped above
+        completed_stats = store.query(
+            "SELECT COUNT(*) as completed FROM tasks "
+            "WHERE assignee = ? AND status = 'completed' "
+            "AND updated_at >= date('now', '-7 days')",
+            [assignee_name],
+        )
 
         stats = task_stats[0] if task_stats else {}
         completed = completed_stats[0] if completed_stats else {}
@@ -1895,12 +1894,6 @@ async def api_calendar(
     }
 
 
-@app.get("/api/delegations", response_model=DetailResponse)
-async def api_delegations():
-    """Get delegated tasks (alias)."""
-    return await get_delegations()
-
-
 @app.get("/api/inbox", response_model=DetailResponse)
 async def api_inbox(limit: int = 50):
     """Get inbox items (unprocessed communications, new tasks, etc.)."""
@@ -1915,22 +1908,6 @@ async def api_inbox(limit: int = 50):
     )
 
     return {"items": [dict(i) for i in items], "total": len(items)}
-
-
-@app.get("/api/insights", response_model=DetailResponse)
-async def api_insights(limit: int = 20):
-    """Get insights."""
-    insights = store.query(
-        """
-        SELECT * FROM insights
-        WHERE expires_at IS NULL OR expires_at > datetime('now')
-        ORDER BY created_at DESC
-        LIMIT ?
-    """,
-        [limit],
-    )
-
-    return {"insights": [dict(i) for i in insights], "total": len(insights)}
 
 
 @app.get("/api/decisions", response_model=DetailResponse)
@@ -1979,7 +1956,7 @@ async def api_priority_complete(item_id: str):
             signal_svc = SignalService()
             result = signal_svc.handle_task_completed(item_id)
             signals_resolved = result.get("resolved_count", 0)
-        except Exception as sig_err:
+        except (sqlite3.Error, ValueError) as sig_err:
             logger.warning(f"Failed to resolve signals for completed task {item_id}: {sig_err}")
 
         return {
@@ -1988,7 +1965,7 @@ async def api_priority_complete(item_id: str):
             "bundle_id": bundle["id"],
             "signals_resolved": signals_resolved,
         }
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         mark_failed(bundle["id"], str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -2023,7 +2000,7 @@ async def api_priority_snooze(item_id: str, days: int = 1):
             "new_due_date": new_date,
             "bundle_id": bundle["id"],
         }
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         mark_failed(bundle["id"], str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -2082,7 +2059,7 @@ async def api_priority_delegate(item_id: str, to: str):
             "delegated_to": to,
             "bundle_id": bundle["id"],
         }
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         mark_failed(bundle["id"], str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -2164,7 +2141,7 @@ async def api_decision(decision_id: str, action: ApprovalAction):
                             "changes": list(proposed_changes.keys()),
                         }
                     )
-                except Exception as e:
+                except (sqlite3.Error, ValueError) as e:
                     side_effects_failed.append(
                         {"type": "task_update", "target": target_id, "error": str(e)}
                     )
@@ -2196,7 +2173,7 @@ async def api_decision(decision_id: str, action: ApprovalAction):
                                 "dismissed": 0,
                             },
                         )
-                except Exception as e:
+                except (sqlite3.Error, ValueError) as e:
                     side_effects_failed.append(
                         {"type": "delegation", "target": target_id, "error": str(e)}
                     )
@@ -2229,7 +2206,7 @@ async def api_decision(decision_id: str, action: ApprovalAction):
                                 "dismissed": 0,
                             },
                         )
-                except Exception as e:
+                except (sqlite3.Error, ValueError) as e:
                     side_effects_failed.append(
                         {"type": "escalation", "target": target_id, "error": str(e)}
                     )
@@ -2248,7 +2225,7 @@ async def api_decision(decision_id: str, action: ApprovalAction):
                                 "new_mode": new_mode,
                             }
                         )
-                except Exception as e:
+                except (sqlite3.Error, ValueError) as e:
                     side_effects_failed.append({"type": "governance_change", "error": str(e)})
 
         # Log to governance history
@@ -2288,7 +2265,7 @@ async def api_decision(decision_id: str, action: ApprovalAction):
 
         return result
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         mark_failed(bundle["id"], str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -2393,7 +2370,7 @@ async def api_bundle_rollback(bundle_id: str):
         return {"success": True, "bundle": result}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    except Exception as e:
+    except sqlite3.Error as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -2458,69 +2435,6 @@ async def get_priorities(limit: int = 20, context: str | None = None):
     sorted_items = sorted(priority_queue, key=lambda x: x.get("score", 0), reverse=True)[:limit]
 
     return {"items": sorted_items, "total": len(priority_queue)}
-
-
-@app.post("/api/priorities/{item_id}/complete", response_model=DetailResponse)
-async def complete_item(item_id: str):
-    """Complete a priority item based on its type/source."""
-    if item_id.startswith("asana_"):
-        store.update(
-            "tasks",
-            item_id,
-            {"status": "done", "updated_at": datetime.now().isoformat()},
-        )
-    elif item_id.startswith("gmail_"):
-        store.update("communications", item_id, {"processed": 1})
-    else:
-        raise HTTPException(404, "Item not found")
-
-    store.clear_cache("priority_queue")
-
-    return {"status": "completed", "id": item_id}
-
-
-@app.post("/api/priorities/{item_id}/snooze", response_model=MutationResponse)
-async def snooze_item(item_id: str, hours: int = 4):
-    """Snooze a priority item."""
-
-    task = store.get("tasks", item_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-
-    new_time = datetime.now() + timedelta(hours=hours)
-    now = datetime.now().isoformat()
-
-    store.update("tasks", item_id, {"snoozed_until": new_time.isoformat(), "updated_at": now})
-
-    return {"success": True, "id": item_id, "snoozed_until": new_time.isoformat()}
-
-
-class DelegateAction(BaseModel):
-    to: str
-    note: str | None = None
-
-
-@app.post("/api/priorities/{item_id}/delegate", response_model=MutationResponse)
-async def delegate_item(item_id: str, body: DelegateAction):
-    """Delegate a priority item."""
-    task = store.get("tasks", item_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-
-    now = datetime.now().isoformat()
-    store.update(
-        "tasks",
-        item_id,
-        {
-            "assignee": body.to,
-            "delegated_by": "moh",
-            "delegated_at": now,
-            "delegated_note": body.note,
-            "updated_at": now,
-        },
-    )
-
-    return {"success": True, "id": item_id, "delegated_to": body.to}
 
 
 @app.get("/api/priorities/filtered", response_model=DetailResponse)
@@ -2708,7 +2622,7 @@ async def bulk_action(body: BulkAction):
             update_data_dict: dict[str, str | None] = update["data"]  # type: ignore[assignment]
             store.update("tasks", update_id, update_data_dict)
             updated += 1
-        except Exception as e:
+        except (sqlite3.Error, ValueError) as e:
             logger.info(f"Failed to update {update['id']}: {e}")
     mark_applied(bundle["id"])
     store.clear_cache("priority_queue")
@@ -3501,7 +3415,7 @@ def _recency_health_factor(client: dict) -> int:
         if days_ago < 90:
             return 60
         return 40
-    except Exception:
+    except (sqlite3.Error, ValueError):
         return 50
 
 
@@ -4017,7 +3931,7 @@ async def bulk_link_tasks(request: Request):
             store.update("tasks", task_id, updates)
             results.append({"task_id": task_id, "success": True, "linked": str(updates)})
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError) as e:
             results.append({"task_id": task_id, "success": False, "error": str(e)})
 
     succeeded = sum(1 for r in results if r.get("success"))
@@ -4045,35 +3959,6 @@ async def propose_project(name: str, client_id: str | None = None, type: str = "
     store.insert("projects", project_data)
 
     return {"success": True, "project": project_data}
-
-
-@app.get("/api/emails", response_model=DetailResponse)
-async def get_email_queue(limit: int = 20):
-    """Get email queue."""
-    emails = store.query(
-        """
-        SELECT * FROM communications
-        WHERE type = 'email' AND (processed = 0 OR processed IS NULL)
-        ORDER BY received_at DESC
-        LIMIT ?
-    """,
-        [limit],
-    )
-
-    return {
-        "items": [
-            {
-                "id": e.get("id"),
-                "subject": e.get("subject"),
-                "from": e.get("from_address") or e.get("sender"),
-                "received": e.get("received_at") or e.get("created_at"),
-                "snippet": (e.get("snippet") or e.get("body") or "")[:100],
-                "thread_id": e.get("thread_id"),
-            }
-            for e in emails
-        ],
-        "total": store.count("communications", "(processed = 0 OR processed IS NULL)"),
-    }
 
 
 @app.post("/api/emails/{email_id}/dismiss", response_model=MutationResponse)
@@ -4335,7 +4220,7 @@ async def get_proposals(
                 proposals.sort(key=lambda x: x.get("score", 0), reverse=True)
 
                 return {"items": proposals[:limit], "total": len(proposals)}
-        except Exception as svc_err:
+        except (sqlite3.Error, ValueError) as svc_err:
             logger.warning(f"ProposalService error: {svc_err}")
             pass
 
@@ -4487,15 +4372,9 @@ async def get_proposals(
         proposals.sort(key=lambda x: x["score"], reverse=True)
         conn.close()
         return {"items": proposals[:limit], "total": len(proposals)}
-    except Exception as e:
-        import traceback
-
-        return {
-            "items": [],
-            "total": 0,
-            "error": str(e),
-            "trace": traceback.format_exc(),
-        }
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/api/control-room/issues", response_model=DetailResponse)
@@ -4656,8 +4535,9 @@ async def get_issues(
 
         conn.close()
         return {"items": issues, "total": len(issues)}
-    except Exception as e:
-        return {"items": [], "total": 0, "error": str(e)}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 class ResolveIssueRequest(BaseModel):
@@ -4697,8 +4577,9 @@ async def resolve_issue(issue_id: str, body: ResolveIssueRequest):
             "state": "resolved",
             "note": "Signal-based issue acknowledged",
         }
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 class ChangeIssueStateRequest(BaseModel):
@@ -4746,8 +4627,9 @@ async def change_issue_state(issue_id: str, body: ChangeIssueStateRequest):
             "state": body.state,
             "note": "Signal-based issue acknowledged",
         }
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 class AddIssueNoteRequest(BaseModel):
@@ -4797,8 +4679,9 @@ async def add_issue_note(issue_id: str, body: AddIssueNoteRequest):
         conn.commit()
         conn.close()
         return {"success": True, "note_id": note_id, "issue_id": issue_id}
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/api/control-room/watchers", response_model=DetailResponse)
@@ -4857,8 +4740,9 @@ async def get_watchers(hours: int = 24):
 
         conn.close()
         return {"items": items, "total": len(items)}
-    except Exception as e:
-        return {"items": [], "total": 0, "error": str(e)}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 class DismissWatcherRequest(BaseModel):
@@ -4885,8 +4769,9 @@ async def dismiss_watcher(watcher_id: str, body: DismissWatcherRequest):
         conn.commit()
         conn.close()
         return {"success": True, "watcher_id": watcher_id, "action": "dismissed"}
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("dismiss_watcher failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 class SnoozeWatcherRequest(BaseModel):
@@ -4920,8 +4805,9 @@ async def snooze_watcher(watcher_id: str, body: SnoozeWatcherRequest):
             "action": "snoozed",
             "hours": body.hours,
         }
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("snooze_watcher failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/api/control-room/fix-data", response_model=DetailResponse)
@@ -4982,14 +4868,9 @@ async def get_fix_data():
             "missing_mappings": [],
             "total": len(conflicts) + len(ambiguous),
         }
-    except Exception as e:
-        return {
-            "identity_conflicts": [],
-            "ambiguous_links": [],
-            "missing_mappings": [],
-            "total": 0,
-            "error": str(e),
-        }
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # ==== Control Room POST Endpoints (Mutations) ====
@@ -5009,7 +4890,7 @@ async def create_issue_from_proposal(body: TagProposalRequest):
         if result.get("status") == "created":
             return {"success": True, **result}
         raise HTTPException(status_code=400, detail=result.get("error", "Failed to tag proposal"))
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -5141,7 +5022,7 @@ async def get_proposal_detail(proposal_id: str):
         }
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         import traceback
 
         raise HTTPException(status_code=500, detail=f"{str(e)}\n{traceback.format_exc()}") from e
@@ -5165,7 +5046,7 @@ async def snooze_proposal(proposal_id: str, body: SnoozeProposalRequest):
         raise HTTPException(
             status_code=400, detail=result.get("error", "Failed to snooze proposal")
         )
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -5184,7 +5065,7 @@ async def dismiss_proposal(proposal_id: str, body: DismissProposalRequest):
         raise HTTPException(
             status_code=400, detail=result.get("error", "Failed to dismiss proposal")
         )
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -5193,7 +5074,9 @@ class ResolveFixDataRequest(BaseModel):
     actor: str = "moh"
 
 
-@app.post("/api/control-room/fix-data/{item_type}/{item_id}/resolve", response_model=MutationResponse)
+@app.post(
+    "/api/control-room/fix-data/{item_type}/{item_id}/resolve", response_model=MutationResponse
+)
 async def resolve_fix_data_item(item_type: str, item_id: str, body: ResolveFixDataRequest):
     """Resolve a fix-data item (identity conflict or ambiguous link)."""
     try:
@@ -5248,7 +5131,7 @@ async def resolve_fix_data_item(item_type: str, item_id: str, body: ResolveFixDa
             "item_id": item_id,
             "resolution": body.resolution,
         }
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -5262,8 +5145,9 @@ async def get_couplings(anchor_type: str | None = None, anchor_id: str | None = 
         else:
             couplings = svc.get_strongest_couplings(limit=100)
         return {"items": couplings, "total": len(couplings)}
-    except Exception as e:
-        return {"items": [], "total": 0, "error": str(e)}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("get_couplings failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/api/control-room/clients", response_model=DetailResponse)
@@ -5287,8 +5171,9 @@ async def get_control_room_clients():
         clients = [dict(r) for r in cur.fetchall()]
         conn.close()
         return {"items": clients, "total": len(clients)}
-    except Exception as e:
-        return {"items": [], "total": 0, "error": str(e)}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("get_control_room_clients failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/api/control-room/team", response_model=DetailResponse)
@@ -5312,8 +5197,9 @@ async def get_control_room_team():
         team = [dict(r) for r in cur.fetchall()]
         conn.close()
         return {"items": team, "total": len(team)}
-    except Exception as e:
-        return {"items": [], "total": 0, "error": str(e)}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("get_control_room_team failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/api/control-room/evidence/{entity_type}/{entity_id}", response_model=DetailResponse)
@@ -5342,8 +5228,9 @@ async def get_evidence(entity_type: str, entity_id: str):
 
         conn.close()
         return {"items": excerpts, "total": len(excerpts)}
-    except Exception as e:
-        return {"items": [], "total": 0, "error": str(e)}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("get_evidence failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # ==== Control Room Health ====
@@ -5377,13 +5264,9 @@ async def control_room_health():
                 "clients": client_count,
             },
         }
-    except Exception as e:
-        return {
-            "status": "unhealthy",
-            "version": "1.0.0",
-            "timestamp": datetime.datetime.now().isoformat(),
-            "error": str(e),
-        }
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("control_room_health failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # ==== Admin Endpoints ====
@@ -5402,10 +5285,9 @@ async def seed_identities():
         people_stats = seed_identities_from_people()
 
         return {"success": True, "clients": client_stats, "people": people_stats}
-    except Exception as e:
-        import traceback
-
-        return {"success": False, "error": str(e), "trace": traceback.format_exc()}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("seed_identities failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # ==== SPA Fallback (MUST be last route) ====

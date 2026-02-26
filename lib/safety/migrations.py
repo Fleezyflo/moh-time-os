@@ -59,7 +59,7 @@ def run_safety_migrations(conn: sqlite3.Connection, verbose: bool = True) -> dic
         results["tables_created"].append("write_context_v1")
         if verbose:
             logger.info("Created/verified write_context_v1 table")
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         results["errors"].append(f"write_context_v1: {e}")
 
     # 2. Create db_write_audit_v1 table
@@ -94,7 +94,7 @@ def run_safety_migrations(conn: sqlite3.Connection, verbose: bool = True) -> dic
         results["tables_created"].append("db_write_audit_v1")
         if verbose:
             logger.info("Created/verified db_write_audit_v1 table with indexes")
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         results["errors"].append(f"db_write_audit_v1: {e}")
 
     # 3. Create maintenance_mode table
@@ -115,7 +115,7 @@ def run_safety_migrations(conn: sqlite3.Connection, verbose: bool = True) -> dic
         results["tables_created"].append("maintenance_mode_v1")
         if verbose:
             logger.info("Created/verified maintenance_mode_v1 table")
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         results["errors"].append(f"maintenance_mode_v1: {e}")
 
     # 4. Create invariant triggers on inbox_items_v29
@@ -128,7 +128,7 @@ def run_safety_migrations(conn: sqlite3.Connection, verbose: bool = True) -> dic
             results["triggers_created"].append(trigger_name)
             if verbose:
                 logger.info(f"Created trigger: {trigger_name}")
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             results["errors"].append(f"{trigger_name}: {e}")
 
     # 5. Create write context enforcement triggers
@@ -146,7 +146,7 @@ def run_safety_migrations(conn: sqlite3.Connection, verbose: bool = True) -> dic
                 results["triggers_created"].append(trigger_name)
                 if verbose:
                     logger.info(f"Created trigger: {trigger_name}")
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 results["errors"].append(f"{trigger_name}: {e}")
 
     # 6. Create audit logging triggers
@@ -162,7 +162,7 @@ def run_safety_migrations(conn: sqlite3.Connection, verbose: bool = True) -> dic
                 results["triggers_created"].append(trigger_name)
                 if verbose:
                     logger.info(f"Created trigger: {trigger_name}")
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 results["errors"].append(f"{trigger_name}: {e}")
 
     # 7. Convert inbox_items to VIEW if it's a table
@@ -188,7 +188,7 @@ def run_safety_migrations(conn: sqlite3.Connection, verbose: bool = True) -> dic
         elif row and row[0] == "view":
             if verbose:
                 logger.info("inbox_items is already a VIEW")
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         results["errors"].append(f"inbox_items view conversion: {e}")
 
     conn.commit()
@@ -324,7 +324,7 @@ def _get_context_triggers(table: str) -> list[tuple[str, str]]:
             BEGIN
                 SELECT RAISE(ABORT, 'SAFETY: write context required - use WriteContext or set maintenance_mode');
             END
-        """,  # nosec B608
+        """,  # noqa: S608
         ),
         # Check context on UPDATE
         (
@@ -342,7 +342,7 @@ def _get_context_triggers(table: str) -> list[tuple[str, str]]:
             BEGIN
                 SELECT RAISE(ABORT, 'SAFETY: write context required - use WriteContext or set maintenance_mode');
             END
-        """,  # nosec B608
+        """,  # noqa: S608
         ),
         # Check context on DELETE
         (
@@ -360,7 +360,7 @@ def _get_context_triggers(table: str) -> list[tuple[str, str]]:
             BEGIN
                 SELECT RAISE(ABORT, 'SAFETY: write context required - use WriteContext or set maintenance_mode');
             END
-        """,  # nosec B608
+        """,  # noqa: S608
         ),
     ]
 
@@ -419,7 +419,7 @@ def _get_audit_triggers(table: str) -> list[tuple[str, str]]:
                 FROM (SELECT 1) AS dummy
                 LEFT JOIN write_context_v1 wc ON wc.id = 1;
             END
-        """,  # nosec B608
+        """,  # noqa: S608
         ),
         # Audit UPDATE
         (
@@ -448,7 +448,7 @@ def _get_audit_triggers(table: str) -> list[tuple[str, str]]:
                 FROM (SELECT 1) AS dummy
                 LEFT JOIN write_context_v1 wc ON wc.id = 1;
             END
-        """,  # nosec B608
+        """,  # noqa: S608
         ),
         # Audit DELETE
         (
@@ -477,7 +477,7 @@ def _get_audit_triggers(table: str) -> list[tuple[str, str]]:
                 FROM (SELECT 1) AS dummy
                 LEFT JOIN write_context_v1 wc ON wc.id = 1;
             END
-        """,  # nosec B608
+        """,  # noqa: S608
         ),
     ]
 

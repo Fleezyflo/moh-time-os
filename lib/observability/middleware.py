@@ -5,6 +5,7 @@ FastAPI middleware for observability metrics and correlation ID tracking.
 import logging
 import time
 from collections.abc import Callable
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +80,7 @@ class CorrelationIdMiddleware:
                 try:
                     request_id = value.decode("utf-8")
                     break
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError) as e:
                     logger.warning(f"Could not decode X-Request-ID header: {e}")
                     break
 

@@ -13,6 +13,7 @@ import logging
 import re
 from collections import defaultdict
 from datetime import datetime, timedelta
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -130,7 +131,7 @@ class PatternAnalyzer:
         # Adjust detection sensitivity based on feedback
         try:
             self.adjust_scoring_weights(feedback_summary)
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             self.logger.error(f"Failed to adjust scoring weights: {e}")
 
         return {

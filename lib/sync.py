@@ -4,6 +4,8 @@ import logging
 import os
 from typing import Any
 
+import sqlite3
+
 from .entities import (
     find_client,
     list_clients,
@@ -117,7 +119,7 @@ def sync_xero_clients_from_cache() -> dict[str, Any]:
                 error_msg = f"{contact.get('name', 'Unknown')}: {e}"
                 logger.debug(f"Skipping contact due to data issue: {error_msg}")
                 result["errors"].append(error_msg)
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 # Unexpected error - log with stack trace but continue batch
                 error_msg = f"{contact.get('name', 'Unknown')}: {e}"
                 logger.warning(f"Failed to sync contact: {error_msg}", exc_info=True)
@@ -131,7 +133,7 @@ def sync_xero_clients_from_cache() -> dict[str, Any]:
         error_msg = f"Xero cache file corrupt: {e}"
         logger.error(error_msg)
         result["errors"].append(error_msg)
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
         error_msg = f"Xero cache sync failed: {e}"
         logger.error(error_msg, exc_info=True)
         result["errors"].append(error_msg)
@@ -152,7 +154,7 @@ def sync_xero_clients() -> dict[str, Any]:
         # Xero client not available - use cache
         logger.info(f"Xero client not available, using cached data: {e}")
         return sync_xero_clients_from_cache()
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
         # API failed - fallback to cached data
         logger.warning(f"Xero API failed, falling back to cached data: {e}")
         return sync_xero_clients_from_cache()
@@ -205,7 +207,7 @@ def sync_xero_clients() -> dict[str, Any]:
             error_msg = f"{contact.get('Name', 'Unknown')}: {e}"
             logger.debug(f"Skipping contact due to data issue: {error_msg}")
             result["errors"].append(error_msg)
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             # Unexpected error - log with stack trace but continue batch
             error_msg = f"{contact.get('Name', 'Unknown')}: {e}"
             logger.warning(f"Failed to sync contact from API: {error_msg}", exc_info=True)
@@ -374,7 +376,7 @@ def sync_asana_projects(
                 error_msg = f"{proj.get('name', 'Unknown')}: {e}"
                 logger.debug(f"Skipping project due to data issue: {error_msg}")
                 result["errors"].append(error_msg)
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 # Unexpected error - log with stack trace but continue batch
                 error_msg = f"{proj.get('name', 'Unknown')}: {e}"
                 logger.warning(f"Failed to sync project: {error_msg}", exc_info=True)
@@ -384,7 +386,7 @@ def sync_asana_projects(
         error_msg = f"Asana client not available: {e}"
         logger.warning(error_msg)
         result["errors"].append(error_msg)
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
         error_msg = f"Asana sync failed: {e}"
         logger.error(error_msg, exc_info=True)
         result["errors"].append(error_msg)
@@ -445,7 +447,7 @@ def sync_team_from_kb() -> dict[str, Any]:
                 error_msg = f"{member.get('name', '?')}: {e}"
                 logger.debug(f"Skipping team member due to data issue: {error_msg}")
                 result["errors"].append(error_msg)
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 error_msg = f"{member.get('name', '?')}: {e}"
                 logger.warning(f"Failed to sync team member: {error_msg}", exc_info=True)
                 result["errors"].append(error_msg)
@@ -458,7 +460,7 @@ def sync_team_from_kb() -> dict[str, Any]:
         error_msg = f"Knowledge base file corrupt: {e}"
         logger.error(error_msg)
         result["errors"].append(error_msg)
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
         error_msg = f"Team sync failed: {e}"
         logger.error(error_msg, exc_info=True)
         result["errors"].append(error_msg)
@@ -520,7 +522,7 @@ def sync_external_contacts_from_xero() -> dict[str, Any]:
                 error_msg = f"{contact.get('name', '?')}: {e}"
                 logger.debug(f"Skipping contact due to data issue: {error_msg}")
                 result["errors"].append(error_msg)
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 error_msg = f"{contact.get('name', '?')}: {e}"
                 logger.warning(f"Failed to sync external contact: {error_msg}", exc_info=True)
                 result["errors"].append(error_msg)
@@ -533,7 +535,7 @@ def sync_external_contacts_from_xero() -> dict[str, Any]:
         error_msg = f"Xero contacts cache corrupt: {e}"
         logger.error(error_msg)
         result["errors"].append(error_msg)
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
         error_msg = f"External contacts sync failed: {e}"
         logger.error(error_msg, exc_info=True)
         result["errors"].append(error_msg)

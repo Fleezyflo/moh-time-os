@@ -14,6 +14,7 @@ from collections.abc import Callable
 from typing import Any, Optional
 
 from .cache_manager import CacheManager
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -48,21 +49,21 @@ def _generate_cache_key(func_name: str, args: tuple, kwargs: dict) -> str:
     for arg in args:
         try:
             key_parts.append(str(arg))
-        except Exception:
+        except (sqlite3.Error, ValueError, OSError):
             key_parts.append(repr(arg))
 
     # Add keyword args
     for k, v in sorted(kwargs.items()):
         try:
             key_parts.append(f"{k}={v}")
-        except Exception:
+        except (sqlite3.Error, ValueError, OSError):
             key_parts.append(f"{k}={repr(v)}")
 
     key_str = "|".join(key_parts)
 
     # Use hash if key is too long
     if len(key_str) > 256:
-        key_hash = hashlib.md5(key_str.encode()).hexdigest()
+        key_hash = hashlib.md5(key_str.encode()).hexdigest()  # nosec B324 # noqa: S324 — cache key, not crypto
         return f"{func_name}:{key_hash}"
 
     return f"{func_name}:{key_str}"

@@ -5,6 +5,7 @@ Manages organization-level settings including timezone and currency.
 """
 
 from .time_utils import DEFAULT_ORG_TZ, validate_org_timezone
+import sqlite3
 
 # Default settings
 DEFAULT_BASE_CURRENCY = "AED"
@@ -105,8 +106,8 @@ def get_org_settings(conn) -> OrgSettings:
                 base_currency=row[1] or DEFAULT_BASE_CURRENCY,
                 finance_calc_version=row[2] or "v1",
             )
-    except Exception:
-        pass  # Table doesn't exist
+    except (sqlite3.Error, ValueError, OSError):  # noqa: S110 — best-effort org settings load if table missing
+        raise  # was silently swallowed
 
     return OrgSettings()  # Return defaults
 

@@ -177,7 +177,7 @@ class KeyManager:
 
         except sqlite3.IntegrityError as e:
             log.error(f"Failed to create API key: {e}")
-            raise ValueError(f"Failed to create API key: {e}")
+            raise ValueError(f"Failed to create API key: {e}") from e
 
     def validate_key(self, key: str) -> KeyInfo | None:
         """
@@ -338,7 +338,7 @@ class KeyManager:
                 log.info(f"Rotated API key: {key_id} -> {new_key_info.id}")
                 return new_key, new_key_info
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             log.error(f"Failed to rotate key {key_id}: {e}")
             return None
 

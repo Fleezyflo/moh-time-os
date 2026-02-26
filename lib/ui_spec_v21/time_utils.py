@@ -162,7 +162,7 @@ def validate_org_timezone(tz: str) -> tuple:
     # Check if it's a valid timezone
     try:
         ZoneInfo(tz)
-    except Exception:
+    except (sqlite3.Error, ValueError, OSError):
         return False, f"Invalid timezone: {tz}"
 
     # Reject DST-observing zones
@@ -568,8 +568,9 @@ def validate_timestamp_ordering(conn) -> list:
                     "resurfaced_before_proposed",
                 )
             )
-    except Exception:
-        pass  # Table may not exist
+    except (sqlite3.Error, ValueError, OSError) as e:  # noqa: S110 — best-effort validation if table missing
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise  # re-raise after logging
 
     # All tables: updated_at >= created_at
     for table in ["inbox_items", "issues", "signals"]:
@@ -577,11 +578,12 @@ def validate_timestamp_ordering(conn) -> list:
             cursor = conn.execute(f"""
                 SELECT id, created_at, updated_at FROM {table}
                 WHERE updated_at IS NOT NULL AND created_at IS NOT NULL AND updated_at < created_at
-            """)  # nosec B608 - table is from hardcoded list above
+            """)  # noqa: S608
             for row in cursor.fetchall():
                 violations.append((table, "updated_at", row[0], row[2], "updated_before_created"))
-        except Exception:
-            pass  # Table may not exist
+        except (sqlite3.Error, ValueError, OSError) as e:  # noqa: S110 — best-effort validation if table missing
+            logger.error("handler failed: %s", e, exc_info=True)
+            raise  # re-raise after logging
 
     # Issues: resolved_at >= created_at (if set)
     try:
@@ -591,8 +593,9 @@ def validate_timestamp_ordering(conn) -> list:
         """)
         for row in cursor.fetchall():
             violations.append(("issues", "resolved_at", row[0], row[2], "resolved_before_created"))
-    except Exception:
-        pass
+    except (sqlite3.Error, ValueError, OSError) as e:  # noqa: S110 — best-effort validation if table missing
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise  # re-raise after logging
 
     return violations
 
@@ -653,12 +656,13 @@ def validate_all_timestamps(conn) -> tuple:
     for table, columns in TIMESTAMP_COLUMNS.items():
         try:
             for col in columns:
-                cursor = conn.execute(f"SELECT id, {col} FROM {table} WHERE {col} IS NOT NULL")  # nosec B608
+                cursor = conn.execute(f"SELECT id, {col} FROM {table} WHERE {col} IS NOT NULL")  # noqa: S608
                 for row in cursor.fetchall():
                     if not validate_timestamp_semantic(row[1]):
                         violations.append((table, col, row[0], row[1], "invalid_format"))
-        except Exception:
-            pass  # Table or column may not exist
+        except (sqlite3.Error, ValueError, OSError) as e:  # noqa: S110 — best-effort validation if table/column missing
+            logger.error("handler failed: %s", e, exc_info=True)
+            raise  # re-raise after logging
 
     # Ordering validation
     ordering_violations = validate_timestamp_ordering(conn)

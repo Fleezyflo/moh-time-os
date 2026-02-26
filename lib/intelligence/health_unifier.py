@@ -269,7 +269,7 @@ class HealthUnifier:
             logger.warning("Unsupported entity type for live scoring: %s", entity_type)
             return None
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.warning("Live scoring failed for %s/%s: %s", entity_type, entity_id, e)
             return None
 

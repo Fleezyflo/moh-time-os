@@ -6,6 +6,7 @@ accurate OpenAPI schemas instead of empty `schema: {}`.
 
 Usage:
     from api.response_models import IntelligenceResponse, ListResponse
+import sqlite3
 
     @router.get("/endpoint", response_model=IntelligenceResponse)
     async def my_endpoint(): ...

@@ -58,7 +58,7 @@ def migrate(db_path: Path) -> None:
 
         conn.commit()
         logger.info("v33 migration applied: signal_outcomes table created")
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.error(f"v33 migration failed: {e}")
         raise
     finally:

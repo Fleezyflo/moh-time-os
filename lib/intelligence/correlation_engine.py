@@ -18,6 +18,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
+import sqlite3
+
 from lib.intelligence.correlation_confidence import (
     CorrelationConfidenceCalculator,
     CorrelationSignalEvidence,
@@ -320,7 +322,7 @@ class CorrelationEngine:
         try:
             pattern_results = detect_all_patterns(self.db_path)
             patterns = pattern_results.get("patterns", [])
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             self.logger.error(f"Error detecting patterns: {e}")
             patterns = []
             pattern_results = {}
@@ -329,7 +331,7 @@ class CorrelationEngine:
         try:
             signal_results = detect_all_signals(self.db_path)
             signals = signal_results.get("signals", [])
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             self.logger.error(f"Error detecting signals: {e}")
             signals = []
             signal_results = {}

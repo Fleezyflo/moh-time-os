@@ -18,6 +18,8 @@ from typing import Any, Optional
 from fastapi import APIRouter, Body, HTTPException
 from pydantic import BaseModel, Field
 
+import sqlite3
+
 from lib.actions import (
     ActionFramework,
     ActionSource,
@@ -162,7 +164,7 @@ async def propose_action(request: ProposalRequest):
     except ValueError as e:
         logger.error(f"Invalid request: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e)) from e
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Error proposing action: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
@@ -193,7 +195,7 @@ async def batch_propose(request: BatchProposalRequest):
     except ValueError as e:
         logger.error(f"Invalid request: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e)) from e
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Error batch proposing actions: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
@@ -217,7 +219,7 @@ async def approve_action(action_id: str, request: ApproveRequest):
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Error approving action: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
@@ -239,7 +241,7 @@ async def reject_action(action_id: str, request: RejectRequest):
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Error rejecting action: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
@@ -260,7 +262,7 @@ async def execute_action(action_id: str, request: ExecuteRequest):
             "result_data": result.result_data,
         }
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Error executing action: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
@@ -277,7 +279,7 @@ async def get_pending_actions(action_type: str | None = None, limit: int = 50):
 
         return {"count": len(actions), "actions": actions}
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Error fetching pending actions: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
@@ -296,6 +298,6 @@ async def get_action_history(
 
         return {"count": len(actions), "actions": actions}
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Error fetching action history: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error") from e

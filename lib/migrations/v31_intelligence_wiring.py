@@ -145,7 +145,7 @@ def run_migration(db_path: Path | None = None) -> dict:
         conn.close()
         logger.info("v31 migration complete: created %s", result["tables_created"])
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.error("v31 migration failed: %s", e)
         result["errors"].append(str(e))
 

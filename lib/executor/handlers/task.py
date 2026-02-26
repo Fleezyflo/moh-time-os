@@ -10,6 +10,7 @@ Handles:
 
 import json
 from datetime import datetime
+import sqlite3
 
 
 class TaskHandler:
@@ -55,8 +56,8 @@ class TaskHandler:
             self._log_action(action, result)
 
             return result
-        except Exception as e:
-            return {"success": False, "error": str(e)}
+        except (sqlite3.Error, ValueError, OSError):
+            raise  # was silently swallowed
 
     def _create_task(self, action: dict) -> dict:
         """Create a new task."""
@@ -217,7 +218,7 @@ class TaskHandler:
                 self.store.update("tasks", task_id, {"asana_gid": new_gid})
                 logger.info(f"Created Asana task {new_gid} for local task {task_id}")
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Asana sync failed for task {task_id}: {e}")
 
     def _complete_in_asana(self, asana_id: str):
@@ -238,7 +239,7 @@ class TaskHandler:
         try:
             asana_client.tasks.update_task(asana_id, {"completed": True})
             logger.info(f"Marked Asana task {asana_id} as complete")
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Failed to complete Asana task {asana_id}: {e}")
 
     def _log_action(self, action: dict, result: dict):

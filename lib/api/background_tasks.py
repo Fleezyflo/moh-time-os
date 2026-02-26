@@ -19,7 +19,8 @@ from datetime import datetime, timedelta
 from enum import Enum
 from typing import Any, Optional
 
-from lib.compat import StrEnum
+from enum import StrEnum
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -128,7 +129,7 @@ class TaskManager:
                 self._tasks[task_id]["completed_at"] = datetime.now()
             logger.info(f"Task {task_id} completed successfully")
             return result
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             with self._lock:
                 self._tasks[task_id]["error"] = str(e)
                 self._tasks[task_id]["status"] = TaskStatusEnum.FAILED

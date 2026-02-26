@@ -14,6 +14,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 from typing import Any, Optional
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -78,7 +79,7 @@ class GmailWriter:
             creds = creds.with_subject(self.delegated_user)
             self._service = build("gmail", "v1", credentials=creds)
             return self._service
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             error_msg = f"Failed to get Gmail service: {e}"
             logger.error(error_msg)
             raise
@@ -192,7 +193,7 @@ class GmailWriter:
                 data=result,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             error_msg = f"Failed to create draft: {e}"
             logger.error(error_msg)
             return GmailWriteResult(success=False, error=error_msg)
@@ -227,7 +228,7 @@ class GmailWriter:
                 data=result,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             error_msg = f"Failed to send draft {draft_id}: {e}"
             logger.error(error_msg)
             return GmailWriteResult(success=False, error=error_msg)
@@ -285,7 +286,7 @@ class GmailWriter:
                 data=result,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             error_msg = f"Failed to send email to {to}: {e}"
             logger.error(error_msg)
             return GmailWriteResult(success=False, error=error_msg)
@@ -332,7 +333,7 @@ class GmailWriter:
                 data=result,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             error_msg = f"Failed to add labels to {message_id}: {e}"
             logger.error(error_msg)
             return GmailWriteResult(success=False, error=error_msg)
@@ -379,7 +380,7 @@ class GmailWriter:
                 data=result,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             error_msg = f"Failed to remove labels from {message_id}: {e}"
             logger.error(error_msg)
             return GmailWriteResult(success=False, error=error_msg)
@@ -486,7 +487,7 @@ class GmailWriter:
                 data=result,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             error_msg = f"Failed to reply to thread {thread_id}: {e}"
             logger.error(error_msg)
             return GmailWriteResult(success=False, error=error_msg)

@@ -276,7 +276,7 @@ class ArtifactService:
 
         except sqlite3.IntegrityError as e:
             conn.rollback()
-            raise ValueError(f"Failed to create artifact: {e}")
+            raise ValueError(f"Failed to create artifact: {e}") from e
         finally:
             conn.close()
 

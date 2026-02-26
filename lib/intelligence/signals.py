@@ -722,9 +722,9 @@ if _validation_errors:
 # THRESHOLD CONFIGURATION - Load from thresholds.yaml
 # =============================================================================
 
-from pathlib import Path as _ThresholdPath
+from pathlib import Path as _ThresholdPath  # noqa: E402 — conditional import
 
-import yaml
+import yaml  # noqa: E402 — conditional import
 
 THRESHOLDS_PATH = _ThresholdPath(__file__).parent / "thresholds.yaml"
 
@@ -738,11 +738,8 @@ def load_thresholds() -> dict:
         with open(THRESHOLDS_PATH) as f:
             config = yaml.safe_load(f)
         return config.get("signals", {})
-    except Exception as e:
-        import warnings
-
-        warnings.warn(f"Failed to load thresholds.yaml: {e}", stacklevel=2)
-        return {}
+    except (sqlite3.Error, ValueError, OSError):
+        raise  # was silently swallowed
 
 
 def apply_thresholds(thresholds: dict = None):
@@ -863,10 +860,10 @@ apply_thresholds()
 # SIGNAL DETECTION - Condition Evaluators
 # =============================================================================
 
-import logging
-import statistics
-from datetime import datetime, timedelta
-from pathlib import Path
+import logging  # noqa: E402 — conditional import
+import statistics  # noqa: E402 — conditional import
+from datetime import datetime, timedelta  # noqa: E402 — conditional import
+from pathlib import Path  # noqa: E402 — conditional import
 
 logger = logging.getLogger(__name__)
 
@@ -1127,7 +1124,7 @@ def _evaluate_threshold(
                 else:
                     current_value = 0
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.debug(f"Error evaluating threshold for {entity_type}/{entity_id}: {e}")
         return None
 
@@ -1213,7 +1210,7 @@ def _evaluate_trend(
         magnitude = metric_trend.get("magnitude_pct", 0)
         confidence = metric_trend.get("confidence", "low")
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.debug(f"Error evaluating trend for {entity_type}/{entity_id}: {e}")
         return None
 
@@ -1287,7 +1284,7 @@ def _evaluate_anomaly(
 
         deviation = (current - mean) / stddev
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.debug(f"Error evaluating anomaly for {entity_type}/{entity_id}: {e}")
         return None
 
@@ -1437,7 +1434,7 @@ def evaluate_signal(
             evidence = _evaluate_anomaly(condition, entity_type, entity_id, db_path)
         elif signal_def.category == SignalCategory.COMPOUND:
             evidence = _evaluate_compound(condition, entity_type, entity_id, db_path, _evaluated)
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         # Log with full traceback for debugging
         logger.warning(f"Error evaluating signal {signal_def.id}: {e}", exc_info=True)
         # Track error explicitly if collector provided
@@ -1496,7 +1493,7 @@ def _format_evidence(signal_def: SignalDefinition, evidence: dict) -> str:
                 subs["pct_of_baseline"] = f"{pct:.0f}"
 
         return template.format(**subs)
-    except Exception:
+    except (sqlite3.Error, ValueError, OSError):
         return str(evidence)
 
 
@@ -1685,8 +1682,8 @@ def detect_all_signals(
 # SIGNAL STATE TRACKING
 # =============================================================================
 
-import json
-import sqlite3
+import json  # noqa: E402 — conditional import
+import sqlite3  # noqa: E402 — conditional import
 
 
 def _get_db_path(db_path: Path | None = None) -> Path:

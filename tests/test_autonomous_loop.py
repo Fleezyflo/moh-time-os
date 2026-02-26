@@ -321,7 +321,7 @@ class TestErrorHandling:
         with patch.object(loop.collectors, "sync_all", side_effect=Exception("Network error")):
             try:
                 loop.run_cycle()
-            except:
+            except Exception:
                 pass
 
             # Cycle count should have incremented

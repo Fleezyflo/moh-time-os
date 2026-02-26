@@ -16,6 +16,7 @@ from fastapi import APIRouter, HTTPException, Query
 from api.response_models import DetailResponse
 from lib.governance.subject_access import SubjectAccessManager
 from lib.paths import data_dir
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +73,7 @@ def create_subject_access_request(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Error creating SAR: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -100,7 +101,7 @@ def get_subject_access_request(request_id: str) -> dict:
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Error getting SAR status: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -129,7 +130,7 @@ def list_subject_access_requests(
             ],
         }
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Error listing SARs: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -219,7 +220,7 @@ def fulfill_subject_access_request(
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Error fulfilling SAR: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -256,6 +257,6 @@ def query_audit_log(
             ],
         }
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Error querying audit log: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e

@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Optional
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -76,7 +77,7 @@ class CalendarWriter:
             creds = creds.with_subject(self.delegated_user)
             self._service = build("calendar", "v3", credentials=creds)
             return self._service
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             error_msg = f"Failed to get Calendar service: {e}"
             logger.error(error_msg)
             raise
@@ -148,7 +149,7 @@ class CalendarWriter:
                 data=result,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             error_msg = f"Failed to create event: {e}"
             logger.error(error_msg)
             return CalendarWriteResult(success=False, error=error_msg)
@@ -203,7 +204,7 @@ class CalendarWriter:
                 data=result,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             error_msg = f"Failed to update event {event_id}: {e}"
             logger.error(error_msg)
             return CalendarWriteResult(success=False, error=error_msg)
@@ -244,7 +245,7 @@ class CalendarWriter:
                 data={"deleted": True},
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             error_msg = f"Failed to delete event {event_id}: {e}"
             logger.error(error_msg)
             return CalendarWriteResult(success=False, error=error_msg)
@@ -286,7 +287,7 @@ class CalendarWriter:
                 data=result,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             error_msg = f"Failed to create quick event: {e}"
             logger.error(error_msg)
             return CalendarWriteResult(success=False, error=error_msg)
@@ -334,7 +335,7 @@ class CalendarWriter:
                 data=result,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             error_msg = f"Failed to move event {event_id}: {e}"
             logger.error(error_msg)
             return CalendarWriteResult(success=False, error=error_msg)
@@ -388,7 +389,7 @@ class CalendarWriter:
                 data=result,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             error_msg = f"Failed to add attendee to event {event_id}: {e}"
             logger.error(error_msg)
             return CalendarWriteResult(success=False, error=error_msg)
@@ -500,7 +501,7 @@ class CalendarWriter:
 
             return free_slots
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             error_msg = f"Failed to find free slots: {e}"
             logger.error(error_msg)
             return []

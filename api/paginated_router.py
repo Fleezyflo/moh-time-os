@@ -13,19 +13,19 @@ Endpoints:
 - GET /api/v2/paginated/signals — Paginated signals
 - GET /api/v2/paginated/clients — Paginated client list
 - GET /api/v2/paginated/invoices — Paginated invoice list
+
+All endpoints query the live database. No fallback data — if the DB is
+unreachable or the table is missing, the endpoint returns an error.
 """
 
 import logging
 import sqlite3
-from datetime import datetime
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
-from pydantic import BaseModel
+from fastapi import APIRouter, Depends, HTTPException
 
 from lib import paths
 from lib.api.pagination import PaginatedResponse, PaginationParams, paginate, pagination_params
-from lib.ui_spec_v21.time_utils import now_iso
 
 logger = logging.getLogger(__name__)
 
@@ -36,69 +36,48 @@ paginated_router = APIRouter(tags=["Pagination"])
 DB_PATH = paths.db_path()
 
 
-# ==== Demo Data (Fallback) ====
-# Used when live DB is unavailable to ensure endpoints are functional
+# ==== Database Helpers ====
 
 
-def _demo_tasks() -> list[dict[str, Any]]:
-    """Generate demo task data."""
-    return [
-        {
-            "id": f"task-{i}",
-            "title": f"Task {i}: Sample task item",
-            "description": f"This is a sample task for pagination demo (item {i})",
-            "status": ["todo", "in_progress", "done"][i % 3],
-            "priority": ["low", "medium", "high"][i % 3],
-            "created_at": now_iso(),
-            "due_at": now_iso(),
-        }
-        for i in range(1, 251)  # 250 demo tasks
-    ]
+def _get_connection() -> sqlite3.Connection:
+    """Get a DB connection or raise."""
+    try:
+        conn = sqlite3.connect(str(DB_PATH))
+        conn.row_factory = sqlite3.Row
+        return conn
+    except sqlite3.Error as e:
+        logger.error("Failed to connect to database at %s: %s", DB_PATH, e)
+        raise HTTPException(
+            status_code=503,
+            detail=f"Database unavailable: {e}",
+        ) from e
 
 
-def _demo_signals() -> list[dict[str, Any]]:
-    """Generate demo signal data."""
-    return [
-        {
-            "id": f"signal-{i}",
-            "type": ["anomaly", "threshold", "trend"][i % 3],
-            "description": f"Signal {i}: Sample signal data",
-            "severity": ["low", "medium", "high"][i % 3],
-            "created_at": now_iso(),
-            "resolved": i % 4 == 0,
-        }
-        for i in range(1, 151)  # 150 demo signals
-    ]
-
-
-def _demo_clients() -> list[dict[str, Any]]:
-    """Generate demo client data."""
-    return [
-        {
-            "id": f"client-{i}",
-            "name": f"Client {i}",
-            "status": ["active", "paused", "archived"][i % 3],
-            "projects": i % 5,
-            "created_at": now_iso(),
-        }
-        for i in range(1, 101)  # 100 demo clients
-    ]
-
-
-def _demo_invoices() -> list[dict[str, Any]]:
-    """Generate demo invoice data."""
-    return [
-        {
-            "id": f"inv-{i}",
-            "invoice_number": f"INV-2024-{i:05d}",
-            "client_id": f"client-{(i % 20) + 1}",
-            "amount": 1000 + (i * 100),
-            "status": ["draft", "sent", "paid"][i % 3],
-            "created_at": now_iso(),
-            "due_at": now_iso(),
-        }
-        for i in range(1, 201)  # 200 demo invoices
-    ]
+def _query_table(
+    table: str,
+    columns: str,
+    order_by: str = "created_at DESC",
+    limit: int = 1000,
+) -> list[dict[str, Any]]:
+    """Query a table and return rows as dicts. Raises on failure."""
+    conn = _get_connection()
+    try:
+        cursor = conn.cursor()
+        # Table and column names are hardcoded strings from this file,
+        # not user input — safe to use directly.
+        cursor.execute(
+            f"SELECT {columns} FROM {table} ORDER BY {order_by} LIMIT ?",  # noqa: S608
+            (limit,),
+        )
+        return [dict(row) for row in cursor.fetchall()]
+    except sqlite3.OperationalError as e:
+        logger.error("Query failed on table '%s': %s", table, e)
+        raise HTTPException(
+            status_code=503,
+            detail=f"Database query failed ({table}): {e}",
+        ) from e
+    finally:
+        conn.close()
 
 
 # ==== Live DB Fetching ====
@@ -106,103 +85,56 @@ def _demo_invoices() -> list[dict[str, Any]]:
 
 def _get_tasks_from_db() -> list[dict[str, Any]]:
     """Fetch tasks from live database."""
-    try:
-        conn = sqlite3.connect(str(DB_PATH))
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            SELECT id, title, description, status, priority, created_at, due_at
-            FROM tasks
-            ORDER BY created_at DESC
-            LIMIT 1000
-            """
-        )
-        tasks = [dict(row) for row in cursor.fetchall()]
-        conn.close()
-        return tasks
-    except Exception as e:
-        logger.warning(f"Failed to fetch tasks from DB: {e}")
-        return _demo_tasks()
+    return _query_table(
+        table="tasks",
+        columns="id, title, description, status, priority, created_at, due_at",
+    )
 
 
 def _get_signals_from_db() -> list[dict[str, Any]]:
     """Fetch signals from live database."""
-    try:
-        conn = sqlite3.connect(str(DB_PATH))
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            SELECT id, type, description, severity, created_at, resolved
-            FROM signals
-            ORDER BY created_at DESC
-            LIMIT 1000
-            """
-        )
-        signals = [dict(row) for row in cursor.fetchall()]
-        conn.close()
-        return signals
-    except Exception as e:
-        logger.warning(f"Failed to fetch signals from DB: {e}")
-        return _demo_signals()
+    return _query_table(
+        table="signals",
+        columns="id, type, description, severity, created_at, resolved",
+    )
 
 
 def _get_clients_from_db() -> list[dict[str, Any]]:
-    """Fetch clients from live database."""
+    """Fetch clients from live database with project counts."""
+    conn = _get_connection()
     try:
-        conn = sqlite3.connect(str(DB_PATH))
-        conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute(
             """
-            SELECT id, name, status, created_at
-            FROM clients
-            ORDER BY created_at DESC
+            SELECT c.id, c.name, c.status, c.created_at,
+                   COALESCE(p.project_count, 0) AS projects
+            FROM clients c
+            LEFT JOIN (
+                SELECT client_id, COUNT(*) AS project_count
+                FROM projects
+                GROUP BY client_id
+            ) p ON p.client_id = c.id
+            ORDER BY c.created_at DESC
             LIMIT 1000
             """
         )
-        clients = [dict(row) for row in cursor.fetchall()]
-
-        # Attempt to count projects per client
-        for client in clients:
-            try:
-                cursor.execute(
-                    "SELECT COUNT(*) as count FROM projects WHERE client_id = ?",
-                    (client["id"],),
-                )
-                result = cursor.fetchone()
-                client["projects"] = result["count"] if result else 0
-            except Exception:
-                client["projects"] = 0
-
+        return [dict(row) for row in cursor.fetchall()]
+    except sqlite3.OperationalError as e:
+        logger.error("Query failed on clients: %s", e)
+        raise HTTPException(
+            status_code=503,
+            detail=f"Database query failed (clients): {e}",
+        ) from e
+    finally:
         conn.close()
-        return clients
-    except Exception as e:
-        logger.warning(f"Failed to fetch clients from DB: {e}")
-        return _demo_clients()
 
 
 def _get_invoices_from_db() -> list[dict[str, Any]]:
     """Fetch invoices from live database."""
-    try:
-        conn = sqlite3.connect(str(DB_PATH))
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            SELECT id, invoice_number, client_id, amount, status, created_at, due_at
-            FROM invoices
-            ORDER BY created_at DESC
-            LIMIT 1000
-            """
-        )
-        invoices = [dict(row) for row in cursor.fetchall()]
-        conn.close()
-        return invoices
-    except Exception as e:
-        logger.warning(f"Failed to fetch invoices from DB: {e}")
-        return _demo_invoices()
+    return _query_table(
+        table="invoices",
+        columns="id, invoice_number, client_id, amount, status, created_at, due_at",
+    )
 
 
 # ==== Endpoints ====
@@ -219,14 +151,10 @@ async def list_tasks_paginated(
     - page: Page number (default 1)
     - page_size: Items per page (default 50, max 500)
 
-    Falls back to demo data if live DB is unavailable.
+    Returns 503 if database is unavailable.
     """
-    try:
-        tasks = _get_tasks_from_db()
-        return paginate(tasks, params.page, params.page_size)
-    except Exception as e:
-        logger.error(f"Error listing paginated tasks: {e}")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+    tasks = _get_tasks_from_db()
+    return paginate(tasks, params.page, params.page_size)
 
 
 @paginated_router.get("/signals")
@@ -240,14 +168,10 @@ async def list_signals_paginated(
     - page: Page number (default 1)
     - page_size: Items per page (default 50, max 500)
 
-    Falls back to demo data if live DB is unavailable.
+    Returns 503 if database is unavailable.
     """
-    try:
-        signals = _get_signals_from_db()
-        return paginate(signals, params.page, params.page_size)
-    except Exception as e:
-        logger.error(f"Error listing paginated signals: {e}")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+    signals = _get_signals_from_db()
+    return paginate(signals, params.page, params.page_size)
 
 
 @paginated_router.get("/clients")
@@ -261,14 +185,10 @@ async def list_clients_paginated(
     - page: Page number (default 1)
     - page_size: Items per page (default 50, max 500)
 
-    Falls back to demo data if live DB is unavailable.
+    Returns 503 if database is unavailable.
     """
-    try:
-        clients = _get_clients_from_db()
-        return paginate(clients, params.page, params.page_size)
-    except Exception as e:
-        logger.error(f"Error listing paginated clients: {e}")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+    clients = _get_clients_from_db()
+    return paginate(clients, params.page, params.page_size)
 
 
 @paginated_router.get("/invoices")
@@ -282,11 +202,7 @@ async def list_invoices_paginated(
     - page: Page number (default 1)
     - page_size: Items per page (default 50, max 500)
 
-    Falls back to demo data if live DB is unavailable.
+    Returns 503 if database is unavailable.
     """
-    try:
-        invoices = _get_invoices_from_db()
-        return paginate(invoices, params.page, params.page_size)
-    except Exception as e:
-        logger.error(f"Error listing paginated invoices: {e}")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+    invoices = _get_invoices_from_db()
+    return paginate(invoices, params.page, params.page_size)

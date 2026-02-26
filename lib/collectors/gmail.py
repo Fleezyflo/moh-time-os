@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from .base import BaseCollector
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,7 @@ class GmailCollector(BaseCollector):
             creds = creds.with_subject(user)
             self._service = build("gmail", "v1", credentials=creds)
             return self._service
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             self.logger.error(f"Failed to get Gmail service: {e}")
             raise
 
@@ -163,14 +164,14 @@ class GmailCollector(BaseCollector):
                             "labels": first_msg.get("labelIds", []),
                         }
                     )
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     self.logger.warning(f"Failed to fetch thread {ref['id']}: {e}")
                     continue
 
             self.logger.info(f"Collected {len(all_threads)} threads")
             return {"threads": all_threads}
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             self.logger.error(f"Gmail collection failed: {e}")
             return {"threads": []}
 
@@ -606,7 +607,7 @@ class GmailCollector(BaseCollector):
                 self._raw_data = retry_with_backoff(
                     collect_with_retry, self.retry_config, self.logger
                 )
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                 self.logger.error(f"Collect failed after retries: {e}")
                 self.circuit_breaker.record_failure()
                 self.store.update_sync_state(self.source_name, success=False, error=str(e))
@@ -620,7 +621,7 @@ class GmailCollector(BaseCollector):
             # Step 2: Transform to canonical format
             try:
                 transformed = self.transform(self._raw_data)
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                 self.logger.warning(f"Transform failed: {e}. Attempting partial success.")
                 transformed = []
                 self.metrics["partial_failures"] += 1
@@ -648,7 +649,7 @@ class GmailCollector(BaseCollector):
                         secondary_stats["participants"] = (
                             secondary_stats.get("participants", 0) + stored
                         )
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     self.logger.warning(f"Failed to store participants for {thread_id}: {e}")
 
                 try:
@@ -659,7 +660,7 @@ class GmailCollector(BaseCollector):
                         secondary_stats["attachments"] = (
                             secondary_stats.get("attachments", 0) + stored
                         )
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     self.logger.warning(f"Failed to store attachments for {thread_id}: {e}")
 
                 try:
@@ -668,7 +669,7 @@ class GmailCollector(BaseCollector):
                     if labels:
                         stored = self.store.insert_many("gmail_labels", labels)
                         secondary_stats["labels"] = secondary_stats.get("labels", 0) + stored
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     self.logger.warning(f"Failed to store labels for {thread_id}: {e}")
 
             # Step 5: Update sync state and record success
@@ -692,7 +693,7 @@ class GmailCollector(BaseCollector):
             self.logger.info(f"Sync completed: {result}")
             return result
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             self.logger.error(f"Sync failed for {self.source_name}: {e}")
             self.circuit_breaker.record_failure()
             self.store.update_sync_state(self.source_name, success=False, error=str(e))

@@ -139,7 +139,7 @@ def extract_commitments_from_text(text: str) -> list:
 def generate_commitment_id(source_id: str, text: str) -> str:
     """Generate deterministic ID for deduplication."""
     content = f"{source_id}:{text[:50]}"
-    return hashlib.md5(content.encode()).hexdigest()[:16]
+    return hashlib.md5(content.encode()).hexdigest()[:16]  # nosec B324 # noqa: S324 — dedup key, not crypto
 
 
 def extract_from_communications(limit: int = 100) -> dict:

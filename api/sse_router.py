@@ -20,6 +20,7 @@ Usage in server.py:
 import asyncio
 import json
 import logging
+import sqlite3
 from collections.abc import AsyncGenerator
 from dataclasses import asdict, dataclass
 from datetime import datetime
@@ -155,7 +156,7 @@ async def _heartbeat_generator(
                     await queue.put(event)
                 except asyncio.CancelledError:
                     break
-                except Exception as e:
+                except (sqlite3.Error, ValueError) as e:
                     logger.error(f"Heartbeat error: {e}")
 
         # Start heartbeat task
@@ -173,7 +174,7 @@ async def _heartbeat_generator(
                 break
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except (sqlite3.Error, ValueError) as e:
                 logger.error(f"SSE stream error: {e}")
                 break
     finally:
@@ -212,7 +213,7 @@ async def stream_events() -> StreamingResponse:
                 "Connection": "keep-alive",
             },
         )
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"SSE stream setup failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to establish SSE stream") from e
 
@@ -242,7 +243,7 @@ def get_event_history(limit: int = Query(100, description="Maximum events to ret
         }
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"get_event_history failed: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -274,6 +275,6 @@ async def publish_event(
             "event_id": event.id,
             "timestamp": event.timestamp,
         }
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"publish_event failed: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e

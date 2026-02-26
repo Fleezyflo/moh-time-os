@@ -9,6 +9,7 @@ Handles:
 
 import json
 from datetime import datetime
+import sqlite3
 
 
 class NotificationHandler:
@@ -49,8 +50,8 @@ class NotificationHandler:
             result = handler(action)
             self._log_action(action, result)
             return result
-        except Exception as e:
-            return {"success": False, "error": str(e)}
+        except (sqlite3.Error, ValueError, OSError):
+            raise  # was silently swallowed
 
     def _create_notification(self, action: dict) -> dict:
         """Create a notification for later delivery."""

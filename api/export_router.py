@@ -17,6 +17,7 @@ from fastapi import APIRouter, HTTPException, Query
 from api.response_models import DetailResponse
 from lib.governance.data_export import DataExporter, ExportFormat, ExportRequest
 from lib.paths import data_dir
+import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -84,7 +85,7 @@ def request_data_export(
         }
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Error requesting export: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -115,7 +116,7 @@ def get_export_status(request_id: str) -> dict:
         }
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Error getting export status: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -134,7 +135,7 @@ def list_exportable_tables() -> dict:
             "table_count": len(tables),
             "tables": tables,
         }
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Error listing tables: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -157,6 +158,6 @@ def get_table_schema(table: str) -> dict:
         }
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Error getting schema: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e

@@ -9,7 +9,7 @@ import sqlite3
 from typing import Any
 from uuid import uuid4
 
-from lib.compat import StrEnum
+from enum import StrEnum
 
 from .time_utils import from_iso, now_iso, to_iso
 

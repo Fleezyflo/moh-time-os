@@ -446,7 +446,7 @@ def update_item(item_id: str, changed_by: str = "A", **changes) -> bool:
     values = list(updates.values()) + [item_id]
 
     with get_connection() as conn:
-        cursor = conn.execute(f"UPDATE items SET {set_clause} WHERE id = ?", values)  # nosec B608 — validated above
+        cursor = conn.execute(f"UPDATE items SET {set_clause} WHERE id = ?", values)  # noqa: S608
 
         if cursor.rowcount == 0:
             return False
@@ -553,7 +553,7 @@ def list_items(
                 due ASC,
                 created_at DESC
             LIMIT ?
-        """,
+        """,  # noqa: S608
             params,
         ).fetchall()
 

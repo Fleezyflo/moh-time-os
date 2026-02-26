@@ -180,7 +180,7 @@ class InMemoryCache:
 def make_cache_key(*parts: Any) -> str:
     """Generate a deterministic cache key from parts."""
     raw = ":".join(str(p) for p in parts)
-    return hashlib.md5(raw.encode()).hexdigest()
+    return hashlib.md5(raw.encode()).hexdigest()  # nosec B324 # noqa: S324 — cache key, not crypto
 
 
 # ---------------------------------------------------------------------------

@@ -4,31 +4,29 @@
 repos:
   # ==========================================
   # RUFF - Fast Python linter + formatter
-  # Only runs on active, maintained modules
+  # Rules defined in pyproject.toml (single source of truth)
   # ==========================================
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.8.6
     hooks:
-      # Linter - only run on v29/spec modules
-      # Note: --ignore S110,S602,S608 skips security rules that are too noisy for legacy code
       - id: ruff
-        args: [--fix, --exit-non-zero-on-fix, --ignore, "S110,S602,S608,B904"]
+        args: [--fix, --exit-non-zero-on-fix]
         types_or: [python, pyi]
-        files: ^(lib/ui_spec_v21|lib/collectors|lib/safety|lib/db|lib/paths|lib/collector_registry|api/spec_router|scripts/backfill|scripts/verify)/.*\.py$
-      # Formatter - same scope
+        files: ^(lib|api|tests|scripts)/.*\.py$
       - id: ruff-format
         types_or: [python, pyi]
-        files: ^(lib/ui_spec_v21|lib/collectors|lib/safety|lib/db|lib/paths|lib/collector_registry|api/spec_router|scripts/backfill|scripts/verify)/.*\.py$
+        files: ^(lib|api|tests|scripts)/.*\.py$
 
   # ==========================================
   # BANDIT - Security scanning
+  # Rules aligned with pyproject.toml
   # ==========================================
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.8
     hooks:
       - id: bandit
-        args: [-r, -ll, --skip, "B101,B602,B608"]  # Skip assert warnings
-        files: ^(lib/ui_spec_v21|lib/collectors|lib/safety|api/spec_router)/.*\.py$
+        args: [-r, -ll, --skip, "B101,B602,B608"]
+        files: ^(lib|api|scripts)/.*\.py$
 
   # ==========================================
   # GENERAL HOOKS
@@ -37,10 +35,10 @@ repos:
     rev: v4.6.0
     hooks:
       - id: trailing-whitespace
-        files: ^(lib/ui_spec_v21|lib/collectors|lib/safety|api|tests|scripts)/
+        files: ^(lib|api|tests|scripts)/
         exclude: \.md$
       - id: end-of-file-fixer
-        files: ^(lib/ui_spec_v21|lib/collectors|lib/safety|api|tests|scripts)/
+        files: ^(lib|api|tests|scripts)/
       - id: check-yaml
         files: ^(\.pre-commit-config\.yaml|pytest\.ini)$
       - id: check-json
