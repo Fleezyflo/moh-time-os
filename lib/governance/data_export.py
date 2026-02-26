@@ -15,6 +15,7 @@ import hashlib
 import json
 import logging
 import sqlite3
+import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
@@ -84,7 +85,7 @@ class DataExporter:
         """Initialize exporter with database path and optional export directory."""
         self.db_path = Path(db_path)
         if export_dir is None:
-            export_dir = Path("/tmp/moh_exports")  # nosec B108 # noqa: S108 — local desktop app, user-owned temp dir
+            export_dir = Path(tempfile.gettempdir()) / "moh_exports"
         self.export_dir = Path(export_dir)
         self.lifecycle = get_lifecycle_manager()
         self.anonymizer = Anonymizer()

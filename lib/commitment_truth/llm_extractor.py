@@ -131,7 +131,7 @@ def process_unextracted_communications(limit: int = 50) -> dict:
 
             for c in commitments:
                 hash_input = f"{comm['id']}:{c['text']}"
-                commitment_id = f"llm_{hashlib.md5(hash_input.encode()).hexdigest()[:12]}"  # nosec B324 # noqa: S324 — dedup key, not crypto
+                commitment_id = f"llm_{hashlib.sha256(hash_input.encode()).hexdigest()[:12]}"
 
                 conn.execute(
                     """

@@ -19,8 +19,10 @@ Features:
 
 import json
 import logging
+import os
 import re
 import sqlite3
+import tempfile
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -381,7 +383,7 @@ class SubjectAccessManager:
             # Generate filename
             safe_subject = re.sub(r"[^\w\-@.]", "_", subject_identifier)
             filename = f"subject_data_{safe_subject}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.{format}"
-            file_path = f"/tmp/{filename}"  # nosec B108 # noqa: S108 — local desktop app, user-owned temp dir
+            file_path = os.path.join(tempfile.gettempdir(), filename)
 
             if format == "json":
                 with open(file_path, "w") as f:

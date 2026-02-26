@@ -32,7 +32,9 @@ class GmailCollector(BaseCollector):
     def __init__(self, config: dict, store=None):
         super().__init__(config, store)
         self._service = None
-        self._raw_data = None  # Store raw data for secondary table extraction
+        self._raw_data: dict[str, Any] | None = (
+            None  # Store raw data for secondary table extraction
+        )
 
     def _get_service(self, user: str = DEFAULT_USER):
         """Get Gmail API service using service account."""

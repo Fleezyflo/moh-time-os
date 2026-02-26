@@ -174,31 +174,21 @@ def check_api(api_url: str, token: str | None) -> list[str]:
     failures = []
 
     try:
-        import urllib.error
-        import urllib.request
+        import httpx
 
         def check_endpoint(path: str, expected_status: int, use_auth: bool = False) -> bool:
             url = f"{api_url}{path}"
-            req = urllib.request.Request(url)
-
+            headers = {}
             if use_auth and token:
-                req.add_header("Authorization", f"Bearer {token}")
+                headers["Authorization"] = f"Bearer {token}"
 
             try:
-                response = urllib.request.urlopen(req, timeout=10)  # nosec B310
-                status = response.getcode()
-                if status == expected_status:
-                    ok(f"{path} → {status}")
+                response = httpx.get(url, headers=headers, timeout=10)
+                if response.status_code == expected_status:
+                    ok(f"{path} → {response.status_code}")
                     return True
                 else:
-                    fail(f"{path} → {status} (expected {expected_status})")
-                    return False
-            except urllib.error.HTTPError as e:
-                if e.code == expected_status:
-                    ok(f"{path} → {e.code}")
-                    return True
-                else:
-                    fail(f"{path} → {e.code} (expected {expected_status})")
+                    fail(f"{path} → {response.status_code} (expected {expected_status})")
                     return False
             except Exception as e:
                 fail(f"{path} → error: {e}")
@@ -221,20 +211,19 @@ def check_api(api_url: str, token: str | None) -> list[str]:
                     warn("Auth not enforced for intelligence endpoints!")
 
         # Stub endpoint should return 501
-        req = urllib.request.Request(f"{api_url}/api/tasks/link", method="POST")
         try:
-            urllib.request.urlopen(req, timeout=10)  # nosec B310
-            fail("POST /api/tasks/link → 200 (expected 501)")
-            failures.append("stub_endpoint")
-        except urllib.error.HTTPError as e:
-            if e.code == 501:
+            response = httpx.post(f"{api_url}/api/tasks/link", timeout=10)
+            if response.status_code == 501:
                 ok("POST /api/tasks/link → 501 (correctly not implemented)")
             else:
-                fail(f"POST /api/tasks/link → {e.code} (expected 501)")
+                fail(f"POST /api/tasks/link → {response.status_code} (expected 501)")
                 failures.append("stub_endpoint")
+        except Exception as e:
+            fail(f"POST /api/tasks/link → error: {e}")
+            failures.append("stub_endpoint")
 
     except ImportError:
-        warn("Skipping API checks (urllib not available)")
+        warn("Skipping API checks (httpx not available)")
     except Exception as e:
         fail(f"API check error: {e}")
         failures.append("api_error")

@@ -85,7 +85,7 @@ def save_promises(promises: list) -> None:
 
 def generate_id(text: str, timestamp: str) -> str:
     """Generate unique ID for a promise."""
-    return hashlib.md5(f"{text}{timestamp}".encode()).hexdigest()[:8]  # nosec B324 # noqa: S324 — dedup key, not crypto
+    return hashlib.sha256(f"{text}{timestamp}".encode()).hexdigest()[:8]
 
 
 def parse_due_date(text: str) -> date | None:

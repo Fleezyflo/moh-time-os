@@ -264,7 +264,7 @@ def collect_contacts():
         return {}
 
 
-def collect_all(sources: list = None, v4_ingest: bool = True):
+def collect_all(sources: list[str] | None = None, v4_ingest: bool = True):
     """Collect from all sources in parallel, then ingest to V4."""
 
     from lib.collector_registry import CollectorLock

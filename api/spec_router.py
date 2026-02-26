@@ -115,7 +115,7 @@ def get_db_with_context(
     """
     conn = get_db()
     try:
-        if SAFETY_ENABLED:
+        if SAFETY_ENABLED and WriteContext is not None:
             with WriteContext(conn, actor=actor, source=source, request_id=request_id):
                 yield conn
         else:

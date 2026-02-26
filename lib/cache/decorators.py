@@ -62,7 +62,7 @@ def _generate_cache_key(func_name: str, args: tuple, kwargs: dict) -> str:
 
     # Use hash if key is too long
     if len(key_str) > 256:
-        key_hash = hashlib.md5(key_str.encode()).hexdigest()  # nosec B324 # noqa: S324 — cache key, not crypto
+        key_hash = hashlib.sha256(key_str.encode()).hexdigest()
         return f"{func_name}:{key_hash}"
 
     return f"{func_name}:{key_str}"
