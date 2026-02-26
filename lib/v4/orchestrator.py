@@ -11,6 +11,7 @@ Runs the complete V4 pipeline:
 """
 
 import logging
+import sqlite3
 import time
 from datetime import datetime
 from typing import Any
@@ -18,8 +19,6 @@ from typing import Any
 from .artifact_service import get_artifact_service
 from .collector_hooks import get_hooks
 from .coupling_service import get_coupling_service
-import sqlite3
-
 from .detectors import (
     AnomalyDetector,
     CommitmentDetector,

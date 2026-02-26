@@ -18,7 +18,6 @@ Self-test:
 """
 
 import argparse
-import signal
 import subprocess
 import sys
 import time

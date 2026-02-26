@@ -5,11 +5,8 @@ Tests AsanaWriter and AsanaSyncManager without calling real Asana API.
 All HTTP calls are mocked using unittest.mock.
 """
 
-import json
 import os
-import sqlite3
-from datetime import datetime
-from unittest.mock import ANY, MagicMock, Mock, call, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 

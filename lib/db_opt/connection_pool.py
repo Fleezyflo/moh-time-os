@@ -21,7 +21,6 @@ import sqlite3
 import threading
 import time
 from dataclasses import dataclass
-from typing import Optional
 
 from lib.db_opt.db_adapter import DatabaseAdapter, SQLiteAdapter
 

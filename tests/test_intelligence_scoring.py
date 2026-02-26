@@ -14,18 +14,14 @@ Live data verification (run against actual DB):
 - No crashes on sparse data
 """
 
-from pathlib import Path
-
 import pytest
 
 from lib.intelligence.scorecard import (
     get_entities_by_classification,
     get_score_distribution,
     score_all_clients,
-    score_all_persons,
     score_all_projects,
     score_client,
-    score_person,
     score_portfolio,
     score_project,
 )
@@ -35,15 +31,11 @@ from lib.intelligence.scoring import (
     PORTFOLIO_DIMENSIONS,
     PROJECT_DIMENSIONS,
     EntityType,
-    NormMethod,
-    ScoreRange,
-    ScoringDimension,
     classify_score,
     normalize_percentile,
     normalize_relative,
     normalize_threshold,
     score_dimension,
-    score_to_range,
     validate_dimensions,
 )
 

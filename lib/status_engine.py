@@ -13,11 +13,10 @@ Implements status model from MOH_TIME_OS_STATUS.md:
 
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+from enum import StrEnum
 
 from lib import paths
-from datetime import UTC
-from enum import StrEnum
 
 from .change_bundles import create_status_change_bundle
 from .config_store import get

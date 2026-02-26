@@ -3,7 +3,6 @@
 import importlib
 import sys
 import types
-from datetime import date, datetime
 from unittest.mock import MagicMock
 
 import pytest

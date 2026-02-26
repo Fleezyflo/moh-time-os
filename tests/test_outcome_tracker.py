@@ -4,12 +4,11 @@ Tests for OutcomeTracker — signal resolution recording and metrics.
 Brief 18 (ID), Task ID-4.1 + ID-6.1
 """
 
-from datetime import datetime, timedelta
-from pathlib import Path
+from datetime import datetime
 
 import pytest
 
-from lib.intelligence.outcome_tracker import OutcomeTracker, SignalOutcome
+from lib.intelligence.outcome_tracker import OutcomeTracker
 
 
 @pytest.fixture

@@ -11,7 +11,6 @@ import logging
 import os
 import sqlite3
 from datetime import datetime, timedelta
-from typing import Optional
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request

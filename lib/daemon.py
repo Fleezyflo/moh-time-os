@@ -23,7 +23,7 @@ import json
 import logging
 import os
 import signal
-import subprocess
+import sqlite3
 import sys
 import threading
 import time
@@ -34,7 +34,6 @@ from enum import StrEnum
 from lib import paths
 from lib.collectors.resilience import CircuitBreaker
 from lib.observability.metrics import REGISTRY
-import sqlite3
 
 collect_all = None  # Lazy-loaded on first use
 

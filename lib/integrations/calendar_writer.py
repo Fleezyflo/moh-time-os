@@ -5,14 +5,12 @@ Handles creating, updating, deleting events, managing attendees, and finding fre
 via Google API using service account with domain-wide delegation.
 """
 
-import json
 import logging
 import os
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from pathlib import Path
-from typing import Any, Optional
 import sqlite3
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 

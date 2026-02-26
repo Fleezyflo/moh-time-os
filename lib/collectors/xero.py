@@ -7,10 +7,10 @@ enabling accurate financial calculations for YTD, prior year, and lifetime reven
 
 import logging
 import re
+import sqlite3
 from datetime import date, datetime
 
 from lib.state_store import get_store
-import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -70,7 +70,7 @@ class XeroCollector:
             [contact_name],
         )
         if clients:
-            return clients[0]["id"]
+            return str(clients[0]["id"])
 
         # Try normalized name match
         clients = self.store.query(
@@ -78,7 +78,7 @@ class XeroCollector:
             [contact_name],
         )
         if clients:
-            return clients[0]["id"]
+            return str(clients[0]["id"])
 
         # Try partial match
         clients = self.store.query(
@@ -89,7 +89,7 @@ class XeroCollector:
             [f"%{contact_name}%", contact_name],
         )
         if clients:
-            return clients[0]["id"]
+            return str(clients[0]["id"])
 
         return None
 
@@ -390,8 +390,8 @@ class XeroCollector:
                         if status in ("sent", "overdue"):
                             if client_id not in ar_by_client:
                                 ar_by_client[client_id] = {
-                                    "total": 0,
-                                    "overdue": 0,
+                                    "total": 0.0,
+                                    "overdue": 0.0,
                                     "max_days": 0,
                                 }
                             ar_by_client[client_id]["total"] += amount_due

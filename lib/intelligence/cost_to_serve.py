@@ -22,13 +22,12 @@ Code rules enforced:
 """
 
 import logging
+import sqlite3
 from dataclasses import dataclass, field
 from pathlib import Path
-from statistics import mean, quantiles
-from typing import Optional
+from statistics import quantiles
 
-from lib.query_engine import QueryEngine, get_engine
-import sqlite3
+from lib.query_engine import get_engine
 
 logger = logging.getLogger(__name__)
 

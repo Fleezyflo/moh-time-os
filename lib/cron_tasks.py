@@ -8,6 +8,7 @@ These are called by Clawdbot cron jobs:
 """
 
 import logging
+import sqlite3
 
 from .backup import create_backup, prune_backups
 from .classify import run_auto_classification
@@ -16,7 +17,6 @@ from .maintenance import fix_item_priorities
 from .store import get_connection
 from .sync_asana import sync_asana_projects
 from .sync_xero import sync_xero_clients
-import sqlite3
 
 logger = logging.getLogger(__name__)
 

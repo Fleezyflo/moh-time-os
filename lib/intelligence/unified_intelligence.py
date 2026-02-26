@@ -21,18 +21,17 @@ Usage:
 """
 
 import logging
+import sqlite3
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
-from lib.intelligence.correlation_engine import CorrelationEngine, HealthGrade
+from lib.intelligence.correlation_engine import CorrelationEngine
 from lib.intelligence.cost_to_serve import CostToServeEngine
 from lib.intelligence.patterns import detect_all_patterns
 from lib.intelligence.scenario_engine import ScenarioEngine
 from lib.intelligence.trajectory import TrajectoryEngine
-import sqlite3
 
 logger = logging.getLogger(__name__)
 

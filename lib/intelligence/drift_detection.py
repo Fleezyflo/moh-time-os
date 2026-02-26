@@ -10,11 +10,11 @@ Brief 28 (IO), Task IO-3.1
 import logging
 import sqlite3
 import uuid
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from dataclasses import dataclass
+from datetime import datetime
 from math import sqrt
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 

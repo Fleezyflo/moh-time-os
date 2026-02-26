@@ -6,7 +6,7 @@ Brief 28 (IO), Task IO-1.1
 
 import pytest
 
-from lib.intelligence.audit_trail import AuditEntry, AuditTrail
+from lib.intelligence.audit_trail import AuditTrail
 
 
 @pytest.fixture

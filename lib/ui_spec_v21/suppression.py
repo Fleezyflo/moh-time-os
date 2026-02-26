@@ -211,7 +211,10 @@ def insert_suppression_rule(
     existing = cursor.fetchone()
     if existing:
         # Rule already exists - return existing ID (idempotent)
-        return existing[0]
+        existing_id = existing[0]
+        if isinstance(existing_id, str):
+            return existing_id
+        return str(existing_id)
 
     rule_id = str(uuid4())
     expires_at = get_expiry_date(item_type)

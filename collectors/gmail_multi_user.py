@@ -12,7 +12,7 @@ Collects Gmail from all team members incrementally.
 import json
 import logging
 import sqlite3
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from lib import paths
 

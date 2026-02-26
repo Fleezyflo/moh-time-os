@@ -13,14 +13,13 @@ All computations use pure Python; no external dependencies beyond stdlib.
 """
 
 import logging
+import sqlite3
 import statistics
 from dataclasses import asdict, dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Optional
 
 from lib.query_engine import get_engine
-import sqlite3
 
 logger = logging.getLogger(__name__)
 

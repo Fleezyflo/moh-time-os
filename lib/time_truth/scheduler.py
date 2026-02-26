@@ -6,13 +6,13 @@ Assigns pending tasks to available blocks based on priority and constraints.
 """
 
 import logging
+import sqlite3
 from dataclasses import dataclass
 from datetime import date
 
 from lib.state_store import get_store
 from lib.time_truth.block_manager import BlockManager
 from lib.time_truth.calendar_sync import CalendarSync
-import sqlite3
 
 logger = logging.getLogger(__name__)
 

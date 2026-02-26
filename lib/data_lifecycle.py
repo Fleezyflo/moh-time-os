@@ -16,12 +16,12 @@ Safety guards:
 """
 
 import logging
+import sqlite3
 from datetime import date, datetime, timedelta
 from typing import TypedDict
 
 from .backup import create_backup
 from .store import get_connection
-import sqlite3
 
 logger = logging.getLogger(__name__)
 

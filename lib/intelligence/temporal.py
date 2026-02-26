@@ -16,17 +16,15 @@ do its own business-day math.
 """
 
 import logging
-import math
-from dataclasses import dataclass, field
+import sqlite3
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Optional
 
 import yaml
 
 from lib import paths
-import sqlite3
 
 logger = logging.getLogger(__name__)
 

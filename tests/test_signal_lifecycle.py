@@ -4,10 +4,8 @@ Tests for SignalLifecycleTracker — signal persistence and escalation.
 Brief 31 (TC), Task TC-4.1 + TC-5.1
 """
 
-import json
 import sqlite3
-import tempfile
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from pathlib import Path
 
 import pytest

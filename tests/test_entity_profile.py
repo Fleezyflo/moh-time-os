@@ -11,7 +11,6 @@ import pytest
 from lib.intelligence.entity_profile import (
     AttentionLevel,
     CostProfile,
-    EntityIntelligenceProfile,
     ProfileCompoundRisk,
     ProfilePatternSnapshot,
     ScoreDimension,

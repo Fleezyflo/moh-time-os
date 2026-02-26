@@ -5,6 +5,7 @@ THIS IS THE SAFETY LAYER - what the system can do automatically.
 
 import contextlib
 import json
+import sqlite3
 from collections import defaultdict
 from datetime import datetime
 from enum import Enum
@@ -14,7 +15,6 @@ import yaml
 from lib import paths
 
 from .state_store import StateStore, get_store
-import sqlite3
 
 
 class DomainMode(Enum):

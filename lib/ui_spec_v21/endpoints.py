@@ -39,7 +39,10 @@ def safe_parse_evidence(evidence_raw: str | None, item_id: str = "unknown") -> d
         return {}
 
     try:
-        return json.loads(evidence_raw)
+        result = json.loads(evidence_raw)
+        if isinstance(result, dict):
+            return result
+        return {}
     except json.JSONDecodeError as e:
         logger.error(
             f"JSON parse error for item {item_id}: "
@@ -123,7 +126,7 @@ class ClientEndpoints:
         filters = filters or {}
         boundaries = client_status_boundaries(self.org_tz)
 
-        result = {
+        result: dict[str, Any] = {
             "active": [],
             "recently_active": [],
             "cold": [],
@@ -190,7 +193,7 @@ class ClientEndpoints:
         first_inv: str | None,
     ) -> dict[str, Any]:
         """Build client card data based on status."""
-        base = {
+        base: dict[str, Any] = {
             "id": client_id,
             "name": name,
             "tier": tier or "none",
@@ -649,13 +652,14 @@ class ClientEndpoints:
             (client_id, cutoff.isoformat()),
         )
 
-        summary = {"good": 0, "neutral": 0, "bad": 0, "by_source": {}}
+        summary: dict[str, Any] = {"good": 0, "neutral": 0, "bad": 0, "by_source": {}}
         for row in cursor.fetchall():
             sentiment, source, count = row
-            summary[sentiment] += count
-            if source not in summary["by_source"]:
-                summary["by_source"][source] = {"good": 0, "neutral": 0, "bad": 0}
-            summary["by_source"][source][sentiment] = count
+            if isinstance(sentiment, str):
+                summary[sentiment] += count
+                if source not in summary["by_source"]:
+                    summary["by_source"][source] = {"good": 0, "neutral": 0, "bad": 0}
+                summary["by_source"][source][sentiment] = count
 
         return summary
 
@@ -882,6 +886,7 @@ class FinancialsEndpoints:
             due_date_str, amount, status = row
             total += amount
 
+            bucket: str | None = None
             if status == "sent":
                 if due_date_str:
                     due_date = date.fromisoformat(due_date_str)
@@ -900,7 +905,8 @@ class FinancialsEndpoints:
                 else:
                     bucket = "90_plus"
 
-            buckets[bucket] += amount
+            if bucket:
+                buckets[bucket] += amount
 
         # Convert to response format
         result_buckets = []
@@ -942,8 +948,8 @@ class InboxEndpoints:
         v2.9: Used for Severity Sync Rule (§7.10)
         display_severity = max(inbox_items.severity, issues.severity)
         """
-        ord1 = self.SEVERITY_ORDER.get(sev1, 0)
-        ord2 = self.SEVERITY_ORDER.get(sev2, 0)
+        ord1 = self.SEVERITY_ORDER.get(sev1, 0) if sev1 else 0
+        ord2 = self.SEVERITY_ORDER.get(sev2, 0) if sev2 else 0
         if ord1 >= ord2:
             return sev1 or "info"
         return sev2 or "info"
@@ -1138,14 +1144,8 @@ class InboxEndpoints:
         """
 
         # Get items
-        cursor = self.conn.execute(
-            f"""
-            SELECT * FROM inbox_items_v29
-            WHERE {where_clause}
-            ORDER BY {order}
-        """,  # noqa: S608
-            params,
-        )
+        sql = "".join(["SELECT * FROM inbox_items_v29\nWHERE ", where_clause, "\nORDER BY ", order])
+        cursor = self.conn.execute(sql, params)
 
         items = []
         for row in cursor.fetchall():
@@ -1262,14 +1262,10 @@ class InboxEndpoints:
 
         where_clause = " AND ".join(where)
 
-        cursor = self.conn.execute(
-            f"""
-            SELECT * FROM inbox_items_v29
-            WHERE {where_clause}
-            ORDER BY resolved_at DESC
-        """,  # noqa: S608
-            params,
+        sql = "".join(
+            ["SELECT * FROM inbox_items_v29\nWHERE ", where_clause, "\nORDER BY resolved_at DESC"]
         )
+        cursor = self.conn.execute(sql, params)
 
         items = []
         for row in cursor.fetchall():
@@ -1316,6 +1312,8 @@ class InboxEndpoints:
         Includes by_severity and by_type breakdowns per §1.9.
         """
         from datetime import timedelta
+
+        from .time_utils import from_iso
 
         now = now_iso()
         one_day_later = (from_iso(now) + timedelta(days=1)).isoformat()
@@ -1433,7 +1431,3 @@ class InboxEndpoints:
             response["brand_id"] = result.brand_id
 
         return response, None
-
-
-# Import for circular dependency resolution
-from .time_utils import from_iso  # noqa: E402

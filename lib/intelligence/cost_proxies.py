@@ -15,7 +15,6 @@ import logging
 import math
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Optional
 
 logger = logging.getLogger(__name__)
 

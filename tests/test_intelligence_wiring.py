@@ -8,14 +8,12 @@ Verifies end-to-end data flow through the intelligence pipeline:
 - Intelligence phase result structure and isolation guarantees
 """
 
-import json
 import sqlite3
 from datetime import datetime, timedelta
-from pathlib import Path
 
 import pytest
 
-from lib.intelligence.health_unifier import HealthScore, HealthUnifier, classify_score
+from lib.intelligence.health_unifier import HealthUnifier
 from lib.intelligence.persistence import (
     CostPersistence,
     CostSnapshotRecord,

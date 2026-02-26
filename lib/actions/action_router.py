@@ -10,11 +10,10 @@ Manages:
 """
 
 import logging
+import sqlite3
 from collections.abc import Callable
-from typing import Optional
 
 from lib.actions.action_framework import ActionResult
-import sqlite3
 
 logger = logging.getLogger(__name__)
 

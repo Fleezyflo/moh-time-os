@@ -18,7 +18,6 @@ Covers:
 Uses temporary SQLite databases for all tests.
 """
 
-import json
 import sqlite3
 import tempfile
 from datetime import datetime, timedelta

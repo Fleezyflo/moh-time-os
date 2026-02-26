@@ -2,9 +2,8 @@
 
 import logging
 import os
-from typing import Any
-
 import sqlite3
+from typing import Any
 
 from .entities import (
     find_client,

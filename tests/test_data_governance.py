@@ -9,17 +9,12 @@ import pytest
 from lib.intelligence.data_governance import (
     SENSITIVITY_CONFIDENTIAL,
     SENSITIVITY_INTERNAL,
-    SENSITIVITY_PUBLIC,
     SENSITIVITY_RESTRICTED,
-    ComplianceReport,
     ComplianceReporter,
     DataCatalog,
     DataExporter,
-    DeletionCertificate,
     ExportRequest,
-    ExportResult,
     RetentionEnforcer,
-    RetentionPolicy,
     SubjectAccessManager,
     SubjectSearchResult,
 )

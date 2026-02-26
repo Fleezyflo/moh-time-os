@@ -12,8 +12,7 @@ Tests cover:
 - Edge cases (no findings, all findings, single domain)
 """
 
-from datetime import datetime
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import patch
 
 import pytest
 

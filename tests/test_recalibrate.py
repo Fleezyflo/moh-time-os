@@ -200,27 +200,21 @@ class TestRecalibrateActiveSignals:
     def test_data_quality_capped_at_medium(self, test_db):
         recalibrate_active_signals(test_db)
         conn = sqlite3.connect(test_db)
-        row = conn.execute(
-            "SELECT severity FROM signals WHERE signal_id = 's9'"
-        ).fetchone()
+        row = conn.execute("SELECT severity FROM signals WHERE signal_id = 's9'").fetchone()
         conn.close()
         assert row[0] == "medium"
 
     def test_hierarchy_capped_at_low(self, test_db):
         recalibrate_active_signals(test_db)
         conn = sqlite3.connect(test_db)
-        row = conn.execute(
-            "SELECT severity FROM signals WHERE signal_id = 's11'"
-        ).fetchone()
+        row = conn.execute("SELECT severity FROM signals WHERE signal_id = 's11'").fetchone()
         conn.close()
         assert row[0] == "low"
 
     def test_expired_signals_untouched(self, test_db):
         recalibrate_active_signals(test_db)
         conn = sqlite3.connect(test_db)
-        row = conn.execute(
-            "SELECT severity FROM signals WHERE signal_id = 's_exp'"
-        ).fetchone()
+        row = conn.execute("SELECT severity FROM signals WHERE signal_id = 's_exp'").fetchone()
         conn.close()
         assert row[0] == "critical"  # Expired signal not touched
 

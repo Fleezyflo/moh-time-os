@@ -7,10 +7,9 @@ Implements inbox item state machine and actions.
 import json
 import sqlite3
 from dataclasses import dataclass
+from enum import StrEnum
 from typing import Any
 from uuid import uuid4
-
-from enum import StrEnum
 
 from .evidence import validate_evidence
 from .suppression import SuppressionManager, check_suppression

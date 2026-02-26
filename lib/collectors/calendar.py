@@ -8,12 +8,12 @@ Note: DWD allowlist has `calendar` (full) authorized, not `calendar.readonly`.
 import json
 import logging
 import os
-from datetime import UTC, datetime, timedelta, timezone
+import sqlite3
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from .base import BaseCollector
-import sqlite3
 
 logger = logging.getLogger(__name__)
 

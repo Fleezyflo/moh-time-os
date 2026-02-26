@@ -10,11 +10,11 @@ Provides:
 
 import logging
 import random
+import sqlite3
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import TypeVar
-import sqlite3
 
 T = TypeVar("T")
 

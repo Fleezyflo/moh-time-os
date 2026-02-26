@@ -8,13 +8,12 @@ Supports both sync and async functions.
 import asyncio
 import functools
 import hashlib
-import inspect
 import logging
+import sqlite3
 from collections.abc import Callable
-from typing import Any, Optional
+from typing import Any
 
 from .cache_manager import CacheManager
-import sqlite3
 
 logger = logging.getLogger(__name__)
 

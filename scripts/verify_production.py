@@ -174,7 +174,6 @@ def check_api(api_url: str, token: str | None) -> list[str]:
     failures = []
 
     try:
-        import json
         import urllib.error
         import urllib.request
 

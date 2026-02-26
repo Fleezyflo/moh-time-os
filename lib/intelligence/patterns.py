@@ -15,11 +15,10 @@ Pattern Types:
 This module contains DEFINITIONS only. Detection logic is in Task 2.2.
 """
 
+import sqlite3
 import threading
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
-import sqlite3
 
 # =============================================================================
 # ERROR TRACKING - Pattern detection errors are tracked, not swallowed
@@ -672,7 +671,7 @@ if _validation_errors:
 import logging  # noqa: E402 — conditional import
 import math  # noqa: E402 — conditional import
 import statistics  # noqa: E402 — conditional import
-from datetime import datetime, timedelta  # noqa: E402 — conditional import
+from datetime import datetime  # noqa: E402 — conditional import
 from pathlib import Path  # noqa: E402 — conditional import
 
 logger = logging.getLogger(__name__)

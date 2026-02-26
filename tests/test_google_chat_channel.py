@@ -2,8 +2,6 @@
 
 import asyncio
 
-import pytest
-
 from lib.notifier.channels.google_chat import GoogleChatChannel
 
 

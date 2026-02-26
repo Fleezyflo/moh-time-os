@@ -12,14 +12,13 @@ Enables rollback-first safety.
 
 import json
 import logging
+import sqlite3
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 
 from lib import paths
-from datetime import UTC
-from enum import StrEnum
-import sqlite3
 
 logger = logging.getLogger(__name__)
 

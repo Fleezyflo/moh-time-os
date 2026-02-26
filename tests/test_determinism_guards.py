@@ -10,7 +10,6 @@ Run with: pytest tests/test_determinism_guards.py -v
 """
 
 import sqlite3
-from pathlib import Path
 
 import pytest
 
@@ -275,7 +274,7 @@ class TestFilesystemProbeGuard:
         The module should use lazy initialization to avoid filesystem probes.
         """
         # If we got here without error, the guard didn't fire during import
-        from lib.query_engine import QueryEngine, get_default_db_path
+        from lib.query_engine import QueryEngine
 
         # QueryEngine class should be importable
         assert QueryEngine is not None

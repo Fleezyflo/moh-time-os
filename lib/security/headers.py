@@ -13,7 +13,6 @@ Usage in server.py:
 
 import logging
 import os
-from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 

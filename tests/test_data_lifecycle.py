@@ -9,16 +9,13 @@ Covers:
 - Lifecycle reporting
 """
 
-import sqlite3
-from datetime import date, datetime, timedelta
-from pathlib import Path
+from datetime import date, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
 
 from lib.data_lifecycle import (
     ARCHIVE_TABLES,
-    DEFAULT_RETENTION_POLICIES,
     MIN_ROWS_THRESHOLD,
     PROTECTED_TABLES,
     DataLifecycleManager,

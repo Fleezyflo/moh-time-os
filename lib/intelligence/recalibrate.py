@@ -23,7 +23,6 @@ Priority weight by category:
 import json
 import logging
 import sqlite3
-from pathlib import Path
 
 from lib.paths import db_path as canonical_db_path
 

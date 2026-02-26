@@ -6,9 +6,8 @@ Includes built-in commands for status, tasks, signals, approvals, and briefings.
 """
 
 import logging
-from collections.abc import Callable
-from typing import Any, Optional
 import sqlite3
+from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 

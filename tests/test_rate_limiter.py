@@ -10,10 +10,7 @@ Tests validate:
 """
 
 import threading
-import time
 from datetime import datetime, timedelta
-
-import pytest
 
 from lib.security.rate_limiter import DEFAULT_RATE_LIMITS, RateLimiter, RateLimitResult
 

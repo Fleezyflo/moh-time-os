@@ -230,8 +230,8 @@ class TestLaunchdPlist:
         assert plist.exists(), "LaunchAgent plist missing"
 
     def test_plist_has_required_keys(self):
-        from pathlib import Path
         import xml.etree.ElementTree as ET
+        from pathlib import Path
 
         plist = Path(__file__).parent.parent / "com.mohtimeos.api.plist"
         tree = ET.parse(plist)  # noqa: S314 — trusted local plist file, not untrusted XML
@@ -245,8 +245,8 @@ class TestLaunchdPlist:
         assert "KeepAlive" in keys
 
     def test_plist_label_correct(self):
-        from pathlib import Path
         import xml.etree.ElementTree as ET
+        from pathlib import Path
 
         plist = Path(__file__).parent.parent / "com.mohtimeos.api.plist"
         tree = ET.parse(plist)  # noqa: S314 — trusted local plist file, not untrusted XML

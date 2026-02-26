@@ -8,13 +8,12 @@ import hashlib
 import json
 import logging
 import os
-import re
+import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from .base import BaseCollector
-import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +81,7 @@ class GmailCollector(BaseCollector):
         """Get header value by name."""
         for h in headers:
             if h.get("name", "").lower() == name.lower():
-                return h.get("value", "")
+                return str(h.get("value", ""))
         return ""
 
     def collect(self) -> dict[str, Any]:
@@ -620,7 +619,7 @@ class GmailCollector(BaseCollector):
 
             # Step 2: Transform to canonical format
             try:
-                transformed = self.transform(self._raw_data)
+                transformed = self.transform(self._raw_data or {})
             except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                 self.logger.warning(f"Transform failed: {e}. Attempting partial success.")
                 transformed = []
@@ -632,8 +631,8 @@ class GmailCollector(BaseCollector):
             stored_primary = self.store.insert_many(self.target_table, transformed)
 
             # Step 4: Store secondary tables - failures don't block primary
-            secondary_stats = {}
-            for thread in self._raw_data.get("threads", []):
+            secondary_stats: dict[str, int] = {}
+            for thread in (self._raw_data or {}).get("threads", []):
                 thread_id = thread.get("id")
                 messages = thread.get("messages", [])
                 label_ids = thread.get("labels", [])
@@ -682,7 +681,7 @@ class GmailCollector(BaseCollector):
             result = {
                 "source": self.source_name,
                 "success": True,
-                "collected": len(self._raw_data.get("threads", [])),
+                "collected": len((self._raw_data or {}).get("threads", [])),
                 "transformed": len(transformed),
                 "stored_primary": stored_primary,
                 "stored_secondary": secondary_stats,

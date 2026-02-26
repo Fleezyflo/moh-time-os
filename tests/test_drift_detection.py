@@ -7,7 +7,6 @@ Brief 28 (IO), Task IO-3.1
 import pytest
 
 from lib.intelligence.drift_detection import (
-    DriftAlert,
     DriftDetector,
     classify_drift_severity,
 )

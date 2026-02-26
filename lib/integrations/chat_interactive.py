@@ -7,9 +7,8 @@ Uses httpx for HTTP calls with bot token or webhook URL.
 
 import logging
 import os
-from dataclasses import dataclass, field
-from typing import Any, Optional
 import sqlite3
+from dataclasses import dataclass
 
 try:
     import httpx

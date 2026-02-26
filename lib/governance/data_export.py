@@ -19,7 +19,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any
 
 from lib.data_lifecycle import get_lifecycle_manager
 from lib.db import validate_identifier

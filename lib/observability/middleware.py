@@ -3,9 +3,8 @@ FastAPI middleware for observability metrics and correlation ID tracking.
 """
 
 import logging
-import time
-from collections.abc import Callable
 import sqlite3
+import time
 
 logger = logging.getLogger(__name__)
 

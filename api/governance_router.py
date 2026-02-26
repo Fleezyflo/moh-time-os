@@ -9,14 +9,13 @@ REST endpoints for GDPR/privacy compliance:
 """
 
 import logging
-from typing import Optional
+import sqlite3
 
 from fastapi import APIRouter, HTTPException, Query
 
 from api.response_models import DetailResponse
 from lib.governance.subject_access import SubjectAccessManager
 from lib.paths import data_dir
-import sqlite3
 
 logger = logging.getLogger(__name__)
 

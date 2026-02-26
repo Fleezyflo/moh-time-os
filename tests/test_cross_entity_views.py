@@ -6,7 +6,6 @@ Uses fixture DB for deterministic testing.
 """
 
 import sqlite3
-from pathlib import Path
 
 import pytest
 

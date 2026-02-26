@@ -4,6 +4,7 @@ Executor Engine - Processes and executes approved actions.
 
 import json
 import logging
+import sqlite3
 from datetime import datetime
 
 from lib import paths
@@ -13,7 +14,6 @@ from ..governance import GovernanceEngine, get_governance
 from ..notifier import NotificationEngine
 from ..state_store import StateStore, get_store
 from .handlers import CalendarHandler, EmailHandler, NotificationHandler, TaskHandler
-import sqlite3
 
 logger = logging.getLogger(__name__)
 

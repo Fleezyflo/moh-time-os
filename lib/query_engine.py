@@ -9,7 +9,7 @@ Read-only — this module never writes to the database.
 import logging
 import sqlite3
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from lib import paths
 

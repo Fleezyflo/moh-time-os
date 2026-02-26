@@ -14,9 +14,8 @@ Brief 18 (ID), Task ID-1.1
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from statistics import mean, stdev
-from typing import Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 

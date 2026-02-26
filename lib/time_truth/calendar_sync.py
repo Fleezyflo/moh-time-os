@@ -6,11 +6,11 @@ Creates protected blocks for meetings and available blocks in gaps.
 """
 
 import logging
+import sqlite3
 from datetime import date, datetime, timedelta
 
 from lib.state_store import get_store
 from lib.time_truth.block_manager import BlockManager, TimeBlock
-import sqlite3
 
 logger = logging.getLogger(__name__)
 

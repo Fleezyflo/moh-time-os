@@ -5,8 +5,7 @@ Tests ChatInteractive, SlashCommandHandler, CardBuilder, and webhook endpoints.
 All HTTP calls are mocked using unittest.mock.
 """
 
-import json
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 

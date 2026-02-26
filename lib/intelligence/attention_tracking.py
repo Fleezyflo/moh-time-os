@@ -10,14 +10,13 @@ Complements entity_memory.py with explicit attention economics:
 budget, debt, and investment tracking.
 """
 
-import json
 import logging
 import sqlite3
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 

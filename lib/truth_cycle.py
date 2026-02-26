@@ -12,13 +12,12 @@ Dependency order:
 """
 
 import logging
+import sqlite3
 import traceback
 from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 from lib import paths
-from datetime import UTC
-import sqlite3
 
 logger = logging.getLogger(__name__)
 

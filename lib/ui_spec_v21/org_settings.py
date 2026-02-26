@@ -4,8 +4,12 @@ Org Settings — Spec Section 0.1
 Manages organization-level settings including timezone and currency.
 """
 
-from .time_utils import DEFAULT_ORG_TZ, validate_org_timezone
+import logging
 import sqlite3
+
+from .time_utils import DEFAULT_ORG_TZ, validate_org_timezone
+
+logger = logging.getLogger(__name__)
 
 # Default settings
 DEFAULT_BASE_CURRENCY = "AED"
@@ -106,8 +110,10 @@ def get_org_settings(conn) -> OrgSettings:
                 base_currency=row[1] or DEFAULT_BASE_CURRENCY,
                 finance_calc_version=row[2] or "v1",
             )
-    except (sqlite3.Error, ValueError, OSError):  # noqa: S110 — best-effort org settings load if table missing
-        raise  # was silently swallowed
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.debug(
+            "get_org_settings: table missing or inaccessible, returning default settings: %s", e
+        )
 
     return OrgSettings()  # Return defaults
 

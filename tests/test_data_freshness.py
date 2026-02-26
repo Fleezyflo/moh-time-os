@@ -4,9 +4,7 @@ Tests for DataFreshnessTracker — freshness scoring and stale detection.
 Brief 27 (DQ), Task DQ-1.1
 """
 
-import sqlite3
 from datetime import datetime, timedelta
-from pathlib import Path
 
 import pytest
 

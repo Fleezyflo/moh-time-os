@@ -19,11 +19,10 @@ Safety guarantees:
 - All deletes logged with cutoff dates
 """
 
-import json
 import logging
 import sqlite3
 import time
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from pathlib import Path

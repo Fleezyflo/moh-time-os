@@ -8,7 +8,7 @@ It collects data from all sources and caches it for heartbeat use.
 
 import json
 import subprocess
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 from lib import paths

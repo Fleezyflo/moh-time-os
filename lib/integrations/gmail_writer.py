@@ -6,15 +6,13 @@ via Google API using service account with domain-wide delegation.
 """
 
 import base64
-import json
 import logging
 import os
-from dataclasses import dataclass, field
+import sqlite3
+from dataclasses import dataclass
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
-from typing import Any, Optional
-import sqlite3
 
 logger = logging.getLogger(__name__)
 

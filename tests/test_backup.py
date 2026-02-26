@@ -9,15 +9,13 @@ Covers:
 - WAL checkpoint integration
 """
 
-import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import patch
 
 import pytest
 
 from lib.backup import (
-    BACKUP_DIR,
     backup_status,
     create_backup,
     get_latest_backup,
@@ -196,7 +194,6 @@ class TestListBackups:
 
         # Make old_file actually older
         import os
-        import time
 
         old_stat = os.stat(old_file)
         os.utime(old_file, (old_stat.st_atime - 1000, old_stat.st_mtime - 1000))

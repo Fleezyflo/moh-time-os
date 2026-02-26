@@ -10,17 +10,15 @@ Features:
 """
 
 import logging
+import sqlite3
 import threading
 import uuid
 from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta
-from enum import Enum
-from typing import Any, Optional
-
 from enum import StrEnum
-import sqlite3
+from typing import Any
 
 logger = logging.getLogger(__name__)
 

@@ -12,12 +12,12 @@ Expanded API coverage (~85%):
 import json
 import logging
 import socket
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from .base import BaseCollector
-import sqlite3
 
 logger = logging.getLogger(__name__)
 

@@ -9,7 +9,6 @@ import json
 import logging
 import sqlite3
 from datetime import datetime
-from typing import Optional
 
 from lib.store import get_connection
 

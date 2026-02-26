@@ -9,11 +9,11 @@ Expanded API coverage (~90%):
 
 import json
 import logging
+import sqlite3
 from datetime import date, datetime
 from typing import Any
 
 from .base import BaseCollector
-import sqlite3
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +63,9 @@ class AsanaCollector(BaseCollector):
             for proj in projects:
                 proj_gid = proj.get("gid")
                 proj_name = proj.get("name", "Unknown")
+
+                if not proj_gid:
+                    continue
 
                 try:
                     # Collect ALL tasks (not just incomplete)

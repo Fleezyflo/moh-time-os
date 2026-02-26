@@ -12,9 +12,7 @@ Per MOH_TIME_OS_SCHEDULING.md spec:
 import json
 import logging
 from dataclasses import dataclass, field
-from datetime import date, datetime, time, timedelta, timezone
-
-from datetime import UTC
+from datetime import UTC, date, datetime, time, timedelta
 
 from .config_store import get, get_all_lanes, get_lane
 

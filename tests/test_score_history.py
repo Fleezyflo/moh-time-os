@@ -8,7 +8,6 @@ Tests:
 - trend calculation works correctly
 """
 
-import json
 import sqlite3
 import tempfile
 from datetime import datetime, timedelta
@@ -19,10 +18,7 @@ import pytest
 from lib.intelligence.scorecard import (
     get_score_history_summary,
     get_score_trend,
-    record_all_scores,
     record_score,
-    score_all_clients,
-    score_client,
 )
 from lib.migrations.v30_score_history import run_migration, verify_migration
 

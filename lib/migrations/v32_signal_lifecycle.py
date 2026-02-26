@@ -20,7 +20,6 @@ Run: python -m lib.migrations.v32_signal_lifecycle
 import logging
 import sqlite3
 from pathlib import Path
-from typing import Optional
 
 from lib import paths
 

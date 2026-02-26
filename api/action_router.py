@@ -11,14 +11,12 @@ Endpoints:
 - POST /api/actions/batch — batch propose multiple actions
 """
 
-import json
 import logging
-from typing import Any, Optional
-
-from fastapi import APIRouter, Body, HTTPException
-from pydantic import BaseModel, Field
-
 import sqlite3
+from typing import Any
+
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel, Field
 
 from lib.actions import (
     ActionFramework,

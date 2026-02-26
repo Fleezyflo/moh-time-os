@@ -12,8 +12,7 @@ import logging
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
-from statistics import mean, stdev
-from typing import Dict, List, Literal, Optional
+from statistics import mean
 
 logger = logging.getLogger(__name__)
 

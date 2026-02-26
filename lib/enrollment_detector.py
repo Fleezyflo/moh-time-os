@@ -10,11 +10,11 @@ Signals:
 
 import logging
 import os
+import sqlite3
 from collections import Counter
 from datetime import datetime, timedelta
 
 from .state_store import get_store
-import sqlite3
 
 logger = logging.getLogger(__name__)
 

@@ -11,9 +11,8 @@ Reference: data/signal_catalog_20260214.md
 """
 
 import threading
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Optional
 
 # =============================================================================
 # ERROR TRACKING - Signal evaluation errors are tracked, not swallowed
@@ -794,7 +793,6 @@ def export_signals_for_review(output_path: str = None, quick: bool = True) -> st
     """
     import csv
     import io
-    from datetime import datetime
 
     # Detect signals
     result = detect_all_signals(quick=quick)

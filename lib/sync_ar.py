@@ -1,12 +1,12 @@
 """Sync AR data from Xero and update client tiers."""
 
 import logging
+import sqlite3
 from collections import defaultdict
 from datetime import date, datetime
 from typing import Any
 
 from .entities import find_client, list_clients, update_client
-import sqlite3
 
 logger = logging.getLogger(__name__)
 

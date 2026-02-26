@@ -12,12 +12,11 @@ Instead of regenerating everything from scratch, this:
 
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+import sqlite3
+from datetime import UTC, datetime, timedelta
 
 from lib import paths
-from datetime import UTC
 from lib.state_tracker import filter_new_items, mark_surfaced
-import sqlite3
 
 logger = logging.getLogger(__name__)
 

@@ -10,8 +10,6 @@ Tests the full path:
 
 import os
 
-import pytest
-
 from .conftest import compare_golden
 
 # Set update mode from env

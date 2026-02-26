@@ -8,6 +8,7 @@ Every collector MUST:
 
 import json
 import logging
+import sqlite3
 import subprocess
 from abc import ABC, abstractmethod
 from datetime import datetime
@@ -15,13 +16,12 @@ from typing import Any
 
 from ..state_store import StateStore, get_store
 from .resilience import CircuitBreaker, RetryConfig, retry_with_backoff
-import sqlite3
 
 
 class BaseCollector(ABC):
     """Base class for all data collectors."""
 
-    def __init__(self, config: dict, store: StateStore = None):
+    def __init__(self, config: dict, store: StateStore | None = None):
         self.config = config
         self.store = store or get_store()
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -213,7 +213,7 @@ class BaseCollector(ABC):
             if not cmd or not shutil.which(cmd[0]):
                 raise Exception(f"Command not found: {cmd[0] if cmd else 'empty'}")
 
-            result = subprocess.run(  # noqa: S603 - shell=False is secure
+            result = subprocess.run(
                 cmd,
                 shell=False,  # SECURE: no shell interpretation
                 capture_output=True,

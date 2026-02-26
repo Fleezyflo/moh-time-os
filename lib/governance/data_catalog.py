@@ -4,9 +4,7 @@ Data Catalog for MOH Time OS.
 Provides queryable interface to classified data and compliance reporting.
 """
 
-import json
 import logging
-from typing import Optional
 
 from lib.governance.data_classification import DataSensitivity, TableClassification
 

@@ -17,7 +17,6 @@ from pathlib import Path
 import pytest
 
 from lib.db_opt.indexes import (
-    IndexReport,
     drop_index,
     ensure_indexes,
     get_missing_indexes,

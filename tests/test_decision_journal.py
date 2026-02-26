@@ -4,12 +4,9 @@ Tests for DecisionJournal — persistent decision logging and queries.
 Brief 22 (SM), Task SM-1.1
 """
 
-from datetime import datetime
-from pathlib import Path
-
 import pytest
 
-from lib.intelligence.decision_journal import Decision, DecisionJournal
+from lib.intelligence.decision_journal import DecisionJournal
 
 
 @pytest.fixture

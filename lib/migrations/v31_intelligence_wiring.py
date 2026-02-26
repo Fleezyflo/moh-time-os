@@ -14,7 +14,6 @@ Run: python -m lib.migrations.v31_intelligence_wiring
 import logging
 import sqlite3
 from pathlib import Path
-from typing import Optional
 
 from lib import paths
 

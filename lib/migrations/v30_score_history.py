@@ -9,10 +9,9 @@ Run: python -m lib.migrations.v30_score_history
 
 import logging
 import sqlite3
-from datetime import datetime, timedelta
 from pathlib import Path
 
-from lib import db, paths
+from lib import paths
 
 logger = logging.getLogger(__name__)
 

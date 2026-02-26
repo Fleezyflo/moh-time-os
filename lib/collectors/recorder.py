@@ -11,12 +11,12 @@ Features:
 import hashlib
 import json
 import re
+import sqlite3
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
-import sqlite3
 
 CASSETTES_DIR = Path(__file__).parent.parent.parent / "tests" / "cassettes"
 

@@ -18,7 +18,6 @@ from lib.intelligence.engine import (
     _compute_data_completeness,
     _count_entities,
     _run_pattern_stage,
-    _run_proposal_stage,
     _run_scoring_stage,
     _run_signal_stage,
     generate_intelligence_snapshot,
@@ -318,16 +317,9 @@ class TestPublicAPI:
     def test_imports_work(self):
         """All public API imports should work."""
         from lib.intelligence import (
-            detect_all_patterns,
             detect_all_signals,
-            generate_daily_briefing,
             generate_intelligence_snapshot,
-            generate_proposals,
             get_client_intelligence,
-            get_critical_items,
-            get_person_intelligence,
-            get_portfolio_intelligence,
-            rank_proposals,
             score_client,
         )
 

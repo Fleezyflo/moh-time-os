@@ -6,10 +6,9 @@ Implements issue state machine and transitions.
 
 import json
 import sqlite3
+from enum import StrEnum
 from typing import Any
 from uuid import uuid4
-
-from enum import StrEnum
 
 from .time_utils import from_iso, now_iso, to_iso
 

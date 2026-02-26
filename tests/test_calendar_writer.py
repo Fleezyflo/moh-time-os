@@ -5,11 +5,7 @@ Tests CalendarWriter without calling real Calendar API.
 All Google API calls are mocked using unittest.mock.
 """
 
-import json
-from datetime import datetime, timedelta
-from unittest.mock import ANY, MagicMock, Mock, call, patch
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 from lib.integrations.calendar_writer import CalendarWriter, CalendarWriteResult
 

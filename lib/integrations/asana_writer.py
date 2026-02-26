@@ -5,15 +5,13 @@ Handles creating, updating, and commenting on Asana tasks via REST API.
 Uses httpx for HTTP calls (not the asana SDK for writes).
 """
 
-import json
 import logging
 import os
+import sqlite3
 import time
-from dataclasses import dataclass, field
-from typing import Any, Optional
+from dataclasses import dataclass
 
 import httpx
-import sqlite3
 
 logger = logging.getLogger(__name__)
 

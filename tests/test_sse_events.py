@@ -8,20 +8,16 @@ and error handling.
 import asyncio
 import json
 import logging
-from collections.abc import AsyncGenerator
 from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
-from fastapi.testclient import TestClient
 
 from api.sse_router import (
     Event,
     EventBus,
     _create_event,
     _heartbeat_generator,
-    get_event_bus,
-    sse_router,
 )
 
 logger = logging.getLogger(__name__)

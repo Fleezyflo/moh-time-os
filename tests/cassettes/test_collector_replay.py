@@ -7,14 +7,11 @@ Tests that collectors produce consistent output from recorded cassettes.
 import json
 from pathlib import Path
 
-import pytest
-
 from lib.collectors.recorder import (
     Cassette,
     CassetteEntry,
     RecordingSession,
     ReplaySession,
-    load_cassette,
     redact_secrets,
     save_cassette,
     validate_cassettes,

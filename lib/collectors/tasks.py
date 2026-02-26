@@ -4,11 +4,11 @@ REPLACES the broken Asana collector - uses real working commands.
 """
 
 import json
+import sqlite3
 from datetime import datetime
 from typing import Any
 
 from .base import BaseCollector
-import sqlite3
 
 
 class TasksCollector(BaseCollector):
@@ -108,7 +108,7 @@ class TasksCollector(BaseCollector):
         due = task.get("due")
         if due:
             # Format: 2024-01-15T00:00:00.000Z
-            return due[:10]  # Just the date part
+            return str(due)[:10]  # Just the date part
         return None
 
     def _compute_priority(self, task: dict) -> int:

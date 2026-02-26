@@ -5,13 +5,11 @@ Brief 18 (ID), Task ID-5.1 + ID-6.1
 """
 
 import sqlite3
-from pathlib import Path
 
 import pytest
 
 from lib.intelligence.pattern_trending import (
     PatternCycleSnapshot,
-    PatternTrendAnalysis,
     PatternTrendAnalyzer,
 )
 
@@ -154,7 +152,7 @@ class TestToDict:
         assert d["pattern_key"] == "d1"
         assert d["pattern_type"] == "overdue_cluster"
         assert "current_direction" in d
-        assert isinstance(d["avg_entity_count_last_5"], (int, float))
+        assert isinstance(d["avg_entity_count_last_5"], int | float)
         assert isinstance(d["avg_evidence_strength_last_5"], float)
 
 

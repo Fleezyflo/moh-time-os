@@ -22,15 +22,13 @@ Code rules enforced:
 """
 
 import logging
-from dataclasses import dataclass, field
-from enum import Enum
-from pathlib import Path
-from typing import Optional
-
-from enum import StrEnum
-from lib.intelligence.cost_to_serve import CostToServeEngine
-from lib.query_engine import QueryEngine, get_engine
 import sqlite3
+from dataclasses import dataclass, field
+from enum import StrEnum
+from pathlib import Path
+
+from lib.intelligence.cost_to_serve import CostToServeEngine
+from lib.query_engine import get_engine
 
 logger = logging.getLogger(__name__)
 

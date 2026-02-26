@@ -13,21 +13,16 @@ Domain definitions:
 """
 
 import logging
+import sqlite3
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Optional
-
-import sqlite3
 
 from lib.intelligence.correlation_confidence import (
     CorrelationConfidenceCalculator,
     CorrelationSignalEvidence,
 )
 from lib.intelligence.patterns import (
-    PATTERN_LIBRARY,
-    PatternSeverity,
-    PatternType,
     detect_all_patterns,
 )
 from lib.intelligence.signals import detect_all_signals

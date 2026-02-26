@@ -18,10 +18,9 @@ Enrolled project management per spec 4.2:
 import json
 import logging
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from lib import paths
-from datetime import UTC
 
 logger = logging.getLogger(__name__)
 

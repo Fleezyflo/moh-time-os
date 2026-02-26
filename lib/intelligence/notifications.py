@@ -18,7 +18,6 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Optional
 
 from lib.paths import db_path as get_db_path_from_lib
 

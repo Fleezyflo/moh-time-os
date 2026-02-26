@@ -2,11 +2,11 @@
 
 import logging
 import shutil
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 
 from .store import DB_PATH, checkpoint_wal, db_exists
-import sqlite3
 
 log = logging.getLogger("moh_time_os")
 

@@ -9,10 +9,10 @@ Brief 27 (DQ), Task DQ-1.1
 
 import logging
 import sqlite3
-from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 

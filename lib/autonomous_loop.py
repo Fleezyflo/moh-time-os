@@ -6,6 +6,7 @@ This is the MAIN WIRING - connects all components into one running system.
 import argparse
 import json
 import logging
+import sqlite3
 import sys
 from datetime import datetime
 from pathlib import Path
@@ -21,7 +22,6 @@ from .governance import get_governance
 from .notifier import NotificationEngine
 from .reasoner import ReasonerEngine
 from .state_store import get_store
-import sqlite3
 
 # Configure logging
 logging.basicConfig(

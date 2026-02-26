@@ -6,16 +6,15 @@ Endpoints:
 - POST /api/chat/interactive — handle interactive card button clicks
 """
 
-import json
 import logging
-from typing import Any, Optional
+import sqlite3
+from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from lib.integrations.chat_commands import SlashCommandHandler
 from lib.integrations.chat_interactive import ChatInteractive
-import sqlite3
 
 logger = logging.getLogger(__name__)
 

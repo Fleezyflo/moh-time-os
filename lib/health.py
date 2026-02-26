@@ -2,11 +2,10 @@
 
 import logging
 import os
+import sqlite3
 from datetime import datetime
 from enum import Enum
 from typing import Any
-
-import sqlite3
 
 from .store import (
     DB_PATH,

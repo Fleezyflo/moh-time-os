@@ -6,16 +6,10 @@ Brief 14 (PS), Task PS-1.1
 
 import time
 
-import pytest
-
 from lib.intelligence.performance_scale import (
-    CacheEntry,
-    CacheStats,
     IndexRecommendation,
     InMemoryCache,
-    PaginatedResult,
     PaginationParams,
-    PerformanceBaseline,
     PerformanceMonitor,
     QueryOptimizer,
     make_cache_key,

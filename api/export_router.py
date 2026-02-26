@@ -10,14 +10,13 @@ Provides endpoints for:
 """
 
 import logging
-from typing import Optional
+import sqlite3
 
 from fastapi import APIRouter, HTTPException, Query
 
 from api.response_models import DetailResponse
 from lib.governance.data_export import DataExporter, ExportFormat, ExportRequest
 from lib.paths import data_dir
-import sqlite3
 
 logger = logging.getLogger(__name__)
 

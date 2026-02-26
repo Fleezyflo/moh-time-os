@@ -8,9 +8,9 @@ CRITICAL: Does NOT go through AI. Direct API calls only.
 import json
 import logging
 import os
+import sqlite3
 import uuid
 from datetime import datetime
-import sqlite3
 
 logger = logging.getLogger(__name__)
 

@@ -8,8 +8,8 @@ Handles:
 """
 
 import json
-from datetime import datetime
 import sqlite3
+from datetime import datetime
 
 
 class NotificationHandler:

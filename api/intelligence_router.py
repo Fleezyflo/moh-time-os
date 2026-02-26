@@ -16,13 +16,12 @@ Usage in server.py:
 import logging
 import sqlite3
 from datetime import datetime
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from api.auth import require_auth
 from api.response_models import IntelligenceResponse
-from lib.cache import cache_invalidate, cached, get_cache
+from lib.cache import cache_invalidate, cached
 from lib.query_engine import QueryEngine
 
 logger = logging.getLogger(__name__)
@@ -751,7 +750,6 @@ def list_proposals(
             detect_all_signals,
             generate_proposals,
             get_top_proposals,
-            rank_proposals,
         )
 
         signals = detect_all_signals(quick=True)

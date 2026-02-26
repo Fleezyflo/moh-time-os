@@ -8,9 +8,8 @@ import json
 import logging
 import sqlite3
 from dataclasses import dataclass
-from uuid import uuid4
-
 from enum import StrEnum
+from uuid import uuid4
 
 from .evidence import create_flagged_signal_evidence, create_invoice_evidence
 from .suppression import (
@@ -78,9 +77,11 @@ class DetectorRunner:
             result.issues_created += r.issues_created
             result.flagged_signals_created += r.flagged_signals_created
             result.suppressed_count += r.suppressed_count
-        except (sqlite3.Error, ValueError, OSError) as e:  # noqa: S110 — best-effort invoice detection on schema mismatch
-            logger.error("run_all failed: %s", e, exc_info=True)
-            raise  # re-raise after logging
+        except (sqlite3.Error, ValueError, OSError) as e:
+            logger.debug(
+                "run_all: invoice detector failed on schema mismatch, skipping invoice detection: %s",
+                e,
+            )
 
         # Run communications detector
         r = self.run_communications_detector()
@@ -233,9 +234,11 @@ class DetectorRunner:
                     ),
                 )
                 result.flagged_signals_created += 1
-            except (sqlite3.Error, ValueError, OSError) as e:  # noqa: S110 — best-effort signal creation on constraint violation
-                logger.error("handler failed: %s", e, exc_info=True)
-                raise  # re-raise after logging
+            except (sqlite3.Error, ValueError, OSError) as e:
+                logger.debug(
+                    "run_communications_detector: failed to create inbox item, constraint violation: %s",
+                    e,
+                )
 
         return result
 

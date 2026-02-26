@@ -96,12 +96,16 @@ def enrich_with_llm(sender: str, subject: str, body: str) -> dict[str, Any]:
 
         # Parse JSON response
         if result_text.startswith("{"):
-            return json.loads(result_text)
+            result = json.loads(result_text)
+            if isinstance(result, dict):
+                return result
 
         # Try to extract JSON from response
         match = re.search(r"\{.*\}", result_text, re.DOTALL)
         if match:
-            return json.loads(match.group())
+            result = json.loads(match.group())
+            if isinstance(result, dict):
+                return result
 
         return {}
 
@@ -125,7 +129,7 @@ def enrich_from_heuristics(
 
     Extracts basic context without AI.
     """
-    enrichment = {
+    enrichment: dict[str, Any] = {
         "entities": [],
         "rationale": None,
         "suggested_actions": [],
@@ -282,16 +286,18 @@ def enrich_inbox_item(
 
     # Parse existing evidence with strict error handling
     evidence_raw = item_dict.get("evidence")
-    meta_trust = {"data_integrity": True, "errors": []}
+    meta_trust: dict[str, Any] = {"data_integrity": True, "errors": []}
     try:
-        evidence = json.loads(evidence_raw) if evidence_raw else {}
+        evidence: dict[str, Any] = json.loads(evidence_raw) if evidence_raw else {}
     except json.JSONDecodeError as e:
         logger.error(
             f"JSON parse error for inbox item {inbox_item_id} evidence: raw_length={len(evidence_raw) if evidence_raw else 0}"
         )
         evidence = {}
         meta_trust["data_integrity"] = False
-        meta_trust["errors"].append(f"evidence parse failed: {str(e)[:100]}")
+        errors = meta_trust.get("errors")
+        if isinstance(errors, list):
+            errors.append(f"evidence parse failed: {str(e)[:100]}")
         meta_trust["debug"] = {"evidence_raw_length": len(evidence_raw) if evidence_raw else 0}
 
     # Merge enrichment into payload

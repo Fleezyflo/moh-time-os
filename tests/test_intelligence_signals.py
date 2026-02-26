@@ -8,21 +8,16 @@ Covers:
 - Full database signal scan
 """
 
-from pathlib import Path
-
 import pytest
 
 from lib.intelligence.signals import (
     SIGNAL_CATALOG,
     SignalCategory,
-    SignalDefinition,
-    SignalSeverity,
     _evaluate_anomaly,
     _evaluate_compound,
     _evaluate_threshold,
     _evaluate_trend,
     acknowledge_signal,
-    clear_all_signal_state,
     detect_all_client_signals,
     detect_all_signals,
     detect_signals_for_entity,
@@ -33,8 +28,6 @@ from lib.intelligence.signals import (
     get_signal_summary,
     get_signals_by_category,
     get_signals_by_entity_type,
-    get_signals_by_severity,
-    # State management
     update_signal_state,
     validate_signal_catalog,
 )

@@ -13,19 +13,16 @@ Reference: data/scoring_model_20260213.md
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
 
 from lib.intelligence.scoring import (
     CLIENT_DIMENSIONS,
     PERSON_DIMENSIONS,
     PORTFOLIO_DIMENSIONS,
     PROJECT_DIMENSIONS,
-    EntityScore,
     EntityType,
     NormMethod,
     ScoringDimension,
     classify_score,
-    normalize_percentile,
     score_dimension,
 )
 from lib.query_engine import QueryEngine
