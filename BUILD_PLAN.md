@@ -861,25 +861,88 @@ except Exception:
 
 ### Phase 0: Design System Foundation
 **Size:** 5 new files, 5 edited files. ~200 lines new, ~50 lines deleted.
-**Dependencies:** Phase -1 (Backend Cleanup).
+**Dependencies:** Phase -1 (Backend Cleanup) ✅ COMPLETE.
 
-| Step | What | Files |
-|------|------|-------|
-| 0.1 | Update neutral token values in tokens.css (5 values) | `design/system/tokens.css` |
-| 0.2 | Add 3 new tokens (`--grey-mid`, `--grey-muted`, `--grey-subtle`) | `design/system/tokens.css` |
-| 0.3 | Update accent color + fix hardcoded accent refs (lines 25, 26, 98, 512) | `design/system/tokens.css` |
-| 0.4 | Remove `:root` override block in index.css (lines 46-52) | `src/index.css` |
-| 0.5 | Create PageLayout component | `src/components/layout/PageLayout.tsx` (new) |
-| 0.6 | Create SummaryGrid component | `src/components/layout/SummaryGrid.tsx` (new) |
-| 0.7 | Create MetricCard component | `src/components/layout/MetricCard.tsx` (new) |
-| 0.8 | Extract issueStyles.ts, update IssueCard + IssueDrawer imports | `src/lib/issueStyles.ts` (new), 2 existing files |
-| 0.9 | Delete 6 inline component duplicates, add shared imports | `Signals.tsx`, `Patterns.tsx`, `Proposals.tsx` |
+#### Step 0.1: Update neutral token values in `time-os-ui/src/design/system/tokens.css`
+
+Change these 5 values to match Tailwind slate equivalents:
+
+| Token | Current | Target |
+|-------|---------|--------|
+| `--black` | `#000000` | `#0f172a` (slate-900) |
+| `--grey-dim` | `#1a1a1a` | `#1e293b` (slate-800) |
+| `--grey` | `#333333` | `#334155` (slate-700) |
+| `--grey-light` | `#555555` | `#94a3b8` (slate-400) |
+| `--white` | `#ffffff` | `#f1f5f9` (slate-200) |
+
+#### Step 0.2: Add 3 new tokens in `time-os-ui/src/design/system/tokens.css`
+
+Add after `--grey-light` in the Neutral Colors section:
+
+```css
+--grey-mid: #475569;    /* slate-600 */
+--grey-muted: #64748b;  /* slate-500 */
+--grey-subtle: #cbd5e1; /* slate-300 */
+```
+
+#### Step 0.3: Update accent color in `time-os-ui/src/design/system/tokens.css`
+
+Decision D1 resolved: accent = `#3b82f6` (blue).
+
+| Line | Current | Target |
+|------|---------|--------|
+| `--accent` | `#ff3d00` | `#3b82f6` |
+| `--accent-dim` | `#ff3d0066` | `#3b82f666` |
+| `--border-active` (line ~98) | `1px solid #ff3d00` | `1px solid #3b82f6` |
+| `.btn--primary:hover` (line ~512) | `#ff5522` | `#2563eb` |
+
+#### Step 0.4: Remove `:root` override block
+
+File: `time-os-ui/src/index.css` — find and remove any `:root` block that overrides tokens.css values (lines ~46-52). Verify line numbers before deleting.
+
+#### Step 0.5: Create PageLayout component
+
+File: `time-os-ui/src/components/layout/PageLayout.tsx` (new)
+
+Reusable page wrapper: header area (title + optional actions slot), consistent max-width, padding, spacing. All pages will use this.
+
+#### Step 0.6: Create SummaryGrid component
+
+File: `time-os-ui/src/components/layout/SummaryGrid.tsx` (new)
+
+2-3 column responsive grid for top-level metrics. Takes children (MetricCard instances).
+
+#### Step 0.7: Create MetricCard component
+
+File: `time-os-ui/src/components/layout/MetricCard.tsx` (new)
+
+Metric display: label + value + optional trend indicator. Uses `.metric-card` CSS classes from tokens.css.
+
+#### Step 0.8: Extract shared issue styles
+
+Create: `time-os-ui/src/lib/issueStyles.ts` (new)
+
+Extract shared card styling (colors, status mappings, severity indicators) used by both:
+- `time-os-ui/src/components/IssueCard.tsx`
+- `time-os-ui/src/components/IssueDrawer.tsx`
+
+Update both files to import from `issueStyles.ts` instead of defining inline.
+
+#### Step 0.9: Delete inline duplicates
+
+Grep for duplicated card/badge/metric styling across these 3 files:
+- `time-os-ui/src/intelligence/pages/Signals.tsx`
+- `time-os-ui/src/intelligence/pages/Patterns.tsx`
+- `time-os-ui/src/intelligence/pages/Proposals.tsx`
+
+Replace with imports from the shared components created in 0.5-0.8.
 
 **Verification:**
-- `tsc --noEmit` passes
+- `npx tsc --noEmit` passes (Mac only — do NOT run from sandbox)
 - Open Inbox, Issues, Clients, Command Center, Signals in browser — no visual breakage
 - DevTools: inspect `--black` → should show `#0f172a`, `--accent` → should show `#3b82f6`
 - Signals/Patterns/Proposals pages still render cards correctly after deduplication
+- `grep -r "ff3d00" time-os-ui/src/` returns 0 hits (old accent fully replaced)
 
 ---
 
