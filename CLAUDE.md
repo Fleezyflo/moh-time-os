@@ -44,6 +44,8 @@ The sandbox (Linux x86) and Molham's Mac (Darwin ARM) share the same repo folder
 
 **NEVER format files from the sandbox.** The sandbox ruff version (0.15.2) differs from pre-commit's pinned version (0.15.1). Formatting from the sandbox produces different output, causing pre-commit stash conflicts that loop infinitely. Always give Molham `uv run pre-commit run ruff-format --files <paths>` to format on his Mac.
 
+**Prettier for new .tsx/.ts files.** CI runs `prettier --check` on all `src/**/*.{ts,tsx,css}`. The sandbox cannot run prettier (no node_modules). When creating new `.tsx`/`.ts` files in `time-os-ui/`, always include a prettier step in the commit commands for Molham: `cd time-os-ui && pnpm exec prettier --write <new files> && cd ..` BEFORE `git add`. Session 5 learned this — PR #30 failed CI on new `PageLayout.tsx` and `MetricCard.tsx` until prettier was applied.
+
 **Molham runs on his Mac:** commits, pushes, dev servers, installs. When work is done, give him a single copy-paste block.
 
 ## Git Rules
@@ -74,6 +76,7 @@ The sandbox (Linux x86) and Molham's Mac (Darwin ARM) share the same repo folder
 **Never add `nosec`, `noqa`, or `# type: ignore` to suppress a warning.** Fix the root cause instead.
 
 If a linter, type checker, or security scanner flags something:
+
 1. Understand what the tool is telling you
 2. Fix the actual issue (wrong hash, missing timeout, unsafe import, bad type)
 3. If the tool is wrong (false positive on a specific line), explain WHY in a comment and get Molham's approval before adding any suppression
@@ -83,6 +86,7 @@ This rule exists because Session 2 added 10 bypass comments that all turned out 
 ## Verification Requirements
 
 Before giving Molham a commit command, verify ALL of the following locally:
+
 1. `ruff check` — zero lint errors on changed files
 2. `ruff format --check` — zero format issues on changed files
 3. `bandit -r` — zero security findings on changed files
@@ -91,6 +95,7 @@ Before giving Molham a commit command, verify ALL of the following locally:
 6. Stage ALL modified files before committing (prevents ruff-format stash conflicts)
 
 Before giving Molham a push command, verify the full 7-gate pre-push will pass:
+
 1. ruff lint (full scope)
 2. ruff format (full scope)
 3. fast tests

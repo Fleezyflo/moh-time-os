@@ -1,3 +1,6 @@
+// Layout exports
+export { PageLayout, SummaryGrid, MetricCard } from './layout';
+
 // Auth exports
 export { AuthProvider, useAuth, ProtectedRoute } from './auth';
 

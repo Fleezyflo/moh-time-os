@@ -55,7 +55,7 @@ Read BUILD_PLAN.md "Phase 0: Design System Foundation" section for the full spec
 
 - **Repo:** `moh-time-os` on branch `main`
 - **UI root:** `time-os-ui/src/`
-- **Design tokens:** `time-os-ui/src/design/system/tokens.css`
+- **Design tokens:** `design/system/tokens.css`
 - **Accent color (D1):** `#3b82f6` (blue)
 - **Tertiary text (D2):** `slate-400` / `#94a3b8`
 - **Do NOT run:** `uv sync`, `pnpm install`, `ruff format`, `npx`, or dev servers from the sandbox

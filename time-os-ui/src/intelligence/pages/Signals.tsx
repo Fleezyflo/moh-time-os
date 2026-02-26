@@ -7,53 +7,7 @@
 import { useSignals } from '../hooks';
 import { useSignalFilters } from '../lib';
 import { ErrorState, NoSignals, NoResults } from '../../components';
-import { SkeletonSignalsPage } from '../components';
-import type { Signal } from '../api';
-
-function SeverityBadge({ severity }: { severity: string }) {
-  const colors: Record<string, string> = {
-    critical: 'bg-red-500/20 text-red-400',
-    warning: 'bg-amber-500/20 text-amber-400',
-    watch: 'bg-slate-500/20 text-slate-400',
-  };
-
-  return (
-    <span className={`px-2 py-0.5 rounded text-xs font-medium ${colors[severity] || colors.watch}`}>
-      {severity}
-    </span>
-  );
-}
-
-function SignalCard({ signal }: { signal: Signal }) {
-  return (
-    <div
-      className={`rounded-lg p-4 border ${
-        signal.severity === 'critical'
-          ? 'bg-red-500/5 border-red-500/30'
-          : signal.severity === 'warning'
-            ? 'bg-amber-500/5 border-amber-500/30'
-            : 'bg-slate-800 border-slate-700'
-      }`}
-    >
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            <SeverityBadge severity={signal.severity} />
-            <span className="text-sm text-slate-500">{signal.entity_type}</span>
-          </div>
-          <div className="font-medium mt-2">{signal.name}</div>
-          <div className="text-sm text-slate-400 mt-1">
-            {signal.entity_name || signal.entity_id}
-          </div>
-        </div>
-      </div>
-      <div className="text-sm text-slate-500 mt-3">{signal.evidence}</div>
-      <div className="text-sm text-slate-400 mt-2 pt-2 border-t border-slate-700">
-        → {signal.implied_action}
-      </div>
-    </div>
-  );
-}
+import { SkeletonSignalsPage, SignalCard } from '../components';
 
 export default function Signals() {
   const { severity, entityType, setSeverity, setEntityType, resetFilters } = useSignalFilters();

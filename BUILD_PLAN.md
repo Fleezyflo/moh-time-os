@@ -863,7 +863,7 @@ except Exception:
 **Size:** 5 new files, 5 edited files. ~200 lines new, ~50 lines deleted.
 **Dependencies:** Phase -1 (Backend Cleanup) ✅ COMPLETE.
 
-#### Step 0.1: Update neutral token values in `time-os-ui/src/design/system/tokens.css`
+#### Step 0.1: Update neutral token values in `design/system/tokens.css`
 
 Change these 5 values to match Tailwind slate equivalents:
 
@@ -875,7 +875,7 @@ Change these 5 values to match Tailwind slate equivalents:
 | `--grey-light` | `#555555` | `#94a3b8` (slate-400) |
 | `--white` | `#ffffff` | `#f1f5f9` (slate-200) |
 
-#### Step 0.2: Add 3 new tokens in `time-os-ui/src/design/system/tokens.css`
+#### Step 0.2: Add 3 new tokens in `design/system/tokens.css`
 
 Add after `--grey-light` in the Neutral Colors section:
 
@@ -885,7 +885,7 @@ Add after `--grey-light` in the Neutral Colors section:
 --grey-subtle: #cbd5e1; /* slate-300 */
 ```
 
-#### Step 0.3: Update accent color in `time-os-ui/src/design/system/tokens.css`
+#### Step 0.3: Update accent color in `design/system/tokens.css`
 
 Decision D1 resolved: accent = `#3b82f6` (blue).
 

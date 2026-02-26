@@ -2,8 +2,17 @@
 import { useState, useEffect, useRef } from 'react';
 import type { Issue } from '../types/api';
 import type { IssueState } from '../lib/api';
-import { priorityLabel } from '../lib/priority';
 import { useToast } from './Toast';
+import {
+  stateStyles,
+  defaultStateStyle,
+  getTitle,
+  getType,
+  getPriority,
+  getCreatedAt,
+  getLastActivity,
+  getPriorityInfo,
+} from '../lib/issueStyles';
 
 interface IssueDrawerProps {
   issue: Issue | null;
@@ -12,89 +21,6 @@ interface IssueDrawerProps {
   onResolve?: () => Promise<void>;
   onAddNote?: (text: string) => Promise<void>;
   onChangeState?: (newState: IssueState) => Promise<void>;
-}
-
-const stateStyles: Record<string, { icon: string; color: string; bg: string; label: string }> = {
-  // v29 states
-  detected: { icon: '◎', color: 'text-blue-300', bg: 'bg-blue-900/20', label: 'Detected' },
-  surfaced: { icon: '○', color: 'text-blue-400', bg: 'bg-blue-900/30', label: 'Surfaced' },
-  snoozed: { icon: '◷', color: 'text-amber-400', bg: 'bg-amber-900/30', label: 'Snoozed' },
-  acknowledged: {
-    icon: '◉',
-    color: 'text-purple-400',
-    bg: 'bg-purple-900/30',
-    label: 'Acknowledged',
-  },
-  addressing: { icon: '⊕', color: 'text-cyan-400', bg: 'bg-cyan-900/30', label: 'Addressing' },
-  awaiting_resolution: {
-    icon: '◷',
-    color: 'text-amber-400',
-    bg: 'bg-amber-900/30',
-    label: 'Awaiting Resolution',
-  },
-  regression_watch: {
-    icon: '◎',
-    color: 'text-yellow-400',
-    bg: 'bg-yellow-900/30',
-    label: 'Regression Watch',
-  },
-  regressed: { icon: '⊘', color: 'text-red-400', bg: 'bg-red-900/30', label: 'Regressed' },
-  closed: { icon: '✓', color: 'text-green-400', bg: 'bg-green-900/30', label: 'Closed' },
-  // Legacy states
-  open: { icon: '○', color: 'text-blue-400', bg: 'bg-blue-900/30', label: 'Open' },
-  monitoring: { icon: '◉', color: 'text-purple-400', bg: 'bg-purple-900/30', label: 'Monitoring' },
-  awaiting: { icon: '◷', color: 'text-amber-400', bg: 'bg-amber-900/30', label: 'Awaiting' },
-  blocked: { icon: '⊘', color: 'text-red-400', bg: 'bg-red-900/30', label: 'Blocked' },
-  resolved: { icon: '✓', color: 'text-green-400', bg: 'bg-green-900/30', label: 'Resolved' },
-};
-
-const priorityColors: Record<string, string> = {
-  critical: 'text-red-400',
-  high: 'text-orange-400',
-  medium: 'text-amber-400',
-  low: 'text-slate-400',
-  info: 'text-slate-500',
-};
-
-// Convert v29 severity to priority number
-const severityToPriority = (severity: string | undefined): number => {
-  switch (severity) {
-    case 'critical':
-      return 90;
-    case 'high':
-      return 70;
-    case 'medium':
-      return 50;
-    case 'low':
-      return 30;
-    case 'info':
-      return 10;
-    default:
-      return 50;
-  }
-};
-
-// Get issue title (v29: title, legacy: headline)
-const getTitle = (issue: Issue): string => issue.title || issue.headline || '';
-
-// Get issue type (v29: type, legacy: issue_type - not in Issue type but may exist)
-const getType = (issue: Issue): string => issue.type || '';
-
-// Get priority (v29: severity→number, legacy: priority)
-const getPriority = (issue: Issue): number => issue.priority ?? severityToPriority(issue.severity);
-
-// Get created at (v29: created_at, legacy: opened_at - not in Issue type)
-const getCreatedAt = (issue: Issue): string => issue.created_at || '';
-
-// Get last activity (v29: updated_at, legacy: last_activity_at)
-const getLastActivity = (issue: Issue): string => issue.updated_at || issue.last_activity_at || '';
-
-function getPriorityInfo(priority: number): { label: string; color: string } {
-  const label = priorityLabel(priority);
-  return {
-    label: label.charAt(0).toUpperCase() + label.slice(1),
-    color: priorityColors[label] || priorityColors.medium,
-  };
 }
 
 export function IssueDrawer({
@@ -169,7 +95,7 @@ export function IssueDrawer({
 
   if (!open || !issue) return null;
 
-  const stateStyle = stateStyles[issue.state] || stateStyles.open;
+  const stateStyle = stateStyles[issue.state] || defaultStateStyle;
   const priorityInfo = getPriorityInfo(getPriority(issue));
 
   const handleResolve = async () => {

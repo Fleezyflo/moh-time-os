@@ -2,11 +2,11 @@
 
 ## Current State
 
-- **Current phase:** Phase -1 COMPLETE (merged via PR #28). Phase 0 next.
-- **Current track:** T0 DONE → T1 (Design System & Foundation)
-- **Blocked by:** Nothing. Phase 0 is unblocked.
+- **Current phase:** Phase 0 COMPLETE (PR #30 — all CI green, awaiting merge). Phase 1 next.
+- **Current track:** T1 (Design System & Foundation)
+- **Blocked by:** Nothing. Merge PR #30, then Phase 1 is unblocked.
 - **D1/D2:** Resolved. Blue `#3b82f6`, slate-400 at 5.1:1.
-- **Next session:** Type A build session — Phase 0 (Design System Foundation). Update token values in `design/system/tokens.css` per BUILD_PLAN.md §0.1-0.3. Create `PageLayout.tsx`, `SummaryGrid.tsx`, `MetricCard.tsx` per §0.5-0.7. Extract `issueStyles.ts` per §0.8. Delete inline duplicates per §0.9. Run `npx tsc --noEmit` on Mac to verify. See BUILD_PLAN.md lines 848-865.
+- **Next session:** Type A build — Phase 1 (Slate Migration). Replace 396 hardcoded `slate-*` Tailwind classes across 51 files with `var(--token)` equivalents. See BUILD_PLAN.md §Phase 1. Batch by prefix: `bg-slate-*` (140), `text-slate-*` (261), `border-slate-*` (75). Verify per batch: `tsc --noEmit` + visual check.
 
 ## Session History
 
@@ -161,3 +161,51 @@
   4. Protected file changes only take effect after blessing in the enforcement repo
   5. CI `pnpm install` needed in Python Quality job for sync-ui-types hook
 - **Next session:** Type A build — Phase 0 (Design System Foundation)
+
+### Session 5 (Phase 0 — Design System Foundation) — 2026-02-27
+
+- **Type:** A (Build)
+- **Phase:** Phase 0 (T1 — Design System & Foundation)
+- **Work done:**
+  - **Steps 0.1-0.3 — Token updates** (`design/system/tokens.css`):
+    - Updated 5 neutral tokens to slate equivalents: `--black` → `#0f172a`, `--white` → `#f1f5f9`, `--grey` → `#334155`, `--grey-light` → `#94a3b8`, `--grey-dim` → `#1e293b`
+    - Added 3 new tokens: `--grey-mid` (`#475569`), `--grey-muted` (`#64748b`), `--grey-subtle` (`#cbd5e1`)
+    - Updated accent: `--accent` → `#3b82f6`, `--accent-dim` → `#3b82f666`, `--border-active` → `#3b82f6`, `.btn--primary:hover` → `#2563eb`
+    - Updated hardcoded border colors: `--border` → `#334155`, `--border-hover` → `#94a3b8`
+  - **Step 0.4** — Removed orphan `:root` override block from `time-os-ui/src/index.css` (lines 46-52). Verified no references to removed vars.
+  - **Steps 0.5-0.7 — Layout components** (new `components/layout/` directory):
+    - `PageLayout.tsx` — page wrapper with title, subtitle, actions slot, consistent max-width/padding
+    - `SummaryGrid.tsx` — responsive 2-4 column grid for MetricCard instances
+    - `MetricCard.tsx` — label + value + trend + severity coloring, uses `.card` + `.metric-card` CSS from tokens.css
+    - `layout/index.ts` — barrel export
+    - Added `PageLayout`, `SummaryGrid`, `MetricCard` exports to `components/index.ts`
+  - **Step 0.8 — issueStyles extraction** (`lib/issueStyles.ts`, new):
+    - Extracted `stateStyles`, `priorityColors`, `severityToPriority`, `getTitle`, `getType`, `getPriority`, `getCreatedAt`, `getLastActivity`, `getPriorityInfo` from IssueCard.tsx and IssueDrawer.tsx
+    - Both components updated to import from `issueStyles.ts` — zero inline duplication remaining
+  - **Step 0.9 — Page dedup** (Signals.tsx, Patterns.tsx, Proposals.tsx):
+    - Removed inline `SeverityBadge`, `TypeBadge`, `UrgencyBadge`, `SignalCard`, `PatternCard`, `ProposalCard` from page files
+    - Pages now import from `intelligence/components/` (which already had proper versions with expand/collapse, EntityLink, EvidenceList)
+    - Net: -344 lines across 3 pages
+  - **Doc fixes** — Corrected `tokens.css` path from `time-os-ui/src/design/system/tokens.css` to `design/system/tokens.css` in BUILD_PLAN.md (3 locations) and HANDOFF.md (1 location)
+- **Files changed:** 10 modified, 5 new files. +46/-390 lines (net -344).
+- **Verification completed:**
+  - `grep -r "ff3d00" time-os-ui/src/` → 0 hits (old accent fully removed)
+  - `grep -r "#000000" design/system/tokens.css` → 0 hits (old black removed)
+  - `grep -r "ff5522" *.css` → 0 hits (old hover removed)
+  - `--accent` shows `#3b82f6`, `--black` shows `#0f172a` in tokens.css
+  - No inline `stateStyles`, `priorityColors`, `SeverityBadge` in page/component files
+  - No references to removed `:root` vars (`--bg-primary`, `--bg-secondary`, etc.)
+  - Zero remaining `time-os-ui/src/design/system/tokens.css` references in docs
+- **Verification completed (Mac):**
+  - `npx tsc --noEmit` — clean
+  - All 7 pre-push gates passed
+  - CI: 26/26 checks passed (after prettier fix — see lessons learned)
+- **PRs:** #30 — all CI checks green, ready to merge
+- **Commits:** `83d375a` on `feat/phase-0-design-system-foundation` (amended to fix prettier + commit msg casing)
+- **Discovered work:** None
+- **Lessons learned:**
+  1. `tokens.css` lives at `design/system/tokens.css` (repo root), not under `time-os-ui/src/`. BUILD_PLAN.md had incorrect paths — fixed in this session.
+  2. The `--border` and `--border-hover` tokens had hardcoded hex values matching old neutral tokens — these need updating alongside Step 0.1, not just the named tokens.
+  3. Intelligence pages had inline card/badge components that duplicated richer versions already in `intelligence/components/`. Step 0.9 dedup is really about wiring pages to existing shared components.
+  4. **New .tsx files must be prettier-formatted before commit.** CI runs `prettier --check` on `src/**/*.{ts,tsx,css}`. Sandbox can't run prettier. Always include `cd time-os-ui && pnpm exec prettier --write <new files> && cd ..` in commit commands for new UI files. Added to CLAUDE.md.
+  5. Conventional commit description must start with lowercase (`feat: phase 0` not `feat: Phase 0`).

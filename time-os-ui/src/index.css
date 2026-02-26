@@ -43,14 +43,6 @@
 }
 
 /* Base styles */
-:root {
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --text-primary: #e2e8f0;
-  --text-secondary: #94a3b8;
-  --accent: #3b82f6;
-}
-
 body {
   @apply bg-[var(--black)] text-[var(--white)] antialiased;
   font-family: var(--font-primary);

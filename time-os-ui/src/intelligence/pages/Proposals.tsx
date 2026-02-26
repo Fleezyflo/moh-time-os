@@ -4,96 +4,10 @@
  * Shows all proposals sorted by priority with filtering.
  */
 
-import { useState } from 'react';
 import { useProposals } from '../hooks';
 import { useProposalFilters } from '../lib';
 import { ErrorState, NoProposals, NoResults } from '../../components';
-import { SkeletonProposalsPage } from '../components';
-import type { Proposal } from '../api';
-
-function UrgencyBadge({ urgency }: { urgency: string }) {
-  const colors: Record<string, string> = {
-    immediate: 'bg-red-500/20 text-red-400',
-    this_week: 'bg-amber-500/20 text-amber-400',
-    monitor: 'bg-slate-500/20 text-slate-400',
-  };
-
-  return (
-    <span
-      className={`px-2 py-0.5 rounded text-xs font-medium ${colors[urgency] || colors.monitor}`}
-    >
-      {urgency.replace('_', ' ')}
-    </span>
-  );
-}
-
-function ProposalCard({ proposal, rank }: { proposal: Proposal; rank: number }) {
-  const [expanded, setExpanded] = useState(false);
-
-  return (
-    <div
-      className={`rounded-lg border ${
-        proposal.urgency === 'immediate'
-          ? 'bg-red-500/5 border-red-500/30'
-          : proposal.urgency === 'this_week'
-            ? 'bg-amber-500/5 border-amber-500/30'
-            : 'bg-slate-800 border-slate-700'
-      }`}
-    >
-      <div className="p-4 cursor-pointer" onClick={() => setExpanded(!expanded)}>
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-slate-500 font-mono text-sm">#{rank}</span>
-              <UrgencyBadge urgency={proposal.urgency} />
-              <span className="text-xs text-slate-500">{proposal.type.replace('_', ' ')}</span>
-            </div>
-            <div className="font-medium">{proposal.headline}</div>
-            <div className="text-sm text-slate-400 mt-1">
-              {proposal.entity.type}: {proposal.entity.name}
-            </div>
-          </div>
-          <div className="text-right">
-            {proposal.priority_score && (
-              <div className="text-lg font-bold text-slate-300">
-                {Math.round(proposal.priority_score.raw_score)}
-              </div>
-            )}
-            <div className="text-xs text-slate-500">{expanded ? '▲' : '▼'}</div>
-          </div>
-        </div>
-      </div>
-
-      {expanded && (
-        <div className="px-4 pb-4 border-t border-slate-700 pt-4">
-          <div className="text-sm text-slate-300 mb-4">{proposal.summary}</div>
-
-          {/* Evidence */}
-          {proposal.evidence && proposal.evidence.length > 0 && (
-            <div className="mb-4">
-              <div className="text-xs text-slate-500 uppercase tracking-wide mb-2">Evidence</div>
-              <div className="space-y-2">
-                {proposal.evidence.map((e, i) => (
-                  <div key={i} className="text-sm bg-slate-800 rounded p-2">
-                    <span className="text-slate-400">{e.description}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Implied Action */}
-          <div className="bg-slate-700/50 rounded p-3">
-            <div className="text-xs text-slate-500 uppercase tracking-wide mb-1">
-              Recommended Action
-            </div>
-            <div className="text-sm">{proposal.implied_action}</div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
+import { SkeletonProposalsPage, ProposalCard } from '../components';
 
 export default function Proposals() {
   const { urgency, limit, setUrgency, setLimit, resetFilters } = useProposalFilters();
