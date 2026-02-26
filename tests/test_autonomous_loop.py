@@ -8,6 +8,7 @@ Covers:
 - Cycle tracking and metrics
 """
 
+import logging
 from unittest.mock import Mock, patch
 
 import pytest
@@ -317,7 +318,7 @@ class TestErrorHandling:
             try:
                 loop.run_cycle()
             except Exception:
-                pass
+                logging.debug("Expected error during test cycle")
 
             # Cycle count should have incremented
             assert loop.cycle_count > original_count

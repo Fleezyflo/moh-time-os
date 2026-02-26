@@ -101,7 +101,7 @@ skip-magic-trailing-comma = false
 # ==========================================
 [tool.bandit]
 exclude_dirs = ["tests", ".venv", "venv"]
-skips = ["B101"]  # B101: asserts in production — same as ruff S101, tests already excluded
+skips = ["B101", "B608"]  # B101: asserts — ruff S101 covers it. B608: hardcoded SQL — ruff S608 covers it.
 
 # ==========================================
 # MYPY - Type Checking

@@ -369,7 +369,7 @@ class TestHeartbeatGenerator:
             except StopAsyncIteration:
                 pass
             except Exception:
-                pass
+                logging.debug("Expected error during generator close")
 
             # Should have unsubscribed from event_bus
             # (This is implicitly tested by no error being raised)

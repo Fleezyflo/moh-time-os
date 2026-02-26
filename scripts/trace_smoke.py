@@ -13,6 +13,7 @@ from lib.observability.tracing import SpanContext, get_trace_id
 with SpanContext("test_span", attributes={"test": "smoke"}) as ctx:
     trace_id = get_trace_id()
     print(f"Trace ID: {trace_id}")
-    assert trace_id is not None, "Trace ID should be set"
+    if trace_id is None:
+        raise RuntimeError("Trace ID should be set")
 
 print("✅ Trace correlation working")

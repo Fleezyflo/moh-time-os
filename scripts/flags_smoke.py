@@ -14,5 +14,6 @@ print("Registered flags:")
 for d in REGISTRY.get_definitions():
     print(f"  {d['name']}: {d['current']} (default: {d['default']})")
 
-assert is_enabled("offline_mode"), "offline_mode should be True by default"
+if not is_enabled("offline_mode"):
+    raise RuntimeError("offline_mode should be True by default")
 print("✅ Feature flags working")

@@ -9,6 +9,7 @@ Covers:
 - WAL checkpoint integration
 """
 
+import logging
 from datetime import datetime, timedelta
 from pathlib import Path
 from unittest.mock import patch
@@ -110,7 +111,7 @@ class TestCreateBackup:
                     try:
                         create_backup(label="test-label")
                     except Exception:
-                        pass  # Error is ok for this mock test
+                        logging.debug("Expected error in mock backup test")
 
     @patch("lib.backup.DB_PATH")
     @patch("lib.backup.db_exists")
@@ -160,7 +161,7 @@ class TestCreateBackup:
                 try:
                     create_backup()
                 except Exception:
-                    pass  # Non-critical error
+                    logging.debug("Expected error in checkpoint failure test")
 
 
 # =============================================================================
