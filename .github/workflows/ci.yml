@@ -177,7 +177,7 @@ jobs:
         run: uv run pytest tests/golden/ -v --tb=short
 
       - name: Run UI Spec tests
-        run: TZ=UTC uv run pytest lib/ui_spec_v21/tests/ -v --tb=short
+        run: TZ=UTC uv run pytest tests/ui_spec_v21/ -v --tb=short
 
       - name: Run Property tests
         run: uv run pytest tests/property/ -v --tb=short
