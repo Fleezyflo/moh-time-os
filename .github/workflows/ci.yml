@@ -79,6 +79,10 @@ jobs:
       - name: Install pnpm
         run: npm install -g pnpm
 
+      - name: Install UI dependencies
+        run: pnpm install
+        working-directory: time-os-ui
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
