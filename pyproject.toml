@@ -161,4 +161,5 @@ dev = [
     "vulture>=2.0.0",
     "mutmut>=2.4.0",
     "semgrep~=1.151",
+    "types-PyYAML>=6.0",
 ]
