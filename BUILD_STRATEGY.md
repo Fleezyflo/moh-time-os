@@ -22,7 +22,7 @@ Wire every production-ready backend capability to a frontend view. The backend h
 
 | In scope | Out of scope |
 |----------|-------------|
-| Backend cleanup: SQL injection, duplicate routes, silent-swallow exceptions, dead router | 2 stub endpoints (capacity debt accrue/resolve — return 501) |
+| Backend cleanup: SQL injection, duplicate routes, silent-swallow exceptions, dead router ✅ DONE (PR #28) | 2 stub endpoints (capacity debt accrue/resolve — return 501) |
 | All server.py production-ready endpoints (~140 after cleanup) | wave2_router (16 dead endpoints — delete in Phase -1) |
 | All spec_router endpoints (61) | ~75 `except Exception` blocks that log+re-raise (narrow later, not Phase -1) |
 | All intelligence_router unique endpoints (18) | GDPR/SAR compliance endpoints (5 — legal review needed) |
@@ -378,6 +378,39 @@ Before wiring any endpoint to the frontend, the session must read the actual end
 ### Rule 8: No silent error handling
 
 Every hook must surface errors to the UI. No `catch (e) {}`. No `|| []` without a loading/error state that explains what happened. The `except Exception: pass` patterns in spec_router are bugs — don't replicate them in the frontend.
+
+### Rule 9: No inline suppressions — fix root causes
+
+Never add `nosec`, `noqa`, or `# type: ignore` to bypass a linter/scanner/type-checker. Every warning is a real issue until proven otherwise. Fix the root cause:
+
+| Warning | Wrong response | Right response |
+|---------|---------------|----------------|
+| B324/S324 (MD5) | `# nosec B324` | Replace with `hashlib.sha256` |
+| B108/S108 (/tmp) | `# nosec B108` | Use `tempfile.gettempdir()` |
+| B310/S310 (urlopen) | `# nosec B310` | Use `httpx.get/post` with timeout |
+| S113 (no timeout) | `# noqa: S113` | Add `timeout=30` parameter |
+| S110/S112 (silent except) | `# noqa: S110` | Add `logging.debug()` with context |
+| mypy type error | `# type: ignore` | Fix the type annotation or add proper guard |
+
+If a tool is genuinely wrong (confirmed false positive), explain why in a comment and get Molham's approval before suppressing.
+
+### Rule 10: Verify all gates before committing
+
+Before giving Molham a commit command:
+1. Run `ruff check` on changed files — must be clean
+2. Run `ruff format --check` on changed files — must be clean
+3. Stage ALL modified files (prevents stash conflicts when pre-commit runs ruff-format)
+
+Before giving Molham a push command:
+1. Confirm all 7 pre-push gates will pass: ruff lint, ruff format, fast tests, mypy (zero baseline), secrets scan, UI typecheck, guardrails
+2. If unsure about mypy, run `python scripts/check_mypy_baseline.py` first
+
+### Rule 11: Document as you go
+
+1. Update SESSION_LOG.md after EACH commit, not at session end
+2. If you discover a new coding rule, add it to CLAUDE.md immediately
+3. If you complete a phase, mark it in BUILD_PLAN.md immediately
+4. Never defer documentation to "later" — it doesn't happen
 
 ---
 

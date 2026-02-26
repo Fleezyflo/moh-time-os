@@ -2,11 +2,11 @@
 
 ## Current State
 
-- **Current phase:** Phase -1 DONE (code ready, not committed). Phase 0 next.
-- **Current track:** T0 → T1 (Design System & Foundation)
-- **Blocked by:** Protected files check + Molham commit/push for Phase -1 changes.
+- **Current phase:** Phase -1 COMPLETE (merged via PR #28). Phase 0 next.
+- **Current track:** T0 DONE → T1 (Design System & Foundation)
+- **Blocked by:** Nothing. Phase 0 is unblocked.
 - **D1/D2:** Resolved. Blue `#3b82f6`, slate-400 at 5.1:1.
-- **Next session:** After Phase -1 is committed → Type A build session — Phase 0 (Design System Foundation). Update token values in `design/system/tokens.css` per BUILD_PLAN.md §2.1. Create `PageLayout.tsx`, `SummaryGrid.tsx`, `MetricCard.tsx` per §2.2.
+- **Next session:** Type A build session — Phase 0 (Design System Foundation). Update token values in `design/system/tokens.css` per BUILD_PLAN.md §0.1-0.3. Create `PageLayout.tsx`, `SummaryGrid.tsx`, `MetricCard.tsx` per §0.5-0.7. Extract `issueStyles.ts` per §0.8. Delete inline duplicates per §0.9. Run `npx tsc --noEmit` on Mac to verify. See BUILD_PLAN.md lines 848-865.
 
 ## Session History
 
@@ -83,23 +83,49 @@
   - Zero duplicate routes (133 unique)
   - Zero f-string SQL injection
   - All files pass Python syntax check
-- **PRs needed:** Molham must commit and push. Suggested commit message below.
-- **Protected files check:** Still needed before pushing
+- **PRs:** Code committed locally. Continued in Session 2.
 
-**Commit command for Molham:**
-```bash
-git add -A && git commit -m "fix: Phase -1 backend cleanup — narrow exceptions, fix SQL injection, remove duplicates
+### Session 2 (Enforcement + Mypy + Root-cause fixes) — 2026-02-26
 
-- Narrow 593 except Exception blocks to (sqlite3.Error, ValueError[, OSError, KeyError])
-- Fix SQL injection in server.py get_team() — f-string interpolation → parameterized queries
-- Remove 6 duplicate route handlers in server.py (~120 lines)
-- Delete wave2_router.py (368 lines dead code, never registered)
-- Convert 54 silent-swallow except blocks to log + raise
+- **Type:** A (Build) + C (Plan Update)
+- **Work done:**
+  - **S110/S112/S113 enforcement** — removed per-file-ignores for collectors/cli/engine/scripts, fixed 22 violations across 9 files:
+    - S113 (missing timeout): Added `timeout=30` to all `requests.get/post` in `cli/xero_auth.py`, `cli/xero_auth_auto.py`
+    - S110/S112 (silent pass/continue): Added `logging.debug()` with context in `collectors/chat_direct.py`, `engine/discovery.py`, `engine/heartbeat_pulse.py` (8 blocks), `engine/xero_client.py`, `scripts/generate_baseline_snapshot.py` (5 blocks), `scripts/remove_orphans.py`, `scripts/schema_audit.py`
+    - Removed 4 dead noqa comments in `lib/commitment_truth/detector.py`, `lib/observability/logging.py`, `lib/observability/health.py`, `lib/governance/anonymizer.py`
+  - **Mypy zero-tolerance** — fixed all 53 type errors, emptied `.mypy-baseline.txt`:
+    - `api/spec_router.py`: WriteContext None guard, type annotations
+    - `lib/collectors/gmail.py`: typed `_raw_data: dict[str, Any] | None`
+    - `lib/collectors/orchestrator.py`: removed `type: ignore`, added `types-PyYAML` to dev deps
+    - `collectors/scheduled_collect.py`: fixed `collect_all` signature to `list[str] | None`
+    - `lib/ui_spec_v21/`: 19 fixes across endpoints.py, inbox_enricher.py, suppression.py, time_utils.py
+  - **Root-cause fixes (no bypasses)** — eliminated all 10 nosec/noqa comments added during the session:
+    - 5× MD5 → SHA256: `lib/cache/decorators.py`, `lib/intelligence/performance_scale.py`, `lib/commitment_truth/llm_extractor.py`, `lib/commitment_extractor.py`, `lib/promise_tracker.py`
+    - 3× `/tmp` → `tempfile.gettempdir()`: `lib/governance/data_export.py`, `lib/governance/subject_access.py`, `scripts/validate_intelligence.py`
+    - 2× `urllib.urlopen` → `httpx`: `scripts/verify_production.py`
+  - **UP038 fixes** — 4 isinstance tuple→union: `lib/intelligence/scoring.py`, `lib/sync_health.py`, `tests/golden/conftest.py`, `tests/test_pattern_trending.py`
+  - **Ruff format** — formatted 264 files across entire codebase
+- **Commits:** 3 commits on `feat/wire-intelligence-routes`:
+  - `e1c1960` — fix: enforce S110/S112/S113 everywhere, remove all bypasses
+  - `a80f32c` — fix: resolve all mypy errors and format entire codebase (264 files)
+  - (third) — fix: eliminate all nosec bypasses with root-cause fixes
+- **PR:** #28 created, auto-merge set, all CI gates passed, merged to main
+- **Process failures identified:** No SESSION_LOG updates during session, no BUILD_PLAN updates, no CLAUDE.md rule additions. This is being corrected now.
+- **Lessons learned:**
+  1. Never add `nosec`, `noqa`, or `type: ignore` — always fix the root cause
+  2. Stage ALL files before committing to avoid ruff-format stash conflicts
+  3. Run all 7 pre-push gates locally before giving Molham the push command
+  4. Update SESSION_LOG.md after each commit, not at the end of the session
+  5. When mypy errors shift line numbers, fix the errors — don't update the baseline
 
-Deletion rationale: wave2_router.py (368 lines) contained 16 stub endpoints
-that were never registered in server.py — completely unreachable dead code.
-6 duplicate route handlers (~120 lines) in server.py where FastAPI silently
-used the first-registered match, making the second definitions dead code.
+### Session 3 (Documentation update) — 2026-02-26
 
-large-change"
-```
+- **Type:** C (Plan Update)
+- **Work done:**
+  - Updated SESSION_LOG.md with full Session 2 record
+  - Updated BUILD_PLAN.md marking Phase -1 complete
+  - Updated CLAUDE.md with enforced coding standards learned in Session 2
+  - Updated BUILD_STRATEGY.md with mandatory verification checklist and no-bypass mandate
+  - Created HANDOFF.md with exact state for next session
+- **PRs:** Documentation changes ready for commit
+- **Next session:** Type A build — Phase 0 (Design System Foundation)

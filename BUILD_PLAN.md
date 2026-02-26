@@ -763,11 +763,14 @@ These need replacement with CSS custom property values or a chart color palette 
 
 ## §3 — Build Sequence
 
-### Phase -1: Backend Cleanup (BEFORE any frontend work)
+### Phase -1: Backend Cleanup ✅ COMPLETE
+
+**Status:** Merged via PR #28 (2026-02-26). All CI gates passed.
+**Scope exceeded plan:** In addition to the planned 4 items, Session 2 also enforced S110/S112/S113 everywhere, fixed all 53 mypy errors (zero baseline), replaced all MD5 with SHA256, replaced all hardcoded /tmp with tempfile.gettempdir(), replaced urllib with httpx, and formatted 264 files.
 
 **Rationale:** Building UI on a backend with 165 `except Exception` blocks, duplicate routes, SQL injection, and dead routers means every session fights the same bugs. Clean first.
 
-**Size:** 0 new files, ~10 edited files, ~15 deleted duplicate functions, ~500 lines changed.
+**Size:** 0 new files, ~10 edited files, ~15 deleted duplicate functions, ~500 lines changed. (Actual: 264 files touched across 3 commits.)
 **Dependencies:** None. This is the new starting point.
 **Protected files check:** Required — verify `protected-files.txt` in Fleezyflo/enforcement before any backend PR.
 
@@ -837,11 +840,22 @@ except Exception:
 | All tests pass | `python -m pytest tests/ -x` | Green |
 | Pre-commit passes | `pre-commit run --all-files` | All passed |
 
-**PR structure:** 3-4 PRs:
+**PR structure (planned):** 3-4 PRs. **(Actual: 3 commits in 1 PR)**
 1. SQL injection fix (1 line change, critical)
 2. Duplicate route removal (~120 lines deleted)
 3. Silent-swallow except blocks (~47 blocks in spec_router + server.py)
 4. wave2_router deletion (368 lines)
+
+**Completion evidence (PR #28, merged 2026-02-26):**
+- Zero `except Exception` in api/ and lib/ (593 narrowed to specific types)
+- Zero f-string SQL injection
+- Zero duplicate routes (133 unique)
+- Zero silent-swallow except blocks
+- wave2_router.py deleted
+- S110/S112/S113 enforced everywhere (22 violations fixed)
+- Zero mypy errors (.mypy-baseline.txt emptied)
+- Zero nosec/noqa bypass comments
+- All 7 pre-push gates passing (ruff, ruff-format, fast tests, mypy, secrets, UI typecheck, guardrails)
 
 ---
 
