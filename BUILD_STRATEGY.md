@@ -255,17 +255,18 @@ Every session begins by reading this section and executing the checklist.
 #### Entry checklist (MANDATORY — do this before writing any code)
 
 ```
-0. Read HANDOFF.md FIRST — it has the exact next task, file paths, and rules
-1. Read BUILD_STRATEGY.md (this file) — understand the full buildout
-2. Read BUILD_PLAN.md §1 + the section for the current phase — understand the spec
-3. Read SESSION_LOG.md — understand what's been done and what's next
-4. Read the "Current phase" and "Next session" fields in SESSION_LOG.md
-5. Verify preconditions for the assigned work:
-   a. Are prerequisite phases marked complete in SESSION_LOG.md?
+0. Read HANDOFF.md FIRST — it has the exact next task, file paths, rules, and reading order
+1. Read CLAUDE.md — coding standards, sandbox rules, verification requirements
+2. Read BUILD_STRATEGY.md (this file) §3 — entry/exit checklists, session contract
+3. Read BUILD_PLAN.md — the section referenced by HANDOFF.md "What's Next"
+4. Read SESSION_LOG.md — what's done, current state, lessons learned
+5. Read the SOURCE FILES for the assigned work (all files listed in HANDOFF.md)
+6. Verify preconditions for the assigned work:
+   a. Are prerequisite phases marked complete? (SESSION_LOG.md + BUILD_PLAN.md)
    b. Are blocking PRs merged? (check git log --oneline -20)
    c. Are there uncommitted changes? (git status)
-6. State what this session will do (session type + specific deliverables)
-7. Only then begin work
+7. State what this session will do (session type + specific deliverables)
+8. Only then begin work — DO NOT claim readiness without completing steps 0-6
 ```
 
 #### Exit checklist (MANDATORY — do this before session ends)
@@ -275,11 +276,19 @@ Every session begins by reading this section and executing the checklist.
 2. List PRs created or code ready for commit
 3. List what was completed vs what was planned
 4. Update SESSION_LOG.md:
-   a. Add entry for this session (date, type, what was done, PRs)
-   b. Update "Current phase" if phase completed
-   c. Write "Next session" instructions (specific, actionable)
-5. If anything in BUILD_PLAN.md needs updating, update it
-6. Give Molham the commit/push commands
+   a. Add entry for this session (date, type, what was done, PRs, lessons learned)
+   b. Update "Current phase" and "Current track" if phase completed
+   c. Update "Blocked by" if state changed
+   d. Write "Next session" instructions (specific, actionable, with file paths)
+5. Update HANDOFF.md:
+   a. Rewrite "What Just Happened" for this session's work
+   b. Rewrite "What's Next" for the next session's task (batch plan, file list, verification steps)
+   c. Update "Key Rules" if new lessons were learned
+   d. Update "Documents to Read" to point at the correct BUILD_PLAN.md section
+6. If a phase completed, mark it ✅ COMPLETE in BUILD_PLAN.md
+7. If anything else in BUILD_PLAN.md needs updating, update it
+8. Give Molham the commit/push commands
+9. VERIFY: re-read HANDOFF.md top to bottom — would a fresh session know exactly what to do?
 ```
 
 ### SESSION_LOG.md format
@@ -510,11 +519,14 @@ Copy-paste this to the start of every new Cowork session:
 
 ```
 Read these files in order:
-1. BUILD_STRATEGY.md — the build strategy and session rules
-2. SESSION_LOG.md — what's been done, what's next
-3. BUILD_PLAN.md — the section referenced by SESSION_LOG.md's "Next session"
+1. HANDOFF.md — the exact next task, file paths, rules, and reading order
+2. CLAUDE.md — coding standards, sandbox rules, verification requirements
+3. BUILD_STRATEGY.md §3 — entry/exit checklists, session contract
+4. BUILD_PLAN.md — the section referenced by HANDOFF.md's "What's Next"
+5. SESSION_LOG.md — what's done, current state, lessons learned
 
 Then execute the entry checklist from BUILD_STRATEGY.md §3.
+Do NOT start work until all 5 files are read and all source files for the assigned task are read.
 ```
 
 This is the single instruction that prevents drift. Every session starts from the same anchor point.
