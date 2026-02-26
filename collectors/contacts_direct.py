@@ -8,20 +8,23 @@ import socket
 from datetime import datetime
 from pathlib import Path
 
-# Force IPv4
-_original_getaddrinfo = socket.getaddrinfo
-
-
-def _getaddrinfo_ipv4(host, port, family=0, type=0, proto=0, flags=0):
-    return _original_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
-
-
-socket.getaddrinfo = _getaddrinfo_ipv4
-
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
 from lib import paths
+
+
+def _patch_ipv4():
+    """Force IPv4 to avoid IPv6 timeout issues with Google APIs."""
+    _original = socket.getaddrinfo
+
+    def _ipv4_only(host, port, family=0, type=0, proto=0, flags=0):
+        return _original(host, port, socket.AF_INET, type, proto, flags)
+
+    socket.getaddrinfo = _ipv4_only
+
+
+_patch_ipv4()
 
 SA_FILE = Path.home() / "Library/Application Support/gogcli/sa-bW9saGFtQGhybW55LmNv.json"
 SCOPES = [

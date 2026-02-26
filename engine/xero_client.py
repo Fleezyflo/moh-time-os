@@ -11,7 +11,7 @@ import requests
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", ".credentials.json")
 TOKEN_CACHE_PATH = os.path.join(os.path.dirname(__file__), "..", "config", ".xero_token_cache.json")
 
-XERO_TOKEN_URL = "https://identity.xero.com/connect/token"
+XERO_OAUTH_ENDPOINT = "https://identity.xero.com/connect/token"
 XERO_API_BASE = "https://api.xero.com/api.xro/2.0"
 
 
@@ -66,7 +66,7 @@ def save_tokens(access_token: str, refresh_token: str) -> None:
 def refresh_access_token(creds: XeroCredentials) -> str:
     """Use refresh token to get new access token."""
     resp = requests.post(
-        XERO_TOKEN_URL,
+        XERO_OAUTH_ENDPOINT,
         data={
             "grant_type": "refresh_token",
             "refresh_token": creds.refresh_token,

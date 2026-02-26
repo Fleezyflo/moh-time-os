@@ -701,20 +701,29 @@ def _test_dubai_boundaries():
 
     midnight = local_midnight_utc(org_tz, test_date)
 
-    assert midnight.year == 2026
-    assert midnight.month == 2
-    assert midnight.day == 6
-    assert midnight.hour == 20
-    assert midnight.minute == 0
+    if midnight.year != 2026:
+        raise AssertionError(f"expected year 2026, got {midnight.year}")
+    if midnight.month != 2:
+        raise AssertionError(f"expected month 2, got {midnight.month}")
+    if midnight.day != 6:
+        raise AssertionError(f"expected day 6, got {midnight.day}")
+    if midnight.hour != 20:
+        raise AssertionError(f"expected hour 20, got {midnight.hour}")
+    if midnight.minute != 0:
+        raise AssertionError(f"expected minute 0, got {midnight.minute}")
 
     # Next midnight (end of day)
     next_day = date(2026, 2, 8)
     next_midnight = local_midnight_utc(org_tz, next_day)
 
-    assert next_midnight.year == 2026
-    assert next_midnight.month == 2
-    assert next_midnight.day == 7
-    assert next_midnight.hour == 20
+    if next_midnight.year != 2026:
+        raise AssertionError(f"expected year 2026, got {next_midnight.year}")
+    if next_midnight.month != 2:
+        raise AssertionError(f"expected month 2, got {next_midnight.month}")
+    if next_midnight.day != 7:
+        raise AssertionError(f"expected day 7, got {next_midnight.day}")
+    if next_midnight.hour != 20:
+        raise AssertionError(f"expected hour 20, got {next_midnight.hour}")
 
     logger.info("✓ Dubai boundary tests passed")
     return True

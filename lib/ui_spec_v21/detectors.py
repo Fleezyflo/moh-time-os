@@ -580,8 +580,10 @@ def _test_invoice_precedence():
     cursor = conn.execute("SELECT COUNT(*) FROM issues WHERE type = 'financial'")
     issue_count = cursor.fetchone()[0]
 
-    assert flagged_count == 1, f"Expected 1 flagged_signal, got {flagged_count}"
-    assert issue_count == 0, f"Expected 0 issues, got {issue_count}"
+    if flagged_count != 1:
+        raise AssertionError(f"Expected 1 flagged_signal, got {flagged_count}")
+    if issue_count != 0:
+        raise AssertionError(f"Expected 0 issues, got {issue_count}")
     logger.info("✓ Test case 25 passed: sent past due creates flagged_signal")
     # Test Case 26: Overdue invoice → issue, no flagged_signal
     conn.execute("DELETE FROM inbox_items")
@@ -606,7 +608,8 @@ def _test_invoice_precedence():
     """)
     cursor.fetchone()[0]
 
-    assert issue_count == 1, f"Expected 1 issue, got {issue_count}"
+    if issue_count != 1:
+        raise AssertionError(f"Expected 1 issue, got {issue_count}")
     # Note: The old flagged_signal still exists, but no new one should be created
     logger.info("✓ Test case 26 passed: issue takes precedence, no double-create")
     conn.close()

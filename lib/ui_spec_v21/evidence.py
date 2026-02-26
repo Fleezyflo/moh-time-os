@@ -464,18 +464,24 @@ def _test_link_rendering():
         "INV-1234", 35000, "AED", "2025-12-20", 45, "overdue", "inv_abc"
     )
     result = render_link(invoice)
-    assert result["is_plain_text"]
-    assert not result["can_render_link"]
-    assert "open in Xero" in result["link_text"]
+    if not result["is_plain_text"]:
+        raise AssertionError("expected is_plain_text to be truthy")
+    if result["can_render_link"]:
+        raise AssertionError("expected can_render_link to be falsy")
+    if "open in Xero" not in result["link_text"]:
+        raise AssertionError("expected 'open in Xero' in link_text")
     logger.info("✓ Xero link test passed")
     # Test 2: Asana renders link
     task = create_asana_task_evidence(
         "12345", "Q1 Report", "Sarah", "2026-01-15", 5, "Monthly Retainer", "67890"
     )
     result = render_link(task)
-    assert result["can_render_link"]
-    assert "asana" in result["link_url"]
-    assert "↗" in result["link_text"]
+    if not result["can_render_link"]:
+        raise AssertionError("expected can_render_link to be truthy")
+    if "asana" not in result["link_url"]:
+        raise AssertionError("expected 'asana' in link_url")
+    if "↗" not in result["link_text"]:
+        raise AssertionError("expected '↗' in link_text")
     logger.info("✓ Asana link test passed")
     # Test 3: Minutes uses payload URLs
     minutes = create_minutes_evidence(
@@ -486,9 +492,12 @@ def _test_link_rendering():
         recording_url="https://meet.google.com/rec/123",
     )
     result = render_link(minutes)
-    assert result["is_plain_text"]
-    assert len(result["additional_links"]) == 1
-    assert "Recording" in result["additional_links"][0]["text"]
+    if not result["is_plain_text"]:
+        raise AssertionError("expected is_plain_text to be truthy")
+    if len(result["additional_links"]) != 1:
+        raise AssertionError(f"expected 1 additional_link, got {len(result['additional_links'])}")
+    if "Recording" not in result["additional_links"][0]["text"]:
+        raise AssertionError("expected 'Recording' in additional_links[0]['text']")
     logger.info("✓ Minutes link test passed")
     logger.info("All link rendering tests passed!")
 

@@ -77,7 +77,7 @@ class StateStore:
         for col in columns:
             db_module.validate_identifier(col)
         placeholders = ["?" for _ in columns]
-        values = [json.dumps(v) if isinstance(v, (dict, list)) else v for v in data.values()]
+        values = [json.dumps(v) if isinstance(v, dict | list) else v for v in data.values()]
 
         with self._get_conn() as conn:
             cols_sql = ",".join(columns)
@@ -104,9 +104,7 @@ class StateStore:
 
         with self._get_conn() as conn:
             for item in items:
-                values = [
-                    json.dumps(v) if isinstance(v, (dict, list)) else v for v in item.values()
-                ]
+                values = [json.dumps(v) if isinstance(v, dict | list) else v for v in item.values()]
                 conn.execute(sql, values)
 
         return len(items)
@@ -128,7 +126,7 @@ class StateStore:
         for k in data:
             db_module.validate_identifier(k)
         sets = [f"{k} = ?" for k in data]
-        values = [json.dumps(v) if isinstance(v, (dict, list)) else v for v in data.values()]
+        values = [json.dumps(v) if isinstance(v, dict | list) else v for v in data.values()]
         values.append(id)
 
         with self._get_conn() as conn:

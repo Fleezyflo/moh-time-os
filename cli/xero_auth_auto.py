@@ -16,7 +16,7 @@ from lib import paths
 CONFIG_PATH = str(paths.config_dir() / ".credentials.json")
 
 XERO_AUTH_URL = "https://login.xero.com/identity/connect/authorize"
-XERO_TOKEN_URL = "https://identity.xero.com/connect/token"
+XERO_OAUTH_ENDPOINT = "https://identity.xero.com/connect/token"
 XERO_CONNECTIONS_URL = "https://api.xero.com/connections"
 
 CALLBACK_PORT = 8743
@@ -104,7 +104,7 @@ def main():
     print("✓ Got auth code, exchanging for tokens...")
 
     resp = requests.post(
-        XERO_TOKEN_URL,
+        XERO_OAUTH_ENDPOINT,
         data={
             "grant_type": "authorization_code",
             "code": OAuthCallbackHandler.auth_code,
