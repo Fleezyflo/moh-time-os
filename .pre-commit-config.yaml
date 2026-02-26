@@ -67,7 +67,7 @@ repos:
 
   # ==========================================
   # DERIVED FILE SYNC
-  # Regenerate derived files so they never drift
+  # Regenerate derived files so they never drift.
   # ==========================================
   - repo: local
     hooks:
@@ -85,6 +85,14 @@ repos:
         language: system
         pass_filenames: false
         files: ^(api|lib)/.*\.py$
+
+      - id: sync-system-map
+        name: Sync system map
+        entry: bash -c 'python scripts/generate_system_map.py && git add docs/system-map.json'
+        language: system
+        pass_filenames: false
+        files: ^(lib|api|collectors|cli|engine)/.*\.py$
+        types: [python]
 
   # ==========================================
   # CONVENTIONAL COMMITS

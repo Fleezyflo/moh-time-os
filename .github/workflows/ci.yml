@@ -71,6 +71,14 @@ jobs:
           done < /tmp/enforcement/protected-files.txt
           rm -rf /tmp/enforcement
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
