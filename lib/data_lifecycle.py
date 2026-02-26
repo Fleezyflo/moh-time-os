@@ -16,6 +16,7 @@ Safety guards:
 """
 
 import logging
+import sqlite3
 from datetime import date, datetime, timedelta
 from typing import TypedDict
 
@@ -167,7 +168,7 @@ class DataLifecycleManager:
     def _get_row_count(self, table: str) -> int:
         """Get current row count for a table."""
         with get_connection() as conn:
-            cursor = conn.execute(f"SELECT COUNT(*) FROM {table}")
+            cursor = conn.execute(f"SELECT COUNT(*) FROM {table}")  # noqa: S608
             return cursor.fetchone()[0]
 
     def _get_oldest_row_date(self, table: str) -> date | None:
@@ -181,7 +182,7 @@ class DataLifecycleManager:
                 f"""
                 SELECT MIN({timestamp_col}) FROM {table}
                 WHERE {timestamp_col} IS NOT NULL
-            """
+            """  # noqa: S608
             )
             oldest = cursor.fetchone()[0]
 
@@ -230,7 +231,7 @@ class DataLifecycleManager:
                 conn.execute(create_sql)
                 conn.commit()
                 logger.info(f"Created archive table: {archive_table}")
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 logger.error(f"Failed to create archive table {archive_table}: {e}")
                 raise
 
@@ -271,8 +272,9 @@ class DataLifecycleManager:
                 f"""
                 SELECT COUNT(*) FROM {table}
                 WHERE {timestamp_col} < ?
-            """,
-                (cutoff,),
+            """(  # noqa: S608
+                    cutoff,
+                ),
             )
             count = cursor.fetchone()[0]
 
@@ -308,8 +310,9 @@ class DataLifecycleManager:
                 INSERT INTO {archive_table}
                 SELECT * FROM {table}
                 WHERE {timestamp_col} < ?
-            """,
-                (cutoff,),
+            """(  # noqa: S608
+                    cutoff,
+                ),
             )
 
             # Delete from original table
@@ -317,8 +320,9 @@ class DataLifecycleManager:
                 f"""
                 DELETE FROM {table}
                 WHERE {timestamp_col} < ?
-            """,
-                (cutoff,),
+            """(  # noqa: S608
+                    cutoff,
+                ),
             )
             archived = cursor.rowcount
 
@@ -385,13 +389,14 @@ class DataLifecycleManager:
                     f"""
                     SELECT COUNT(*) FROM {table}
                     WHERE {timestamp_col} < ?
-                """,
-                    (cutoff,),
+                """(  # noqa: S608
+                        cutoff,
+                    ),
                 )
                 delete_count = cursor.fetchone()[0]
 
             if delete_count == 0:
-                logger.debug(f"No rows to delete from {table} (before {cutoff})")
+                logger.debug(f"No rows to delete from {table} (before {cutoff})")  # noqa: S608
                 continue
 
             if delete_count > row_count * 0.8:
@@ -420,7 +425,7 @@ class DataLifecycleManager:
                     f"""
                     DELETE FROM {table}
                     WHERE {timestamp_col} < ?
-                """,
+                """,  # noqa: S608
                     (cutoff,),
                 )
                 deleted = cursor.rowcount
@@ -462,7 +467,7 @@ class DataLifecycleManager:
             try:
                 conn.execute("VACUUM")
                 conn.commit()
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 logger.error(f"VACUUM failed: {e}")
                 return {
                     "success": False,
@@ -530,7 +535,7 @@ class DataLifecycleManager:
                     "rows_deletable": deletable,
                     "estimated_space_kb": row_count * 0.5,
                 }
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 logger.error(f"Error generating report for {table}: {e}")
                 report["tables"][table] = {"error": str(e)}
 
@@ -547,7 +552,7 @@ class DataLifecycleManager:
                 f"""
                 SELECT MAX({timestamp_col}) FROM {table}
                 WHERE {timestamp_col} IS NOT NULL
-            """
+            """  # noqa: S608
             )
             newest = cursor.fetchone()[0]
 
@@ -570,8 +575,9 @@ class DataLifecycleManager:
                 f"""
                 SELECT COUNT(*) FROM {table}
                 WHERE {timestamp_col} < ?
-            """,
-                (cutoff_str,),
+            """(  # noqa: S608
+                    cutoff_str,
+                ),
             )
             return cursor.fetchone()[0]
 

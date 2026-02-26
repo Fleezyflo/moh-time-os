@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from tests.fixtures.fixture_db import create_fixture_db, get_fixture_db_path, guard_no_live_db
+from tests.fixtures.fixture_db import get_fixture_db_path
 
 # Block access to live DB
 LIVE_DB_PATH = Path(__file__).parent.parent.parent / "data" / "moh_time_os.db"
@@ -84,7 +84,7 @@ def block_live_db_access(monkeypatch):
     original_connect = sqlite3.connect
 
     def guarded_connect(database, *args, **kwargs):
-        if isinstance(database, (str, Path)):
+        if isinstance(database, str | Path):
             db_str = str(database)
             if "moh_time_os.db" in db_str and "fixture" not in db_str:
                 # Allow if it's clearly a test/fixture path

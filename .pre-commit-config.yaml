@@ -4,31 +4,29 @@
 repos:
   # ==========================================
   # RUFF - Fast Python linter + formatter
-  # Only runs on active, maintained modules
+  # Rules defined in pyproject.toml (single source of truth)
   # ==========================================
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.6
+    rev: v0.15.1
     hooks:
-      # Linter - only run on v29/spec modules
-      # Note: --ignore S110,S602,S608 skips security rules that are too noisy for legacy code
       - id: ruff
-        args: [--fix, --exit-non-zero-on-fix, --ignore, "S110,S602,S608,B904"]
+        args: [--fix, --exit-non-zero-on-fix]
         types_or: [python, pyi]
-        files: ^(lib/ui_spec_v21|lib/collectors|lib/safety|lib/db|lib/paths|lib/collector_registry|api/spec_router|scripts/backfill|scripts/verify)/.*\.py$
-      # Formatter - same scope
+        files: ^(lib|api|tests|scripts|collectors|cli|engine)/.*\.py$
       - id: ruff-format
         types_or: [python, pyi]
-        files: ^(lib/ui_spec_v21|lib/collectors|lib/safety|lib/db|lib/paths|lib/collector_registry|api/spec_router|scripts/backfill|scripts/verify)/.*\.py$
+        files: ^(lib|api|tests|scripts|collectors|cli|engine)/.*\.py$
 
   # ==========================================
   # BANDIT - Security scanning
+  # Rules aligned with pyproject.toml
   # ==========================================
   - repo: https://github.com/PyCQA/bandit
-    rev: 1.7.8
+    rev: 1.9.3
     hooks:
       - id: bandit
-        args: [-r, -ll, --skip, "B101,B602,B608"]  # Skip assert warnings
-        files: ^(lib/ui_spec_v21|lib/collectors|lib/safety|api/spec_router)/.*\.py$
+        args: [-r, -ll, --skip, "B101,B608"]
+        files: ^(lib|api|scripts|collectors|cli|engine)/.*\.py$
 
   # ==========================================
   # GENERAL HOOKS
@@ -37,14 +35,14 @@ repos:
     rev: v4.6.0
     hooks:
       - id: trailing-whitespace
-        files: ^(lib/ui_spec_v21|lib/collectors|lib/safety|api|tests|scripts)/
+        files: ^(lib|api|tests|scripts|collectors|cli|engine)/
         exclude: \.md$
       - id: end-of-file-fixer
-        files: ^(lib/ui_spec_v21|lib/collectors|lib/safety|api|tests|scripts)/
+        files: ^(lib|api|tests|scripts|collectors|cli|engine)/
       - id: check-yaml
         files: ^(\.pre-commit-config\.yaml|pytest\.ini)$
       - id: check-json
-        files: ^(lib|api|tests)/.*\.json$
+        files: ^(lib|api|tests|collectors)/.*\.json$
       - id: check-added-large-files
         args: [--maxkb=500]
       - id: check-merge-conflict
@@ -65,6 +63,35 @@ repos:
         entry: bash -c 'grep -rn "execute.*f\"" --include="*.py" lib/ui_spec_v21/endpoints.py lib/ui_spec_v21/detectors.py lib/ui_spec_v21/inbox_lifecycle.py lib/ui_spec_v21/issue_lifecycle.py lib/collectors/ 2>/dev/null && exit 1 || exit 0'
         language: system
         pass_filenames: false
+        types: [python]
+
+  # ==========================================
+  # DERIVED FILE SYNC
+  # Regenerate derived files so they never drift.
+  # ==========================================
+  - repo: local
+    hooks:
+      - id: sync-openapi-spec
+        name: Sync OpenAPI spec
+        entry: bash -c 'python scripts/export_openapi.py && git add docs/openapi.json'
+        language: system
+        pass_filenames: false
+        files: ^(api|lib)/.*\.py$
+        types: [python]
+
+      - id: sync-ui-types
+        name: Sync UI generated types
+        entry: bash -c 'bash scripts/generate_ui_types.sh && git add time-os-ui/src/types/generated.ts'
+        language: system
+        pass_filenames: false
+        files: ^(api|lib)/.*\.py$
+
+      - id: sync-system-map
+        name: Sync system map
+        entry: bash -c 'python scripts/generate_system_map.py && git add docs/system-map.json'
+        language: system
+        pass_filenames: false
+        files: ^(lib|api|collectors|cli|engine)/.*\.py$
         types: [python]
 
   # ==========================================

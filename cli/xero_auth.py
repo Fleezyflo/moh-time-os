@@ -26,7 +26,7 @@ CONFIG_PATH = str(paths.config_dir() / ".credentials.json")
 
 # Xero OAuth endpoints
 XERO_AUTH_URL = "https://login.xero.com/identity/connect/authorize"
-XERO_TOKEN_URL = "https://identity.xero.com/connect/token"
+XERO_OAUTH_ENDPOINT = "https://identity.xero.com/connect/token"
 XERO_CONNECTIONS_URL = "https://api.xero.com/connections"
 
 # Local callback server
@@ -103,7 +103,7 @@ class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
 def exchange_code_for_tokens(client_id: str, client_secret: str, auth_code: str) -> dict:
     """Exchange authorization code for access and refresh tokens."""
     resp = requests.post(
-        XERO_TOKEN_URL,
+        XERO_OAUTH_ENDPOINT,
         data={
             "grant_type": "authorization_code",
             "code": auth_code,
@@ -112,6 +112,7 @@ def exchange_code_for_tokens(client_id: str, client_secret: str, auth_code: str)
             "client_secret": client_secret,
         },
         headers={"Content-Type": "application/x-www-form-urlencoded"},
+        timeout=30,
     )
 
     if resp.status_code != 200:
@@ -125,6 +126,7 @@ def get_tenant_id(access_token: str) -> str:
     resp = requests.get(
         XERO_CONNECTIONS_URL,
         headers={"Authorization": f"Bearer {access_token}"},
+        timeout=30,
     )
 
     if resp.status_code != 200:

@@ -491,7 +491,7 @@ class IdentityService:
                 f"""
                 SELECT profile_id FROM identity_profiles
                 WHERE profile_id IN ({placeholders}) AND status = 'active'
-            """,
+            """,  # noqa: S608
                 all_ids,
             )
 
@@ -546,9 +546,8 @@ class IdentityService:
                 "target_profile_id": to_profile_id,
             }
 
-        except Exception as e:
-            conn.rollback()
-            return {"status": "error", "error": str(e)}
+        except (sqlite3.Error, ValueError, OSError):
+            raise  # was silently swallowed
         finally:
             conn.close()
 

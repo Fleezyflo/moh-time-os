@@ -11,9 +11,7 @@ Usage:
 
 import logging
 import sqlite3
-import uuid
-from datetime import UTC, datetime, timezone
-from pathlib import Path
+from datetime import UTC, datetime
 
 from lib.paths import db_path as canonical_db_path
 

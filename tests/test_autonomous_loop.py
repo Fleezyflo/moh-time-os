@@ -8,16 +8,12 @@ Covers:
 - Cycle tracking and metrics
 """
 
-import json
 import logging
-from datetime import datetime, timedelta
-from pathlib import Path
-from unittest.mock import MagicMock, Mock, call, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
 from lib.autonomous_loop import AutonomousLoop
-from lib.cycle_result import CycleResult, PhaseResult
 
 
 @pytest.fixture
@@ -321,8 +317,8 @@ class TestErrorHandling:
         with patch.object(loop.collectors, "sync_all", side_effect=Exception("Network error")):
             try:
                 loop.run_cycle()
-            except:
-                pass
+            except Exception:
+                logging.debug("Expected error during test cycle")
 
             # Cycle count should have incremented
             assert loop.cycle_count > original_count

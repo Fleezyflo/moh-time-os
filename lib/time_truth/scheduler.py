@@ -6,6 +6,7 @@ Assigns pending tasks to available blocks based on priority and constraints.
 """
 
 import logging
+import sqlite3
 from dataclasses import dataclass
 from datetime import date
 
@@ -298,8 +299,8 @@ class Scheduler:
                     issues.append(
                         f"Capacity invariant violated: lane '{lane}' at {util_pct}% (exceeds 100%)"
                     )
-        except Exception:
-            pass  # Capacity module may not be available
+        except (sqlite3.Error, ValueError, OSError):
+            logger.debug("Capacity module not available for invariant check")
 
         # Calculate stats
         protected_count = 0

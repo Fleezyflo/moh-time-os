@@ -6,16 +6,10 @@ Brief 14 (PS), Task PS-1.1
 
 import time
 
-import pytest
-
 from lib.intelligence.performance_scale import (
-    CacheEntry,
-    CacheStats,
     IndexRecommendation,
     InMemoryCache,
-    PaginatedResult,
     PaginationParams,
-    PerformanceBaseline,
     PerformanceMonitor,
     QueryOptimizer,
     make_cache_key,
@@ -123,7 +117,7 @@ class TestQueryOptimizer:
     def test_detect_n_plus_one(self):
         opt = QueryOptimizer()
         for i in range(5):
-            opt.log_query(f"SELECT * FROM clients WHERE id = '{i}'", 10.0)
+            opt.log_query(f"SELECT * FROM clients WHERE id = '{i}'", 10.0)  # noqa: S608
         patterns = opt.detect_n_plus_one()
         assert len(patterns) >= 1
         assert patterns[0]["count"] == 5

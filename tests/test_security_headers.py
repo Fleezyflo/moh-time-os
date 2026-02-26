@@ -11,13 +11,10 @@ Tests validate:
 import os
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from lib.security.headers import (
     CORS_ALLOWED_HEADERS,
     CORS_ALLOWED_METHODS,
     CSP_POLICY,
-    DEFAULT_CORS_ORIGINS,
     SECURITY_HEADERS,
     SecurityHeadersMiddleware,
     is_cors_allowed,

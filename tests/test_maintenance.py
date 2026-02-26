@@ -12,8 +12,6 @@ Covers:
 from datetime import date, timedelta
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from lib.maintenance import (
     archive_ancient_items,
     cleanup_asana_cruft,

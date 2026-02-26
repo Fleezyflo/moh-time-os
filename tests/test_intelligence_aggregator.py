@@ -7,10 +7,8 @@ Brief 26 (IA), Task IA-1.1
 import pytest
 
 from lib.intelligence.intelligence_aggregator import (
-    CascadingRisk,
     EntityIntelligenceSummary,
     IntelligenceAggregator,
-    PortfolioRollup,
     classify_health,
     determine_trend,
 )

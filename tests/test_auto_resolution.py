@@ -13,7 +13,7 @@ Tests cover:
 
 import sqlite3
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 

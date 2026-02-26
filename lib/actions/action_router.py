@@ -10,8 +10,8 @@ Manages:
 """
 
 import logging
+import sqlite3
 from collections.abc import Callable
-from typing import Optional
 
 from lib.actions.action_framework import ActionResult
 
@@ -97,7 +97,7 @@ class ActionRouter:
             for hook in self.on_dispatch_error_hooks:
                 try:
                     hook(action_type, payload, result)
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError) as e:
                     logger.error(f"Error hook failed: {str(e)}")
 
             return result
@@ -111,7 +111,7 @@ class ActionRouter:
             for hook in self.on_dispatch_error_hooks:
                 try:
                     hook(action_type, payload, result)
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError) as e:
                     logger.error(f"Error hook failed: {str(e)}")
 
             return result
@@ -120,7 +120,7 @@ class ActionRouter:
         try:
             for hook in self.before_dispatch_hooks:
                 hook(action_type, payload)
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             error = f"Before-dispatch hook failed: {str(e)}"
             logger.error(error)
             result = ActionResult(action_id=action_id or "unknown", success=False, error=error)
@@ -128,7 +128,7 @@ class ActionRouter:
             for hook in self.on_dispatch_error_hooks:
                 try:
                     hook(action_type, payload, result)
-                except Exception as err:
+                except (sqlite3.Error, ValueError, OSError) as err:
                     logger.error(f"Error hook failed: {str(err)}")
 
             return result
@@ -158,7 +158,7 @@ class ActionRouter:
                         result_data=handler_result,
                     )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             error = str(e)
             logger.error(f"Handler execution failed: {error}")
             result = ActionResult(action_id=action_id or "unknown", success=False, error=error)
@@ -167,7 +167,7 @@ class ActionRouter:
             for hook in self.on_dispatch_error_hooks:
                 try:
                     hook(action_type, payload, result)
-                except Exception as hook_error:
+                except (sqlite3.Error, ValueError, OSError) as hook_error:
                     logger.error(f"Error hook failed: {str(hook_error)}")
 
             return result
@@ -176,7 +176,7 @@ class ActionRouter:
         try:
             for hook in self.after_dispatch_hooks:
                 hook(action_type, payload, result)
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"After-dispatch hook failed: {str(e)}")
 
         logger.info(

@@ -8,6 +8,7 @@ These are called by Clawdbot cron jobs:
 """
 
 import logging
+import sqlite3
 
 from .backup import create_backup, prune_backups
 from .classify import run_auto_classification
@@ -42,7 +43,7 @@ def cron_daily_sync() -> dict:
             "errors": len(errors),
         }
         log.info(f"Xero sync: {created} created, {updated} updated")
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         results["xero"] = {"error": str(e)}
         log.error(f"Xero sync failed: {e}")
 
@@ -56,7 +57,7 @@ def cron_daily_sync() -> dict:
             "errors": len(errors),
         }
         log.info(f"Asana sync: {created} created, {updated} updated")
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         results["asana"] = {"error": str(e)}
         log.error(f"Asana sync failed: {e}")
 
@@ -64,14 +65,14 @@ def cron_daily_sync() -> dict:
     try:
         count = fix_item_priorities()
         results["priorities_updated"] = count
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         results["priorities_error"] = str(e)
 
     # Run auto-classification
     try:
         class_results = run_auto_classification()
         results["classification"] = class_results["tiers"]
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         results["classification_error"] = str(e)
 
     log.info("Daily sync complete")
@@ -175,9 +176,9 @@ def cron_retention_enforcement() -> dict:
         log.info("Retention enforcement complete")
         return summary
 
-    except Exception as e:
-        log.error(f"Retention enforcement failed: {e}", exc_info=True)
-        return {"error": str(e), "timestamp": None}
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise  # re-raise after logging
 
 
 def cron_weekly_archive() -> dict:
@@ -225,7 +226,7 @@ def cron_weekly_archive() -> dict:
             except ValueError as e:
                 # Table might not have timestamp column or be protected
                 log.debug(f"Cannot archive {table}: {e}")
-            except Exception as e:
+            except (sqlite3.Error, OSError) as e:
                 log.error(f"Failed to archive {table}: {e}", exc_info=True)
 
         summary = {
@@ -237,9 +238,9 @@ def cron_weekly_archive() -> dict:
         log.info("Weekly archive complete")
         return summary
 
-    except Exception as e:
-        log.error(f"Weekly archive failed: {e}", exc_info=True)
-        return {"error": str(e)}
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise  # re-raise after logging
 
 
 def get_cron_config() -> dict:

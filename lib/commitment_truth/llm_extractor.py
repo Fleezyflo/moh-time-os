@@ -96,7 +96,7 @@ def extract_with_llm(text: str, subject: str = "") -> list[dict]:
 
         return []
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.info(f"LLM extraction error: {e}")
         return []
 
@@ -131,7 +131,7 @@ def process_unextracted_communications(limit: int = 50) -> dict:
 
             for c in commitments:
                 hash_input = f"{comm['id']}:{c['text']}"
-                commitment_id = f"llm_{hashlib.md5(hash_input.encode()).hexdigest()[:12]}"
+                commitment_id = f"llm_{hashlib.sha256(hash_input.encode()).hexdigest()[:12]}"
 
                 conn.execute(
                     """
@@ -153,7 +153,7 @@ def process_unextracted_communications(limit: int = 50) -> dict:
 
             stats["processed"] += 1
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             stats["errors"] += 1
             logger.info(f"Error processing {comm['id']}: {e}")
     conn.commit()

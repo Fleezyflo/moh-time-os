@@ -20,16 +20,17 @@ Usage in server.py:
 import asyncio
 import json
 import logging
+import sqlite3
 from collections.abc import AsyncGenerator
 from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Optional
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
 from api.auth import require_auth
+from api.response_models import DetailResponse
 
 logger = logging.getLogger(__name__)
 
@@ -154,7 +155,7 @@ async def _heartbeat_generator(
                     await queue.put(event)
                 except asyncio.CancelledError:
                     break
-                except Exception as e:
+                except (sqlite3.Error, ValueError) as e:
                     logger.error(f"Heartbeat error: {e}")
 
         # Start heartbeat task
@@ -172,7 +173,7 @@ async def _heartbeat_generator(
                 break
             except asyncio.CancelledError:
                 break
-            except Exception as e:
+            except (sqlite3.Error, ValueError) as e:
                 logger.error(f"SSE stream error: {e}")
                 break
     finally:
@@ -211,12 +212,12 @@ async def stream_events() -> StreamingResponse:
                 "Connection": "keep-alive",
             },
         )
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"SSE stream setup failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to establish SSE stream") from e
 
 
-@sse_router.get("/events/history")
+@sse_router.get("/events/history", response_model=DetailResponse)
 def get_event_history(limit: int = Query(100, description="Maximum events to return")):
     """
     Get recent event history.
@@ -241,12 +242,12 @@ def get_event_history(limit: int = Query(100, description="Maximum events to ret
         }
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"get_event_history failed: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@sse_router.post("/events/publish")
+@sse_router.post("/events/publish", response_model=DetailResponse)
 async def publish_event(
     event_type: str = Query(..., description="Type of event"),
     message: str = Query(..., description="Event message"),
@@ -273,6 +274,6 @@ async def publish_event(
             "event_id": event.id,
             "timestamp": event.timestamp,
         }
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"publish_event failed: {e}")
         raise HTTPException(status_code=500, detail=str(e)) from e

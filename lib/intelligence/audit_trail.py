@@ -11,10 +11,10 @@ import json
 import logging
 import sqlite3
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -177,7 +177,7 @@ class AuditTrail:
             params.append(limit)
 
             rows = conn.execute(
-                f"SELECT * FROM intelligence_audit {where} ORDER BY created_at DESC LIMIT ?",
+                f"SELECT * FROM intelligence_audit {where} ORDER BY created_at DESC LIMIT ?",  # noqa: S608
                 params,
             ).fetchall()
 

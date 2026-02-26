@@ -14,13 +14,14 @@ Usage in server.py:
 """
 
 import logging
+import sqlite3
 from datetime import datetime
-from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from api.auth import require_auth
-from lib.cache import cache_invalidate, cached, get_cache
+from api.response_models import IntelligenceResponse
+from lib.cache import cache_invalidate, cached
 from lib.query_engine import QueryEngine
 
 logger = logging.getLogger(__name__)
@@ -67,7 +68,7 @@ def _error_response(message: str, code: str = "ERROR") -> dict:
 # =============================================================================
 
 
-@intelligence_router.get("/portfolio/overview")
+@intelligence_router.get("/portfolio/overview", response_model=IntelligenceResponse)
 @cached(
     ttl=120, key_func=lambda order_by, desc: f"intelligence:portfolio:overview:{order_by}:{desc}"
 )
@@ -87,12 +88,12 @@ def portfolio_overview(
         engine = get_engine()
         data = engine.client_portfolio_overview(order_by=order_by, desc=desc)
         return _wrap_response(data, {"order_by": order_by, "desc": desc})
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("portfolio_overview failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/portfolio/risks")
+@intelligence_router.get("/portfolio/risks", response_model=IntelligenceResponse)
 def portfolio_risks(
     overdue_threshold: int = Query(5, description="Min overdue tasks to flag project"),
     aging_threshold: int = Query(30, description="Days overdue to flag invoice"),
@@ -113,12 +114,12 @@ def portfolio_risks(
             data,
             {"overdue_threshold": overdue_threshold, "aging_threshold": aging_threshold},
         )
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("portfolio_risks failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/portfolio/trajectory")
+@intelligence_router.get("/portfolio/trajectory", response_model=IntelligenceResponse)
 def portfolio_trajectory(
     window_days: int = Query(30, description="Size of each time window in days"),
     num_windows: int = Query(6, description="Number of windows to analyze"),
@@ -145,7 +146,7 @@ def portfolio_trajectory(
                 "min_activity": min_activity,
             },
         )
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("portfolio_trajectory failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -155,7 +156,7 @@ def portfolio_trajectory(
 # =============================================================================
 
 
-@intelligence_router.get("/clients/{client_id}/profile")
+@intelligence_router.get("/clients/{client_id}/profile", response_model=IntelligenceResponse)
 def client_profile(client_id: str):
     """
     Get deep operational profile for a client.
@@ -171,12 +172,12 @@ def client_profile(client_id: str):
         return _wrap_response(data, {"client_id": client_id})
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("client_profile failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/clients/{client_id}/tasks")
+@intelligence_router.get("/clients/{client_id}/tasks", response_model=IntelligenceResponse)
 def client_tasks(client_id: str):
     """
     Get task summary for a client.
@@ -188,12 +189,12 @@ def client_tasks(client_id: str):
         engine = get_engine()
         data = engine.client_task_summary(client_id)
         return _wrap_response(data, {"client_id": client_id})
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("client_tasks failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/clients/{client_id}/communication")
+@intelligence_router.get("/clients/{client_id}/communication", response_model=IntelligenceResponse)
 def client_communication(
     client_id: str,
     since: str | None = Query(None, description="Start date (ISO format)"),
@@ -208,12 +209,12 @@ def client_communication(
         engine = get_engine()
         data = engine.client_communication_summary(client_id)
         return _wrap_response(data, {"client_id": client_id, "since": since, "until": until})
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("client_communication failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/clients/{client_id}/trajectory")
+@intelligence_router.get("/clients/{client_id}/trajectory", response_model=IntelligenceResponse)
 def client_trajectory(
     client_id: str,
     window_days: int = Query(30, description="Size of each time window in days"),
@@ -236,12 +237,12 @@ def client_trajectory(
             data,
             {"client_id": client_id, "window_days": window_days, "num_windows": num_windows},
         )
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("client_trajectory failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/clients/{client_id}/compare")
+@intelligence_router.get("/clients/{client_id}/compare", response_model=IntelligenceResponse)
 def client_compare(
     client_id: str,
     period_a_start: str = Query(..., description="Period A start date (ISO)"),
@@ -269,12 +270,12 @@ def client_compare(
                 "period_b": {"start": period_b_start, "end": period_b_end},
             },
         )
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("client_compare failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/clients/compare")
+@intelligence_router.get("/clients/compare", response_model=IntelligenceResponse)
 def clients_compare(
     period_a_start: str = Query(..., description="Period A start date (ISO)"),
     period_a_end: str = Query(..., description="Period A end date (ISO)"),
@@ -299,7 +300,7 @@ def clients_compare(
                 "period_b": {"start": period_b_start, "end": period_b_end},
             },
         )
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("clients_compare failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -309,7 +310,7 @@ def clients_compare(
 # =============================================================================
 
 
-@intelligence_router.get("/team/distribution")
+@intelligence_router.get("/team/distribution", response_model=IntelligenceResponse)
 def team_distribution():
     """
     Get team load distribution.
@@ -321,12 +322,12 @@ def team_distribution():
         engine = get_engine()
         data = engine.resource_load_distribution()
         return _wrap_response(data)
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("team_distribution failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/team/capacity")
+@intelligence_router.get("/team/capacity", response_model=IntelligenceResponse)
 def team_capacity():
     """
     Get team capacity overview.
@@ -338,12 +339,12 @@ def team_capacity():
         engine = get_engine()
         data = engine.team_capacity_overview()
         return _wrap_response(data)
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("team_capacity failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/team/{person_id}/profile")
+@intelligence_router.get("/team/{person_id}/profile", response_model=IntelligenceResponse)
 def team_person_profile(person_id: str):
     """
     Get operational profile for a person.
@@ -359,12 +360,12 @@ def team_person_profile(person_id: str):
         return _wrap_response(data, {"person_id": person_id})
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("team_person_profile failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/team/{person_id}/trajectory")
+@intelligence_router.get("/team/{person_id}/trajectory", response_model=IntelligenceResponse)
 def team_person_trajectory(
     person_id: str,
     window_days: int = Query(30, description="Size of each time window in days"),
@@ -386,7 +387,7 @@ def team_person_trajectory(
             data,
             {"person_id": person_id, "window_days": window_days, "num_windows": num_windows},
         )
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("team_person_trajectory failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -396,7 +397,7 @@ def team_person_trajectory(
 # =============================================================================
 
 
-@intelligence_router.get("/projects/{project_id}/state")
+@intelligence_router.get("/projects/{project_id}/state", response_model=IntelligenceResponse)
 def project_state(project_id: str):
     """
     Get operational state of a project.
@@ -412,12 +413,12 @@ def project_state(project_id: str):
         return _wrap_response(data, {"project_id": project_id})
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("project_state failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/projects/health")
+@intelligence_router.get("/projects/health", response_model=IntelligenceResponse)
 def projects_health(
     min_tasks: int = Query(1, description="Minimum tasks to include project"),
 ):
@@ -431,7 +432,7 @@ def projects_health(
         engine = get_engine()
         data = engine.projects_by_health(min_tasks=min_tasks)
         return _wrap_response(data, {"min_tasks": min_tasks})
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("projects_health failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -441,7 +442,7 @@ def projects_health(
 # =============================================================================
 
 
-@intelligence_router.get("/financial/aging")
+@intelligence_router.get("/financial/aging", response_model=IntelligenceResponse)
 def financial_aging():
     """
     Get invoice aging report.
@@ -453,7 +454,7 @@ def financial_aging():
         engine = get_engine()
         data = engine.invoice_aging_report()
         return _wrap_response(data)
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("financial_aging failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -463,7 +464,7 @@ def financial_aging():
 # =============================================================================
 
 
-@intelligence_router.get("/snapshot")
+@intelligence_router.get("/snapshot", response_model=IntelligenceResponse)
 @cached(ttl=60, key_func=lambda: "intelligence:snapshot:full")
 def intelligence_snapshot():
     """
@@ -484,12 +485,12 @@ def intelligence_snapshot():
 
         data = generate_intelligence_snapshot()
         return _wrap_response(data)
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("intelligence_snapshot failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/critical")
+@intelligence_router.get("/critical", response_model=IntelligenceResponse)
 def critical_items():
     """
     Get critical items only (IMMEDIATE urgency proposals).
@@ -502,12 +503,12 @@ def critical_items():
 
         data = get_critical_items()
         return _wrap_response(data)
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("critical_items failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/briefing")
+@intelligence_router.get("/briefing", response_model=IntelligenceResponse)
 @cached(ttl=300, key_func=lambda: "intelligence:briefing:daily")
 def daily_briefing():
     """
@@ -541,7 +542,7 @@ def daily_briefing():
         briefing = generate_daily_briefing(proposals)
 
         return _wrap_response(briefing)
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("daily_briefing failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -551,7 +552,7 @@ def daily_briefing():
 # =============================================================================
 
 
-@intelligence_router.get("/signals")
+@intelligence_router.get("/signals", response_model=IntelligenceResponse)
 def list_signals(
     quick: bool = Query(True, description="Use quick mode (sample portfolio)"),
 ):
@@ -565,12 +566,12 @@ def list_signals(
 
         data = detect_all_signals(quick=quick)
         return _wrap_response(data, {"quick": quick})
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("list_signals failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/signals/summary")
+@intelligence_router.get("/signals/summary", response_model=IntelligenceResponse)
 @cached(ttl=60, key_func=lambda: "intelligence:signals:summary")
 def signals_summary():
     """
@@ -583,12 +584,12 @@ def signals_summary():
 
         data = get_signal_summary()
         return _wrap_response(data)
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("signals_summary failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/signals/active")
+@intelligence_router.get("/signals/active", response_model=IntelligenceResponse)
 def active_signals(
     entity_type: str | None = Query(None, description="Filter by entity type"),
     entity_id: str | None = Query(None, description="Filter by entity ID"),
@@ -601,12 +602,12 @@ def active_signals(
 
         data = get_active_signals(entity_type=entity_type, entity_id=entity_id)
         return _wrap_response(data, {"entity_type": entity_type, "entity_id": entity_id})
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("active_signals failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/signals/history")
+@intelligence_router.get("/signals/history", response_model=IntelligenceResponse)
 def signal_history(
     entity_type: str = Query(..., description="Entity type (client, project, person)"),
     entity_id: str = Query(..., description="Entity ID"),
@@ -622,7 +623,7 @@ def signal_history(
         return _wrap_response(
             data, {"entity_type": entity_type, "entity_id": entity_id, "limit": limit}
         )
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("signal_history failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -646,12 +647,12 @@ def export_signals():
             media_type="text/csv",
             headers={"Content-Disposition": "attachment; filename=signals_export.csv"},
         )
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("export_signals failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/signals/thresholds")
+@intelligence_router.get("/signals/thresholds", response_model=IntelligenceResponse)
 def get_thresholds():
     """
     Get current threshold configuration for all signals.
@@ -661,7 +662,7 @@ def get_thresholds():
 
         data = load_thresholds()
         return _wrap_response(data)
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("get_thresholds failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -671,7 +672,7 @@ def get_thresholds():
 # =============================================================================
 
 
-@intelligence_router.get("/patterns")
+@intelligence_router.get("/patterns", response_model=IntelligenceResponse)
 def list_patterns():
     """
     Detect all active patterns.
@@ -688,12 +689,12 @@ def list_patterns():
 
         data = detect_all_patterns()
         return _wrap_response(data)
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("list_patterns failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/patterns/catalog")
+@intelligence_router.get("/patterns/catalog", response_model=IntelligenceResponse)
 def pattern_catalog():
     """
     Get pattern library (all defined patterns with detection logic).
@@ -716,7 +717,7 @@ def pattern_catalog():
             )
 
         return _wrap_response(catalog)
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("pattern_catalog failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -726,7 +727,7 @@ def pattern_catalog():
 # =============================================================================
 
 
-@intelligence_router.get("/proposals")
+@intelligence_router.get("/proposals", response_model=IntelligenceResponse)
 def list_proposals(
     limit: int = Query(20, description="Max proposals to return"),
     urgency: str | None = Query(
@@ -749,7 +750,6 @@ def list_proposals(
             detect_all_signals,
             generate_proposals,
             get_top_proposals,
-            rank_proposals,
         )
 
         signals = detect_all_signals(quick=True)
@@ -776,7 +776,7 @@ def list_proposals(
         return _wrap_response(result, {"limit": limit, "urgency": urgency})
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("list_proposals failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -786,7 +786,7 @@ def list_proposals(
 # =============================================================================
 
 
-@intelligence_router.get("/scores/client/{client_id}")
+@intelligence_router.get("/scores/client/{client_id}", response_model=IntelligenceResponse)
 def client_score(client_id: str):
     """
     Get scorecard for a client.
@@ -802,12 +802,12 @@ def client_score(client_id: str):
 
         data = score_client(client_id)
         return _wrap_response(data, {"client_id": client_id})
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("client_score failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/scores/project/{project_id}")
+@intelligence_router.get("/scores/project/{project_id}", response_model=IntelligenceResponse)
 def project_score(project_id: str):
     """
     Get scorecard for a project.
@@ -823,12 +823,12 @@ def project_score(project_id: str):
 
         data = score_project(project_id)
         return _wrap_response(data, {"project_id": project_id})
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("project_score failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/scores/person/{person_id}")
+@intelligence_router.get("/scores/person/{person_id}", response_model=IntelligenceResponse)
 def person_score(person_id: str):
     """
     Get scorecard for a person.
@@ -844,12 +844,12 @@ def person_score(person_id: str):
 
         data = score_person(person_id)
         return _wrap_response(data, {"person_id": person_id})
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("person_score failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/scores/portfolio")
+@intelligence_router.get("/scores/portfolio", response_model=IntelligenceResponse)
 def portfolio_score():
     """
     Get portfolio scorecard.
@@ -865,7 +865,7 @@ def portfolio_score():
 
         data = score_portfolio()
         return _wrap_response(data)
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("portfolio_score failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -875,7 +875,9 @@ def portfolio_score():
 # =============================================================================
 
 
-@intelligence_router.get("/scores/{entity_type}/{entity_id}/history")
+@intelligence_router.get(
+    "/scores/{entity_type}/{entity_id}/history", response_model=IntelligenceResponse
+)
 def score_history(
     entity_type: str,
     entity_id: str,
@@ -903,12 +905,12 @@ def score_history(
         return _wrap_response(
             data, {"entity_type": entity_type, "entity_id": entity_id, "days": days}
         )
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("score_history failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/scores/history/summary")
+@intelligence_router.get("/scores/history/summary", response_model=IntelligenceResponse)
 def score_history_summary():
     """
     Get summary of score history data collection.
@@ -921,12 +923,12 @@ def score_history_summary():
 
         data = get_score_history_summary()
         return _wrap_response(data)
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("score_history_summary failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.post("/scores/record")
+@intelligence_router.post("/scores/record", response_model=IntelligenceResponse)
 @cache_invalidate("intelligence:*")
 def record_scores():
     """
@@ -944,7 +946,7 @@ def record_scores():
 
         data = record_all_scores()
         return _wrap_response(data)
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("record_scores failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -954,7 +956,7 @@ def record_scores():
 # =============================================================================
 
 
-@intelligence_router.get("/entity/client/{client_id}")
+@intelligence_router.get("/entity/client/{client_id}", response_model=IntelligenceResponse)
 def client_intelligence(client_id: str):
     """
     Get complete intelligence for a client.
@@ -971,12 +973,12 @@ def client_intelligence(client_id: str):
 
         data = get_client_intelligence(client_id)
         return _wrap_response(data, {"client_id": client_id})
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("client_intelligence failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/entity/person/{person_id}")
+@intelligence_router.get("/entity/person/{person_id}", response_model=IntelligenceResponse)
 def person_intelligence(person_id: str):
     """
     Get complete intelligence for a person.
@@ -992,12 +994,12 @@ def person_intelligence(person_id: str):
 
         data = get_person_intelligence(person_id)
         return _wrap_response(data, {"person_id": person_id})
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("person_intelligence failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@intelligence_router.get("/entity/portfolio")
+@intelligence_router.get("/entity/portfolio", response_model=IntelligenceResponse)
 def portfolio_intelligence():
     """
     Get portfolio-level intelligence.
@@ -1013,7 +1015,7 @@ def portfolio_intelligence():
 
         data = get_portfolio_intelligence()
         return _wrap_response(data)
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("portfolio_intelligence failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -1023,7 +1025,7 @@ def portfolio_intelligence():
 # =============================================================================
 
 
-@intelligence_router.get("/changes")
+@intelligence_router.get("/changes", response_model=IntelligenceResponse)
 def detect_changes():
     """
     Run change detection and return delta report.
@@ -1047,6 +1049,6 @@ def detect_changes():
                 "has_changes": changes.has_changes,
             }
         )
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.exception("detect_changes failed")
         raise HTTPException(status_code=500, detail=str(e)) from e

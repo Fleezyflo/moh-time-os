@@ -6,15 +6,7 @@ import os
 import shutil
 import subprocess
 import uuid
-from datetime import datetime, timezone
-
-# UTC compatibility for Python 3.10/3.11
-try:
-    from datetime import UTC  # Python 3.11+
-except ImportError:
-    import datetime as _dtmod  # noqa: F811
-
-    UTC = _dtmod.timezone.utc  # noqa
+from datetime import UTC, datetime
 
 
 def get_git_sha() -> str:
@@ -27,7 +19,7 @@ def get_git_sha() -> str:
         return "unknown"
 
     try:
-        result = subprocess.run(  # noqa: S603 - git path verified via shutil.which
+        result = subprocess.run(
             [git, "rev-parse", "--short", "HEAD"],
             capture_output=True,
             text=True,
@@ -37,7 +29,7 @@ def get_git_sha() -> str:
         )
         if result.returncode == 0:
             return result.stdout.strip()
-    except Exception as e:
+    except (subprocess.TimeoutExpired, OSError) as e:
         import logging
 
         logging.getLogger(__name__).debug("Failed to get git hash: %s", e)

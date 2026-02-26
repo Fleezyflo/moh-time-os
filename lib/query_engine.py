@@ -9,7 +9,7 @@ Read-only — this module never writes to the database.
 import logging
 import sqlite3
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from lib import paths
 
@@ -671,7 +671,7 @@ class QueryEngine:
             SELECT * FROM v_task_with_client
             {where}
             ORDER BY created_at DESC
-        """
+        """  # noqa: S608
         return self._execute(sql, tuple(params))
 
     def invoices_in_period(
@@ -704,7 +704,7 @@ class QueryEngine:
             SELECT * FROM v_invoice_client_project
             {where}
             ORDER BY issue_date DESC
-        """
+        """  # noqa: S608
         return self._execute(sql, tuple(params))
 
     def communications_in_period(
@@ -732,7 +732,7 @@ class QueryEngine:
             SELECT * FROM v_communication_client_link
             {where}
             ORDER BY occurred_at DESC
-        """
+        """  # noqa: S608
         return self._execute(sql, tuple(params))
 
     def client_metrics_in_period(self, client_id: str, since: str, until: str) -> dict:

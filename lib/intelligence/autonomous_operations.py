@@ -11,11 +11,9 @@ Makes the autonomous loop survive failures without manual intervention.
 
 import logging
 import time
-from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 

@@ -14,7 +14,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -270,7 +270,7 @@ class EntityMemory:
                     AND interaction_type IN ({placeholders})
                     ORDER BY created_at DESC
                     LIMIT ?
-                    """,
+                    """,  # noqa: S608
                     (entity_type, entity_id, *interaction_types, limit),
                 ).fetchall()
             else:

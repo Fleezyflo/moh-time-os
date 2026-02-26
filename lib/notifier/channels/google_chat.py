@@ -1,7 +1,6 @@
 """Google Chat webhook notification channel."""
 
 import logging
-from typing import Optional
 
 import httpx
 

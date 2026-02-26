@@ -9,6 +9,7 @@ Handles:
 """
 
 import json
+import sqlite3
 from datetime import datetime
 
 
@@ -56,8 +57,8 @@ class DelegationHandler:
             result = handler(action)
             self._log_action(action, result)
             return result
-        except Exception as e:
-            return {"success": False, "error": str(e)}
+        except (sqlite3.Error, ValueError, OSError):
+            raise  # was silently swallowed
 
     def _delegate_task(self, action: dict) -> dict:
         """Delegate a task to someone."""

@@ -11,6 +11,7 @@ Features:
 import hashlib
 import json
 import re
+import sqlite3
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -253,7 +254,7 @@ def validate_cassettes() -> list[str]:
             if expired_count > 0:
                 issues.append(f"{path.name}: {expired_count} expired entries")
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             issues.append(f"{path.name}: {e}")
 
     return issues

@@ -555,7 +555,7 @@ class IngestPipeline:
 
                     stats["by_surface"][surface] = stats["by_surface"].get(surface, 0) + 1
 
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError) as e:
                     stats["errors"] += 1
                     logger.info(f"Error processing event {event_id}: {e}")
             return stats

@@ -59,7 +59,7 @@ def run_safety_migrations(conn: sqlite3.Connection, verbose: bool = True) -> dic
         results["tables_created"].append("write_context_v1")
         if verbose:
             logger.info("Created/verified write_context_v1 table")
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         results["errors"].append(f"write_context_v1: {e}")
 
     # 2. Create db_write_audit_v1 table
@@ -94,7 +94,7 @@ def run_safety_migrations(conn: sqlite3.Connection, verbose: bool = True) -> dic
         results["tables_created"].append("db_write_audit_v1")
         if verbose:
             logger.info("Created/verified db_write_audit_v1 table with indexes")
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         results["errors"].append(f"db_write_audit_v1: {e}")
 
     # 3. Create maintenance_mode table
@@ -115,7 +115,7 @@ def run_safety_migrations(conn: sqlite3.Connection, verbose: bool = True) -> dic
         results["tables_created"].append("maintenance_mode_v1")
         if verbose:
             logger.info("Created/verified maintenance_mode_v1 table")
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         results["errors"].append(f"maintenance_mode_v1: {e}")
 
     # 4. Create invariant triggers on inbox_items_v29
@@ -128,7 +128,7 @@ def run_safety_migrations(conn: sqlite3.Connection, verbose: bool = True) -> dic
             results["triggers_created"].append(trigger_name)
             if verbose:
                 logger.info(f"Created trigger: {trigger_name}")
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             results["errors"].append(f"{trigger_name}: {e}")
 
     # 5. Create write context enforcement triggers
@@ -146,7 +146,7 @@ def run_safety_migrations(conn: sqlite3.Connection, verbose: bool = True) -> dic
                 results["triggers_created"].append(trigger_name)
                 if verbose:
                     logger.info(f"Created trigger: {trigger_name}")
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 results["errors"].append(f"{trigger_name}: {e}")
 
     # 6. Create audit logging triggers
@@ -162,7 +162,7 @@ def run_safety_migrations(conn: sqlite3.Connection, verbose: bool = True) -> dic
                 results["triggers_created"].append(trigger_name)
                 if verbose:
                     logger.info(f"Created trigger: {trigger_name}")
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 results["errors"].append(f"{trigger_name}: {e}")
 
     # 7. Convert inbox_items to VIEW if it's a table
@@ -188,7 +188,7 @@ def run_safety_migrations(conn: sqlite3.Connection, verbose: bool = True) -> dic
         elif row and row[0] == "view":
             if verbose:
                 logger.info("inbox_items is already a VIEW")
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         results["errors"].append(f"inbox_items view conversion: {e}")
 
     conn.commit()
@@ -307,61 +307,70 @@ def _get_context_triggers(table: str) -> list[tuple[str, str]]:
     safe_table = table.replace("-", "_")
 
     # nosec B608 - table names are from hardcoded SAFETY_MANAGED_TABLES list
+    sql_insert = "".join(
+        [
+            "CREATE TRIGGER trg_",
+            safe_table,
+            "_ctx_insert\n",
+            "BEFORE INSERT ON ",
+            table,
+            "\n",
+            "FOR EACH ROW\n",
+            "WHEN NOT EXISTS (\n",
+            "    SELECT 1 FROM write_context_v1\n",
+            "    WHERE id = 1 AND request_id IS NOT NULL AND actor IS NOT NULL\n",
+            ") AND NOT EXISTS (\n",
+            "    SELECT 1 FROM maintenance_mode_v1 WHERE id = 1 AND flag = 1\n",
+            ")\n",
+            "BEGIN\n",
+            "    SELECT RAISE(ABORT, 'SAFETY: write context required - use WriteContext or set maintenance_mode');\n",
+            "END",
+        ]
+    )
+    sql_update = "".join(
+        [
+            "CREATE TRIGGER trg_",
+            safe_table,
+            "_ctx_update\n",
+            "BEFORE UPDATE ON ",
+            table,
+            "\n",
+            "FOR EACH ROW\n",
+            "WHEN NOT EXISTS (\n",
+            "    SELECT 1 FROM write_context_v1\n",
+            "    WHERE id = 1 AND request_id IS NOT NULL AND actor IS NOT NULL\n",
+            ") AND NOT EXISTS (\n",
+            "    SELECT 1 FROM maintenance_mode_v1 WHERE id = 1 AND flag = 1\n",
+            ")\n",
+            "BEGIN\n",
+            "    SELECT RAISE(ABORT, 'SAFETY: write context required - use WriteContext or set maintenance_mode');\n",
+            "END",
+        ]
+    )
+    sql_delete = "".join(
+        [
+            "CREATE TRIGGER trg_",
+            safe_table,
+            "_ctx_delete\n",
+            "BEFORE DELETE ON ",
+            table,
+            "\n",
+            "FOR EACH ROW\n",
+            "WHEN NOT EXISTS (\n",
+            "    SELECT 1 FROM write_context_v1\n",
+            "    WHERE id = 1 AND request_id IS NOT NULL AND actor IS NOT NULL\n",
+            ") AND NOT EXISTS (\n",
+            "    SELECT 1 FROM maintenance_mode_v1 WHERE id = 1 AND flag = 1\n",
+            ")\n",
+            "BEGIN\n",
+            "    SELECT RAISE(ABORT, 'SAFETY: write context required - use WriteContext or set maintenance_mode');\n",
+            "END",
+        ]
+    )
     return [
-        # Check context on INSERT
-        (
-            f"trg_{safe_table}_ctx_insert",
-            f"""
-            CREATE TRIGGER trg_{safe_table}_ctx_insert
-            BEFORE INSERT ON {table}
-            FOR EACH ROW
-            WHEN NOT EXISTS (
-                SELECT 1 FROM write_context_v1
-                WHERE id = 1 AND request_id IS NOT NULL AND actor IS NOT NULL
-            ) AND NOT EXISTS (
-                SELECT 1 FROM maintenance_mode_v1 WHERE id = 1 AND flag = 1
-            )
-            BEGIN
-                SELECT RAISE(ABORT, 'SAFETY: write context required - use WriteContext or set maintenance_mode');
-            END
-        """,  # nosec B608
-        ),
-        # Check context on UPDATE
-        (
-            f"trg_{safe_table}_ctx_update",
-            f"""
-            CREATE TRIGGER trg_{safe_table}_ctx_update
-            BEFORE UPDATE ON {table}
-            FOR EACH ROW
-            WHEN NOT EXISTS (
-                SELECT 1 FROM write_context_v1
-                WHERE id = 1 AND request_id IS NOT NULL AND actor IS NOT NULL
-            ) AND NOT EXISTS (
-                SELECT 1 FROM maintenance_mode_v1 WHERE id = 1 AND flag = 1
-            )
-            BEGIN
-                SELECT RAISE(ABORT, 'SAFETY: write context required - use WriteContext or set maintenance_mode');
-            END
-        """,  # nosec B608
-        ),
-        # Check context on DELETE
-        (
-            f"trg_{safe_table}_ctx_delete",
-            f"""
-            CREATE TRIGGER trg_{safe_table}_ctx_delete
-            BEFORE DELETE ON {table}
-            FOR EACH ROW
-            WHEN NOT EXISTS (
-                SELECT 1 FROM write_context_v1
-                WHERE id = 1 AND request_id IS NOT NULL AND actor IS NOT NULL
-            ) AND NOT EXISTS (
-                SELECT 1 FROM maintenance_mode_v1 WHERE id = 1 AND flag = 1
-            )
-            BEGIN
-                SELECT RAISE(ABORT, 'SAFETY: write context required - use WriteContext or set maintenance_mode');
-            END
-        """,  # nosec B608
-        ),
+        (f"trg_{safe_table}_ctx_insert", sql_insert),
+        (f"trg_{safe_table}_ctx_update", sql_update),
+        (f"trg_{safe_table}_ctx_delete", sql_delete),
     ]
 
 
@@ -391,94 +400,123 @@ def _get_audit_triggers(table: str) -> list[tuple[str, str]]:
         after_json_update = f"json_object('id', NEW.{pk_col})"
         before_json_delete = f"json_object('id', OLD.{pk_col})"
 
+    sql_insert = "".join(
+        [
+            "CREATE TRIGGER trg_",
+            safe_table,
+            "_audit_insert\n",
+            "AFTER INSERT ON ",
+            table,
+            "\n",
+            "FOR EACH ROW\n",
+            "BEGIN\n",
+            "    INSERT INTO db_write_audit_v1 (\n",
+            "        id, at, actor, request_id, source, git_sha,\n",
+            "        table_name, op, row_id, before_json, after_json\n",
+            "    )\n",
+            "    SELECT\n",
+            "        lower(hex(randomblob(16))),\n",
+            "        datetime('now'),\n",
+            "        COALESCE(wc.actor, 'maintenance'),\n",
+            "        COALESCE(wc.request_id, 'maintenance-' || lower(hex(randomblob(8)))),\n",
+            "        COALESCE(wc.source, 'maintenance'),\n",
+            "        COALESCE(wc.git_sha, 'unknown'),\n",
+            "        '",
+            table,
+            "',\n",
+            "        'INSERT',\n",
+            "        NEW.",
+            pk_col,
+            ",\n",
+            "        NULL,\n",
+            "        ",
+            after_json_insert,
+            "\n",
+            "    FROM (SELECT 1) AS dummy\n",
+            "    LEFT JOIN write_context_v1 wc ON wc.id = 1;\n",
+            "END",
+        ]
+    )
+    sql_update = "".join(
+        [
+            "CREATE TRIGGER trg_",
+            safe_table,
+            "_audit_update\n",
+            "AFTER UPDATE ON ",
+            table,
+            "\n",
+            "FOR EACH ROW\n",
+            "BEGIN\n",
+            "    INSERT INTO db_write_audit_v1 (\n",
+            "        id, at, actor, request_id, source, git_sha,\n",
+            "        table_name, op, row_id, before_json, after_json\n",
+            "    )\n",
+            "    SELECT\n",
+            "        lower(hex(randomblob(16))),\n",
+            "        datetime('now'),\n",
+            "        COALESCE(wc.actor, 'maintenance'),\n",
+            "        COALESCE(wc.request_id, 'maintenance-' || lower(hex(randomblob(8)))),\n",
+            "        COALESCE(wc.source, 'maintenance'),\n",
+            "        COALESCE(wc.git_sha, 'unknown'),\n",
+            "        '",
+            table,
+            "',\n",
+            "        'UPDATE',\n",
+            "        NEW.",
+            pk_col,
+            ",\n",
+            "        ",
+            before_json_update,
+            ",\n",
+            "        ",
+            after_json_update,
+            "\n",
+            "    FROM (SELECT 1) AS dummy\n",
+            "    LEFT JOIN write_context_v1 wc ON wc.id = 1;\n",
+            "END",
+        ]
+    )
+    sql_delete = "".join(
+        [
+            "CREATE TRIGGER trg_",
+            safe_table,
+            "_audit_delete\n",
+            "AFTER DELETE ON ",
+            table,
+            "\n",
+            "FOR EACH ROW\n",
+            "BEGIN\n",
+            "    INSERT INTO db_write_audit_v1 (\n",
+            "        id, at, actor, request_id, source, git_sha,\n",
+            "        table_name, op, row_id, before_json, after_json\n",
+            "    )\n",
+            "    SELECT\n",
+            "        lower(hex(randomblob(16))),\n",
+            "        datetime('now'),\n",
+            "        COALESCE(wc.actor, 'maintenance'),\n",
+            "        COALESCE(wc.request_id, 'maintenance-' || lower(hex(randomblob(8)))),\n",
+            "        COALESCE(wc.source, 'maintenance'),\n",
+            "        COALESCE(wc.git_sha, 'unknown'),\n",
+            "        '",
+            table,
+            "',\n",
+            "        'DELETE',\n",
+            "        OLD.",
+            pk_col,
+            ",\n",
+            "        ",
+            before_json_delete,
+            ",\n",
+            "        NULL\n",
+            "    FROM (SELECT 1) AS dummy\n",
+            "    LEFT JOIN write_context_v1 wc ON wc.id = 1;\n",
+            "END",
+        ]
+    )
     return [
-        # Audit INSERT
-        (
-            f"trg_{safe_table}_audit_insert",
-            f"""
-            CREATE TRIGGER trg_{safe_table}_audit_insert
-            AFTER INSERT ON {table}
-            FOR EACH ROW
-            BEGIN
-                INSERT INTO db_write_audit_v1 (
-                    id, at, actor, request_id, source, git_sha,
-                    table_name, op, row_id, before_json, after_json
-                )
-                SELECT
-                    lower(hex(randomblob(16))),
-                    datetime('now'),
-                    COALESCE(wc.actor, 'maintenance'),
-                    COALESCE(wc.request_id, 'maintenance-' || lower(hex(randomblob(8)))),
-                    COALESCE(wc.source, 'maintenance'),
-                    COALESCE(wc.git_sha, 'unknown'),
-                    '{table}',
-                    'INSERT',
-                    NEW.{pk_col},
-                    NULL,
-                    {after_json_insert}
-                FROM (SELECT 1) AS dummy
-                LEFT JOIN write_context_v1 wc ON wc.id = 1;
-            END
-        """,  # nosec B608
-        ),
-        # Audit UPDATE
-        (
-            f"trg_{safe_table}_audit_update",
-            f"""
-            CREATE TRIGGER trg_{safe_table}_audit_update
-            AFTER UPDATE ON {table}
-            FOR EACH ROW
-            BEGIN
-                INSERT INTO db_write_audit_v1 (
-                    id, at, actor, request_id, source, git_sha,
-                    table_name, op, row_id, before_json, after_json
-                )
-                SELECT
-                    lower(hex(randomblob(16))),
-                    datetime('now'),
-                    COALESCE(wc.actor, 'maintenance'),
-                    COALESCE(wc.request_id, 'maintenance-' || lower(hex(randomblob(8)))),
-                    COALESCE(wc.source, 'maintenance'),
-                    COALESCE(wc.git_sha, 'unknown'),
-                    '{table}',
-                    'UPDATE',
-                    NEW.{pk_col},
-                    {before_json_update},
-                    {after_json_update}
-                FROM (SELECT 1) AS dummy
-                LEFT JOIN write_context_v1 wc ON wc.id = 1;
-            END
-        """,  # nosec B608
-        ),
-        # Audit DELETE
-        (
-            f"trg_{safe_table}_audit_delete",
-            f"""
-            CREATE TRIGGER trg_{safe_table}_audit_delete
-            AFTER DELETE ON {table}
-            FOR EACH ROW
-            BEGIN
-                INSERT INTO db_write_audit_v1 (
-                    id, at, actor, request_id, source, git_sha,
-                    table_name, op, row_id, before_json, after_json
-                )
-                SELECT
-                    lower(hex(randomblob(16))),
-                    datetime('now'),
-                    COALESCE(wc.actor, 'maintenance'),
-                    COALESCE(wc.request_id, 'maintenance-' || lower(hex(randomblob(8)))),
-                    COALESCE(wc.source, 'maintenance'),
-                    COALESCE(wc.git_sha, 'unknown'),
-                    '{table}',
-                    'DELETE',
-                    OLD.{pk_col},
-                    {before_json_delete},
-                    NULL
-                FROM (SELECT 1) AS dummy
-                LEFT JOIN write_context_v1 wc ON wc.id = 1;
-            END
-        """,  # nosec B608
-        ),
+        (f"trg_{safe_table}_audit_insert", sql_insert),
+        (f"trg_{safe_table}_audit_update", sql_update),
+        (f"trg_{safe_table}_audit_delete", sql_delete),
     ]
 
 

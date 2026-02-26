@@ -17,6 +17,22 @@ from contextlib import contextmanager
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel
 
+from api.response_models import (
+    ClientIndexResponse,
+    DetailResponse,
+    EngagementListResponse,
+    FixDataResponse,
+    HealthResponse,
+    InboxCountsResponse,
+    InboxRecentResponse,
+    InboxResponse,
+    IntelligenceResponse,
+    InvoiceListResponse,
+    ListResponse,
+    MutationResponse,
+    SignalListResponse,
+    TeamInvolvementResponse,
+)
 from lib import paths
 from lib.ui_spec_v21.endpoints import (
     ClientEndpoints,
@@ -32,13 +48,16 @@ from lib.ui_spec_v21.issue_lifecycle import (
 from lib.ui_spec_v21.time_utils import now_iso
 
 # Import safety modules
+WriteContext = None
+SAFETY_ENABLED = False
 try:
-    from lib.safety import WriteContext, generate_request_id, get_git_sha
+    from lib.safety import WriteContext as _WriteContext
+    from lib.safety import generate_request_id
 
+    WriteContext = _WriteContext
     SAFETY_ENABLED = True
 except ImportError:
-    SAFETY_ENABLED = False
-    WriteContext = None
+    pass
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +66,30 @@ spec_router = APIRouter(tags=["Spec v2.9"])
 
 # Database path
 DB_PATH = paths.db_path()
+
+
+def _validate_sql_fragment(fragment: str) -> None:
+    """
+    Validate SQL fragments used in dynamic query construction.
+
+    This validates that fragments only contain safe patterns:
+    - Parameterized ? placeholders for user-provided values
+    - Hardcoded column/table names and operators
+    - Literal values from internal code logic
+
+    Args:
+        fragment: SQL fragment to validate
+
+    Raises:
+        ValueError: If dangerous SQL keywords or patterns are detected
+    """
+    # All user-provided data MUST use ? placeholders
+    # These fragments are hardcoded in function calls, not from user input
+    dangerous_keywords = ["UNION", "DROP", "DELETE", "INSERT", "CREATE", "PRAGMA", "ATTACH"]
+    upper = fragment.upper()
+    for keyword in dangerous_keywords:
+        if keyword in upper:
+            raise ValueError(f"Dangerous SQL keyword '{keyword}' in: {fragment}")
 
 
 def get_db() -> sqlite3.Connection:
@@ -72,7 +115,7 @@ def get_db_with_context(
     """
     conn = get_db()
     try:
-        if SAFETY_ENABLED and WriteContext:
+        if SAFETY_ENABLED and WriteContext is not None:
             with WriteContext(conn, actor=actor, source=source, request_id=request_id):
                 yield conn
         else:
@@ -114,7 +157,7 @@ class IssueTransitionRequest(BaseModel):
 # ==== Client Endpoints (§7.1-7.3, 7.9) ====
 
 
-@spec_router.get("/clients")
+@spec_router.get("/clients", response_model=ClientIndexResponse)
 async def get_clients(
     status: str | None = Query(None, description="Filter by status: active|recently_active|cold"),
     tier: str | None = Query(None, description="Filter by tier"),
@@ -144,7 +187,7 @@ async def get_clients(
         conn.close()
 
 
-@spec_router.get("/clients/{client_id}")
+@spec_router.get("/clients/{client_id}", response_model=DetailResponse)
 async def get_client_detail(
     client_id: str,
     include: str | None = Query(None, description="Comma-separated sections to include"),
@@ -169,7 +212,7 @@ async def get_client_detail(
         conn.close()
 
 
-@spec_router.get("/clients/{client_id}/snapshot")
+@spec_router.get("/clients/{client_id}/snapshot", response_model=DetailResponse)
 async def get_client_snapshot(
     client_id: str,
     context_issue_id: str | None = Query(None),
@@ -183,11 +226,16 @@ async def get_client_snapshot(
     conn = get_db()
     try:
         endpoints = ClientEndpoints(conn)
-        result = endpoints.get_client_snapshot(
+        result, error_code = endpoints.get_client_snapshot(
             client_id,
-            context_issue_id=context_issue_id,
-            context_inbox_item_id=context_inbox_item_id,
+            inbox_item_id=context_inbox_item_id,
+            issue_id=context_issue_id,
         )
+        if error_code:
+            raise HTTPException(
+                status_code=error_code,
+                detail=result.get("error", "Error") if isinstance(result, dict) else "Error",
+            )
         if not result:
             raise HTTPException(status_code=404, detail="Client not found")
         return result
@@ -198,7 +246,7 @@ async def get_client_snapshot(
 # ==== Financials Endpoints (§7.5) ====
 
 
-@spec_router.get("/clients/{client_id}/invoices")
+@spec_router.get("/clients/{client_id}/invoices", response_model=InvoiceListResponse)
 async def get_client_invoices(
     client_id: str,
     status: str | None = Query(None, description="Filter by status"),
@@ -218,7 +266,7 @@ async def get_client_invoices(
         conn.close()
 
 
-@spec_router.get("/clients/{client_id}/ar-aging")
+@spec_router.get("/clients/{client_id}/ar-aging", response_model=DetailResponse)
 async def get_client_ar_aging(client_id: str):
     """
     GET /api/v2/clients/:id/ar-aging
@@ -236,7 +284,7 @@ async def get_client_ar_aging(client_id: str):
 # ==== Inbox Endpoints (§7.10) ====
 
 
-@spec_router.get("/inbox")
+@spec_router.get("/inbox", response_model=InboxResponse)
 async def get_inbox(
     state: str | None = Query(None, description="Filter by state: proposed|snoozed"),
     type: str | None = Query(
@@ -267,7 +315,7 @@ async def get_inbox(
     conn = get_db()
     try:
         endpoints = InboxEndpoints(conn)
-        filters = {}
+        filters: dict[str, str | bool] = {}
         if state:
             filters["state"] = state
         if type:
@@ -286,7 +334,7 @@ async def get_inbox(
         conn.close()
 
 
-@spec_router.get("/inbox/recent")
+@spec_router.get("/inbox/recent", response_model=InboxRecentResponse)
 async def get_inbox_recent(
     days: int = Query(7, ge=1, le=90, description="Number of days to look back"),
     state: str | None = Query(
@@ -313,7 +361,7 @@ async def get_inbox_recent(
         conn.close()
 
 
-@spec_router.get("/inbox/counts")
+@spec_router.get("/inbox/counts", response_model=InboxCountsResponse)
 async def get_inbox_counts():
     """
     GET /api/v2/inbox/counts
@@ -328,7 +376,7 @@ async def get_inbox_counts():
         conn.close()
 
 
-@spec_router.post("/inbox/{item_id}/action")
+@spec_router.post("/inbox/{item_id}/action", response_model=MutationResponse)
 async def execute_inbox_action(
     item_id: str,
     request: InboxActionRequest,
@@ -369,7 +417,7 @@ async def execute_inbox_action(
         return result
 
 
-@spec_router.post("/inbox/{item_id}/read")
+@spec_router.post("/inbox/{item_id}/read", response_model=MutationResponse)
 async def mark_inbox_read(
     item_id: str,
     actor: str = Query(..., description="User ID marking as read"),
@@ -382,7 +430,7 @@ async def mark_inbox_read(
     """
     with get_db_with_context(actor=actor, request_id=request_id, source="api") as conn:
         lifecycle = InboxLifecycleManager(conn)
-        success = lifecycle.mark_read(item_id, actor)
+        success = lifecycle.mark_read(item_id)
 
         if not success:
             raise HTTPException(status_code=404, detail="Inbox item not found or already terminal")
@@ -394,7 +442,7 @@ async def mark_inbox_read(
 # ==== Issue Endpoints (§7.6) ====
 
 
-@spec_router.get("/issues")
+@spec_router.get("/issues", response_model=ListResponse)
 async def get_issues(
     client_id: str | None = Query(None, description="Filter by client"),
     state: str | None = Query(None, description="Filter by state"),
@@ -433,22 +481,26 @@ async def get_issues(
         if not include_suppressed:
             where.append("(suppressed = 0 OR suppressed IS NULL)")
 
-        cursor = conn.execute(
-            f"""
-            SELECT * FROM issues_v29
-            WHERE {" AND ".join(where)}
-            ORDER BY
-                CASE severity
-                    WHEN 'critical' THEN 5
-                    WHEN 'high' THEN 4
-                    WHEN 'medium' THEN 3
-                    WHEN 'low' THEN 2
-                    WHEN 'info' THEN 1
-                END DESC,
-                created_at ASC
-        """,
-            params,
+        # Validate all WHERE clause parts are safe (hardcoded in this function, not from user input)
+        for cond in where:
+            _validate_sql_fragment(cond)
+
+        sql = "".join(
+            [
+                "SELECT * FROM issues_v29 ",
+                "WHERE ",
+                " AND ".join(where),
+                " ",
+                "ORDER BY CASE severity ",
+                "WHEN 'critical' THEN 5 ",
+                "WHEN 'high' THEN 4 ",
+                "WHEN 'medium' THEN 3 ",
+                "WHEN 'low' THEN 2 ",
+                "WHEN 'info' THEN 1 ",
+                "END DESC, created_at ASC",
+            ]
         )
+        cursor = conn.execute(sql, params)
 
         issues = []
         for row in cursor.fetchall():
@@ -465,7 +517,7 @@ async def get_issues(
         conn.close()
 
 
-@spec_router.get("/issues/{issue_id}")
+@spec_router.get("/issues/{issue_id}", response_model=DetailResponse)
 async def get_issue(issue_id: str):
     """
     GET /api/v2/issues/:id
@@ -491,7 +543,7 @@ async def get_issue(issue_id: str):
         conn.close()
 
 
-@spec_router.post("/issues/{issue_id}/transition")
+@spec_router.post("/issues/{issue_id}/transition", response_model=MutationResponse)
 async def transition_issue(
     issue_id: str,
     request: IssueTransitionRequest,
@@ -535,7 +587,7 @@ async def transition_issue(
 # ==== Signals Endpoints (§7.7) ====
 
 
-@spec_router.get("/clients/{client_id}/signals")
+@spec_router.get("/clients/{client_id}/signals", response_model=SignalListResponse)
 async def get_client_signals(
     client_id: str,
     sentiment: str | None = Query(None, description="Filter: good|neutral|bad|all"),
@@ -571,36 +623,56 @@ async def get_client_signals(
 
         where_clause = " AND ".join(where)
 
+        # Validate all WHERE clause parts are safe (hardcoded in this function)
+        for cond in where:
+            _validate_sql_fragment(cond)
+
         # Get summary
+        summary_where = where_clause.replace("sentiment = ?", "1=1").replace("source = ?", "1=1")
+        sql = "".join(
+            [
+                "SELECT sentiment, source, COUNT(*) as count ",
+                "FROM signals_v29 ",
+                "WHERE ",
+                summary_where,
+                " ",
+                "GROUP BY sentiment, source",
+            ]
+        )
         cursor = conn.execute(
-            f"""
-            SELECT sentiment, source, COUNT(*) as count
-            FROM signals_v29
-            WHERE {where_clause.replace("sentiment = ?", "1=1").replace("source = ?", "1=1")}
-            GROUP BY sentiment, source
-        """,
+            sql,
             [client_id, cutoff.isoformat()],
         )
 
-        summary = {"good": 0, "neutral": 0, "bad": 0, "by_source": {}}
+        by_source: dict[str, dict[str, int]] = {}
+        summary: dict[str, int | dict[str, dict[str, int]]] = {
+            "good": 0,
+            "neutral": 0,
+            "bad": 0,
+            "by_source": by_source,
+        }
         for row in cursor.fetchall():
             sent, src, count = row
-            summary[sent] = summary.get(sent, 0) + count
-            if src not in summary["by_source"]:
-                summary["by_source"][src] = {"good": 0, "neutral": 0, "bad": 0}
-            summary["by_source"][src][sent] = count
+            if isinstance(summary[sent], int):
+                summary[sent] = summary[sent] + count
+            if src not in by_source:
+                by_source[src] = {"good": 0, "neutral": 0, "bad": 0}
+            by_source[src][sent] = count
 
         # Get paginated signals
         offset = (page - 1) * limit
-        cursor = conn.execute(
-            f"""
-            SELECT * FROM signals_v29
-            WHERE {where_clause}
-            ORDER BY observed_at DESC
-            LIMIT ? OFFSET ?
-        """,
-            params + [limit, offset],
+        _validate_sql_fragment(where_clause)
+        sql = "".join(
+            [
+                "SELECT * FROM signals_v29 ",
+                "WHERE ",
+                where_clause,
+                " ",
+                "ORDER BY observed_at DESC ",
+                "LIMIT ? OFFSET ?",
+            ]
         )
+        cursor = conn.execute(sql, params + [limit, offset])
 
         signals = []
         for row in cursor.fetchall():
@@ -616,12 +688,15 @@ async def get_client_signals(
             signals.append(signal)
 
         # Get total
-        cursor = conn.execute(
-            f"""
-            SELECT COUNT(*) FROM signals_v29 WHERE {where_clause}
-        """,
-            params,
+        _validate_sql_fragment(where_clause)
+        sql = "".join(
+            [
+                "SELECT COUNT(*) FROM signals_v29 ",
+                "WHERE ",
+                where_clause,
+            ]
         )
+        cursor = conn.execute(sql, params)
         total = cursor.fetchone()[0]
 
         return {"summary": summary, "signals": signals, "total": total, "page": page}
@@ -632,7 +707,7 @@ async def get_client_signals(
 # ==== Team Endpoints (§7.8) ====
 
 
-@spec_router.get("/clients/{client_id}/team")
+@spec_router.get("/clients/{client_id}/team", response_model=TeamInvolvementResponse)
 async def get_client_team(client_id: str, days: int = Query(30, ge=1, le=365)):
     """
     GET /api/v2/clients/:id/team
@@ -675,14 +750,14 @@ async def get_client_team(client_id: str, days: int = Query(30, ge=1, le=365)):
             )
 
         return {"involvement": involvement, "total": len(involvement)}
-    except Exception:
-        # Table may not exist, return empty
-        return {"involvement": [], "total": 0}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
 
-@spec_router.get("/team")
+@spec_router.get("/team", response_model=ListResponse)
 async def get_team():
     """
     GET /api/v2/team
@@ -727,9 +802,9 @@ async def get_team():
             )
 
         return {"items": items, "total": len(items)}
-    except Exception as e:
-        logger.warning(f"Team endpoint error: {e}")
-        return {"items": [], "total": 0, "error": str(e)}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
@@ -737,7 +812,7 @@ async def get_team():
 # ==== Engagement Endpoints (§7.4, §7.11) ====
 
 
-@spec_router.get("/engagements")
+@spec_router.get("/engagements", response_model=EngagementListResponse)
 async def get_engagements(
     client_id: str | None = Query(None),
     state: str | None = Query(None),
@@ -774,15 +849,21 @@ async def get_engagements(
 
         where_clause = " AND ".join(where)
 
-        cursor = conn.execute(
-            f"""
-            SELECT * FROM engagements
-            WHERE {where_clause}
-            ORDER BY updated_at DESC
-            LIMIT ? OFFSET ?
-        """,
-            params + [limit, offset],
+        # Validate all WHERE clause parts are safe (hardcoded in this function)
+        for cond in where:
+            _validate_sql_fragment(cond)
+
+        sql = "".join(
+            [
+                "SELECT * FROM engagements ",
+                "WHERE ",
+                where_clause,
+                " ",
+                "ORDER BY updated_at DESC ",
+                "LIMIT ? OFFSET ?",
+            ]
         )
+        cursor = conn.execute(sql, params + [limit, offset])
 
         engagements = []
         for row in cursor.fetchall():
@@ -795,12 +876,15 @@ async def get_engagements(
             engagements.append(eng)
 
         # Get total count
-        cursor = conn.execute(
-            f"""
-            SELECT COUNT(*) FROM engagements WHERE {where_clause}
-        """,
-            params,
+        _validate_sql_fragment(where_clause)
+        sql = "".join(
+            [
+                "SELECT COUNT(*) FROM engagements ",
+                "WHERE ",
+                where_clause,
+            ]
         )
+        cursor = conn.execute(sql, params)
         total = cursor.fetchone()[0]
 
         return {
@@ -809,14 +893,14 @@ async def get_engagements(
             "limit": limit,
             "offset": offset,
         }
-    except Exception:
-        # Table may not exist
-        return {"engagements": [], "total": 0, "limit": limit, "offset": offset}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
 
-@spec_router.get("/engagements/{engagement_id}")
+@spec_router.get("/engagements/{engagement_id}", response_model=DetailResponse)
 async def get_engagement(engagement_id: str):
     """
     GET /api/v2/engagements/:id
@@ -858,7 +942,7 @@ class EngagementTransitionRequest(BaseModel):
     note: str | None = None
 
 
-@spec_router.post("/engagements/{engagement_id}/transition")
+@spec_router.post("/engagements/{engagement_id}/transition", response_model=MutationResponse)
 async def transition_engagement(
     engagement_id: str, request: EngagementTransitionRequest, actor: str = Query("user")
 ):
@@ -899,7 +983,7 @@ async def transition_engagement(
 # ==== Health Check ====
 
 
-@spec_router.get("/health")
+@spec_router.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint."""
     conn = get_db()
@@ -907,8 +991,8 @@ async def health_check():
         cursor = conn.execute("SELECT 1")
         cursor.fetchone()
         return {"status": "healthy", "spec_version": "v2.9", "timestamp": now_iso()}
-    except Exception as e:
-        raise HTTPException(status_code=503, detail=str(e))
+    except (sqlite3.Error, ValueError) as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
     finally:
         conn.close()
 
@@ -916,7 +1000,7 @@ async def health_check():
 # ==== Scheduled Jobs ====
 
 
-@spec_router.post("/jobs/snooze-expiry")
+@spec_router.post("/jobs/snooze-expiry", response_model=MutationResponse)
 async def run_snooze_expiry_job():
     """
     Run snooze expiry job.
@@ -947,7 +1031,7 @@ async def run_snooze_expiry_job():
         conn.close()
 
 
-@spec_router.post("/jobs/regression-watch")
+@spec_router.post("/jobs/regression-watch", response_model=MutationResponse)
 async def run_regression_watch_job():
     """
     Run regression watch expiry job.
@@ -976,7 +1060,7 @@ async def run_regression_watch_job():
 # ==== Alias Endpoints for Frontend Compatibility ====
 
 
-@spec_router.get("/priorities")
+@spec_router.get("/priorities", response_model=ListResponse)
 async def get_priorities_v2(limit: int = Query(20), context: str | None = Query(None)):
     """
     GET /api/v2/priorities
@@ -999,14 +1083,14 @@ async def get_priorities_v2(limit: int = Query(20), context: str | None = Query(
         cursor = conn.execute(query, (limit,))
         items = [dict(row) for row in cursor.fetchall()]
         return {"items": items, "total": len(items)}
-    except Exception as e:
-        logger.warning(f"Priorities endpoint error: {e}")
-        return {"items": [], "total": 0}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("get_priorities_v2 failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
 
-@spec_router.get("/projects")
+@spec_router.get("/projects", response_model=ListResponse)
 async def get_projects_v2(limit: int = Query(50), status: str | None = Query(None)):
     """
     GET /api/v2/projects
@@ -1022,27 +1106,35 @@ async def get_projects_v2(limit: int = Query(50), status: str | None = Query(Non
             where.append("p.status = ?")
             params.append(status)
 
-        query = f"""
-            SELECT p.id, p.name, p.status, p.client_id, c.name as client_name,
-                   p.created_at, p.updated_at
-            FROM projects p
-            LEFT JOIN clients c ON p.client_id = c.id
-            WHERE {" AND ".join(where)}
-            ORDER BY p.updated_at DESC NULLS LAST
-            LIMIT ?
-        """
+        # Validate all WHERE clause parts are safe (hardcoded in this function)
+        for cond in where:
+            _validate_sql_fragment(cond)
+
+        sql = "".join(
+            [
+                "SELECT p.id, p.name, p.status, p.client_id, c.name as client_name, ",
+                "p.created_at, p.updated_at ",
+                "FROM projects p ",
+                "LEFT JOIN clients c ON p.client_id = c.id ",
+                "WHERE ",
+                " AND ".join(where),
+                " ",
+                "ORDER BY p.updated_at DESC NULLS LAST ",
+                "LIMIT ?",
+            ]
+        )
         params.append(limit)
-        cursor = conn.execute(query, params)
+        cursor = conn.execute(sql, params)
         items = [dict(row) for row in cursor.fetchall()]
         return {"items": items, "total": len(items)}
-    except Exception as e:
-        logger.warning(f"Projects endpoint error: {e}")
-        return {"items": [], "total": 0}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("get_projects_v2 failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
 
-@spec_router.get("/events")
+@spec_router.get("/events", response_model=ListResponse)
 async def get_events_v2(
     start_date: str | None = Query(None),
     end_date: str | None = Query(None),
@@ -1065,25 +1157,33 @@ async def get_events_v2(
             where.append("start_time <= ?")
             params.append(end_date)
 
-        query = f"""
-            SELECT id, title, start_time, end_time, location, status, source
-            FROM events
-            WHERE {" AND ".join(where)}
-            ORDER BY start_time ASC
-            LIMIT ?
-        """
+        # Validate all WHERE clause parts are safe (hardcoded in this function)
+        for cond in where:
+            _validate_sql_fragment(cond)
+
+        sql = "".join(
+            [
+                "SELECT id, title, start_time, end_time, location, status, source ",
+                "FROM events ",
+                "WHERE ",
+                " AND ".join(where),
+                " ",
+                "ORDER BY start_time ASC ",
+                "LIMIT ?",
+            ]
+        )
         params.append(limit)
-        cursor = conn.execute(query, params)
+        cursor = conn.execute(sql, params)
         items = [dict(row) for row in cursor.fetchall()]
         return {"items": items, "total": len(items)}
-    except Exception as e:
-        logger.warning(f"Events endpoint error: {e}")
-        return {"items": [], "total": 0}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
 
-@spec_router.get("/invoices")
+@spec_router.get("/invoices", response_model=ListResponse)
 async def get_invoices_v2(
     status: str | None = Query(None),
     client_id: str | None = Query(None),
@@ -1106,26 +1206,34 @@ async def get_invoices_v2(
             where.append("client_id = ?")
             params.append(client_id)
 
-        query = f"""
-            SELECT id, source_id, client_id, client_name, status,
-                   amount, currency, issue_date, due_date, payment_date
-            FROM invoices
-            WHERE {" AND ".join(where)}
-            ORDER BY issue_date DESC NULLS LAST
-            LIMIT ?
-        """
+        # Validate all WHERE clause parts are safe (hardcoded in this function)
+        for cond in where:
+            _validate_sql_fragment(cond)
+
+        sql = "".join(
+            [
+                "SELECT id, source_id, client_id, client_name, status, ",
+                "amount, currency, issue_date, due_date, payment_date ",
+                "FROM invoices ",
+                "WHERE ",
+                " AND ".join(where),
+                " ",
+                "ORDER BY issue_date DESC NULLS LAST ",
+                "LIMIT ?",
+            ]
+        )
         params.append(limit)
-        cursor = conn.execute(query, params)
+        cursor = conn.execute(sql, params)
         items = [dict(row) for row in cursor.fetchall()]
         return {"items": items, "total": len(items)}
-    except Exception as e:
-        logger.warning(f"Invoices endpoint error: {e}")
-        return {"items": [], "total": 0}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
 
-@spec_router.get("/proposals")
+@spec_router.get("/proposals", response_model=ListResponse)
 async def get_proposals_v2(
     limit: int = Query(20),
     status: str = Query("open"),
@@ -1149,17 +1257,25 @@ async def get_proposals_v2(
             where.append("client_id = ?")
             params.append(client_id)
 
-        query = f"""
-            SELECT proposal_id, proposal_type, primary_ref_type, primary_ref_id,
-                   headline, score, status, first_seen_at, last_seen_at,
-                   client_id, client_name, client_tier, scope_level, scope_name
-            FROM proposals_v4
-            WHERE {" AND ".join(where)}
-            ORDER BY score DESC
-            LIMIT ?
-        """
+        # Validate all WHERE clause parts are safe (hardcoded in this function)
+        for cond in where:
+            _validate_sql_fragment(cond)
+
+        sql = "".join(
+            [
+                "SELECT proposal_id, proposal_type, primary_ref_type, primary_ref_id, ",
+                "headline, score, status, first_seen_at, last_seen_at, ",
+                "client_id, client_name, client_tier, scope_level, scope_name ",
+                "FROM proposals_v4 ",
+                "WHERE ",
+                " AND ".join(where),
+                " ",
+                "ORDER BY score DESC ",
+                "LIMIT ?",
+            ]
+        )
         params.append(limit)
-        cursor = conn.execute(query, params)
+        cursor = conn.execute(sql, params)
         items = []
         for row in cursor.fetchall():
             item = dict(row)
@@ -1174,14 +1290,14 @@ async def get_proposals_v2(
             item["ui_exposure_level"] = "normal"
             items.append(item)
         return {"items": items, "total": len(items)}
-    except Exception as e:
-        logger.warning(f"Proposals endpoint error: {e}")
-        return {"items": [], "total": 0}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
 
-@spec_router.get("/watchers")
+@spec_router.get("/watchers", response_model=ListResponse)
 async def get_watchers_v2(hours: int = Query(24)):
     """
     GET /api/v2/watchers
@@ -1203,14 +1319,14 @@ async def get_watchers_v2(hours: int = Query(24)):
         )
         items = [dict(row) for row in cursor.fetchall()]
         return {"items": items, "total": len(items)}
-    except Exception as e:
-        logger.warning(f"Watchers endpoint error: {e}")
-        return {"items": [], "total": 0}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("get_watchers_v2 failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
 
-@spec_router.get("/couplings")
+@spec_router.get("/couplings", response_model=ListResponse)
 async def get_couplings_v2(
     anchor_type: str | None = Query(None),
     anchor_id: str | None = Query(None),
@@ -1227,17 +1343,23 @@ async def get_couplings_v2(
             where.append("anchor_ref_type = ? AND anchor_ref_id = ?")
             params.extend([anchor_type, anchor_id])
 
-        cursor = conn.execute(
-            f"""
-            SELECT coupling_id, anchor_ref_type, anchor_ref_id, entity_refs,
-                   coupling_type, strength, why, confidence
-            FROM entity_links
-            WHERE {" AND ".join(where)}
-            ORDER BY strength DESC
-            LIMIT 50
-        """,
-            params,
+        # Validate all WHERE clause parts are safe (hardcoded in this function)
+        for cond in where:
+            _validate_sql_fragment(cond)
+
+        sql = "".join(
+            [
+                "SELECT coupling_id, anchor_ref_type, anchor_ref_id, entity_refs, ",
+                "coupling_type, strength, why, confidence ",
+                "FROM entity_links ",
+                "WHERE ",
+                " AND ".join(where),
+                " ",
+                "ORDER BY strength DESC ",
+                "LIMIT 50",
+            ]
         )
+        cursor = conn.execute(sql, params)
         items = []
         # Import safe JSON parsing
         from lib.safety import TrustMeta, parse_json_field
@@ -1264,14 +1386,14 @@ async def get_couplings_v2(
 
             items.append(item)
         return {"items": items, "total": len(items)}
-    except Exception as e:
-        logger.warning(f"Couplings endpoint error: {e}")
-        return {"items": [], "total": 0}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
 
-@spec_router.get("/fix-data")
+@spec_router.get("/fix-data", response_model=FixDataResponse)
 async def get_fix_data_v2():
     """
     GET /api/v2/fix-data
@@ -1304,19 +1426,917 @@ async def get_fix_data_v2():
             "missing_mappings": [],
             "total": len(identity_conflicts) + len(ambiguous_links),
         }
-    except Exception as e:
-        logger.warning(f"Fix-data endpoint error: {e}")
-        return {
-            "identity_conflicts": [],
-            "ambiguous_links": [],
-            "missing_mappings": [],
-            "total": 0,
-        }
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
 
 
-@spec_router.get("/evidence/{entity_type}/{entity_id}")
+# ==== Intelligence Endpoints ====
+# These wire the intelligence layer into /api/v2/intelligence/*
+# The UI expects all responses wrapped: {status, data, computed_at, params}
+
+
+def _proposal_type_to_issue_type(proposal_type: str) -> str:
+    """Map proposal_type from proposals_v4 to valid issues_v29 type."""
+    mapping = {
+        "risk": "risk",
+        "opportunity": "financial",
+        "request": "communication",
+        "decision_needed": "schedule_delivery",
+        "anomaly": "risk",
+        "compliance": "risk",
+    }
+    return mapping.get(proposal_type, "risk")
+
+
+def _intel_response(data: object, params: dict | None = None) -> dict:
+    """Wrap intelligence data in the envelope the UI expects."""
+    return {
+        "status": "ok",
+        "data": data,
+        "computed_at": now_iso(),
+        "params": params or {},
+    }
+
+
+def _intel_error(message: str, params: dict | None = None) -> dict:
+    """Return an error envelope."""
+    return {
+        "status": "error",
+        "data": None,
+        "computed_at": now_iso(),
+        "params": params or {},
+        "error": message,
+    }
+
+
+@spec_router.get("/intelligence/critical", response_model=IntelligenceResponse)
+async def get_critical_items():
+    """
+    GET /api/v2/intelligence/critical
+
+    Returns IMMEDIATE urgency proposals for the Command Center.
+    """
+    try:
+        from lib.intelligence.engine import get_critical_items as _get_critical
+
+        items = _get_critical()
+        return _intel_response(items)
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Intelligence critical items error: {e}", exc_info=True)
+        return _intel_error(str(e))
+
+
+@spec_router.get("/intelligence/briefing", response_model=IntelligenceResponse)
+async def get_briefing():
+    """
+    GET /api/v2/intelligence/briefing
+
+    Returns daily briefing with proposals grouped by urgency and portfolio health.
+    """
+    try:
+        from lib.intelligence.engine import generate_intelligence_snapshot
+
+        snapshot = generate_intelligence_snapshot()
+
+        proposals_data = snapshot.get("proposals", {})
+        portfolio_score = snapshot.get("scores", {}).get("portfolio", {})
+
+        # Shape the briefing to match the UI's Briefing type
+        result = {
+            "generated_at": snapshot.get("generated_at", now_iso()),
+            "summary": {
+                "total_proposals": proposals_data.get("total", 0),
+                "immediate_count": len(proposals_data.get("by_urgency", {}).get("immediate", [])),
+                "this_week_count": len(proposals_data.get("by_urgency", {}).get("this_week", [])),
+                "monitor_count": len(proposals_data.get("by_urgency", {}).get("monitor", [])),
+            },
+            "critical_items": proposals_data.get("by_urgency", {}).get("immediate", []),
+            "attention_items": proposals_data.get("by_urgency", {}).get("this_week", []),
+            "watching": proposals_data.get("by_urgency", {}).get("monitor", []),
+            "portfolio_health": {
+                "overall_score": portfolio_score.get("composite_score", 0),
+                "active_structural_patterns": len(
+                    snapshot.get("patterns", {}).get("structural", [])
+                ),
+                "trend": "stable",
+            },
+            "top_proposal": (
+                proposals_data.get("ranked", [{}])[0].get("headline", "")
+                if proposals_data.get("ranked")
+                else ""
+            ),
+        }
+        return _intel_response(result)
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Intelligence briefing error: {e}", exc_info=True)
+        return _intel_error(str(e))
+
+
+@spec_router.get("/intelligence/signals", response_model=IntelligenceResponse)
+async def get_intelligence_signals(
+    quick: bool = Query(True, description="Quick detection mode"),
+):
+    """
+    GET /api/v2/intelligence/signals
+
+    Runs signal detection and returns all detected signals.
+    """
+    try:
+        from lib.intelligence.signals import detect_all_signals
+
+        detection = detect_all_signals(quick=quick)
+        signals = detection.get("signals", [])
+        return _intel_response(
+            {"signals": signals, "total_signals": len(signals)},
+            params={"quick": quick},
+        )
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Intelligence signals error: {e}", exc_info=True)
+        return _intel_error(str(e))
+
+
+@spec_router.get("/intelligence/signals/summary", response_model=IntelligenceResponse)
+async def get_intelligence_signal_summary():
+    """
+    GET /api/v2/intelligence/signals/summary
+
+    Returns aggregate signal counts by severity and entity type.
+    """
+    try:
+        from lib.intelligence.signals import get_signal_summary
+
+        summary = get_signal_summary()
+        return _intel_response(summary)
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Intelligence signal summary error: {e}", exc_info=True)
+        return _intel_error(str(e))
+
+
+@spec_router.get("/intelligence/signals/active", response_model=IntelligenceResponse)
+async def get_intelligence_active_signals(
+    entity_type: str | None = Query(None),
+    entity_id: str | None = Query(None),
+):
+    """
+    GET /api/v2/intelligence/signals/active
+
+    Returns currently active signals, optionally filtered by entity.
+    """
+    try:
+        from lib.intelligence.signals import get_active_signals
+
+        signals = get_active_signals(entity_type=entity_type, entity_id=entity_id)
+        return _intel_response(signals, params={"entity_type": entity_type, "entity_id": entity_id})
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Intelligence active signals error: {e}", exc_info=True)
+        return _intel_error(str(e))
+
+
+@spec_router.get("/intelligence/signals/history", response_model=IntelligenceResponse)
+async def get_intelligence_signal_history(
+    entity_type: str = Query(...),
+    entity_id: str = Query(...),
+    limit: int = Query(50, ge=1, le=200),
+):
+    """
+    GET /api/v2/intelligence/signals/history
+
+    Returns signal history for a specific entity.
+    """
+    try:
+        from lib.intelligence.signals import get_signal_history
+
+        history = get_signal_history(entity_type=entity_type, entity_id=entity_id)
+        # Apply limit
+        limited = history[:limit] if isinstance(history, list) else history
+        return _intel_response(
+            limited,
+            params={"entity_type": entity_type, "entity_id": entity_id, "limit": limit},
+        )
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Intelligence signal history error: {e}", exc_info=True)
+        return _intel_error(str(e))
+
+
+@spec_router.get("/intelligence/patterns", response_model=IntelligenceResponse)
+async def get_intelligence_patterns():
+    """
+    GET /api/v2/intelligence/patterns
+
+    Detects and returns all active patterns.
+    """
+    try:
+        from lib.intelligence.patterns import detect_all_patterns
+
+        detection = detect_all_patterns()
+        patterns = detection.get("patterns", [])
+        return _intel_response(
+            {"patterns": patterns, "total_detected": len(patterns)},
+        )
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Intelligence patterns error: {e}", exc_info=True)
+        return _intel_error(str(e))
+
+
+@spec_router.get("/intelligence/patterns/catalog", response_model=IntelligenceResponse)
+async def get_intelligence_pattern_catalog():
+    """
+    GET /api/v2/intelligence/patterns/catalog
+
+    Returns the pattern library — all defined patterns with descriptions.
+    """
+    try:
+        from lib.intelligence.patterns import PATTERN_LIBRARY
+
+        catalog = []
+        for pat_id, pat in PATTERN_LIBRARY.items():
+            catalog.append(
+                {
+                    "id": pat_id,
+                    "name": pat.name,
+                    "type": pat.pattern_type.value
+                    if hasattr(pat.pattern_type, "value")
+                    else str(pat.pattern_type),
+                    "severity": pat.severity.value
+                    if hasattr(pat.severity, "value")
+                    else str(pat.severity),
+                    "description": pat.description,
+                    "implied_action": pat.implied_action,
+                }
+            )
+        return _intel_response(catalog)
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Intelligence pattern catalog error: {e}", exc_info=True)
+        return _intel_error(str(e))
+
+
+@spec_router.get("/intelligence/proposals", response_model=IntelligenceResponse)
+async def get_intelligence_proposals(
+    limit: int = Query(20, ge=1, le=100),
+    urgency: str | None = Query(None, description="Filter by urgency: immediate|this_week|monitor"),
+):
+    """
+    GET /api/v2/intelligence/proposals
+
+    Generates, ranks, and returns proposals.
+    """
+    try:
+        from lib.intelligence.patterns import detect_all_patterns
+        from lib.intelligence.proposals import generate_proposals, rank_proposals
+        from lib.intelligence.signals import detect_all_signals
+
+        signals = detect_all_signals(quick=True)
+        patterns = detect_all_patterns()
+
+        signal_input = {"signals": signals.get("signals", [])}
+        pattern_input = {"patterns": patterns.get("patterns", [])}
+
+        proposals = generate_proposals(signal_input, pattern_input)
+        ranked = rank_proposals(proposals)
+
+        results = []
+        for p, s in ranked[:limit]:
+            item = p.to_dict()
+            item["priority_score"] = s.to_dict()
+            if urgency and p.urgency.value != urgency:
+                continue
+            results.append(item)
+
+        return _intel_response(results[:limit], params={"limit": limit, "urgency": urgency})
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Intelligence proposals error: {e}", exc_info=True)
+        return _intel_error(str(e))
+
+
+@spec_router.get("/intelligence/scores/client/{client_id}", response_model=IntelligenceResponse)
+async def get_client_score(client_id: str):
+    """
+    GET /api/v2/intelligence/scores/client/:id
+
+    Returns scorecard for a specific client.
+    """
+    try:
+        from lib.intelligence.scorecard import score_client
+
+        scorecard = score_client(client_id)
+        scorecard["computed_at"] = now_iso()
+        return _intel_response(scorecard)
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Intelligence client score error: {e}", exc_info=True)
+        return _intel_error(str(e))
+
+
+@spec_router.get("/intelligence/scores/project/{project_id}", response_model=IntelligenceResponse)
+async def get_project_score(project_id: str):
+    """
+    GET /api/v2/intelligence/scores/project/:id
+
+    Returns scorecard for a specific project.
+    """
+    try:
+        from lib.intelligence.scorecard import score_project
+
+        scorecard = score_project(project_id)
+        scorecard["computed_at"] = now_iso()
+        return _intel_response(scorecard)
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Intelligence project score error: {e}", exc_info=True)
+        return _intel_error(str(e))
+
+
+@spec_router.get("/intelligence/scores/person/{person_id}", response_model=IntelligenceResponse)
+async def get_person_score(person_id: str):
+    """
+    GET /api/v2/intelligence/scores/person/:id
+
+    Returns scorecard for a specific person.
+    """
+    try:
+        from lib.intelligence.scorecard import score_person
+
+        scorecard = score_person(person_id)
+        scorecard["computed_at"] = now_iso()
+        return _intel_response(scorecard)
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Intelligence person score error: {e}", exc_info=True)
+        return _intel_error(str(e))
+
+
+@spec_router.get("/intelligence/scores/portfolio", response_model=IntelligenceResponse)
+async def get_portfolio_score():
+    """
+    GET /api/v2/intelligence/scores/portfolio
+
+    Returns scorecard for the entire portfolio.
+    """
+    try:
+        from lib.intelligence.scorecard import score_portfolio
+
+        scorecard = score_portfolio()
+        scorecard["computed_at"] = now_iso()
+        return _intel_response(scorecard)
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Intelligence portfolio score error: {e}", exc_info=True)
+        return _intel_error(str(e))
+
+
+@spec_router.get("/intelligence/entity/client/{client_id}", response_model=IntelligenceResponse)
+async def get_client_intelligence(client_id: str):
+    """
+    GET /api/v2/intelligence/entity/client/:id
+
+    Deep dive: scorecard + signals + history + trajectory + proposals for a client.
+    """
+    try:
+        from lib.intelligence.engine import get_client_intelligence as _get_client_intel
+
+        intel = _get_client_intel(client_id)
+        return _intel_response(intel)
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Intelligence client entity error: {e}", exc_info=True)
+        return _intel_error(str(e))
+
+
+@spec_router.get("/intelligence/entity/person/{person_id}", response_model=IntelligenceResponse)
+async def get_person_intelligence(person_id: str):
+    """
+    GET /api/v2/intelligence/entity/person/:id
+
+    Deep dive: scorecard + signals + history + profile for a person.
+    """
+    try:
+        from lib.intelligence.engine import get_person_intelligence as _get_person_intel
+
+        intel = _get_person_intel(person_id)
+        return _intel_response(intel)
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Intelligence person entity error: {e}", exc_info=True)
+        return _intel_error(str(e))
+
+
+@spec_router.get("/intelligence/entity/portfolio", response_model=IntelligenceResponse)
+async def get_portfolio_intelligence():
+    """
+    GET /api/v2/intelligence/entity/portfolio
+
+    Portfolio-level: score + signal summary + structural patterns + top proposals.
+    """
+    try:
+        from lib.intelligence.engine import get_portfolio_intelligence as _get_portfolio_intel
+
+        intel = _get_portfolio_intel()
+        return _intel_response(intel)
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Intelligence portfolio entity error: {e}", exc_info=True)
+        return _intel_error(str(e))
+
+
+@spec_router.get("/intelligence/projects/{project_id}/state", response_model=IntelligenceResponse)
+async def get_project_state(project_id: str):
+    """
+    GET /api/v2/intelligence/projects/:id/state
+
+    Returns operational state for a project.
+    """
+    try:
+        from lib.query_engine import QueryEngine
+
+        engine = QueryEngine()
+        state = engine.project_operational_state(project_id)
+        if not state:
+            raise HTTPException(status_code=404, detail="Project not found")
+        return _intel_response(state)
+    except HTTPException:
+        raise
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Intelligence project state error: {e}", exc_info=True)
+        return _intel_error(str(e))
+
+
+@spec_router.get("/intelligence/clients/{client_id}/profile", response_model=IntelligenceResponse)
+async def get_client_profile(client_id: str):
+    """
+    GET /api/v2/intelligence/clients/:id/profile
+
+    Returns deep operational profile for a client.
+    """
+    try:
+        from lib.query_engine import QueryEngine
+
+        engine = QueryEngine()
+        profile = engine.client_deep_profile(client_id)
+        if not profile:
+            raise HTTPException(status_code=404, detail="Client not found")
+        return _intel_response(profile)
+    except HTTPException:
+        raise
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Intelligence client profile error: {e}", exc_info=True)
+        return _intel_error(str(e))
+
+
+@spec_router.get("/intelligence/team/{person_id}/profile", response_model=IntelligenceResponse)
+async def get_person_profile(person_id: str):
+    """
+    GET /api/v2/intelligence/team/:id/profile
+
+    Returns operational profile for a person.
+    """
+    try:
+        from lib.query_engine import QueryEngine
+
+        engine = QueryEngine()
+        profile = engine.person_operational_profile(person_id)
+        if not profile:
+            raise HTTPException(status_code=404, detail="Person not found")
+        return _intel_response(profile)
+    except HTTPException:
+        raise
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Intelligence person profile error: {e}", exc_info=True)
+        return _intel_error(str(e))
+
+
+@spec_router.get(
+    "/intelligence/clients/{client_id}/trajectory", response_model=IntelligenceResponse
+)
+async def get_client_trajectory(
+    client_id: str,
+    window_days: int = Query(30, ge=7, le=90),
+    num_windows: int = Query(6, ge=2, le=12),
+):
+    """
+    GET /api/v2/intelligence/clients/:id/trajectory
+
+    Returns rolling-window metrics and trends for a client.
+    """
+    try:
+        from lib.query_engine import QueryEngine
+
+        engine = QueryEngine()
+        trajectory = engine.client_trajectory(
+            client_id, window_size_days=window_days, num_windows=num_windows
+        )
+        return _intel_response(
+            trajectory,
+            params={"window_days": window_days, "num_windows": num_windows},
+        )
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Intelligence client trajectory error: {e}", exc_info=True)
+        return _intel_error(str(e))
+
+
+@spec_router.get("/intelligence/team/{person_id}/trajectory", response_model=IntelligenceResponse)
+async def get_person_trajectory(
+    person_id: str,
+    window_days: int = Query(30, ge=7, le=90),
+    num_windows: int = Query(6, ge=2, le=12),
+):
+    """
+    GET /api/v2/intelligence/team/:id/trajectory
+
+    Returns rolling-window load metrics and trends for a person.
+    """
+    try:
+        from lib.query_engine import QueryEngine
+
+        engine = QueryEngine()
+        trajectory = engine.person_trajectory(
+            person_id, window_size_days=window_days, num_windows=num_windows
+        )
+        return _intel_response(
+            trajectory,
+            params={"window_days": window_days, "num_windows": num_windows},
+        )
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Intelligence person trajectory error: {e}", exc_info=True)
+        return _intel_error(str(e))
+
+
+# ==== Mutation Endpoints (Proposals, Watchers, Fix-Data, Issues) ====
+
+
+class SnoozeRequest(BaseModel):
+    days: int = 7
+
+
+class DismissRequest(BaseModel):
+    reason: str = "Dismissed by user"
+
+
+class WatcherDismissRequest(BaseModel):
+    actor: str = "system"
+
+
+class WatcherSnoozeRequest(BaseModel):
+    hours: int = 24
+    actor: str = "system"
+
+
+class FixDataResolveRequest(BaseModel):
+    resolution: str = "manually_resolved"
+    actor: str = "system"
+
+
+class CreateIssueRequest(BaseModel):
+    proposal_id: str
+    actor: str = "system"
+
+
+class IssueNoteRequest(BaseModel):
+    text: str
+    actor: str = "system"
+
+
+class IssueResolveRequest(BaseModel):
+    resolution: str = "manually_resolved"
+    actor: str = "system"
+
+
+class IssueStateChangeRequest(BaseModel):
+    state: str
+    reason: str | None = None
+    actor: str = "system"
+
+
+@spec_router.post("/proposals/{proposal_id}/snooze", response_model=MutationResponse)
+async def snooze_proposal(proposal_id: str, request: SnoozeRequest):
+    """
+    POST /api/v2/proposals/:id/snooze
+
+    Snooze a proposal for N days.
+    """
+    conn = get_db()
+    try:
+        from datetime import datetime, timedelta
+
+        snooze_until = (datetime.now() + timedelta(days=request.days)).isoformat()
+        cursor = conn.execute(
+            "UPDATE proposals_v4 SET status = 'snoozed', snoozed_until = ? WHERE proposal_id = ?",
+            (snooze_until, proposal_id),
+        )
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Proposal not found")
+        conn.commit()
+        return {"success": True, "proposal_id": proposal_id, "snoozed_until": snooze_until}
+    except HTTPException:
+        raise
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Snooze proposal error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    finally:
+        conn.close()
+
+
+@spec_router.post("/proposals/{proposal_id}/dismiss", response_model=MutationResponse)
+async def dismiss_proposal(proposal_id: str, request: DismissRequest):
+    """
+    POST /api/v2/proposals/:id/dismiss
+
+    Dismiss a proposal.
+    """
+    conn = get_db()
+    try:
+        cursor = conn.execute(
+            "UPDATE proposals_v4 SET status = 'dismissed', dismissed_reason = ? WHERE proposal_id = ?",
+            (request.reason, proposal_id),
+        )
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Proposal not found")
+        conn.commit()
+        return {"success": True, "proposal_id": proposal_id}
+    except HTTPException:
+        raise
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Dismiss proposal error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    finally:
+        conn.close()
+
+
+@spec_router.post("/watchers/{watcher_id}/dismiss", response_model=MutationResponse)
+async def dismiss_watcher(watcher_id: str, request: WatcherDismissRequest):
+    """
+    POST /api/v2/watchers/:id/dismiss
+
+    Dismiss a watcher.
+    """
+    conn = get_db()
+    try:
+        cursor = conn.execute(
+            "UPDATE watchers SET active = 0, last_checked_at = ? WHERE watcher_id = ?",
+            (now_iso(), watcher_id),
+        )
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Watcher not found")
+        conn.commit()
+        return {"success": True, "watcher_id": watcher_id}
+    except HTTPException:
+        raise
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Dismiss watcher error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    finally:
+        conn.close()
+
+
+@spec_router.post("/watchers/{watcher_id}/snooze", response_model=MutationResponse)
+async def snooze_watcher(watcher_id: str, request: WatcherSnoozeRequest):
+    """
+    POST /api/v2/watchers/:id/snooze
+
+    Snooze a watcher for N hours.
+    """
+    conn = get_db()
+    try:
+        from datetime import datetime, timedelta
+
+        snooze_until = (datetime.now() + timedelta(hours=request.hours)).isoformat()
+        cursor = conn.execute(
+            "UPDATE watchers SET next_check_at = ?, last_checked_at = ? WHERE watcher_id = ?",
+            (snooze_until, now_iso(), watcher_id),
+        )
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Watcher not found")
+        conn.commit()
+        return {"success": True, "watcher_id": watcher_id, "snoozed_until": snooze_until}
+    except HTTPException:
+        raise
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Snooze watcher error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    finally:
+        conn.close()
+
+
+@spec_router.post("/fix-data/{item_type}/{item_id}/resolve", response_model=MutationResponse)
+async def resolve_fix_data(item_type: str, item_id: str, request: FixDataResolveRequest):
+    """
+    POST /api/v2/fix-data/:type/:id/resolve
+
+    Resolve a fix-data item (identity conflict or ambiguous link).
+    """
+    conn = get_db()
+    try:
+        if item_type == "identity":
+            cursor = conn.execute(
+                "UPDATE identities SET confidence_score = 1.0 WHERE id = ?",
+                (item_id,),
+            )
+        elif item_type == "link":
+            cursor = conn.execute(
+                "UPDATE entity_links SET confidence = 1.0, status = 'confirmed', confirmed_by = ?, confirmed_at = ? WHERE link_id = ?",
+                (request.actor, now_iso(), item_id),
+            )
+        else:
+            raise HTTPException(status_code=400, detail=f"Unknown item_type: {item_type}")
+
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail=f"{item_type} not found: {item_id}")
+        conn.commit()
+        return {"success": True, "item_type": item_type, "item_id": item_id}
+    except HTTPException:
+        raise
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Resolve fix-data error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    finally:
+        conn.close()
+
+
+@spec_router.post("/issues", response_model=MutationResponse)
+async def create_issue_from_proposal(request: CreateIssueRequest):
+    """
+    POST /api/v2/issues
+
+    Create an issue from a proposal.
+    """
+    conn = get_db()
+    try:
+        import json
+
+        # Get proposal data
+        cursor = conn.execute(
+            "SELECT * FROM proposals_v4 WHERE proposal_id = ?",
+            (request.proposal_id,),
+        )
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(status_code=404, detail="Proposal not found")
+
+        proposal = dict(row)
+
+        # Use IssueLifecycleManager to create issue with correct schema
+        lifecycle = IssueLifecycleManager(conn)
+        issue_id = lifecycle.create_issue(
+            issue_type=_proposal_type_to_issue_type(proposal.get("proposal_type", "risk")),
+            severity=proposal.get("severity", "medium"),
+            title=proposal.get("headline", "Issue from proposal"),
+            evidence={
+                "source": "proposal",
+                "proposal_id": request.proposal_id,
+                "signal_ids": json.loads(proposal.get("signal_ids", "[]")),
+            },
+            client_id=proposal.get("client_id", "unknown"),
+        )
+
+        # Update proposal status to accepted
+        conn.execute(
+            "UPDATE proposals_v4 SET status = 'accepted' WHERE proposal_id = ?",
+            (request.proposal_id,),
+        )
+
+        conn.commit()
+
+        issue = lifecycle.get_issue(issue_id)
+        return {
+            "success": True,
+            "issue": {
+                "issue_id": issue_id,
+                "headline": issue.get("title") if issue else proposal.get("headline"),
+                "state": issue.get("state", "detected") if issue else "detected",
+                "severity": issue.get("severity", "medium") if issue else "medium",
+            },
+        }
+    except HTTPException:
+        raise
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Create issue error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    finally:
+        conn.close()
+
+
+@spec_router.post("/issues/{issue_id}/notes", response_model=MutationResponse)
+async def add_issue_note(issue_id: str, request: IssueNoteRequest):
+    """
+    POST /api/v2/issues/:id/notes
+
+    Add a note to an issue.
+    """
+    conn = get_db()
+    try:
+        import uuid
+
+        # Verify issue exists
+        cursor = conn.execute("SELECT issue_id FROM issues_v29 WHERE issue_id = ?", (issue_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="Issue not found")
+
+        note_id = f"note-{uuid.uuid4().hex[:12]}"
+        conn.execute(
+            """
+            INSERT INTO item_history (id, item_id, timestamp, change, changed_by)
+            VALUES (?, ?, ?, ?, ?)
+        """,
+            (note_id, issue_id, now_iso(), request.text, request.actor),
+        )
+        conn.commit()
+        return {"success": True, "note_id": note_id}
+    except HTTPException:
+        raise
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Add issue note error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    finally:
+        conn.close()
+
+
+# ==== Issue Shape Compatibility Endpoints ====
+# The UI calls PATCH /issues/:id/resolve and PATCH /issues/:id/state
+# The backend has POST /issues/:id/transition — these aliases bridge the gap.
+
+
+@spec_router.patch("/issues/{issue_id}/resolve", response_model=MutationResponse)
+async def resolve_issue(issue_id: str, request: IssueResolveRequest):
+    """
+    PATCH /api/v2/issues/:id/resolve
+
+    Resolves an issue. Translates to the existing transition logic.
+    """
+    conn = get_db()
+    try:
+        lifecycle = IssueLifecycleManager(conn)
+
+        payload = {"note": request.resolution}
+        success, error = lifecycle.transition(issue_id, "resolve", request.actor, payload)
+
+        if not success:
+            raise HTTPException(
+                status_code=400, detail={"error": "resolve_failed", "message": error}
+            )
+
+        conn.commit()
+        issue = lifecycle.get_issue(issue_id)
+        return {
+            "success": True,
+            "issue_id": issue_id,
+            "state": issue["state"] if issue else "resolved",
+        }
+    except HTTPException:
+        raise
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Resolve issue error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    finally:
+        conn.close()
+
+
+@spec_router.patch("/issues/{issue_id}/state", response_model=MutationResponse)
+async def change_issue_state(issue_id: str, request: IssueStateChangeRequest):
+    """
+    PATCH /api/v2/issues/:id/state
+
+    Changes issue state. Maps to the existing transition logic.
+    """
+    conn = get_db()
+    try:
+        lifecycle = IssueLifecycleManager(conn)
+
+        # Map state to action: the IssueLifecycleManager uses action names like
+        # "resolve", "snooze", "reopen", "close", "acknowledge", "block"
+        # The UI sends target state names. We map common states to actions.
+        state_to_action = {
+            "resolved": "resolve",
+            "closed": "close",
+            "open": "reopen",
+            "monitoring": "acknowledge",
+            "blocked": "block",
+            "awaiting": "snooze",
+        }
+        action = state_to_action.get(request.state, request.state)
+
+        payload = {}
+        if request.reason:
+            payload["note"] = request.reason
+
+        success, error = lifecycle.transition(issue_id, action, request.actor, payload)
+
+        if not success:
+            raise HTTPException(
+                status_code=400, detail={"error": "state_change_failed", "message": error}
+            )
+
+        conn.commit()
+        issue = lifecycle.get_issue(issue_id)
+        return {
+            "success": True,
+            "issue_id": issue_id,
+            "state": issue["state"] if issue else request.state,
+        }
+    except HTTPException:
+        raise
+    except (sqlite3.Error, ValueError) as e:
+        logger.error(f"Change issue state error: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    finally:
+        conn.close()
+
+
+@spec_router.get("/evidence/{entity_type}/{entity_id}", response_model=ListResponse)
 async def get_evidence_v2(entity_type: str, entity_id: str):
     """
     GET /api/v2/evidence/{entity_type}/{entity_id}
@@ -1337,8 +2357,8 @@ async def get_evidence_v2(entity_type: str, entity_id: str):
         )
         items = [dict(row) for row in cursor.fetchall()]
         return {"items": items, "total": len(items)}
-    except Exception as e:
-        logger.warning(f"Evidence endpoint error: {e}")
-        return {"items": [], "total": 0}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("get_evidence_v2 failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()

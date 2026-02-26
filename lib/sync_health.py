@@ -13,7 +13,7 @@ Usage:
 
 import logging
 import sqlite3
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import yaml
@@ -60,7 +60,7 @@ def load_schedule(path: str | None = None) -> dict:
             continue
 
         interval = config.get("interval_minutes")
-        if not isinstance(interval, (int, float)) or interval <= 0:
+        if not isinstance(interval, int | float) or interval <= 0:
             logger.warning(f"Invalid interval for {name}: {interval}")
             continue
 

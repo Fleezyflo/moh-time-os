@@ -2,6 +2,7 @@
 
 import logging
 import shutil
+import sqlite3
 from datetime import datetime
 from pathlib import Path
 
@@ -26,7 +27,7 @@ def create_backup(label: str = None) -> Path | None:
     # Checkpoint WAL first to ensure consistency
     try:
         checkpoint_wal()
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         # Non-critical - proceed with backup anyway
         log.warning(f"WAL checkpoint failed before backup: {e}", exc_info=True)
 
@@ -46,7 +47,7 @@ def create_backup(label: str = None) -> Path | None:
     except OSError as e:
         log.error(f"Backup failed - filesystem error: {e}", exc_info=True)
         return None
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         log.error(f"Backup failed - unexpected error: {e}", exc_info=True)
         return None
 
@@ -101,7 +102,7 @@ def restore_backup(backup_path: Path, create_safety_backup: bool = True) -> bool
         if db_exists():
             try:
                 checkpoint_wal()
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 # Non-critical - proceed with restore anyway
                 log.warning(f"WAL checkpoint failed during restore: {e}", exc_info=True)
 
@@ -123,7 +124,7 @@ def restore_backup(backup_path: Path, create_safety_backup: bool = True) -> bool
     except OSError as e:
         log.error(f"Restore failed - filesystem error: {e}", exc_info=True)
         return False
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         log.error(f"Restore failed - unexpected error: {e}", exc_info=True)
         return False
 

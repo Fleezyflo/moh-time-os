@@ -11,6 +11,7 @@ Runs the complete V4 pipeline:
 """
 
 import logging
+import sqlite3
 import time
 from datetime import datetime
 from typing import Any
@@ -218,7 +219,7 @@ class V4Orchestrator:
                 "duration_ms": int((time.time() - stage_start) * 1000),
                 **sync_stats,
             }
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             log.error(f"Sync stage failed: {e}")
             stats["stages"]["sync"] = {"status": "failed", "error": str(e)}
 
@@ -235,7 +236,7 @@ class V4Orchestrator:
                         "signals_created": result["signals_created"],
                     }
                 )
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 log.error(f"Detector {detector.detector_id} failed: {e}")
                 detector_results.append({"detector_id": detector.detector_id, "error": str(e)})
 
@@ -256,7 +257,7 @@ class V4Orchestrator:
                 "duration_ms": int((time.time() - stage_start) * 1000),
                 **proposal_stats,
             }
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             log.error(f"Proposal generation failed: {e}")
             stats["stages"]["proposals"] = {"status": "failed", "error": str(e)}
 
@@ -270,7 +271,7 @@ class V4Orchestrator:
                 "duration_ms": int((time.time() - stage_start) * 1000),
                 **watcher_stats,
             }
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             log.error(f"Watcher evaluation failed: {e}")
             stats["stages"]["watchers"] = {"status": "failed", "error": str(e)}
 
@@ -284,7 +285,7 @@ class V4Orchestrator:
                 "duration_ms": int((time.time() - stage_start) * 1000),
                 **coupling_stats,
             }
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             log.error(f"Coupling discovery failed: {e}")
             stats["stages"]["couplings"] = {"status": "failed", "error": str(e)}
 
@@ -303,7 +304,7 @@ class V4Orchestrator:
             try:
                 result = detector.run(scope or {})
                 results.append(result)
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 results.append({"detector_id": detector.detector_id, "error": str(e)})
         return {"detectors": results}
 

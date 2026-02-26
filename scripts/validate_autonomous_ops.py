@@ -16,13 +16,11 @@ Exit code: 0 if all checks pass, 1 if any fail
 """
 
 # Add repo root to path
-import os
 import subprocess
 import sys
 import tempfile
-from datetime import datetime
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 REPO_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(REPO_ROOT))
@@ -111,7 +109,6 @@ def check_simulated_cycle_run() -> bool:
 
     try:
         from lib.autonomous_loop import AutonomousLoop
-        from lib.cycle_result import CycleResult, PhaseResult
 
         # Create temp config dir
         with tempfile.TemporaryDirectory() as tmpdir:

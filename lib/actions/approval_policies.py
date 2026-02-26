@@ -10,7 +10,6 @@ Determines which actions auto-approve and which require human review based on:
 
 import logging
 from dataclasses import dataclass
-from typing import Optional
 
 from lib.actions.action_framework import (
     ActionProposal,

@@ -14,7 +14,7 @@ import threading
 import time
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 

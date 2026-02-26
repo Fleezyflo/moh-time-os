@@ -18,7 +18,6 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Optional
 
 from lib.paths import db_path as get_db_path_from_lib
 
@@ -371,7 +370,7 @@ def process_intelligence_for_notifications(
         try:
             nid = notify_critical_signal(signal, db_path)
             notification_ids.append(nid)
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.warning(f"Failed to create signal notification: {e}")
 
     # Structural patterns
@@ -380,7 +379,7 @@ def process_intelligence_for_notifications(
         try:
             nid = notify_pattern_detected(pattern, db_path)
             notification_ids.append(nid)
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.warning(f"Failed to create pattern notification: {e}")
 
     # Immediate proposals
@@ -390,7 +389,7 @@ def process_intelligence_for_notifications(
         try:
             nid = notify_proposal(proposal, db_path)
             notification_ids.append(nid)
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.warning(f"Failed to create proposal notification: {e}")
 
     return notification_ids

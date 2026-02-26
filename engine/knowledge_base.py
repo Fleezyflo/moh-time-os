@@ -4,7 +4,7 @@ import json
 import os
 import re
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 
 from engine.asana_client import list_projects, list_workspaces
 from engine.gogcli import run_gog

@@ -4,14 +4,9 @@ Tests for BehavioralPatternAnalyzer — pattern discovery and context hints.
 Brief 22 (SM), Task SM-4.1
 """
 
-import sqlite3
-from datetime import datetime, timedelta
-from pathlib import Path
-
 import pytest
 
 from lib.intelligence.behavioral_patterns import (
-    ActionEffectiveness,
     BehavioralPattern,
     BehavioralPatternAnalyzer,
     ContextHint,

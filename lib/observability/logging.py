@@ -5,15 +5,10 @@ Structured JSON logging with request ID propagation.
 import json
 import logging
 import os
+import sqlite3
 import sys
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
-
-# UTC compatibility for Python 3.10/3.11
-try:
-    from datetime import UTC
-except ImportError:
-    UTC = timezone.utc  # noqa: UP017
 
 from .context import get_request_id
 
@@ -161,8 +156,10 @@ class CorrelationIdMiddleware:
             if key.lower() == b"x-request-id":
                 try:
                     request_id = value.decode("utf-8")
-                except Exception:  # noqa: S110
-                    pass
+                except (ValueError, OSError) as e:
+                    logger = logging.getLogger(__name__)
+                    logger.error("__call__ failed: %s", e, exc_info=True)
+                    raise  # re-raise after logging
                 break
 
         # Generate if not provided
@@ -207,7 +204,7 @@ def configure_log_rotation(
     if log_dir and not os.path.exists(log_dir):
         try:
             os.makedirs(log_dir, exist_ok=True)
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger = logging.getLogger(__name__)
             logger.error(f"Could not create log directory {log_dir}: {e}")
             return
@@ -224,6 +221,6 @@ def configure_log_rotation(
         formatter = JSONFormatter()
         file_handler.setFormatter(formatter)
         root_logger.addHandler(file_handler)
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger = logging.getLogger(__name__)
         logger.error(f"Could not configure log rotation: {e}")

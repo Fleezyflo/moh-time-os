@@ -12,12 +12,13 @@ Enables rollback-first safety.
 
 import json
 import logging
+import sqlite3
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from enum import StrEnum
 from typing import Any
 
 from lib import paths
-from lib.compat import UTC, StrEnum
 
 logger = logging.getLogger(__name__)
 
@@ -241,7 +242,7 @@ def rollback_bundle(bundle_id: str) -> dict:
                     {"step": step, "executed": False, "result": f"unknown_type:{step_type}"}
                 )
 
-        except Exception as step_err:
+        except (sqlite3.Error, ValueError, OSError) as step_err:
             logger.error(f"Rollback step failed: {step_err}", exc_info=True)
             rollback_results.append(
                 {"step": step, "executed": False, "result": f"error:{str(step_err)[:80]}"}
@@ -539,7 +540,7 @@ class BundleManager:
                     rollback_bundle(bundle_id)
                     rolled_back += 1
                     logger.info(f"Rolled back bundle {bundle_id}")
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 error_msg = f"Failed to rollback {bundle_id}: {e}"
                 logger.error(error_msg)
                 errors.append(error_msg)

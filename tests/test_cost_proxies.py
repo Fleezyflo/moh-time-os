@@ -9,7 +9,6 @@ from datetime import datetime, timedelta
 import pytest
 
 from lib.intelligence.cost_proxies import (
-    CostComponents,
     ImprovedCostCalculator,
     InvoiceData,
     TaskData,

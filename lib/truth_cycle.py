@@ -12,12 +12,12 @@ Dependency order:
 """
 
 import logging
+import sqlite3
 import traceback
 from dataclasses import dataclass, field
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 from lib import paths
-from lib.compat import UTC
 
 logger = logging.getLogger(__name__)
 
@@ -133,7 +133,7 @@ class TruthCycle:
                 },
                 duration_ms=elapsed,
             )
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             elapsed = int((datetime.now(UTC) - start).total_seconds() * 1000)
             logger.error("Time truth failed: %s\n%s", e, traceback.format_exc())
             return StageResult(name="time", ok=False, error=str(e), duration_ms=elapsed)
@@ -154,7 +154,7 @@ class TruthCycle:
                 counts=summary,
                 duration_ms=elapsed,
             )
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             elapsed = int((datetime.now(UTC) - start).total_seconds() * 1000)
             logger.error("Commitment truth failed: %s\n%s", e, traceback.format_exc())
             return StageResult(name="commitments", ok=False, error=str(e), duration_ms=elapsed)
@@ -175,7 +175,7 @@ class TruthCycle:
                 counts=summary,
                 duration_ms=elapsed,
             )
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             elapsed = int((datetime.now(UTC) - start).total_seconds() * 1000)
             logger.error("Capacity truth failed: %s\n%s", e, traceback.format_exc())
             return StageResult(name="capacity", ok=False, error=str(e), duration_ms=elapsed)
@@ -199,7 +199,7 @@ class TruthCycle:
                 },
                 duration_ms=elapsed,
             )
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             elapsed = int((datetime.now(UTC) - start).total_seconds() * 1000)
             logger.error("Client truth failed: %s\n%s", e, traceback.format_exc())
             return StageResult(name="client_health", ok=False, error=str(e), duration_ms=elapsed)

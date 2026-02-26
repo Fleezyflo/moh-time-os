@@ -8,7 +8,7 @@ Features:
 - CursorPaginatedResponse: Model for cursor-based pagination
 """
 
-from typing import Any, Optional, TypeVar
+from typing import Any, TypeVar
 
 from fastapi import Query
 from pydantic import BaseModel, Field

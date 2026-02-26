@@ -26,11 +26,9 @@ Usage:
 import logging
 from collections.abc import Callable
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 from fastapi import HTTPException, Request
-
-from lib.compat import StrEnum
 
 logger = logging.getLogger(__name__)
 

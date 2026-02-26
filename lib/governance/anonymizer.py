@@ -10,6 +10,7 @@ Provides deterministic anonymization so:
 import hashlib
 import logging
 import re
+import sqlite3
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -48,7 +49,7 @@ class Anonymizer:
             local, domain = email.rsplit("@", 1)
             hash_value = self._hash(local)
             return f"{hash_value}@{domain}"
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error anonymizing email {email}: {e}")
             return "error@example.com"
 
@@ -74,7 +75,7 @@ class Anonymizer:
                 masked = "X" * len(digits)
 
             return masked
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error anonymizing phone {phone}: {e}")
             return "0000000000"
 
@@ -91,7 +92,7 @@ class Anonymizer:
         try:
             hash_value = self._hash(name)[:8]
             return f"Person_{hash_value}"
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error anonymizing name {name}: {e}")
             return "Person_Error"
 
@@ -128,13 +129,14 @@ class Anonymizer:
                     if "://" in value_str:
                         scheme, rest = value_str.split("://", 1)
                         return f"{scheme}://anonymized-{self._hash(rest)[:8]}.example.com"
-                except Exception:
-                    pass
+                except (sqlite3.Error, ValueError, OSError) as e:
+                    logger.error("handler failed: %s", e, exc_info=True)
+                    raise  # re-raise after logging
                 return f"https://anonymized-{self._hash(value_str)[:8]}.example.com"
             else:
                 # Default: return original
                 return value
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error anonymizing value {value} (type {column_type}): {e}")
             return value
 

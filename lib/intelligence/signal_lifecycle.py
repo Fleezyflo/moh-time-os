@@ -14,10 +14,9 @@ import json
 import logging
 import sqlite3
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Optional
 
 from lib import paths
 from lib.intelligence.temporal import BusinessCalendar

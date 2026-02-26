@@ -175,7 +175,9 @@ def migrate_tasks(conn):
     cursor.execute("SELECT COUNT(*) FROM tasks")
     after = cursor.fetchone()[0]
     logger.info(f"✓ tasks: {before} → {after}")
-    assert before == after, f"Row count mismatch: {before} vs {after}"
+    if before != after:
+        msg = f"Row count mismatch: {before} vs {after}"
+        raise RuntimeError(msg)
 
 
 def migrate_communications(conn):
@@ -234,34 +236,62 @@ def migrate_communications(conn):
     # Check if old table has from_email or from_address
     cursor.execute("PRAGMA table_info(communications)")
     cols = {r["name"] for r in cursor.fetchall()}
-    from_col = "from_email" if "from_email" in cols else "from_address"
-    to_col = "to_emails" if "to_emails" in cols else "to_addresses"
+    has_new_cols = "from_email" in cols and "to_emails" in cols
 
-    cursor.execute(f"""
-        INSERT INTO communications_v12 (
-            id, source, source_id, thread_id,
-            from_email, from_domain, to_emails,
-            subject, snippet, body_text, content_hash, received_at,
-            client_id, link_status, processed, created_at, updated_at,
-            priority, requires_response, response_deadline, sentiment,
-            labels, sensitivity, stakeholder_tier, lane, is_vip, from_name,
-            is_unread, is_starred, is_important, priority_reasons,
-            response_urgency, expected_response_by, processed_at, action_taken,
-            linked_task_id, age_hours
-        )
-        SELECT
-            id, source, source_id, thread_id,
-            {from_col}, from_domain, {to_col},
-            subject, snippet, body_text, content_hash, received_at,
-            client_id, COALESCE(link_status, 'unlinked'), processed,
-            COALESCE(created_at, datetime('now')), datetime('now'),
-            priority, requires_response, response_deadline, sentiment,
-            labels, sensitivity, stakeholder_tier, lane, is_vip, from_name,
-            is_unread, is_starred, is_important, priority_reasons,
-            response_urgency, expected_response_by, processed_at, action_taken,
-            linked_task_id, age_hours
-        FROM communications
-    """)
+    # Two hardcoded queries to avoid f-string SQL (B608).
+    # Column names come from PRAGMA but bandit can't verify that.
+    if has_new_cols:
+        cursor.execute("""
+            INSERT INTO communications_v12 (
+                id, source, source_id, thread_id,
+                from_email, from_domain, to_emails,
+                subject, snippet, body_text, content_hash, received_at,
+                client_id, link_status, processed, created_at, updated_at,
+                priority, requires_response, response_deadline, sentiment,
+                labels, sensitivity, stakeholder_tier, lane, is_vip, from_name,
+                is_unread, is_starred, is_important, priority_reasons,
+                response_urgency, expected_response_by, processed_at, action_taken,
+                linked_task_id, age_hours
+            )
+            SELECT
+                id, source, source_id, thread_id,
+                from_email, from_domain, to_emails,
+                subject, snippet, body_text, content_hash, received_at,
+                client_id, COALESCE(link_status, 'unlinked'), processed,
+                COALESCE(created_at, datetime('now')), datetime('now'),
+                priority, requires_response, response_deadline, sentiment,
+                labels, sensitivity, stakeholder_tier, lane, is_vip, from_name,
+                is_unread, is_starred, is_important, priority_reasons,
+                response_urgency, expected_response_by, processed_at, action_taken,
+                linked_task_id, age_hours
+            FROM communications
+        """)
+    else:
+        cursor.execute("""
+            INSERT INTO communications_v12 (
+                id, source, source_id, thread_id,
+                from_email, from_domain, to_emails,
+                subject, snippet, body_text, content_hash, received_at,
+                client_id, link_status, processed, created_at, updated_at,
+                priority, requires_response, response_deadline, sentiment,
+                labels, sensitivity, stakeholder_tier, lane, is_vip, from_name,
+                is_unread, is_starred, is_important, priority_reasons,
+                response_urgency, expected_response_by, processed_at, action_taken,
+                linked_task_id, age_hours
+            )
+            SELECT
+                id, source, source_id, thread_id,
+                from_address, from_domain, to_addresses,
+                subject, snippet, body_text, content_hash, received_at,
+                client_id, COALESCE(link_status, 'unlinked'), processed,
+                COALESCE(created_at, datetime('now')), datetime('now'),
+                priority, requires_response, response_deadline, sentiment,
+                labels, sensitivity, stakeholder_tier, lane, is_vip, from_name,
+                is_unread, is_starred, is_important, priority_reasons,
+                response_urgency, expected_response_by, processed_at, action_taken,
+                linked_task_id, age_hours
+            FROM communications
+        """)
 
     cursor.execute("DROP TABLE communications")
     cursor.execute("ALTER TABLE communications_v12 RENAME TO communications")
@@ -276,7 +306,9 @@ def migrate_communications(conn):
     cursor.execute("SELECT COUNT(*) FROM communications")
     after = cursor.fetchone()[0]
     logger.info(f"✓ communications: {before} → {after}")
-    assert before == after
+    if before != after:
+        msg = f"communications row count mismatch: {before} vs {after}"
+        raise RuntimeError(msg)
 
 
 def migrate_projects(conn):
@@ -378,7 +410,9 @@ def migrate_projects(conn):
     cursor.execute("SELECT COUNT(*) FROM projects")
     after = cursor.fetchone()[0]
     logger.info(f"✓ projects: {before} → {after}")
-    assert before == after
+    if before != after:
+        msg = f"projects row count mismatch: {before} vs {after}"
+        raise RuntimeError(msg)
 
 
 def migrate_clients(conn):
@@ -431,7 +465,9 @@ def migrate_clients(conn):
     cursor.execute("SELECT COUNT(*) FROM clients")
     after = cursor.fetchone()[0]
     logger.info(f"✓ clients: {before} → {after}")
-    assert before == after
+    if before != after:
+        msg = f"clients row count mismatch: {before} vs {after}"
+        raise RuntimeError(msg)
 
 
 def migrate_invoices(conn):
@@ -486,7 +522,9 @@ def migrate_invoices(conn):
     cursor.execute("SELECT COUNT(*) FROM invoices")
     after = cursor.fetchone()[0]
     logger.info(f"✓ invoices: {before} → {after}")
-    assert before == after
+    if before != after:
+        msg = f"invoices row count mismatch: {before} vs {after}"
+        raise RuntimeError(msg)
 
 
 def migrate_commitments(conn):
@@ -534,7 +572,9 @@ def migrate_commitments(conn):
     cursor.execute("SELECT COUNT(*) FROM commitments")
     after = cursor.fetchone()[0]
     logger.info(f"✓ commitments: {before} → {after}")
-    assert before == after
+    if before != after:
+        msg = f"commitments row count mismatch: {before} vs {after}"
+        raise RuntimeError(msg)
 
 
 def ensure_spec_tables(conn):
@@ -822,7 +862,7 @@ def run_migration():
         else:
             raise Exception("Schema verification failed")
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         conn.rollback()
         logger.info(f"\n✗ MIGRATION FAILED: {e}")
         logger.info(f"  Restore from: {backup_path}")

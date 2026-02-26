@@ -14,7 +14,7 @@ import logging
 import sqlite3
 import time
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -109,10 +109,10 @@ class BatchLoader:
             SELECT {column_list}
             FROM {self.table}
             WHERE {self.id_column} IN ({placeholders})
-        """
+        """  # noqa: S608
 
         try:
-            cursor = self.conn.execute(sql, list(self.ids))
+            cursor = self.conn.execute(sql, list(self.ids))  # noqa: S608
             for row in cursor.fetchall():
                 row_dict = dict(row)
                 id_val = row_dict[self.id_column]
@@ -167,7 +167,7 @@ def prefetch_related(
         SELECT {id_column}, {column_list}
         FROM {table}
         WHERE {id_column} IN ({placeholders})
-    """
+    """  # noqa: S608
 
     try:
         cursor = conn.execute(sql, ids)

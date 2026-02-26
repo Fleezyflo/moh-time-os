@@ -2,8 +2,6 @@
 Feature Flags Tests.
 """
 
-import os
-
 import pytest
 
 from lib.features import (

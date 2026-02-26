@@ -6,11 +6,11 @@ Endpoints:
 - POST /api/chat/interactive — handle interactive card button clicks
 """
 
-import json
 import logging
-from typing import Optional
+import sqlite3
+from typing import Any
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from lib.integrations.chat_commands import SlashCommandHandler
@@ -66,7 +66,16 @@ class InteractiveActionRequest(BaseModel):
     )
 
 
-@router.post("/webhook")
+class ChatWebhookResponse(BaseModel):
+    """Google Chat webhook response — text reply or card payload."""
+
+    text: str | None = None
+    cardsV2: list[Any] | None = None
+
+    model_config = {"extra": "allow"}
+
+
+@router.post("/webhook", response_model=ChatWebhookResponse)
 async def handle_webhook(request: ChatWebhookRequest) -> dict:
     """
     Receive and process Chat webhook events.
@@ -140,12 +149,12 @@ async def handle_webhook(request: ChatWebhookRequest) -> dict:
             logger.debug(f"Unhandled event type: {event_type}")
             return {"text": ""}
 
-    except Exception as e:
-        logger.error(f"Error handling webhook: {e}", exc_info=True)
-        return {"text": f"Error: {str(e)[:100]}"}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@router.post("/interactive")
+@router.post("/interactive", response_model=ChatWebhookResponse)
 async def handle_interactive_action(request: InteractiveActionRequest) -> dict:
     """
     Handle interactive card button clicks.
@@ -186,9 +195,9 @@ async def handle_interactive_action(request: InteractiveActionRequest) -> dict:
                     return {
                         "text": f"Could not approve action {action_id} (not found or not pending)"
                     }
-            except Exception as e:
-                logger.error(f"Error approving action {action_id}: {e}", exc_info=True)
-                return {"text": f"Error approving action: {str(e)[:100]}"}
+            except (sqlite3.Error, ValueError) as e:
+                logger.error("handler failed: %s", e, exc_info=True)
+                raise HTTPException(status_code=500, detail=str(e)) from e
 
         elif action_name == "REJECT_ACTION":
             action_id = params_dict.get("action_id")
@@ -209,14 +218,14 @@ async def handle_interactive_action(request: InteractiveActionRequest) -> dict:
                     return {
                         "text": f"Could not reject action {action_id} (not found or not pending)"
                     }
-            except Exception as e:
-                logger.error(f"Error rejecting action {action_id}: {e}", exc_info=True)
-                return {"text": f"Error rejecting action: {str(e)[:100]}"}
+            except (sqlite3.Error, ValueError) as e:
+                logger.error("handler failed: %s", e, exc_info=True)
+                raise HTTPException(status_code=500, detail=str(e)) from e
 
         else:
             logger.warning(f"Unknown interactive action: {action_name}")
             return {"text": f"Unknown action: {action_name}"}
 
-    except Exception as e:
-        logger.error(f"Error handling interactive action: {e}", exc_info=True)
-        return {"text": f"Error: {str(e)[:100]}"}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e

@@ -7,13 +7,7 @@ Brief 12 (IX), Task IX-2.1
 import pytest
 
 from lib.intelligence.intelligence_index import (
-    ClientIntelligenceCard,
-    CommandCenterView,
-    DashboardIndex,
-    FinancialOverview,
     IntelligenceIndex,
-    ResolutionQueueItem,
-    TeamCapacityCard,
     classify_attention_level,
     classify_capacity_status,
     classify_health,

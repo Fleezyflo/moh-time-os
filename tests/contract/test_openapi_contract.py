@@ -68,9 +68,9 @@ class TestResponseModels:
         proposals_path = paths.get("/api/control-room/proposals", {})
 
         assert "get" in proposals_path, "Proposals endpoint missing GET method"
-        assert "200" in proposals_path["get"].get(
-            "responses", {}
-        ), "Proposals endpoint missing 200 response"
+        assert "200" in proposals_path["get"].get("responses", {}), (
+            "Proposals endpoint missing 200 response"
+        )
 
 
 class TestSchemaStrictness:
@@ -115,10 +115,9 @@ class TestSchemaStrictness:
                         ):
                             any_type_endpoints.append(f"{method.upper()} {path}")
 
-        # Current baseline: 165 any-type endpoints (legacy)
-        # Target: reduce to <50 over time
-        # For now, just track and don't fail
-        current_baseline = 225  # Updated for full system API surface
+        # Baseline after response_model sweep: added Pydantic models to 270 endpoints
+        # Remaining any-type: non-JSON responses (PlainText, SSE, FileResponse, 501 stubs)
+        current_baseline = 10  # Should be near 0 after response_model sweep
         if len(any_type_endpoints) > current_baseline:
             pytest.fail(
                 f"Any-type endpoints grew ({len(any_type_endpoints)} > {current_baseline}): "
@@ -138,9 +137,9 @@ class TestEndpointCount:
         min_expected = 100
         max_expected = 250
 
-        assert (
-            min_expected <= count <= max_expected
-        ), f"Endpoint count {count} outside expected range [{min_expected}, {max_expected}]"
+        assert min_expected <= count <= max_expected, (
+            f"Endpoint count {count} outside expected range [{min_expected}, {max_expected}]"
+        )
 
 
 class TestUiUsedEndpoints:

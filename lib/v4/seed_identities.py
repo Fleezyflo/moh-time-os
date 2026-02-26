@@ -65,7 +65,7 @@ def seed_identities_from_clients():
 
                 stats["created"] += 1
                 logger.info(f"  ✓ Created org profile: {name}")
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 stats["errors"] += 1
                 logger.info(f"  ✗ Error for {name}: {e}")
         conn.commit()
@@ -145,7 +145,7 @@ def seed_identities_from_people():
 
                 stats["created"] += 1
                 logger.info(f"  ✓ Created person profile: {name}")
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 stats["errors"] += 1
                 logger.info(f"  ✗ Error for {name}: {e}")
         conn.commit()

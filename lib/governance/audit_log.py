@@ -13,10 +13,9 @@ Entries are immutable (cannot be deleted or modified after creation).
 
 import logging
 import sqlite3
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +74,7 @@ class AuditLog:
             conn.commit()
             conn.close()
             logger.info("Audit log schema initialized")
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error initializing audit log schema: {e}")
             raise
 
@@ -134,7 +133,7 @@ class AuditLog:
             )
             return entry_id
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error logging audit entry: {e}")
             raise
 
@@ -197,7 +196,7 @@ class AuditLog:
 
             return entries
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error retrieving audit entries: {e}")
             raise
 
@@ -227,6 +226,6 @@ class AuditLog:
 
             return result["cnt"] if result else 0
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error counting audit entries: {e}")
             raise

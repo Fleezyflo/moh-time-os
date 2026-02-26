@@ -1,6 +1,88 @@
 {
   "components": {
     "schemas": {
+      "ActionExecutionResponse": {
+        "description": "Response for action execution.",
+        "properties": {
+          "action_id": {
+            "title": "Action Id",
+            "type": "string"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "execution_time_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Time Ms"
+          },
+          "result_data": {
+            "title": "Result Data"
+          },
+          "success": {
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "action_id",
+          "success"
+        ],
+        "title": "ActionExecutionResponse",
+        "type": "object"
+      },
+      "ActionListResponse": {
+        "description": "Response for listing actions.",
+        "properties": {
+          "actions": {
+            "items": {},
+            "title": "Actions",
+            "type": "array"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "count"
+        ],
+        "title": "ActionListResponse",
+        "type": "object"
+      },
+      "ActionStatusResponse": {
+        "description": "Response for action status changes (propose, approve, reject).",
+        "properties": {
+          "action_id": {
+            "title": "Action Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "action_id",
+          "status"
+        ],
+        "title": "ActionStatusResponse",
+        "type": "object"
+      },
       "AddIssueNoteRequest": {
         "properties": {
           "actor": {
@@ -57,6 +139,33 @@
           "approved_by"
         ],
         "title": "ApproveRequest",
+        "type": "object"
+      },
+      "BatchActionResponse": {
+        "description": "Response for batch action proposal.",
+        "properties": {
+          "action_ids": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Action Ids",
+            "type": "array"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "count",
+          "action_ids",
+          "status"
+        ],
+        "title": "BatchActionResponse",
         "type": "object"
       },
       "BatchProposalRequest": {
@@ -261,6 +370,84 @@
         "title": "ChatWebhookRequest",
         "type": "object"
       },
+      "ChatWebhookResponse": {
+        "additionalProperties": true,
+        "description": "Google Chat webhook response \u2014 text reply or card payload.",
+        "properties": {
+          "cardsV2": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cardsv2"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "title": "ChatWebhookResponse",
+        "type": "object"
+      },
+      "ClientCountsResponse": {
+        "description": "Counts breakdown for client index.",
+        "properties": {
+          "active": {
+            "default": 0,
+            "title": "Active",
+            "type": "integer"
+          },
+          "cold": {
+            "default": 0,
+            "title": "Cold",
+            "type": "integer"
+          },
+          "recently_active": {
+            "default": 0,
+            "title": "Recently Active",
+            "type": "integer"
+          }
+        },
+        "title": "ClientCountsResponse",
+        "type": "object"
+      },
+      "ClientIndexResponse": {
+        "description": "Client index grouped by status.",
+        "properties": {
+          "active": {
+            "items": {},
+            "title": "Active",
+            "type": "array"
+          },
+          "cold": {
+            "items": {},
+            "title": "Cold",
+            "type": "array"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/ClientCountsResponse"
+          },
+          "recently_active": {
+            "items": {},
+            "title": "Recently Active",
+            "type": "array"
+          }
+        },
+        "title": "ClientIndexResponse",
+        "type": "object"
+      },
       "ClientUpdate": {
         "properties": {
           "annual_value": {
@@ -344,28 +531,22 @@
         "title": "ClientUpdate",
         "type": "object"
       },
-      "DelegateAction": {
+      "CreateIssueRequest": {
         "properties": {
-          "note": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Note"
+          "actor": {
+            "default": "system",
+            "title": "Actor",
+            "type": "string"
           },
-          "to": {
-            "title": "To",
+          "proposal_id": {
+            "title": "Proposal Id",
             "type": "string"
           }
         },
         "required": [
-          "to"
+          "proposal_id"
         ],
-        "title": "DelegateAction",
+        "title": "CreateIssueRequest",
         "type": "object"
       },
       "DelegateRequest": {
@@ -403,6 +584,13 @@
         "title": "DelegateRequest",
         "type": "object"
       },
+      "DetailResponse": {
+        "additionalProperties": true,
+        "description": "Single entity detail \u2014 shape varies per entity type.",
+        "properties": {},
+        "title": "DetailResponse",
+        "type": "object"
+      },
       "DismissProposalRequest": {
         "properties": {
           "reason": {
@@ -414,6 +602,17 @@
         "title": "DismissProposalRequest",
         "type": "object"
       },
+      "DismissRequest": {
+        "properties": {
+          "reason": {
+            "default": "Dismissed by user",
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "title": "DismissRequest",
+        "type": "object"
+      },
       "DismissWatcherRequest": {
         "properties": {
           "actor": {
@@ -423,6 +622,33 @@
           }
         },
         "title": "DismissWatcherRequest",
+        "type": "object"
+      },
+      "EngagementListResponse": {
+        "description": "Engagement list (key is 'engagements', not 'items').",
+        "properties": {
+          "engagements": {
+            "items": {},
+            "title": "Engagements",
+            "type": "array"
+          },
+          "limit": {
+            "default": 50,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "default": 0,
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "title": "EngagementListResponse",
         "type": "object"
       },
       "EngagementTransitionRequest": {
@@ -572,6 +798,49 @@
         "title": "FeedbackRequest",
         "type": "object"
       },
+      "FixDataResolveRequest": {
+        "properties": {
+          "actor": {
+            "default": "system",
+            "title": "Actor",
+            "type": "string"
+          },
+          "resolution": {
+            "default": "manually_resolved",
+            "title": "Resolution",
+            "type": "string"
+          }
+        },
+        "title": "FixDataResolveRequest",
+        "type": "object"
+      },
+      "FixDataResponse": {
+        "description": "Data quality issues for manual resolution.",
+        "properties": {
+          "ambiguous_links": {
+            "items": {},
+            "title": "Ambiguous Links",
+            "type": "array"
+          },
+          "identity_conflicts": {
+            "items": {},
+            "title": "Identity Conflicts",
+            "type": "array"
+          },
+          "missing_mappings": {
+            "items": {},
+            "title": "Missing Mappings",
+            "type": "array"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "title": "FixDataResponse",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -583,6 +852,33 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HealthResponse": {
+        "description": "Health check result.",
+        "properties": {
+          "spec_version": {
+            "description": "Spec version string",
+            "title": "Spec Version",
+            "type": "string"
+          },
+          "status": {
+            "description": "healthy or error",
+            "title": "Status",
+            "type": "string"
+          },
+          "timestamp": {
+            "description": "ISO timestamp",
+            "title": "Timestamp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "spec_version",
+          "timestamp"
+        ],
+        "title": "HealthResponse",
         "type": "object"
       },
       "InboxActionRequest": {
@@ -653,6 +949,107 @@
         "title": "InboxActionRequest",
         "type": "object"
       },
+      "InboxCountsResponse": {
+        "additionalProperties": true,
+        "description": "Inbox counts breakdown.",
+        "properties": {},
+        "title": "InboxCountsResponse",
+        "type": "object"
+      },
+      "InboxRecentResponse": {
+        "description": "Recently-actioned inbox items.",
+        "properties": {
+          "items": {
+            "items": {},
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "default": 1,
+            "title": "Page",
+            "type": "integer"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "title": "InboxRecentResponse",
+        "type": "object"
+      },
+      "InboxResponse": {
+        "description": "Inbox with counts and items.",
+        "properties": {
+          "counts": {
+            "additionalProperties": true,
+            "title": "Counts",
+            "type": "object"
+          },
+          "items": {
+            "items": {},
+            "title": "Items",
+            "type": "array"
+          }
+        },
+        "title": "InboxResponse",
+        "type": "object"
+      },
+      "IntelligenceResponse": {
+        "description": "Standard intelligence endpoint envelope.",
+        "properties": {
+          "computed_at": {
+            "description": "ISO timestamp of computation",
+            "title": "Computed At",
+            "type": "string"
+          },
+          "data": {
+            "description": "Response payload",
+            "title": "Data"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Error message if status=error",
+            "title": "Error"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Error code if status=error",
+            "title": "Error Code"
+          },
+          "params": {
+            "additionalProperties": true,
+            "description": "Echo of request params",
+            "title": "Params",
+            "type": "object"
+          },
+          "status": {
+            "description": "ok or error",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "computed_at"
+        ],
+        "title": "IntelligenceResponse",
+        "type": "object"
+      },
       "InteractiveActionRequest": {
         "description": "Incoming interactive action (button click on card).",
         "properties": {
@@ -720,6 +1117,96 @@
         "title": "InteractiveActionRequest",
         "type": "object"
       },
+      "InvoiceListResponse": {
+        "description": "Client invoices (key is 'invoices', not 'items').",
+        "properties": {
+          "invoices": {
+            "items": {},
+            "title": "Invoices",
+            "type": "array"
+          },
+          "limit": {
+            "default": 10,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "page": {
+            "default": 1,
+            "title": "Page",
+            "type": "integer"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "title": "InvoiceListResponse",
+        "type": "object"
+      },
+      "IssueNoteRequest": {
+        "properties": {
+          "actor": {
+            "default": "system",
+            "title": "Actor",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "IssueNoteRequest",
+        "type": "object"
+      },
+      "IssueResolveRequest": {
+        "properties": {
+          "actor": {
+            "default": "system",
+            "title": "Actor",
+            "type": "string"
+          },
+          "resolution": {
+            "default": "manually_resolved",
+            "title": "Resolution",
+            "type": "string"
+          }
+        },
+        "title": "IssueResolveRequest",
+        "type": "object"
+      },
+      "IssueStateChangeRequest": {
+        "properties": {
+          "actor": {
+            "default": "system",
+            "title": "Actor",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "title": "IssueStateChangeRequest",
+        "type": "object"
+      },
       "IssueTransitionRequest": {
         "properties": {
           "action": {
@@ -766,6 +1253,27 @@
         "title": "IssueTransitionRequest",
         "type": "object"
       },
+      "ListResponse": {
+        "description": "Standard list endpoint response.",
+        "properties": {
+          "items": {
+            "description": "Result items",
+            "items": {},
+            "title": "Items",
+            "type": "array"
+          },
+          "total": {
+            "description": "Total count",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "total"
+        ],
+        "title": "ListResponse",
+        "type": "object"
+      },
       "ModeChange": {
         "properties": {
           "mode": {
@@ -791,6 +1299,22 @@
           "modifications"
         ],
         "title": "ModifyApproval",
+        "type": "object"
+      },
+      "MutationResponse": {
+        "additionalProperties": true,
+        "description": "Standard mutation result.",
+        "properties": {
+          "success": {
+            "description": "Whether the operation succeeded",
+            "title": "Success",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "success"
+        ],
+        "title": "MutationResponse",
         "type": "object"
       },
       "NoteAdd": {
@@ -975,6 +1499,33 @@
         "title": "ResolveIssueRequest",
         "type": "object"
       },
+      "SignalListResponse": {
+        "description": "Client signals with summary breakdown.",
+        "properties": {
+          "page": {
+            "default": 1,
+            "title": "Page",
+            "type": "integer"
+          },
+          "signals": {
+            "items": {},
+            "title": "Signals",
+            "type": "array"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "title": "Summary",
+            "type": "object"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "title": "SignalListResponse",
+        "type": "object"
+      },
       "SnoozeProposalRequest": {
         "properties": {
           "days": {
@@ -984,6 +1535,17 @@
           }
         },
         "title": "SnoozeProposalRequest",
+        "type": "object"
+      },
+      "SnoozeRequest": {
+        "properties": {
+          "days": {
+            "default": 7,
+            "title": "Days",
+            "type": "integer"
+          }
+        },
+        "title": "SnoozeRequest",
         "type": "object"
       },
       "SnoozeWatcherRequest": {
@@ -1218,6 +1780,23 @@
         "title": "TaskUpdate",
         "type": "object"
       },
+      "TeamInvolvementResponse": {
+        "description": "Client team involvement (key is 'involvement', not 'items').",
+        "properties": {
+          "involvement": {
+            "items": {},
+            "title": "Involvement",
+            "type": "array"
+          },
+          "total": {
+            "default": 0,
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "title": "TeamInvolvementResponse",
+        "type": "object"
+      },
       "ThresholdUpdate": {
         "properties": {
           "threshold": {
@@ -1269,6 +1848,33 @@
           "type"
         ],
         "title": "ValidationError",
+        "type": "object"
+      },
+      "WatcherDismissRequest": {
+        "properties": {
+          "actor": {
+            "default": "system",
+            "title": "Actor",
+            "type": "string"
+          }
+        },
+        "title": "WatcherDismissRequest",
+        "type": "object"
+      },
+      "WatcherSnoozeRequest": {
+        "properties": {
+          "actor": {
+            "default": "system",
+            "title": "Actor",
+            "type": "string"
+          },
+          "hours": {
+            "default": 24,
+            "title": "Hours",
+            "type": "integer"
+          }
+        },
+        "title": "WatcherSnoozeRequest",
         "type": "object"
       }
     },
@@ -1322,9 +1928,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Batch Propose Api Actions Batch Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/BatchActionResponse"
                 }
               }
             },
@@ -1400,9 +2004,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Action History Api Actions History Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ActionListResponse"
                 }
               }
             },
@@ -1462,9 +2064,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Pending Actions Api Actions Pending Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ActionListResponse"
                 }
               }
             },
@@ -1506,9 +2106,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Propose Action Api Actions Propose Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ActionStatusResponse"
                 }
               }
             },
@@ -1561,9 +2159,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Approve Action Api Actions  Action Id  Approve Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ActionStatusResponse"
                 }
               }
             },
@@ -1616,9 +2212,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Execute Action Api Actions  Action Id  Execute Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ActionExecutionResponse"
                 }
               }
             },
@@ -1671,9 +2265,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Reject Action Api Actions  Action Id  Reject Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ActionStatusResponse"
                 }
               }
             },
@@ -1704,7 +2296,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -1721,7 +2315,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -1738,7 +2334,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -1755,7 +2353,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -1793,7 +2393,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -1841,7 +2443,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -1912,7 +2516,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -1957,7 +2563,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -1984,7 +2592,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -2001,7 +2611,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -2029,7 +2641,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -2067,7 +2681,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -2138,7 +2754,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -2165,7 +2783,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -2182,7 +2802,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -2217,7 +2839,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -2349,7 +2973,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -2376,7 +3002,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -2427,7 +3055,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -2465,9 +3095,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Handle Interactive Action Api Chat Interactive Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ChatWebhookResponse"
                 }
               }
             },
@@ -2509,9 +3137,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Handle Webhook Api Chat Webhook Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ChatWebhookResponse"
                 }
               }
             },
@@ -2612,7 +3238,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -2651,7 +3279,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -2690,7 +3320,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -2737,7 +3369,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -2764,7 +3398,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -2781,7 +3417,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -2809,7 +3447,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -2855,7 +3495,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -2893,7 +3535,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -2931,7 +3575,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -2986,7 +3632,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3031,7 +3679,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3058,7 +3708,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3087,7 +3739,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3125,7 +3779,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3172,7 +3828,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3199,7 +3857,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3250,7 +3910,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3297,7 +3959,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3324,7 +3988,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3371,7 +4037,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3398,7 +4066,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3469,7 +4139,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3504,7 +4176,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3552,7 +4226,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3600,7 +4276,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3648,7 +4326,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3739,7 +4419,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3777,7 +4459,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3825,7 +4509,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3873,7 +4559,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3900,7 +4588,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3929,7 +4619,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -3977,7 +4669,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4025,7 +4719,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4052,7 +4748,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4069,7 +4767,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4098,7 +4798,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4137,7 +4839,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4176,7 +4880,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4214,7 +4920,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4241,7 +4949,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4276,7 +4986,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4303,7 +5015,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4332,7 +5046,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4380,7 +5096,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4401,19 +5119,21 @@
     },
     "/api/delegations": {
       "get": {
-        "description": "Get delegated tasks (alias).",
-        "operationId": "api_delegations_api_delegations_get",
+        "description": "Get delegated tasks split by delegation direction.",
+        "operationId": "get_delegations_api_delegations_get",
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
           }
         },
-        "summary": "Api Delegations"
+        "summary": "Get Delegations"
       }
     },
     "/api/dependencies": {
@@ -4424,7 +5144,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4441,7 +5163,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4452,15 +5176,35 @@
     },
     "/api/emails": {
       "get": {
-        "description": "Get email queue.",
-        "operationId": "get_email_queue_api_emails_get",
+        "description": "Get emails from communications.",
+        "operationId": "get_emails_api_emails_get",
         "parameters": [
+          {
+            "in": "query",
+            "name": "actionable_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Actionable Only",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "unread_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Unread Only",
+              "type": "boolean"
+            }
+          },
           {
             "in": "query",
             "name": "limit",
             "required": false,
             "schema": {
-              "default": 20,
+              "default": 30,
               "title": "Limit",
               "type": "integer"
             }
@@ -4470,7 +5214,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4486,7 +5232,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Get Email Queue"
+        "summary": "Get Emails"
       }
     },
     "/api/emails/{email_id}/dismiss": {
@@ -4508,7 +5254,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4546,7 +5294,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4585,7 +5335,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4622,7 +5374,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4649,7 +5403,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4666,7 +5422,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4740,9 +5498,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Query Audit Log Api Governance Audit Log Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/DetailResponse"
                 }
               }
             },
@@ -4773,7 +5529,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4800,7 +5558,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -4904,9 +5664,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Request Data Export Api Governance Export Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/DetailResponse"
                 }
               }
             },
@@ -4949,9 +5707,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Table Schema Api Governance Export Schema  Table  Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/DetailResponse"
                 }
               }
             },
@@ -4994,9 +5750,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Export Status Api Governance Export  Request Id  Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/DetailResponse"
                 }
               }
             },
@@ -5028,9 +5782,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response List Exportable Tables Api Governance Exportable Tables Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/DetailResponse"
                 }
               }
             },
@@ -5063,7 +5815,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -5111,9 +5865,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response List Subject Access Requests Api Governance Sar Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/DetailResponse"
                 }
               }
             },
@@ -5203,9 +5955,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Create Subject Access Request Api Governance Sar Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/DetailResponse"
                 }
               }
             },
@@ -5248,9 +5998,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Subject Access Request Api Governance Sar  Request Id  Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/DetailResponse"
                 }
               }
             },
@@ -5316,9 +6064,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Fulfill Subject Access Request Api Governance Sar  Request Id  Fulfill Post",
-                  "type": "object"
+                  "$ref": "#/components/schemas/DetailResponse"
                 }
               }
             },
@@ -5370,7 +6116,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -5418,7 +6166,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -5445,7 +6195,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -5474,7 +6226,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -5519,7 +6273,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -5585,7 +6341,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -5612,7 +6370,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -5629,7 +6389,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -5657,7 +6419,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -5684,7 +6448,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -5729,7 +6495,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -5926,7 +6694,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -5965,7 +6735,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -6002,7 +6774,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -6121,7 +6895,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -6170,7 +6946,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -6191,8 +6969,8 @@
     },
     "/api/priorities/{item_id}/complete": {
       "post": {
-        "description": "Complete a priority item based on its type/source.",
-        "operationId": "complete_item_api_priorities__item_id__complete_post",
+        "description": "Complete a priority item (task).",
+        "operationId": "api_priority_complete_api_priorities__item_id__complete_post",
         "parameters": [
           {
             "in": "path",
@@ -6208,7 +6986,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -6224,61 +7004,13 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Complete Item"
+        "summary": "Api Priority Complete"
       }
     },
     "/api/priorities/{item_id}/delegate": {
       "post": {
         "description": "Delegate a priority item.",
-        "operationId": "delegate_item_api_priorities__item_id__delegate_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "item_id",
-            "required": true,
-            "schema": {
-              "title": "Item Id",
-              "type": "string"
-            }
-          }
-        ],
-        "requestBody": {
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/DelegateAction"
-              }
-            }
-          },
-          "required": true
-        },
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Delegate Item"
-      }
-    },
-    "/api/priorities/{item_id}/snooze": {
-      "post": {
-        "description": "Snooze a priority item.",
-        "operationId": "snooze_item_api_priorities__item_id__snooze_post",
+        "operationId": "api_priority_delegate_api_priorities__item_id__delegate_post",
         "parameters": [
           {
             "in": "path",
@@ -6291,12 +7023,11 @@
           },
           {
             "in": "query",
-            "name": "hours",
-            "required": false,
+            "name": "to",
+            "required": true,
             "schema": {
-              "default": 4,
-              "title": "Hours",
-              "type": "integer"
+              "title": "To",
+              "type": "string"
             }
           }
         ],
@@ -6304,7 +7035,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -6320,7 +7053,57 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Snooze Item"
+        "summary": "Api Priority Delegate"
+      }
+    },
+    "/api/priorities/{item_id}/snooze": {
+      "post": {
+        "description": "Snooze a priority item.",
+        "operationId": "api_priority_snooze_api_priorities__item_id__snooze_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Api Priority Snooze"
       }
     },
     "/api/projects": {
@@ -6369,7 +7152,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -6396,7 +7181,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -6425,7 +7212,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -6452,7 +7241,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -6506,7 +7297,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -6544,7 +7337,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -6592,7 +7387,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -6640,7 +7437,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -6667,7 +7466,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -6684,7 +7485,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -6719,7 +7522,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -6746,7 +7551,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -6763,7 +7570,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -6840,7 +7649,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -6875,7 +7686,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -6902,7 +7715,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -6930,7 +7745,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -6966,7 +7783,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -7012,7 +7831,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -7060,7 +7881,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -7107,7 +7930,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -7155,7 +7980,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -7203,7 +8030,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -7251,7 +8080,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -7289,7 +8120,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -7334,7 +8167,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -7361,7 +8196,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -7412,7 +8249,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -7482,7 +8321,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -7527,7 +8368,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -7565,7 +8408,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -7666,7 +8511,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ClientIndexResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -7725,7 +8572,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -7766,7 +8615,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -7848,7 +8699,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceListResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -7960,7 +8813,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/SignalListResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -8033,7 +8888,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -8086,7 +8943,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/TeamInvolvementResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -8150,7 +9009,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ListResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -8253,7 +9114,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/EngagementListResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -8294,7 +9157,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -8355,7 +9220,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -8429,7 +9296,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ListResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -8473,7 +9342,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -8550,7 +9421,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -8630,7 +9503,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ListResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -8660,13 +9535,77 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/FixDataResponse"
+                }
               }
             },
             "description": "Successful Response"
           }
         },
         "summary": "Get Fix Data V2",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
+    "/api/v2/fix-data/{item_type}/{item_id}/resolve": {
+      "post": {
+        "description": "POST /api/v2/fix-data/:type/:id/resolve\n\nResolve a fix-data item (identity conflict or ambiguous link).",
+        "operationId": "resolve_fix_data_api_v2_fix_data__item_type___item_id__resolve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_type",
+            "required": true,
+            "schema": {
+              "title": "Item Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FixDataResolveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resolve Fix Data",
         "tags": [
           "Spec v2.9"
         ]
@@ -8680,7 +9619,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/HealthResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -8811,7 +9752,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/InboxResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -8841,7 +9784,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/InboxCountsResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -8913,7 +9858,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/InboxRecentResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -8991,7 +9938,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9059,7 +10008,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9089,7 +10040,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9114,7 +10067,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9185,7 +10140,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9267,7 +10224,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9357,7 +10316,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9403,7 +10364,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9449,7 +10412,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9519,7 +10484,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9554,7 +10521,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9590,7 +10559,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9636,7 +10607,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9671,7 +10644,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9696,7 +10671,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9721,7 +10698,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9746,7 +10725,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9797,7 +10778,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9858,7 +10841,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9931,7 +10916,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -9980,7 +10967,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10026,7 +11015,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10093,7 +11084,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10139,7 +11132,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10174,7 +11169,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10210,7 +11207,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10245,7 +11244,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10281,7 +11282,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10316,7 +11319,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10373,7 +11378,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10422,7 +11429,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10495,7 +11504,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10591,7 +11602,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10626,7 +11639,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10651,7 +11666,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10676,7 +11693,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10701,7 +11720,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10726,7 +11747,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10762,7 +11785,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10832,7 +11857,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -10911,7 +11938,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ListResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -11021,7 +12050,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ListResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -11038,6 +12069,46 @@
           }
         },
         "summary": "Get Issues",
+        "tags": [
+          "Spec v2.9"
+        ]
+      },
+      "post": {
+        "description": "POST /api/v2/issues\n\nCreate an issue from a proposal.",
+        "operationId": "create_issue_from_proposal_api_v2_issues_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateIssueRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Issue From Proposal",
         "tags": [
           "Spec v2.9"
         ]
@@ -11062,7 +12133,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -11079,6 +12152,165 @@
           }
         },
         "summary": "Get Issue",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
+    "/api/v2/issues/{issue_id}/notes": {
+      "post": {
+        "description": "POST /api/v2/issues/:id/notes\n\nAdd a note to an issue.",
+        "operationId": "add_issue_note_api_v2_issues__issue_id__notes_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "issue_id",
+            "required": true,
+            "schema": {
+              "title": "Issue Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueNoteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Add Issue Note",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
+    "/api/v2/issues/{issue_id}/resolve": {
+      "patch": {
+        "description": "PATCH /api/v2/issues/:id/resolve\n\nResolves an issue. Translates to the existing transition logic.",
+        "operationId": "resolve_issue_api_v2_issues__issue_id__resolve_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "issue_id",
+            "required": true,
+            "schema": {
+              "title": "Issue Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueResolveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Resolve Issue",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
+    "/api/v2/issues/{issue_id}/state": {
+      "patch": {
+        "description": "PATCH /api/v2/issues/:id/state\n\nChanges issue state. Maps to the existing transition logic.",
+        "operationId": "change_issue_state_api_v2_issues__issue_id__state_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "issue_id",
+            "required": true,
+            "schema": {
+              "title": "Issue Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IssueStateChangeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Change Issue State",
         "tags": [
           "Spec v2.9"
         ]
@@ -11140,7 +12372,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -11170,7 +12404,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -11190,7 +12426,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -11204,7 +12442,7 @@
     },
     "/api/v2/paginated/clients": {
       "get": {
-        "description": "Get paginated list of clients.\n\nQuery parameters:\n- page: Page number (default 1)\n- page_size: Items per page (default 50, max 500)\n\nFalls back to demo data if live DB is unavailable.",
+        "description": "Get paginated list of clients.\n\nQuery parameters:\n- page: Page number (default 1)\n- page_size: Items per page (default 50, max 500)\n\nReturns 503 if database is unavailable.",
         "operationId": "list_clients_paginated_api_v2_paginated_clients_get",
         "parameters": [
           {
@@ -11265,7 +12503,7 @@
     },
     "/api/v2/paginated/invoices": {
       "get": {
-        "description": "Get paginated list of invoices.\n\nQuery parameters:\n- page: Page number (default 1)\n- page_size: Items per page (default 50, max 500)\n\nFalls back to demo data if live DB is unavailable.",
+        "description": "Get paginated list of invoices.\n\nQuery parameters:\n- page: Page number (default 1)\n- page_size: Items per page (default 50, max 500)\n\nReturns 503 if database is unavailable.",
         "operationId": "list_invoices_paginated_api_v2_paginated_invoices_get",
         "parameters": [
           {
@@ -11326,7 +12564,7 @@
     },
     "/api/v2/paginated/signals": {
       "get": {
-        "description": "Get paginated list of signals.\n\nQuery parameters:\n- page: Page number (default 1)\n- page_size: Items per page (default 50, max 500)\n\nFalls back to demo data if live DB is unavailable.",
+        "description": "Get paginated list of signals.\n\nQuery parameters:\n- page: Page number (default 1)\n- page_size: Items per page (default 50, max 500)\n\nReturns 503 if database is unavailable.",
         "operationId": "list_signals_paginated_api_v2_paginated_signals_get",
         "parameters": [
           {
@@ -11387,7 +12625,7 @@
     },
     "/api/v2/paginated/tasks": {
       "get": {
-        "description": "Get paginated list of tasks.\n\nQuery parameters:\n- page: Page number (default 1)\n- page_size: Items per page (default 50, max 500)\n\nFalls back to demo data if live DB is unavailable.",
+        "description": "Get paginated list of tasks.\n\nQuery parameters:\n- page: Page number (default 1)\n- page_size: Items per page (default 50, max 500)\n\nReturns 503 if database is unavailable.",
         "operationId": "list_tasks_paginated_api_v2_paginated_tasks_get",
         "parameters": [
           {
@@ -11482,7 +12720,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ListResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -11540,7 +12780,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ListResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -11618,7 +12860,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ListResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -11640,6 +12884,112 @@
         ]
       }
     },
+    "/api/v2/proposals/{proposal_id}/dismiss": {
+      "post": {
+        "description": "POST /api/v2/proposals/:id/dismiss\n\nDismiss a proposal.",
+        "operationId": "dismiss_proposal_api_v2_proposals__proposal_id__dismiss_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DismissRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dismiss Proposal",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
+    "/api/v2/proposals/{proposal_id}/snooze": {
+      "post": {
+        "description": "POST /api/v2/proposals/:id/snooze\n\nSnooze a proposal for N days.",
+        "operationId": "snooze_proposal_api_v2_proposals__proposal_id__snooze_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SnoozeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Snooze Proposal",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
     "/api/v2/team": {
       "get": {
         "description": "GET /api/v2/team\n\nReturns all team members with workload metrics.",
@@ -11648,7 +12998,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ListResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -11680,7 +13032,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/ListResponse"
+                }
               }
             },
             "description": "Successful Response"
@@ -11702,6 +13056,112 @@
         ]
       }
     },
+    "/api/v2/watchers/{watcher_id}/dismiss": {
+      "post": {
+        "description": "POST /api/v2/watchers/:id/dismiss\n\nDismiss a watcher.",
+        "operationId": "dismiss_watcher_api_v2_watchers__watcher_id__dismiss_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "watcher_id",
+            "required": true,
+            "schema": {
+              "title": "Watcher Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WatcherDismissRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dismiss Watcher",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
+    "/api/v2/watchers/{watcher_id}/snooze": {
+      "post": {
+        "description": "POST /api/v2/watchers/:id/snooze\n\nSnooze a watcher for N hours.",
+        "operationId": "snooze_watcher_api_v2_watchers__watcher_id__snooze_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "watcher_id",
+            "required": true,
+            "schema": {
+              "title": "Watcher Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WatcherSnoozeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Snooze Watcher",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
     "/api/week": {
       "get": {
         "description": "Get analysis for the current week.",
@@ -11710,7 +13170,9 @@
           "200": {
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
               }
             },
             "description": "Successful Response"

@@ -6,16 +6,11 @@ Brief 10 (AO), Task AO-1.1
 
 import time
 
-import pytest
-
 from lib.intelligence.autonomous_operations import (
     AutonomousOperations,
     CircuitBreaker,
     CircuitBreakerConfig,
     CircuitState,
-    LoopCycleReport,
-    RetryConfig,
-    SystemHealthReport,
     compute_backoff_delay,
 )
 

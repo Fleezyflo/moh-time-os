@@ -14,8 +14,7 @@ Uses mocked query_engine to avoid live DB dependency.
 """
 
 from pathlib import Path
-from statistics import mean
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 

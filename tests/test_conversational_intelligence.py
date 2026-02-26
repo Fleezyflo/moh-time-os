@@ -15,13 +15,10 @@ from lib.intelligence.conversational_intelligence import (
     INTENT_PREDICTION,
     INTENT_RANKED_SUMMARY,
     INTENT_UNKNOWN,
-    ActionCard,
-    ClassifiedIntent,
     ConversationalIntelligence,
     ConversationState,
     CrossDomainSynthesizer,
     EntityResolver,
-    ResolvedEntity,
     classify_intent,
 )
 

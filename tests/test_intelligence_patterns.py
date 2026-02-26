@@ -8,15 +8,10 @@ Covers:
 - Full pattern detection
 """
 
-from pathlib import Path
-
 import pytest
 
 from lib.intelligence.patterns import (
     PATTERN_LIBRARY,
-    PatternDefinition,
-    PatternEvidence,
-    PatternSeverity,
     PatternType,
     _compute_coefficient_of_variation,
     _compute_correlation,
@@ -29,7 +24,6 @@ from lib.intelligence.patterns import (
     detect_pattern,
     get_library_summary,
     get_pattern,
-    get_patterns_by_severity,
     get_patterns_by_type,
     get_structural_patterns,
     validate_pattern_library,

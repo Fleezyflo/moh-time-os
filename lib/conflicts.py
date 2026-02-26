@@ -12,10 +12,10 @@ Per spec 4.5:
 import json
 import logging
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from enum import StrEnum
 
 from lib import paths
-from lib.compat import UTC, StrEnum
 
 logger = logging.getLogger(__name__)
 

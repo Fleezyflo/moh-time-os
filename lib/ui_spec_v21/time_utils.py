@@ -7,6 +7,7 @@ All timestamps stored as ISO 8601 UTC with Z suffix.
 
 import logging
 import re
+import sqlite3
 from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
@@ -162,7 +163,7 @@ def validate_org_timezone(tz: str) -> tuple:
     # Check if it's a valid timezone
     try:
         ZoneInfo(tz)
-    except Exception:
+    except (sqlite3.Error, ValueError, OSError):
         return False, f"Invalid timezone: {tz}"
 
     # Reject DST-observing zones
@@ -568,20 +569,31 @@ def validate_timestamp_ordering(conn) -> list:
                     "resurfaced_before_proposed",
                 )
             )
-    except Exception:
-        pass  # Table may not exist
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.debug(
+            "validate_timestamp_ordering: inbox_items table missing or inaccessible, skipping resurfaced_at check: %s",
+            e,
+        )
 
     # All tables: updated_at >= created_at
     for table in ["inbox_items", "issues", "signals"]:
         try:
-            cursor = conn.execute(f"""
-                SELECT id, created_at, updated_at FROM {table}
-                WHERE updated_at IS NOT NULL AND created_at IS NOT NULL AND updated_at < created_at
-            """)  # nosec B608 - table is from hardcoded list above
+            sql = "".join(
+                [
+                    "SELECT id, created_at, updated_at FROM ",
+                    table,
+                    "\nWHERE updated_at IS NOT NULL AND created_at IS NOT NULL AND updated_at < created_at",
+                ]
+            )
+            cursor = conn.execute(sql)
             for row in cursor.fetchall():
                 violations.append((table, "updated_at", row[0], row[2], "updated_before_created"))
-        except Exception:
-            pass  # Table may not exist
+        except (sqlite3.Error, ValueError, OSError) as e:
+            logger.debug(
+                "validate_timestamp_ordering: table '%s' missing or inaccessible, skipping: %s",
+                table,
+                e,
+            )
 
     # Issues: resolved_at >= created_at (if set)
     try:
@@ -591,13 +603,16 @@ def validate_timestamp_ordering(conn) -> list:
         """)
         for row in cursor.fetchall():
             violations.append(("issues", "resolved_at", row[0], row[2], "resolved_before_created"))
-    except Exception:
-        pass
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.debug(
+            "validate_timestamp_ordering: issues table missing or inaccessible, skipping resolved_at check: %s",
+            e,
+        )
 
     return violations
 
 
-def validate_all_timestamps(conn) -> tuple:
+def validate_all_timestamps(conn: sqlite3.Connection) -> tuple[bool, list]:
     """
     Full semantic validation for startup canary.
 
@@ -653,12 +668,18 @@ def validate_all_timestamps(conn) -> tuple:
     for table, columns in TIMESTAMP_COLUMNS.items():
         try:
             for col in columns:
-                cursor = conn.execute(f"SELECT id, {col} FROM {table} WHERE {col} IS NOT NULL")  # nosec B608
+                sql = "".join(["SELECT id, ", col, " FROM ", table, " WHERE ", col, " IS NOT NULL"])
+                cursor = conn.execute(sql)
                 for row in cursor.fetchall():
                     if not validate_timestamp_semantic(row[1]):
                         violations.append((table, col, row[0], row[1], "invalid_format"))
-        except Exception:
-            pass  # Table or column may not exist
+        except (sqlite3.Error, ValueError, OSError) as e:
+            logger.debug(
+                "validate_all_timestamps: table '%s' or column '%s' missing, skipping format validation: %s",
+                table,
+                col,
+                e,
+            )
 
     # Ordering validation
     ordering_violations = validate_timestamp_ordering(conn)
@@ -680,26 +701,35 @@ def _test_dubai_boundaries():
 
     midnight = local_midnight_utc(org_tz, test_date)
 
-    assert midnight.year == 2026
-    assert midnight.month == 2
-    assert midnight.day == 6
-    assert midnight.hour == 20
-    assert midnight.minute == 0
+    if midnight.year != 2026:
+        raise AssertionError(f"expected year 2026, got {midnight.year}")
+    if midnight.month != 2:
+        raise AssertionError(f"expected month 2, got {midnight.month}")
+    if midnight.day != 6:
+        raise AssertionError(f"expected day 6, got {midnight.day}")
+    if midnight.hour != 20:
+        raise AssertionError(f"expected hour 20, got {midnight.hour}")
+    if midnight.minute != 0:
+        raise AssertionError(f"expected minute 0, got {midnight.minute}")
 
     # Next midnight (end of day)
     next_day = date(2026, 2, 8)
     next_midnight = local_midnight_utc(org_tz, next_day)
 
-    assert next_midnight.year == 2026
-    assert next_midnight.month == 2
-    assert next_midnight.day == 7
-    assert next_midnight.hour == 20
+    if next_midnight.year != 2026:
+        raise AssertionError(f"expected year 2026, got {next_midnight.year}")
+    if next_midnight.month != 2:
+        raise AssertionError(f"expected month 2, got {next_midnight.month}")
+    if next_midnight.day != 7:
+        raise AssertionError(f"expected day 7, got {next_midnight.day}")
+    if next_midnight.hour != 20:
+        raise AssertionError(f"expected hour 20, got {next_midnight.hour}")
 
     logger.info("✓ Dubai boundary tests passed")
     return True
 
 
-def run_timestamp_canary(conn, verbose: bool = True) -> bool:
+def run_timestamp_canary(conn: sqlite3.Connection, verbose: bool = True) -> bool:
     """
     Run timestamp validation canary on startup.
 

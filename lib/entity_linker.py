@@ -15,10 +15,9 @@ import json
 import logging
 import re
 import sqlite3
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from lib import paths
-from lib.compat import UTC
 
 logger = logging.getLogger(__name__)
 

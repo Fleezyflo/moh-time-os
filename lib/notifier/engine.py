@@ -8,6 +8,7 @@ CRITICAL: Does NOT go through AI. Direct API calls only.
 import json
 import logging
 import os
+import sqlite3
 import uuid
 from datetime import datetime
 
@@ -182,7 +183,7 @@ class NotificationEngine:
                             }
                         )
 
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError) as e:
                     results.append(
                         {
                             "id": notif_id,
@@ -290,7 +291,7 @@ class NotificationEngine:
                                 "error": result.get("error"),
                             }
                         )
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError) as e:
                     results.append(
                         {
                             "id": notif_id,

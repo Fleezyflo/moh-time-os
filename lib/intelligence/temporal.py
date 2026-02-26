@@ -16,12 +16,11 @@ do its own business-day math.
 """
 
 import logging
-import math
-from dataclasses import dataclass, field
+import sqlite3
+from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from enum import Enum
 from pathlib import Path
-from typing import Optional
 
 import yaml
 
@@ -151,7 +150,7 @@ class BusinessCalendar:
         try:
             with open(config_path) as f:
                 return yaml.safe_load(f) or {}
-        except Exception as exc:
+        except (sqlite3.Error, ValueError, OSError) as exc:
             logger.error("Failed to load business calendar config: %s", exc)
             return {}
 

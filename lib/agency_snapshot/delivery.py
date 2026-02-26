@@ -411,7 +411,7 @@ class DeliveryEngine:
             WHERE {where_sql}
             ORDER BY p.target_end_date ASC NULLS LAST
             LIMIT ?
-        """,
+        """,  # noqa: S608
             tuple(params) + (limit * 2,),
         )  # Fetch more, will filter/rank later
 

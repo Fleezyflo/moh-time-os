@@ -15,7 +15,7 @@ import sqlite3
 from abc import ABC, abstractmethod
 from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Any, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -184,7 +184,7 @@ class SQLiteAdapter(DatabaseAdapter):
             self.conn.execute("BEGIN")
             yield
             self.conn.execute("COMMIT")
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"SQLiteAdapter.transaction error: {e}")
             self.conn.execute("ROLLBACK")
             raise
@@ -238,7 +238,7 @@ class PostgreSQLAdapter(DatabaseAdapter):
             raise ImportError(
                 "psycopg2 is required for PostgreSQL support. "
                 "Install with: pip install psycopg2-binary"
-            )
+            ) from None
 
     def execute(self, sql: str, params: tuple | None = None) -> Any:
         """Execute SQL statement."""
@@ -284,7 +284,7 @@ class PostgreSQLAdapter(DatabaseAdapter):
         try:
             yield
             self.conn.commit()
-        except Exception:
+        except (sqlite3.Error, ValueError, OSError):
             self.conn.rollback()
             raise
 

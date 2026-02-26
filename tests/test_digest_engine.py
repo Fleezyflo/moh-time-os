@@ -5,7 +5,7 @@ from datetime import datetime
 import pytest
 
 from lib.notifier.digest import DigestEngine
-from lib.store import DB_PATH, get_connection
+from lib.store import get_connection
 
 
 @pytest.fixture(autouse=True)

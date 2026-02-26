@@ -1511,7 +1511,7 @@ class AgencySnapshotGenerator:
                 "at_risk_count": at_risk_count,
                 "drawer": {},
             }
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.warning(f"Client360Engine.generate() failed: {e}, using minimal data")
             portfolio = []
             for client in normalized.clients[:25]:
@@ -1568,7 +1568,7 @@ class AgencySnapshotGenerator:
                 "tiles": tiles,
                 "debtors": debtors,
             }
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.warning(f"CashAREngine.generate() failed: {e}, using minimal data")
             total_ar = sum(inv.get("amount", 0) for inv in normalized.invoices)
             severe_ar = sum(
@@ -1640,7 +1640,7 @@ class AgencySnapshotGenerator:
                 "commitments": full_snapshot.get("commitments", []),
                 "overdue_count": full_snapshot.get("overdue_count", 0),
             }
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.warning(f"CommsCommitmentsEngine.generate() failed: {e}, using minimal data")
             threads = []
             for comm in normalized.communications[:10]:
@@ -1684,7 +1684,7 @@ class AgencySnapshotGenerator:
         people_overview_raw = []
         try:
             people_overview_raw = self.capacity_engine.build_people_overview()
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.warning(f"CapacityCommandPage7Engine.build_people_overview() failed: {e}")
 
         # Convert PersonData objects to dicts if we got them

@@ -15,8 +15,8 @@ import json
 import logging
 import os
 import re
+import sqlite3
 from dataclasses import dataclass, field
-from datetime import datetime
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -370,7 +370,7 @@ def _classify_with_llm(query: str) -> ClassifiedIntent | None:
             extracted_timeframe=parsed.get("timeframe", ""),
         )
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.debug("LLM classification failed, using regex fallback: %s", e)
         return None
 
@@ -677,7 +677,7 @@ class CrossDomainSynthesizer:
         for metric in metrics:
             value = data.get(metric)
             if value is not None:
-                if isinstance(value, (int, float)):
+                if isinstance(value, int | float):
                     points.append(
                         {
                             "domain": "metrics",
@@ -772,7 +772,7 @@ class CrossDomainSynthesizer:
             val_a = entity_a.get(field_key)
             val_b = entity_b.get(field_key)
             if val_a is not None and val_b is not None:
-                if isinstance(val_a, (int, float)):
+                if isinstance(val_a, int | float):
                     points.append(
                         {
                             "domain": "comparison",

@@ -7,6 +7,7 @@ Attempts to match projects to clients via fuzzy matching.
 """
 
 import logging
+import sqlite3
 from datetime import date, timedelta
 from typing import Any
 
@@ -179,7 +180,7 @@ def sync_asana_projects() -> tuple[int, int, int, int, list[str]]:
                     )
                     created += 1
 
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                 errors.append(f"Project {proj.get('name', 'Unknown')}: {e}")
                 log.error(f"Error syncing project {proj.get('name')}: {e}")
 
@@ -187,7 +188,7 @@ def sync_asana_projects() -> tuple[int, int, int, int, list[str]]:
             f"Asana projects sync complete: {created} created, {updated} updated, {matched} matched to clients"
         )
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
         errors.append(f"Sync failed: {e}")
         log.error(f"Asana projects sync failed: {e}")
 
@@ -289,12 +290,12 @@ def sync_overdue_tasks() -> tuple[int, int, list[str]]:
                     )
                     created += 1
 
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                 errors.append(f"Project {proj.get('name', 'Unknown')}: {e}")
 
         log.info(f"Overdue tasks sync complete: {created} created, {skipped} already existed")
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
         errors.append(f"Sync failed: {e}")
         log.error(f"Overdue tasks sync failed: {e}")
 

@@ -4,15 +4,13 @@ AsanaSyncManager - Bidirectional task sync between local DB and Asana.
 Maintains mappings, handles conflict detection, and batch sync operations.
 """
 
-import json
 import logging
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Optional
 
 from lib.db import get_connection
-from lib.integrations.asana_writer import AsanaWriter, AsanaWriteResult
+from lib.integrations.asana_writer import AsanaWriter
 
 logger = logging.getLogger(__name__)
 

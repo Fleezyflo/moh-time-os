@@ -10,11 +10,11 @@ import logging
 import sqlite3
 from dataclasses import dataclass
 from datetime import date, datetime
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 
 from lib import paths
-from lib.compat import StrEnum
 
 logger = logging.getLogger(__name__)
 
@@ -272,7 +272,7 @@ class CashARPage12Engine:
         except ImportError:
             # Gates module not available - use defaults (optional dependency)
             logger.debug("Gates module not available, using default trust state")
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             # Gates evaluation failed - this indicates a real problem
             logger.warning(f"Gates evaluation failed, using defaults: {e}")
 

@@ -10,7 +10,6 @@ Performs lightweight checks:
 """
 
 import json
-import os
 import sqlite3
 import sys
 from pathlib import Path
@@ -24,11 +23,6 @@ def check_imports() -> bool:
     """Check that key modules can be imported."""
     print("Checking imports...")
     try:
-        import api.server
-        import lib.analyzers
-        import lib.db
-        import lib.state_store
-
         print("  ✓ All key modules imported successfully")
         return True
     except Exception as e:

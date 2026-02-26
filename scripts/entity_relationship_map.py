@@ -4,9 +4,7 @@ Entity Relationship Map for MOH TIME OS.
 Task: SYSPREP 2.1 — Entity Relationship Map
 """
 
-import re
 import sqlite3
-from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
@@ -49,9 +47,9 @@ def get_table_info(conn: sqlite3.Connection, table: str) -> dict:
 
     # Get row count
     try:
-        cursor = conn.execute(f'SELECT COUNT(*) FROM "{table}"')
+        cursor = conn.execute(f'SELECT COUNT(*) FROM "{table}"')  # noqa: S608
         row_count = cursor.fetchone()[0]
-    except:
+    except Exception:
         row_count = 0
 
     return {
@@ -216,7 +214,7 @@ def analyze_relationships(conn: sqlite3.Connection, entity_tables: dict) -> dict
                             }
                         else:
                             relationships[from_entity][to_entity] = {"type": "MISSING", "path": ""}
-                    except:
+                    except Exception:
                         relationships[from_entity][to_entity] = {"type": "MISSING", "path": ""}
             else:
                 relationships[from_entity][to_entity] = {"type": "MISSING", "path": ""}

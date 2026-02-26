@@ -3,6 +3,7 @@ Calendar Handler - Executes calendar-related actions.
 """
 
 import json
+import sqlite3
 from datetime import datetime
 
 
@@ -30,8 +31,8 @@ class CalendarHandler:
 
         try:
             return handler(action)
-        except Exception as e:
-            return {"success": False, "error": str(e)}
+        except (sqlite3.Error, ValueError, OSError):
+            raise  # was silently swallowed
 
     def _create_event(self, action: dict) -> dict:
         data = action.get("data", {})

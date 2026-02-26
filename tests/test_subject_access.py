@@ -16,15 +16,12 @@ import json
 import os
 import sqlite3
 import tempfile
-from datetime import datetime
 from pathlib import Path
 
 import pytest
 
 from lib.governance.subject_access import (
     DeletionResult,
-    RequestStatus,
-    RequestType,
     SubjectAccessManager,
     SubjectAccessRequest,
     SubjectDataReport,

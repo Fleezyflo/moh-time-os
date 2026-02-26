@@ -4,6 +4,7 @@ REPLACES the broken Asana collector - uses real working commands.
 """
 
 import json
+import sqlite3
 from datetime import datetime
 from typing import Any
 
@@ -51,7 +52,7 @@ class TasksCollector(BaseCollector):
 
             return {"tasks": all_tasks, "lists": task_lists}
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             self.logger.exception(f"Tasks collection failed: {e}")
             raise  # Propagate error to sync() which handles it properly
 
@@ -107,7 +108,7 @@ class TasksCollector(BaseCollector):
         due = task.get("due")
         if due:
             # Format: 2024-01-15T00:00:00.000Z
-            return due[:10]  # Just the date part
+            return str(due)[:10]  # Just the date part
         return None
 
     def _compute_priority(self, task: dict) -> int:

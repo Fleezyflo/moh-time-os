@@ -55,12 +55,12 @@ def _parse_expires_in(expires_str: str) -> int:
         try:
             return int(expires_str[:-1])
         except ValueError:
-            raise ValueError(f"Invalid expires-in format: {expires_str}")
+            raise ValueError(f"Invalid expires-in format: {expires_str}") from None
 
     try:
         return int(expires_str)
     except ValueError:
-        raise ValueError(f"Invalid expires-in format: {expires_str}")
+        raise ValueError(f"Invalid expires-in format: {expires_str}") from None
 
 
 def cmd_create(args) -> int:

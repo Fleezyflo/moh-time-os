@@ -13,19 +13,16 @@ Domain definitions:
 """
 
 import logging
+import sqlite3
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Optional
 
 from lib.intelligence.correlation_confidence import (
     CorrelationConfidenceCalculator,
     CorrelationSignalEvidence,
 )
 from lib.intelligence.patterns import (
-    PATTERN_LIBRARY,
-    PatternSeverity,
-    PatternType,
     detect_all_patterns,
 )
 from lib.intelligence.signals import detect_all_signals
@@ -320,7 +317,7 @@ class CorrelationEngine:
         try:
             pattern_results = detect_all_patterns(self.db_path)
             patterns = pattern_results.get("patterns", [])
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             self.logger.error(f"Error detecting patterns: {e}")
             patterns = []
             pattern_results = {}
@@ -329,7 +326,7 @@ class CorrelationEngine:
         try:
             signal_results = detect_all_signals(self.db_path)
             signals = signal_results.get("signals", [])
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             self.logger.error(f"Error detecting signals: {e}")
             signals = []
             signal_results = {}

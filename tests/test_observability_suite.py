@@ -9,17 +9,11 @@ Covers:
 
 import json
 import logging
-import time
-from datetime import timezone
-from io import StringIO
-from unittest.mock import AsyncMock, MagicMock, patch
-
-import pytest
+from unittest.mock import MagicMock
 
 from lib.observability.context import RequestContext, generate_request_id, get_request_id
-from lib.observability.logging import HumanFormatter, JSONFormatter, configure_logging
+from lib.observability.logging import HumanFormatter, JSONFormatter
 from lib.observability.metrics import (
-    REGISTRY,
     Counter,
     Gauge,
     Histogram,

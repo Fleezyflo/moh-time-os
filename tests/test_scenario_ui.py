@@ -5,10 +5,6 @@ Tests ScenarioResult model validation, scenario type parameter validation,
 comparison logic, and API contract integrity.
 """
 
-from dataclasses import asdict
-
-import pytest
-
 from lib.intelligence.scenario_engine import (
     ConfidenceLevel,
     ScenarioComparison,

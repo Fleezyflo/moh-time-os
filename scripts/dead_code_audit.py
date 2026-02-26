@@ -5,9 +5,6 @@ Task: SYSPREP 0.2 — Dead Code Audit
 """
 
 import json
-import os
-import re
-import subprocess
 from datetime import datetime
 from pathlib import Path
 

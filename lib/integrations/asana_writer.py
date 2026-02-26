@@ -5,12 +5,11 @@ Handles creating, updating, and commenting on Asana tasks via REST API.
 Uses httpx for HTTP calls (not the asana SDK for writes).
 """
 
-import json
 import logging
 import os
+import sqlite3
 import time
-from dataclasses import dataclass, field
-from typing import Any, Optional
+from dataclasses import dataclass
 
 import httpx
 
@@ -123,7 +122,7 @@ class AsanaWriter:
                 error_data = response.json()
                 if "errors" in error_data:
                     error_msg += f": {error_data['errors']}"
-            except Exception:
+            except (sqlite3.Error, ValueError, OSError, KeyError):
                 error_msg += f": {response.text[:200]}"
 
             logger.error(error_msg)
@@ -133,7 +132,7 @@ class AsanaWriter:
                 http_status=response.status_code,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             error_msg = f"Asana request failed: {str(e)}"
             logger.error(error_msg)
             return AsanaWriteResult(

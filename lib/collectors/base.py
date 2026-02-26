@@ -8,6 +8,7 @@ Every collector MUST:
 
 import json
 import logging
+import sqlite3
 import subprocess
 from abc import ABC, abstractmethod
 from datetime import datetime
@@ -20,7 +21,7 @@ from .resilience import CircuitBreaker, RetryConfig, retry_with_backoff
 class BaseCollector(ABC):
     """Base class for all data collectors."""
 
-    def __init__(self, config: dict, store: StateStore = None):
+    def __init__(self, config: dict, store: StateStore | None = None):
         self.config = config
         self.store = store or get_store()
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -104,7 +105,7 @@ class BaseCollector(ABC):
 
             try:
                 raw_data = retry_with_backoff(collect_with_retry, self.retry_config, self.logger)
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                 self.logger.error(f"Collect failed after retries: {e}")
                 self.circuit_breaker.record_failure()
                 self.store.update_sync_state(self.source_name, success=False, error=str(e))
@@ -118,7 +119,7 @@ class BaseCollector(ABC):
             # Step 2: Transform to canonical format with partial success handling
             try:
                 transformed = self.transform(raw_data)
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                 self.logger.warning(f"Transform failed: {e}. Attempting partial success.")
                 # If transform fails, try to store what we can
                 transformed = []
@@ -157,7 +158,7 @@ class BaseCollector(ABC):
                 "timestamp": self.last_sync.isoformat(),
             }
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             self.logger.error(f"Sync failed for {self.source_name}: {e}")
             self.circuit_breaker.record_failure()
             self.store.update_sync_state(self.source_name, success=False, error=str(e))
@@ -181,7 +182,7 @@ class BaseCollector(ABC):
             # Default: try a minimal collect
             self.collect()
             return True
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             self.logger.error(f"Health check failed: {e}")
             return False
 
@@ -212,7 +213,7 @@ class BaseCollector(ABC):
             if not cmd or not shutil.which(cmd[0]):
                 raise Exception(f"Command not found: {cmd[0] if cmd else 'empty'}")
 
-            result = subprocess.run(  # noqa: S603 - shell=False is secure
+            result = subprocess.run(
                 cmd,
                 shell=False,  # SECURE: no shell interpretation
                 capture_output=True,
@@ -224,7 +225,7 @@ class BaseCollector(ABC):
                 raise Exception(f"Command failed: {result.stderr}")
             return result.stdout
         except subprocess.TimeoutExpired:
-            raise Exception(f"Command timed out after {timeout}s")
+            raise Exception(f"Command timed out after {timeout}s") from None
 
     def _parse_json_output(self, output: str) -> Any:
         """Parse JSON from command output."""

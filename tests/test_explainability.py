@@ -7,7 +7,6 @@ Brief 28 (IO), Task IO-2.1
 import pytest
 
 from lib.intelligence.explainability import (
-    Explanation,
     ExplanationFactor,
     IntelligenceExplainer,
 )

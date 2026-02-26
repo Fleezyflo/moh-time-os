@@ -3,30 +3,53 @@
 <!--
   LaunchAgent for Time OS API server.
 
-  To install:
+  Install:
     cp com.mohtimeos.api.plist ~/Library/LaunchAgents/
-    launchctl load ~/Library/LaunchAgents/com.mohtimeos.api.plist
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.mohtimeos.api.plist
 
-  Uses $HOME expansion via zsh -c (HOME is inherited from user session).
-  Logs go to /tmp for simplicity.
+  Uninstall:
+    launchctl bootout gui/$(id -u)/com.mohtimeos.api
+
+  Logs:
+    tail -f ~/Library/Logs/mohtimeos-api.out.log
+    tail -f ~/Library/Logs/mohtimeos-api.err.log
 -->
 <plist version="1.0">
 <dict>
     <key>Label</key>
     <string>com.mohtimeos.api</string>
+
     <key>ProgramArguments</key>
     <array>
-        <string>/bin/zsh</string>
-        <string>-c</string>
-        <string>cd "$HOME/clawd/moh_time_os" &amp;&amp; source .venv/bin/activate &amp;&amp; python api/server.py</string>
+        <string>/Users/molhamhomsi/clawd/moh_time_os/.venv/bin/python3</string>
+        <string>-m</string>
+        <string>api.server</string>
     </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/molhamhomsi/clawd/moh_time_os</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PYTHONPATH</key>
+        <string>/Users/molhamhomsi/clawd/moh_time_os</string>
+    </dict>
+
     <key>RunAtLoad</key>
     <true/>
+
     <key>KeepAlive</key>
-    <true/>
+    <dict>
+        <key>SuccessfulExit</key>
+        <false/>
+    </dict>
+
+    <key>ThrottleInterval</key>
+    <integer>10</integer>
+
     <key>StandardOutPath</key>
-    <string>/tmp/mohtimeos-api.out.log</string>
+    <string>/Users/molhamhomsi/Library/Logs/mohtimeos-api.out.log</string>
     <key>StandardErrorPath</key>
-    <string>/tmp/mohtimeos-api.err.log</string>
+    <string>/Users/molhamhomsi/Library/Logs/mohtimeos-api.err.log</string>
 </dict>
 </plist>

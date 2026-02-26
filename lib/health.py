@@ -2,6 +2,7 @@
 
 import logging
 import os
+import sqlite3
 from datetime import datetime
 from enum import Enum
 from typing import Any
@@ -50,7 +51,7 @@ def health_check() -> tuple[HealthStatus, dict[str, Any]]:
         counts = table_counts()
         checks["db_readable"] = True
         checks["table_counts"] = counts
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         checks["db_readable"] = False
         checks["db_read_error"] = str(e)
         return HealthStatus.FAILED, {
@@ -64,7 +65,7 @@ def health_check() -> tuple[HealthStatus, dict[str, Any]]:
         with get_connection() as conn:
             conn.execute("SELECT 1")
         checks["db_writable"] = True
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         checks["db_writable"] = False
         checks["db_write_error"] = str(e)
         return HealthStatus.DEGRADED, {
@@ -117,7 +118,7 @@ def health_check() -> tuple[HealthStatus, dict[str, Any]]:
                 "message": f"Low disk space: {free_mb:.0f}MB",
                 "action": "Free up disk space",
             }
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         checks["disk_check_error"] = str(e)
 
     # All good
@@ -148,21 +149,21 @@ def self_heal() -> list[str]:
             if mode.lower() != "wal":
                 conn.execute("PRAGMA journal_mode=WAL")
                 actions.append("Enabled WAL mode")
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         log.error(f"Failed to check/set WAL mode: {e}")
 
     # Checkpoint WAL to prevent bloat
     try:
         checkpoint_wal()
         actions.append("Checkpointed WAL")
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         log.error(f"Failed to checkpoint WAL: {e}")
 
     # Ensure foreign keys enabled
     try:
         with get_connection() as conn:
             conn.execute("PRAGMA foreign_keys=ON")
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         log.error(f"Failed to enable foreign keys: {e}")
 
     # Prune old backups (keep 7)
@@ -172,7 +173,7 @@ def self_heal() -> list[str]:
             try:
                 old_backup.unlink()
                 actions.append(f"Pruned old backup: {old_backup.name}")
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 log.error(f"Failed to prune backup {old_backup}: {e}")
 
     return actions

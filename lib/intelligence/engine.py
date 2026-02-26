@@ -14,11 +14,11 @@ Usage:
 """
 
 import logging
+import sqlite3
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +95,7 @@ def _run_scoring_stage(db_path: Path | None = None) -> dict:
     # Score clients
     try:
         data["clients"] = score_all_clients(db_path)
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.error(f"Scoring stage failed for clients: {e}", exc_info=True)
         errors.append(
             StageError(
@@ -109,7 +109,7 @@ def _run_scoring_stage(db_path: Path | None = None) -> dict:
     # Score projects
     try:
         data["projects"] = score_all_projects(db_path)
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.error(f"Scoring stage failed for projects: {e}", exc_info=True)
         errors.append(
             StageError(
@@ -123,7 +123,7 @@ def _run_scoring_stage(db_path: Path | None = None) -> dict:
     # Score persons
     try:
         data["persons"] = score_all_persons(db_path)
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.error(f"Scoring stage failed for persons: {e}", exc_info=True)
         errors.append(
             StageError(
@@ -137,7 +137,7 @@ def _run_scoring_stage(db_path: Path | None = None) -> dict:
     # Score portfolio
     try:
         data["portfolio"] = score_portfolio(db_path)
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.error(f"Scoring stage failed for portfolio: {e}", exc_info=True)
         errors.append(
             StageError(
@@ -185,7 +185,7 @@ def _run_signal_stage(db_path: Path | None = None) -> dict:
             sev = sig.get("severity", "watch")
             if sev in data["by_severity"]:
                 data["by_severity"][sev].append(sig)
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.error(f"Signal detection failed: {e}", exc_info=True)
         errors.append(
             StageError(
@@ -204,7 +204,7 @@ def _run_signal_stage(db_path: Path | None = None) -> dict:
             data["ongoing"] = state_update.get("ongoing_signals", [])
             data["escalated"] = state_update.get("escalated_signals", [])
             data["cleared"] = state_update.get("cleared_signals", [])
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Signal state update failed: {e}", exc_info=True)
             errors.append(
                 StageError(
@@ -219,7 +219,7 @@ def _run_signal_stage(db_path: Path | None = None) -> dict:
     try:
         summary = get_signal_summary(db_path)
         data["total_active"] = summary.get("total_active", 0)
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.error(f"Signal summary failed: {e}", exc_info=True)
         errors.append(
             StageError(
@@ -267,7 +267,7 @@ def _run_pattern_stage(
             else:
                 data["informational"].append(pat)
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.error(f"Pattern detection failed: {e}", exc_info=True)
         errors.append(
             StageError(
@@ -320,7 +320,7 @@ def _run_proposal_stage(
     try:
         proposals = generate_proposals(signal_input, pattern_input, db_path)
         data["total"] = len(proposals)
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.error(f"Proposal generation failed: {e}", exc_info=True)
         errors.append(
             StageError(
@@ -336,7 +336,7 @@ def _run_proposal_stage(
         try:
             ranked = rank_proposals(proposals, db_path)
             data["ranked"] = [{**p.to_dict(), "priority_score": s.to_dict()} for p, s in ranked]
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Proposal ranking failed: {e}", exc_info=True)
             errors.append(
                 StageError(
@@ -356,7 +356,7 @@ def _run_proposal_stage(
         # Generate briefing
         try:
             data["briefing"] = generate_daily_briefing(proposals, db_path)
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Briefing generation failed: {e}", exc_info=True)
             errors.append(
                 StageError(
@@ -545,7 +545,7 @@ def get_client_intelligence(client_id: str, db_path: Path | None = None) -> dict
     # Get scorecard
     try:
         result["scorecard"] = score_client(client_id, db_path)
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.error(f"Failed to score client {client_id}: {e}", exc_info=True)
         errors.append(
             StageError(
@@ -561,7 +561,7 @@ def get_client_intelligence(client_id: str, db_path: Path | None = None) -> dict
         result["active_signals"] = get_active_signals(
             entity_type="client", entity_id=client_id, db_path=db_path
         )
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.error(f"Failed to get signals for client {client_id}: {e}", exc_info=True)
         errors.append(
             StageError(
@@ -577,7 +577,7 @@ def get_client_intelligence(client_id: str, db_path: Path | None = None) -> dict
         result["signal_history"] = get_signal_history(
             entity_type="client", entity_id=client_id, db_path=db_path
         )
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.error(f"Failed to get signal history for client {client_id}: {e}", exc_info=True)
         errors.append(
             StageError(
@@ -591,7 +591,7 @@ def get_client_intelligence(client_id: str, db_path: Path | None = None) -> dict
     # Get trajectory
     try:
         result["trajectory"] = engine.client_trajectory(client_id)
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.error(f"Failed to get trajectory for client {client_id}: {e}", exc_info=True)
         errors.append(
             StageError(
@@ -632,7 +632,7 @@ def get_person_intelligence(person_id: str, db_path: Path | None = None) -> dict
     # Get scorecard
     try:
         result["scorecard"] = score_person(person_id, db_path)
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.error(f"Failed to score person {person_id}: {e}", exc_info=True)
         errors.append(
             StageError(
@@ -648,7 +648,7 @@ def get_person_intelligence(person_id: str, db_path: Path | None = None) -> dict
         result["active_signals"] = get_active_signals(
             entity_type="person", entity_id=person_id, db_path=db_path
         )
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.error(f"Failed to get signals for person {person_id}: {e}", exc_info=True)
         errors.append(
             StageError(
@@ -664,7 +664,7 @@ def get_person_intelligence(person_id: str, db_path: Path | None = None) -> dict
         result["signal_history"] = get_signal_history(
             entity_type="person", entity_id=person_id, db_path=db_path
         )
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.error(f"Failed to get signal history for person {person_id}: {e}", exc_info=True)
         errors.append(
             StageError(
@@ -678,7 +678,7 @@ def get_person_intelligence(person_id: str, db_path: Path | None = None) -> dict
     # Get profile
     try:
         result["profile"] = engine.person_operational_profile(person_id)
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.error(f"Failed to get profile for person {person_id}: {e}", exc_info=True)
         errors.append(
             StageError(
@@ -721,7 +721,7 @@ def get_portfolio_intelligence(db_path: Path | None = None) -> dict:
     # Portfolio score
     try:
         result["portfolio_score"] = score_portfolio(db_path)
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.error(f"Failed to score portfolio: {e}", exc_info=True)
         errors.append(
             StageError(
@@ -735,7 +735,7 @@ def get_portfolio_intelligence(db_path: Path | None = None) -> dict:
     # Signal summary
     try:
         result["signal_summary"] = get_signal_summary(db_path)
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.error(f"Failed to get signal summary: {e}", exc_info=True)
         errors.append(
             StageError(
@@ -752,7 +752,7 @@ def get_portfolio_intelligence(db_path: Path | None = None) -> dict:
         result["structural_patterns"] = [
             p for p in patterns.get("patterns", []) if p.get("severity") == "structural"
         ]
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.error(f"Failed to detect patterns: {e}", exc_info=True)
         errors.append(
             StageError(
@@ -776,7 +776,7 @@ def get_portfolio_intelligence(db_path: Path | None = None) -> dict:
             {"headline": p.headline, "urgency": p.urgency.value, "score": s.raw_score}
             for p, s in ranked[:5]
         ]
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.error(f"Failed to generate proposals: {e}", exc_info=True)
         errors.append(
             StageError(
@@ -832,7 +832,7 @@ def get_critical_items(db_path: Path | None = None) -> list:
             if p.urgency == ProposalUrgency.IMMEDIATE
         ]
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.error(f"Failed to get critical items: {e}", exc_info=True)
 
     return items

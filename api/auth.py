@@ -47,6 +47,12 @@ def is_auth_enabled() -> bool:
 # ── Auth Router ──────────────────────────────────────────────────────
 
 
+class AuthModeResponse(BaseModel):
+    """Auth mode response."""
+
+    mode: str
+
+
 class TokenResponse(BaseModel):
     """Response body for token exchange (kept for UI compatibility)."""
 
@@ -58,7 +64,7 @@ class TokenResponse(BaseModel):
 auth_router = APIRouter(tags=["auth"])
 
 
-@auth_router.get("/auth/mode")
+@auth_router.get("/auth/mode", response_model=AuthModeResponse)
 async def get_auth_mode() -> dict:
     """Always dev mode — single-user system."""
     return {"mode": "dev"}

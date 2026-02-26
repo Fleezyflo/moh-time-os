@@ -11,7 +11,6 @@ import logging
 import os
 import sqlite3
 from datetime import datetime, timedelta
-from typing import Optional
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
@@ -19,6 +18,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 
+from api.response_models import DetailResponse, MutationResponse
 from lib import db as db_module
 from lib import paths
 from lib.analyzers import AnalyzerOrchestrator
@@ -132,7 +132,7 @@ async def run_db_migrations_on_startup():
         if migration_result.get("columns_added"):
             logger.info(f"Migrations added columns: {migration_result['columns_added']}")
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.warning(f"DB startup check failed: {e}")
 
 
@@ -152,7 +152,7 @@ async def run_detectors_on_startup():
         )
         conn.commit()
         conn.close()
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.info(f"[WARN] Detector startup failed: {e}")
 
 
@@ -198,7 +198,7 @@ class ModeChange(BaseModel):
 # ==== Overview Endpoint ====
 
 
-@app.get("/api/overview")
+@app.get("/api/overview", response_model=DetailResponse)
 async def get_overview():
     """Get dashboard overview with priorities, calendar, decisions, anomalies."""
     # Get priority queue
@@ -246,7 +246,7 @@ async def get_overview():
 # ==== Time Endpoints ====
 
 
-@app.get("/api/time/blocks")
+@app.get("/api/time/blocks", response_model=DetailResponse)
 async def get_time_blocks(date: str | None = None, lane: str | None = None):
     """Get time blocks for a given date."""
     from datetime import date as dt
@@ -285,7 +285,7 @@ async def get_time_blocks(date: str | None = None, lane: str | None = None):
     return {"date": date, "blocks": result, "total": len(result)}
 
 
-@app.get("/api/time/summary")
+@app.get("/api/time/summary", response_model=DetailResponse)
 async def get_time_summary(date: str | None = None):
     """Get time summary for a date."""
     from datetime import date as dt
@@ -304,7 +304,7 @@ async def get_time_summary(date: str | None = None):
     return {"date": date, "time": day_summary, "scheduling": scheduling_summary}
 
 
-@app.post("/api/time/schedule")
+@app.post("/api/time/schedule", response_model=MutationResponse)
 async def schedule_task(task_id: str, block_id: str | None = None, date: str | None = None):
     """Schedule a task into a time block."""
     from datetime import date as dt
@@ -324,7 +324,7 @@ async def schedule_task(task_id: str, block_id: str | None = None, date: str | N
     }
 
 
-@app.post("/api/time/unschedule")
+@app.post("/api/time/unschedule", response_model=MutationResponse)
 async def unschedule_task(task_id: str):
     """Unschedule a task from its time block."""
     from lib.time_truth import BlockManager
@@ -338,7 +338,7 @@ async def unschedule_task(task_id: str):
 # ==== Commitments Endpoints ====
 
 
-@app.get("/api/commitments")
+@app.get("/api/commitments", response_model=DetailResponse)
 async def get_commitments(status: str | None = None, limit: int = 50):
     """Get all commitments."""
     from lib.commitment_truth import CommitmentManager
@@ -367,7 +367,7 @@ async def get_commitments(status: str | None = None, limit: int = 50):
     }
 
 
-@app.get("/api/commitments/untracked")
+@app.get("/api/commitments/untracked", response_model=DetailResponse)
 async def get_untracked_commitments(limit: int = 50):
     """Get commitments that aren't linked to tasks."""
     from lib.commitment_truth import CommitmentManager
@@ -391,7 +391,7 @@ async def get_untracked_commitments(limit: int = 50):
     }
 
 
-@app.get("/api/commitments/due")
+@app.get("/api/commitments/due", response_model=DetailResponse)
 async def get_commitments_due(date: str | None = None):
     """Get commitments due by a date."""
     from datetime import date as dt
@@ -421,7 +421,7 @@ async def get_commitments_due(date: str | None = None):
     }
 
 
-@app.get("/api/commitments/summary")
+@app.get("/api/commitments/summary", response_model=DetailResponse)
 async def get_commitments_summary():
     """Get commitments summary statistics."""
     from lib.commitment_truth import CommitmentManager
@@ -430,7 +430,7 @@ async def get_commitments_summary():
     return cm.get_summary()
 
 
-@app.post("/api/commitments/{commitment_id}/link")
+@app.post("/api/commitments/{commitment_id}/link", response_model=MutationResponse)
 async def link_commitment(commitment_id: str, task_id: str):
     """Link a commitment to a task."""
     from lib.commitment_truth import CommitmentManager
@@ -441,7 +441,7 @@ async def link_commitment(commitment_id: str, task_id: str):
     return {"success": success, "commitment_id": commitment_id, "task_id": task_id}
 
 
-@app.post("/api/commitments/{commitment_id}/done")
+@app.post("/api/commitments/{commitment_id}/done", response_model=MutationResponse)
 async def mark_commitment_done(commitment_id: str):
     """Mark a commitment as done."""
     from lib.commitment_truth import CommitmentManager
@@ -455,7 +455,7 @@ async def mark_commitment_done(commitment_id: str):
 # ==== Capacity Endpoints ====
 
 
-@app.get("/api/capacity/lanes")
+@app.get("/api/capacity/lanes", response_model=DetailResponse)
 async def get_capacity_lanes_endpoint():
     """Get capacity lanes configuration."""
     from lib.capacity_truth import CapacityCalculator
@@ -465,7 +465,7 @@ async def get_capacity_lanes_endpoint():
     return {"lanes": lanes}
 
 
-@app.get("/api/capacity/utilization")
+@app.get("/api/capacity/utilization", response_model=DetailResponse)
 async def get_capacity_utilization(lane_id: str | None = None, target_date: str | None = None):
     """Get capacity utilization metrics."""
     from lib.capacity_truth import CapacityCalculator
@@ -477,7 +477,7 @@ async def get_capacity_utilization(lane_id: str | None = None, target_date: str 
     return calc.get_capacity_summary(target_date=target_date)
 
 
-@app.get("/api/capacity/forecast")
+@app.get("/api/capacity/forecast", response_model=DetailResponse)
 async def get_capacity_forecast(lane_id: str = "default", days: int = 7):
     """Get capacity forecast for upcoming days."""
     from lib.capacity_truth import CapacityCalculator
@@ -487,7 +487,7 @@ async def get_capacity_forecast(lane_id: str = "default", days: int = 7):
     return {"lane_id": lane_id, "days": days, "forecasts": forecasts}
 
 
-@app.get("/api/capacity/debt")
+@app.get("/api/capacity/debt", response_model=DetailResponse)
 async def get_capacity_debt(lane: str | None = None):
     """Get capacity debt (overcommitments)."""
     from lib.capacity_truth import DebtTracker
@@ -517,7 +517,7 @@ async def resolve_debt(debt_id: str):
 # ==== Clients Endpoints ====
 
 
-@app.get("/api/clients/health")
+@app.get("/api/clients/health", response_model=DetailResponse)
 async def get_clients_health(limit: int = 20):
     """Get client health overview."""
     from lib.client_truth import HealthCalculator
@@ -545,7 +545,7 @@ async def get_clients_health(limit: int = 20):
     return {"clients": results, "total": len(results)}
 
 
-@app.get("/api/clients/at-risk")
+@app.get("/api/clients/at-risk", response_model=DetailResponse)
 async def get_at_risk_clients(threshold: int = 50):
     """Get clients that are at risk (health score below threshold)."""
     from lib.client_truth import HealthCalculator
@@ -569,7 +569,7 @@ async def get_at_risk_clients(threshold: int = 50):
     }
 
 
-@app.get("/api/clients/{client_id}/health")
+@app.get("/api/clients/{client_id}/health", response_model=DetailResponse)
 async def get_client_health(client_id: str):
     """Get detailed health for a specific client."""
     from lib.client_truth import HealthCalculator
@@ -578,7 +578,7 @@ async def get_client_health(client_id: str):
     return calc.get_client_summary(client_id)
 
 
-@app.get("/api/clients/{client_id}/projects")
+@app.get("/api/clients/{client_id}/projects", response_model=DetailResponse)
 async def get_client_projects(client_id: str):
     """Get projects for a client."""
     from lib.client_truth import ClientLinker
@@ -589,7 +589,7 @@ async def get_client_projects(client_id: str):
     return {"client_id": client_id, "projects": projects, "total": len(projects)}
 
 
-@app.post("/api/clients/link")
+@app.post("/api/clients/link", response_model=MutationResponse)
 async def link_project_to_client(project_id: str, client_id: str):
     """Link a project to a client."""
     from lib.client_truth import ClientLinker
@@ -600,7 +600,7 @@ async def link_project_to_client(project_id: str, client_id: str):
     return {"success": success, "message": message}
 
 
-@app.get("/api/clients/linking-stats")
+@app.get("/api/clients/linking-stats", response_model=DetailResponse)
 async def get_linking_stats():
     """Get client linking statistics."""
     from lib.client_truth import ClientLinker
@@ -612,7 +612,7 @@ async def get_linking_stats():
 # ==== Tasks Endpoints ====
 
 
-@app.get("/api/tasks")
+@app.get("/api/tasks", response_model=DetailResponse)
 async def get_tasks(
     status: str | None = None,
     project: str | None = None,
@@ -671,7 +671,7 @@ class TaskUpdate(BaseModel):
     tags: str | None = None
 
 
-@app.get("/api/tasks/{task_id}")
+@app.get("/api/tasks/{task_id}", response_model=DetailResponse)
 async def get_task(task_id: str):
     """Get a specific task."""
     task = store.get("tasks", task_id)
@@ -680,7 +680,7 @@ async def get_task(task_id: str):
     return dict(task)
 
 
-@app.post("/api/tasks")
+@app.post("/api/tasks", response_model=MutationResponse)
 async def create_task(task: TaskCreate):
     """Create a new task."""
     import uuid
@@ -712,12 +712,12 @@ async def create_task(task: TaskCreate):
         store.insert("tasks", task_data)
         mark_applied(bundle["id"])
         return {"success": True, "task": task_data, "bundle_id": bundle["id"]}
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         mark_failed(bundle["id"], str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.put("/api/tasks/{task_id}")
+@app.put("/api/tasks/{task_id}", response_model=MutationResponse)
 async def update_task(task_id: str, task: TaskUpdate):
     """Update a task with comprehensive validation and tracking."""
     existing = store.get("tasks", task_id)
@@ -830,7 +830,7 @@ async def update_task(task_id: str, task: TaskUpdate):
                 signal_svc = SignalService()
                 result = signal_svc.handle_task_completed(task_id)
                 signals_resolved = result.get("resolved_count", 0)
-            except Exception as sig_err:
+            except (sqlite3.Error, ValueError) as sig_err:
                 logger.warning(f"Failed to resolve signals for completed task {task_id}: {sig_err}")
 
         return {
@@ -841,7 +841,7 @@ async def update_task(task_id: str, task: TaskUpdate):
             "updated_fields": list(update_data.keys()),
             "signals_resolved": signals_resolved,
         }
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         mark_failed(bundle["id"], str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -850,7 +850,7 @@ class NoteAdd(BaseModel):
     note: str
 
 
-@app.post("/api/tasks/{task_id}/notes")
+@app.post("/api/tasks/{task_id}/notes", response_model=MutationResponse)
 async def add_task_note(task_id: str, body: NoteAdd):
     """Add a note to a task."""
     task = store.get("tasks", task_id)
@@ -874,7 +874,7 @@ async def add_task_note(task_id: str, body: NoteAdd):
     return {"success": True, "notes": notes}
 
 
-@app.delete("/api/tasks/{task_id}")
+@app.delete("/api/tasks/{task_id}", response_model=MutationResponse)
 async def delete_task(task_id: str):
     """Delete (archive) a task."""
     task = store.get("tasks", task_id)
@@ -895,7 +895,7 @@ async def delete_task(task_id: str):
         )
         mark_applied(bundle["id"])
         return {"success": True, "id": task_id, "bundle_id": bundle["id"]}
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         mark_failed(bundle["id"], str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -914,7 +914,7 @@ class EscalateRequest(BaseModel):
     reason: str | None = None
 
 
-@app.post("/api/tasks/{task_id}/delegate")
+@app.post("/api/tasks/{task_id}/delegate", response_model=MutationResponse)
 async def delegate_task(task_id: str, body: DelegateRequest):
     """Delegate a task to someone with validation and workload awareness."""
     task = store.get("tasks", task_id)
@@ -1082,12 +1082,12 @@ async def delegate_task(task_id: str, body: DelegateRequest):
 
         return result
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         mark_failed(bundle["id"], str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.post("/api/tasks/{task_id}/escalate")
+@app.post("/api/tasks/{task_id}/escalate", response_model=MutationResponse)
 async def escalate_task(task_id: str, body: EscalateRequest):
     """Escalate a task with priority boost and notification chain."""
     task = store.get("tasks", task_id)
@@ -1275,12 +1275,12 @@ async def escalate_task(task_id: str, body: EscalateRequest):
             "new_urgency": new_urgency,
         }
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         mark_failed(bundle["id"], str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.post("/api/tasks/{task_id}/recall")
+@app.post("/api/tasks/{task_id}/recall", response_model=MutationResponse)
 async def recall_task(task_id: str):
     """Recall a delegated task."""
     task = store.get("tasks", task_id)
@@ -1312,12 +1312,12 @@ async def recall_task(task_id: str):
         store.update("tasks", task_id, update_data)
         mark_applied(bundle["id"])
         return {"success": True, "id": task_id, "bundle_id": bundle["id"]}
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         mark_failed(bundle["id"], str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.get("/api/delegations")
+@app.get("/api/delegations", response_model=DetailResponse)
 async def get_delegations():
     """Get delegated tasks split by delegation direction."""
     delegated_by_me = store.query("""
@@ -1342,7 +1342,7 @@ async def get_delegations():
 # ==== Data Quality Endpoints ====
 
 
-@app.get("/api/data-quality")
+@app.get("/api/data-quality", response_model=DetailResponse)
 async def get_data_quality():
     """Get data quality metrics and cleanup suggestions."""
     datetime.now().strftime("%Y-%m-%d")
@@ -1515,7 +1515,7 @@ class CleanupRequest(BaseModel):
     dry_run: bool | None = False
 
 
-@app.post("/api/data-quality/cleanup/ancient")
+@app.post("/api/data-quality/cleanup/ancient", response_model=MutationResponse)
 async def cleanup_ancient_tasks(confirm: bool = False):
     """Archive tasks that are >30 days overdue."""
     tasks = store.query("""
@@ -1552,7 +1552,7 @@ async def cleanup_ancient_tasks(confirm: bool = False):
     return {"success": True, "archived_count": len(tasks), "bundle_id": bundle["id"]}
 
 
-@app.post("/api/data-quality/cleanup/stale")
+@app.post("/api/data-quality/cleanup/stale", response_model=MutationResponse)
 async def cleanup_stale_tasks(confirm: bool = False):
     """Archive tasks that are 14-30 days overdue."""
     tasks = store.query("""
@@ -1592,7 +1592,7 @@ async def cleanup_stale_tasks(confirm: bool = False):
     return {"success": True, "archived_count": len(tasks), "bundle_id": bundle["id"]}
 
 
-@app.post("/api/data-quality/recalculate-priorities")
+@app.post("/api/data-quality/recalculate-priorities", response_model=MutationResponse)
 async def recalculate_priorities():
     """Recalculate priorities for all pending tasks."""
     tasks = store.query("""
@@ -1674,7 +1674,7 @@ def _calculate_realistic_priority(task: dict, today) -> int:
     return max(0, min(100, score))
 
 
-@app.post("/api/data-quality/cleanup/legacy-signals")
+@app.post("/api/data-quality/cleanup/legacy-signals", response_model=MutationResponse)
 async def cleanup_legacy_signals(confirm: bool = False):
     """
     Clean up legacy signals and proposals by:
@@ -1775,7 +1775,7 @@ async def cleanup_legacy_signals(confirm: bool = False):
         conn.close()
 
 
-@app.get("/api/data-quality/preview/{cleanup_type}")
+@app.get("/api/data-quality/preview/{cleanup_type}", response_model=DetailResponse)
 async def preview_cleanup(cleanup_type: str):
     """Preview what would be affected by a cleanup operation."""
     if cleanup_type == "ancient":
@@ -1810,43 +1810,42 @@ async def preview_cleanup(cleanup_type: str):
 # ==== Team Endpoints ====
 
 
-@app.get("/api/team")
+@app.get("/api/team", response_model=DetailResponse)
 async def get_team(type_filter: str | None = None):
     """Get team members with workload metrics."""
     conditions = ["1=1"]
+    params: list = []
     if type_filter:
-        conditions.append(f"p.type = '{type_filter}'")
+        conditions.append("p.type = ?")
+        params.append(type_filter)
 
-    people = store.query(f"""
-        SELECT p.*, c.name as client_name
-        FROM people p
-        LEFT JOIN clients c ON p.client_id = c.id
-        WHERE {" AND ".join(conditions)}
-        ORDER BY p.type DESC, p.name
-    """)  # noqa: S608 - conditions are hardcoded filters
+    people = store.query(
+        f"SELECT p.*, c.name as client_name FROM people p "
+        f"LEFT JOIN clients c ON p.client_id = c.id "
+        f"WHERE {' AND '.join(conditions)} ORDER BY p.type DESC, p.name",
+        params,
+    )
 
     result = []
     for p in people:
         person = dict(p)
-        name_escaped = p["name"].replace("'", "''")
+        assignee_name = p["name"]
 
         # Workload metrics
-        task_stats = store.query(f"""
-            SELECT
-                COUNT(*) as open_tasks,
-                SUM(CASE WHEN due_date < date('now') THEN 1 ELSE 0 END) as overdue_tasks,
-                SUM(CASE WHEN due_date = date('now') THEN 1 ELSE 0 END) as due_today
-            FROM tasks
-            WHERE assignee = '{name_escaped}' AND status IN ('pending', 'in_progress')
-        """)  # noqa: S608 - name_escaped is SQL-escaped above
+        task_stats = store.query(
+            "SELECT COUNT(*) as open_tasks, "
+            "SUM(CASE WHEN due_date < date('now') THEN 1 ELSE 0 END) as overdue_tasks, "
+            "SUM(CASE WHEN due_date = date('now') THEN 1 ELSE 0 END) as due_today "
+            "FROM tasks WHERE assignee = ? AND status IN ('pending', 'in_progress')",
+            [assignee_name],
+        )
 
-        completed_stats = store.query(f"""
-            SELECT COUNT(*) as completed
-            FROM tasks
-            WHERE assignee = '{name_escaped}'
-            AND status = 'completed'
-            AND updated_at >= date('now', '-7 days')
-        """)  # noqa: S608 - name_escaped is SQL-escaped above
+        completed_stats = store.query(
+            "SELECT COUNT(*) as completed FROM tasks "
+            "WHERE assignee = ? AND status = 'completed' "
+            "AND updated_at >= date('now', '-7 days')",
+            [assignee_name],
+        )
 
         stats = task_stats[0] if task_stats else {}
         completed = completed_stats[0] if completed_stats else {}
@@ -1862,7 +1861,7 @@ async def get_team(type_filter: str | None = None):
     return {"items": result, "total": len(result)}
 
 
-@app.get("/api/calendar")
+@app.get("/api/calendar", response_model=DetailResponse)
 async def api_calendar(
     start_date: str | None = None, end_date: str | None = None, view: str = "week"
 ):
@@ -1894,13 +1893,7 @@ async def api_calendar(
     }
 
 
-@app.get("/api/delegations")
-async def api_delegations():
-    """Get delegated tasks (alias)."""
-    return await get_delegations()
-
-
-@app.get("/api/inbox")
+@app.get("/api/inbox", response_model=DetailResponse)
 async def api_inbox(limit: int = 50):
     """Get inbox items (unprocessed communications, new tasks, etc.)."""
     items = store.query(
@@ -1916,23 +1909,7 @@ async def api_inbox(limit: int = 50):
     return {"items": [dict(i) for i in items], "total": len(items)}
 
 
-@app.get("/api/insights")
-async def api_insights(limit: int = 20):
-    """Get insights."""
-    insights = store.query(
-        """
-        SELECT * FROM insights
-        WHERE expires_at IS NULL OR expires_at > datetime('now')
-        ORDER BY created_at DESC
-        LIMIT ?
-    """,
-        [limit],
-    )
-
-    return {"insights": [dict(i) for i in insights], "total": len(insights)}
-
-
-@app.get("/api/decisions")
+@app.get("/api/decisions", response_model=DetailResponse)
 async def api_decisions(limit: int = 20):
     """Get pending decisions."""
     decisions = store.query(
@@ -1948,7 +1925,7 @@ async def api_decisions(limit: int = 20):
     return {"decisions": [dict(d) for d in decisions], "total": len(decisions)}
 
 
-@app.post("/api/priorities/{item_id}/complete")
+@app.post("/api/priorities/{item_id}/complete", response_model=MutationResponse)
 async def api_priority_complete(item_id: str):
     """Complete a priority item (task)."""
     task = store.get("tasks", item_id)
@@ -1978,7 +1955,7 @@ async def api_priority_complete(item_id: str):
             signal_svc = SignalService()
             result = signal_svc.handle_task_completed(item_id)
             signals_resolved = result.get("resolved_count", 0)
-        except Exception as sig_err:
+        except (sqlite3.Error, ValueError) as sig_err:
             logger.warning(f"Failed to resolve signals for completed task {item_id}: {sig_err}")
 
         return {
@@ -1987,12 +1964,12 @@ async def api_priority_complete(item_id: str):
             "bundle_id": bundle["id"],
             "signals_resolved": signals_resolved,
         }
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         mark_failed(bundle["id"], str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.post("/api/priorities/{item_id}/snooze")
+@app.post("/api/priorities/{item_id}/snooze", response_model=MutationResponse)
 async def api_priority_snooze(item_id: str, days: int = 1):
     """Snooze a priority item."""
 
@@ -2022,12 +1999,12 @@ async def api_priority_snooze(item_id: str, days: int = 1):
             "new_due_date": new_date,
             "bundle_id": bundle["id"],
         }
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         mark_failed(bundle["id"], str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.post("/api/priorities/{item_id}/delegate")
+@app.post("/api/priorities/{item_id}/delegate", response_model=MutationResponse)
 async def api_priority_delegate(item_id: str, to: str):
     """Delegate a priority item."""
     task = store.query("SELECT * FROM tasks WHERE id = ?", [item_id])
@@ -2081,12 +2058,12 @@ async def api_priority_delegate(item_id: str, to: str):
             "delegated_to": to,
             "bundle_id": bundle["id"],
         }
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         mark_failed(bundle["id"], str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.post("/api/decisions/{decision_id}")
+@app.post("/api/decisions/{decision_id}", response_model=MutationResponse)
 async def api_decision(decision_id: str, action: ApprovalAction):
     """Process a decision (approve/reject) with side-effect execution."""
     dec = store.query("SELECT * FROM decisions WHERE id = ?", [decision_id])
@@ -2163,7 +2140,7 @@ async def api_decision(decision_id: str, action: ApprovalAction):
                             "changes": list(proposed_changes.keys()),
                         }
                     )
-                except Exception as e:
+                except (sqlite3.Error, ValueError) as e:
                     side_effects_failed.append(
                         {"type": "task_update", "target": target_id, "error": str(e)}
                     )
@@ -2195,7 +2172,7 @@ async def api_decision(decision_id: str, action: ApprovalAction):
                                 "dismissed": 0,
                             },
                         )
-                except Exception as e:
+                except (sqlite3.Error, ValueError) as e:
                     side_effects_failed.append(
                         {"type": "delegation", "target": target_id, "error": str(e)}
                     )
@@ -2228,7 +2205,7 @@ async def api_decision(decision_id: str, action: ApprovalAction):
                                 "dismissed": 0,
                             },
                         )
-                except Exception as e:
+                except (sqlite3.Error, ValueError) as e:
                     side_effects_failed.append(
                         {"type": "escalation", "target": target_id, "error": str(e)}
                     )
@@ -2247,7 +2224,7 @@ async def api_decision(decision_id: str, action: ApprovalAction):
                                 "new_mode": new_mode,
                             }
                         )
-                except Exception as e:
+                except (sqlite3.Error, ValueError) as e:
                     side_effects_failed.append({"type": "governance_change", "error": str(e)})
 
         # Log to governance history
@@ -2287,7 +2264,7 @@ async def api_decision(decision_id: str, action: ApprovalAction):
 
         return result
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         mark_failed(bundle["id"], str(e))
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -2295,21 +2272,21 @@ async def api_decision(decision_id: str, action: ApprovalAction):
 # ==== Bundles Endpoints ====
 
 
-@app.get("/api/bundles")
+@app.get("/api/bundles", response_model=DetailResponse)
 async def api_bundles(status: str | None = None, domain: str | None = None, limit: int = 50):
     """Get change bundles."""
     bundles = list_bundles(status=status or "", domain=domain or "", limit=limit)
     return {"bundles": bundles, "total": len(bundles)}
 
 
-@app.get("/api/bundles/rollbackable")
+@app.get("/api/bundles/rollbackable", response_model=DetailResponse)
 async def api_bundles_rollbackable():
     """Get bundles that can be rolled back."""
     bundles = list_rollbackable_bundles()
     return {"bundles": bundles, "total": len(bundles)}
 
 
-@app.get("/api/bundles/summary")
+@app.get("/api/bundles/summary", response_model=DetailResponse)
 async def get_bundles_summary():
     """Get summary of bundle activity."""
     all_bundles = list_bundles(limit=500)
@@ -2339,7 +2316,7 @@ async def get_bundles_summary():
     }
 
 
-@app.post("/api/bundles/rollback-last")
+@app.post("/api/bundles/rollback-last", response_model=MutationResponse)
 async def rollback_last_bundle(domain: str | None = None):
     """Rollback the most recent bundle."""
     rollbackable = list_rollbackable_bundles()
@@ -2366,7 +2343,7 @@ async def rollback_last_bundle(domain: str | None = None):
     raise HTTPException(status_code=500, detail=result.get("reason", "Rollback failed"))
 
 
-@app.get("/api/bundles/{bundle_id}")
+@app.get("/api/bundles/{bundle_id}", response_model=DetailResponse)
 async def api_bundle_get(bundle_id: str):
     """Get a specific bundle."""
     bundle = get_bundle(bundle_id)
@@ -2375,7 +2352,7 @@ async def api_bundle_get(bundle_id: str):
     return bundle
 
 
-@app.post("/api/bundles/{bundle_id}/rollback")
+@app.post("/api/bundles/{bundle_id}/rollback", response_model=MutationResponse)
 async def api_bundle_rollback(bundle_id: str):
     """Rollback a specific bundle."""
     bundle = get_bundle(bundle_id)
@@ -2392,7 +2369,7 @@ async def api_bundle_rollback(bundle_id: str):
         return {"success": True, "bundle": result}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e)) from e
-    except Exception as e:
+    except sqlite3.Error as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -2401,13 +2378,13 @@ async def api_bundle_rollback(bundle_id: str):
 calibration_engine = CalibrationEngine(store=store)
 
 
-@app.get("/api/calibration")
+@app.get("/api/calibration", response_model=DetailResponse)
 async def api_calibration_last():
     """Get last calibration results."""
     return calibration_engine.get_last_calibration()
 
 
-@app.post("/api/calibration/run")
+@app.post("/api/calibration/run", response_model=DetailResponse)
 async def api_calibration_run():
     """Run calibration."""
     return calibration_engine.run()
@@ -2422,7 +2399,7 @@ class FeedbackRequest(BaseModel):
     comment: str | None = None
 
 
-@app.post("/api/feedback")
+@app.post("/api/feedback", response_model=MutationResponse)
 async def api_feedback(feedback: FeedbackRequest):
     """Submit feedback on a recommendation or action."""
     import uuid
@@ -2447,7 +2424,7 @@ async def api_feedback(feedback: FeedbackRequest):
 # ==== Priorities Endpoints ====
 
 
-@app.get("/api/priorities")
+@app.get("/api/priorities", response_model=DetailResponse)
 async def get_priorities(limit: int = 20, context: str | None = None):
     """Get prioritized items."""
     priority_queue = (
@@ -2459,70 +2436,7 @@ async def get_priorities(limit: int = 20, context: str | None = None):
     return {"items": sorted_items, "total": len(priority_queue)}
 
 
-@app.post("/api/priorities/{item_id}/complete")
-async def complete_item(item_id: str):
-    """Complete a priority item based on its type/source."""
-    if item_id.startswith("asana_"):
-        store.update(
-            "tasks",
-            item_id,
-            {"status": "done", "updated_at": datetime.now().isoformat()},
-        )
-    elif item_id.startswith("gmail_"):
-        store.update("communications", item_id, {"processed": 1})
-    else:
-        raise HTTPException(404, "Item not found")
-
-    store.clear_cache("priority_queue")
-
-    return {"status": "completed", "id": item_id}
-
-
-@app.post("/api/priorities/{item_id}/snooze")
-async def snooze_item(item_id: str, hours: int = 4):
-    """Snooze a priority item."""
-
-    task = store.get("tasks", item_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-
-    new_time = datetime.now() + timedelta(hours=hours)
-    now = datetime.now().isoformat()
-
-    store.update("tasks", item_id, {"snoozed_until": new_time.isoformat(), "updated_at": now})
-
-    return {"success": True, "id": item_id, "snoozed_until": new_time.isoformat()}
-
-
-class DelegateAction(BaseModel):
-    to: str
-    note: str | None = None
-
-
-@app.post("/api/priorities/{item_id}/delegate")
-async def delegate_item(item_id: str, body: DelegateAction):
-    """Delegate a priority item."""
-    task = store.get("tasks", item_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
-
-    now = datetime.now().isoformat()
-    store.update(
-        "tasks",
-        item_id,
-        {
-            "assignee": body.to,
-            "delegated_by": "moh",
-            "delegated_at": now,
-            "delegated_note": body.note,
-            "updated_at": now,
-        },
-    )
-
-    return {"success": True, "id": item_id, "delegated_to": body.to}
-
-
-@app.get("/api/priorities/filtered")
+@app.get("/api/priorities/filtered", response_model=DetailResponse)
 async def get_priorities_filtered(
     due: str | None = None,
     assignee: str | None = None,
@@ -2618,7 +2532,7 @@ class BulkAction(BaseModel):
     project: str | None = None
 
 
-@app.post("/api/priorities/bulk")
+@app.post("/api/priorities/bulk", response_model=MutationResponse)
 async def bulk_action(body: BulkAction):
     """Perform bulk actions on priority items."""
     from lib.change_bundles import create_task_bundle, mark_applied
@@ -2707,7 +2621,7 @@ async def bulk_action(body: BulkAction):
             update_data_dict: dict[str, str | None] = update["data"]  # type: ignore[assignment]
             store.update("tasks", update_id, update_data_dict)
             updated += 1
-        except Exception as e:
+        except (sqlite3.Error, ValueError) as e:
             logger.info(f"Failed to update {update['id']}: {e}")
     mark_applied(bundle["id"])
     store.clear_cache("priority_queue")
@@ -2725,14 +2639,14 @@ class SavedFilter(BaseModel):
     filters: dict
 
 
-@app.get("/api/filters")
+@app.get("/api/filters", response_model=DetailResponse)
 async def get_saved_filters():
     """Get saved filters."""
     filters = store.query("SELECT * FROM saved_filters ORDER BY name")
     return {"filters": [dict(f) for f in filters]}
 
 
-@app.get("/api/priorities/advanced")
+@app.get("/api/priorities/advanced", response_model=DetailResponse)
 async def advanced_filter(
     q: str | None = None,
     due: str | None = None,
@@ -2856,7 +2770,7 @@ async def advanced_filter(
     }
 
 
-@app.post("/api/priorities/archive-stale")
+@app.post("/api/priorities/archive-stale", response_model=MutationResponse)
 async def archive_stale(days_threshold: int = 14):
     """Archive stale priority items."""
 
@@ -2882,7 +2796,7 @@ async def archive_stale(days_threshold: int = 14):
     return {"success": True, "archived_count": len(tasks)}
 
 
-@app.get("/api/events")
+@app.get("/api/events", response_model=DetailResponse)
 async def get_events(hours: int = 24):
     """Get upcoming events."""
 
@@ -2901,7 +2815,7 @@ async def get_events(hours: int = 24):
     return {"events": [dict(e) for e in events], "total": len(events)}
 
 
-@app.get("/api/day/{date}")
+@app.get("/api/day/{date}", response_model=DetailResponse)
 async def get_day_analysis(date: str | None = None):
     """Get analysis for a specific day."""
     from datetime import date as date_type
@@ -2913,7 +2827,7 @@ async def get_day_analysis(date: str | None = None):
     return cs.get_day_summary(target)
 
 
-@app.get("/api/week")
+@app.get("/api/week", response_model=DetailResponse)
 async def get_week_analysis():
     """Get analysis for the current week."""
     from lib.time_truth import CalendarSync
@@ -2922,7 +2836,7 @@ async def get_week_analysis():
     return cs.ensure_blocks_for_week()
 
 
-@app.get("/api/emails")
+@app.get("/api/emails", response_model=DetailResponse)
 async def get_emails(actionable_only: bool = False, unread_only: bool = False, limit: int = 30):
     """Get emails from communications."""
     conditions = ["type = 'email'"]
@@ -2945,7 +2859,7 @@ async def get_emails(actionable_only: bool = False, unread_only: bool = False, l
     return {"emails": [dict(e) for e in emails], "total": len(emails)}
 
 
-@app.post("/api/emails/{email_id}/mark-actionable")
+@app.post("/api/emails/{email_id}/mark-actionable", response_model=MutationResponse)
 async def mark_email_actionable(email_id: str):
     """Mark an email as actionable."""
     store.update(
@@ -2956,7 +2870,7 @@ async def mark_email_actionable(email_id: str):
     return {"success": True, "id": email_id}
 
 
-@app.get("/api/insights")
+@app.get("/api/insights", response_model=DetailResponse)
 async def get_insights(category: str | None = None):
     """Get insights."""
     conditions = ["(expires_at IS NULL OR expires_at > datetime('now'))"]
@@ -2978,7 +2892,7 @@ async def get_insights(category: str | None = None):
     return {"insights": [dict(i) for i in insights], "total": len(insights)}
 
 
-@app.get("/api/anomalies")
+@app.get("/api/anomalies", response_model=DetailResponse)
 async def get_anomalies():
     """Get anomalies."""
     anomalies = store.query("""
@@ -2991,7 +2905,7 @@ async def get_anomalies():
     return {"anomalies": [dict(a) for a in anomalies], "total": len(anomalies)}
 
 
-@app.get("/api/notifications")
+@app.get("/api/notifications", response_model=DetailResponse)
 async def get_notifications(include_dismissed: bool = False, limit: int = 50):
     """Get notifications."""
     conditions = ["1=1"]
@@ -3014,7 +2928,7 @@ async def get_notifications(include_dismissed: bool = False, limit: int = 50):
     }
 
 
-@app.get("/api/notifications/stats")
+@app.get("/api/notifications/stats", response_model=DetailResponse)
 async def get_notification_stats():
     """Get notification statistics."""
     total = store.count("notifications", "1=1")
@@ -3023,7 +2937,7 @@ async def get_notification_stats():
     return {"total": total, "unread": unread}
 
 
-@app.post("/api/notifications/{notif_id}/dismiss")
+@app.post("/api/notifications/{notif_id}/dismiss", response_model=MutationResponse)
 async def dismiss_notification(notif_id: str):
     """Dismiss a notification."""
     store.update(
@@ -3034,7 +2948,7 @@ async def dismiss_notification(notif_id: str):
     return {"success": True, "id": notif_id}
 
 
-@app.post("/api/notifications/dismiss-all")
+@app.post("/api/notifications/dismiss-all", response_model=MutationResponse)
 async def dismiss_all_notifications():
     """Dismiss all notifications."""
     now = datetime.now().isoformat()
@@ -3051,7 +2965,7 @@ async def dismiss_all_notifications():
 # ==== Approvals Endpoints ====
 
 
-@app.get("/api/approvals")
+@app.get("/api/approvals", response_model=DetailResponse)
 async def get_approvals():
     """Get pending approvals."""
     approvals = store.query(
@@ -3060,7 +2974,7 @@ async def get_approvals():
     return {"approvals": [dict(a) for a in approvals], "total": len(approvals)}
 
 
-@app.post("/api/approvals/{decision_id}")
+@app.post("/api/approvals/{decision_id}", response_model=DetailResponse)
 async def process_approval(decision_id: str, body: ApprovalAction):
     """Process an approval."""
     decision = store.get("decisions", decision_id)
@@ -3084,7 +2998,7 @@ class ModifyApproval(BaseModel):
     modifications: dict
 
 
-@app.post("/api/approvals/{decision_id}/modify")
+@app.post("/api/approvals/{decision_id}/modify", response_model=MutationResponse)
 async def modify_approval(decision_id: str, body: ModifyApproval):
     """Modify and approve a decision."""
     dec = store.get("decisions", decision_id)
@@ -3108,7 +3022,7 @@ async def modify_approval(decision_id: str, body: ModifyApproval):
 # ==== Governance Endpoints ====
 
 
-@app.get("/api/governance")
+@app.get("/api/governance", response_model=DetailResponse)
 async def get_governance_status():
     """Get governance configuration and status."""
     return {
@@ -3118,7 +3032,7 @@ async def get_governance_status():
     }
 
 
-@app.put("/api/governance/{domain}")
+@app.put("/api/governance/{domain}", response_model=DetailResponse)
 async def set_governance_mode(domain: str, body: ModeChange):
     """Set governance mode for a domain."""
     try:
@@ -3147,7 +3061,7 @@ class ThresholdUpdate(BaseModel):
     threshold: float
 
 
-@app.put("/api/governance/{domain}/threshold")
+@app.put("/api/governance/{domain}/threshold", response_model=DetailResponse)
 async def set_governance_threshold(domain: str, body: ThresholdUpdate):
     """Set confidence threshold for a domain."""
     if not (0 <= body.threshold <= 1):
@@ -3165,7 +3079,7 @@ async def set_governance_threshold(domain: str, body: ThresholdUpdate):
     return {"domain": domain, "threshold": body.threshold, "status": "updated"}
 
 
-@app.get("/api/governance/history")
+@app.get("/api/governance/history", response_model=DetailResponse)
 async def get_governance_history(limit: int = 50):
     """Get governance action history."""
     history = store.query(
@@ -3180,14 +3094,14 @@ async def get_governance_history(limit: int = 50):
     return {"history": [dict(h) for h in history], "total": len(history)}
 
 
-@app.post("/api/governance/emergency-brake")
+@app.post("/api/governance/emergency-brake", response_model=MutationResponse)
 async def activate_emergency_brake(reason: str = "Manual activation"):
     """Activate emergency brake."""
     governance.emergency_brake(reason)
     return {"success": True, "active": True, "reason": reason}
 
 
-@app.delete("/api/governance/emergency-brake")
+@app.delete("/api/governance/emergency-brake", response_model=MutationResponse)
 async def release_emergency_brake():
     """Release emergency brake."""
     governance.release_emergency_brake()
@@ -3197,32 +3111,32 @@ async def release_emergency_brake():
 # ==== Sync Endpoints ====
 
 
-@app.get("/api/sync/status")
+@app.get("/api/sync/status", response_model=DetailResponse)
 async def get_sync_status():
     """Get sync status for all collectors."""
     return collectors.get_status()
 
 
-@app.post("/api/sync")
+@app.post("/api/sync", response_model=DetailResponse)
 async def force_sync(source: str | None = None):
     """Force a sync operation."""
     return collectors.force_sync(source=source or "")
 
 
-@app.post("/api/analyze")
+@app.post("/api/analyze", response_model=DetailResponse)
 async def run_analysis():
     """Run analysis."""
     return analyzers.analyze()
 
 
-@app.post("/api/cycle")
+@app.post("/api/cycle", response_model=DetailResponse)
 async def run_cycle():
     """Run a full autonomous cycle."""
     loop = AutonomousLoop(store, collectors, analyzers, governance)
     return loop.run_cycle()
 
 
-@app.get("/api/status")
+@app.get("/api/status", response_model=DetailResponse)
 async def get_status():
     """Get system status."""
     return {
@@ -3233,7 +3147,7 @@ async def get_status():
     }
 
 
-@app.get("/api/health")
+@app.get("/api/health", response_model=DetailResponse)
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
@@ -3283,7 +3197,7 @@ async def metrics():
     return PlainTextResponse("\n".join(lines) + "\n", media_type="text/plain")
 
 
-@app.get("/api/debug/db")
+@app.get("/api/debug/db", response_model=DetailResponse)
 async def debug_db():
     """
     Debug endpoint to inspect database configuration.
@@ -3294,7 +3208,7 @@ async def debug_db():
     return db_module.get_db_info()
 
 
-@app.get("/api/summary")
+@app.get("/api/summary", response_model=DetailResponse)
 async def get_summary():
     """Get a comprehensive summary."""
     from datetime import date
@@ -3348,7 +3262,7 @@ async def get_summary():
     }
 
 
-@app.get("/api/search")
+@app.get("/api/search", response_model=DetailResponse)
 async def search_items(q: str, limit: int = 20):
     """Search across tasks, projects, and clients."""
     results = []
@@ -3389,7 +3303,7 @@ async def search_items(q: str, limit: int = 20):
     return {"results": results[:limit], "total": len(results)}
 
 
-@app.get("/api/team/workload")
+@app.get("/api/team/workload", response_model=DetailResponse)
 async def get_team_workload():
     """Get team workload distribution."""
     workload = store.query("""
@@ -3422,7 +3336,7 @@ async def get_team_workload():
     }
 
 
-@app.get("/api/priorities/grouped")
+@app.get("/api/priorities/grouped", response_model=DetailResponse)
 async def get_grouped_priorities(group_by: str = "project", limit: int = 10):
     """Get priorities grouped by a field."""
     if group_by not in ("project", "assignee", "source"):
@@ -3500,7 +3414,7 @@ def _recency_health_factor(client: dict) -> int:
         if days_ago < 90:
             return 60
         return 40
-    except Exception:
+    except (sqlite3.Error, ValueError):
         return 50
 
 
@@ -3515,7 +3429,7 @@ def _compute_fallback_health(client: dict) -> int:
     return max(0, min(100, score))
 
 
-@app.get("/api/clients")
+@app.get("/api/clients", response_model=DetailResponse)
 async def get_clients(
     tier: str | None = None,
     health: str | None = None,
@@ -3626,7 +3540,7 @@ async def get_clients(
     return {"items": result, "total": len(result), "active_only": active_only}
 
 
-@app.get("/api/clients/portfolio")
+@app.get("/api/clients/portfolio", response_model=DetailResponse)
 async def get_client_portfolio():
     """Get client portfolio overview."""
     tier_stats = store.query("""
@@ -3684,7 +3598,7 @@ async def get_client_portfolio():
     }
 
 
-@app.get("/api/clients/{client_id}")
+@app.get("/api/clients/{client_id}", response_model=DetailResponse)
 async def get_client_detail(client_id: str):
     """Get detailed client information."""
     client = store.get("clients", client_id)
@@ -3752,7 +3666,7 @@ class ClientUpdate(BaseModel):
     contact_email: str | None = None
 
 
-@app.put("/api/clients/{client_id}")
+@app.put("/api/clients/{client_id}", response_model=MutationResponse)
 async def update_client(client_id: str, body: ClientUpdate):
     """Update client information."""
     client = store.get("clients", client_id)
@@ -3791,7 +3705,7 @@ async def update_client(client_id: str, body: ClientUpdate):
     return {"success": True, "id": client_id, "updated": list(updates.keys())}
 
 
-@app.get("/api/projects")
+@app.get("/api/projects", response_model=DetailResponse)
 async def get_projects(
     client_id: str | None = None, include_archived: bool = False, limit: int = 50
 ):
@@ -3821,7 +3735,7 @@ async def get_projects(
     return {"projects": [dict(p) for p in projects], "total": len(projects)}
 
 
-@app.get("/api/projects/candidates")
+@app.get("/api/projects/candidates", response_model=DetailResponse)
 async def get_project_candidates():
     """Get projects that could be enrolled (candidates and proposed)."""
     candidates = store.query("""
@@ -3840,7 +3754,7 @@ async def get_project_candidates():
     }
 
 
-@app.get("/api/projects/enrolled")
+@app.get("/api/projects/enrolled", response_model=DetailResponse)
 async def get_enrolled_projects():
     """Get enrolled projects with client info and task counts."""
     projects = store.query("""
@@ -3867,7 +3781,7 @@ class EnrollmentAction(BaseModel):
     snooze_days: int | None = None
 
 
-@app.post("/api/projects/{project_id}/enrollment")
+@app.post("/api/projects/{project_id}/enrollment", response_model=MutationResponse)
 async def process_enrollment(project_id: str, body: EnrollmentAction):
     """Process project enrollment action."""
     project = store.get("projects", project_id)
@@ -3912,7 +3826,7 @@ async def process_enrollment(project_id: str, body: EnrollmentAction):
     raise HTTPException(status_code=400, detail=f"Unknown action: {body.action}")
 
 
-@app.get("/api/projects/detect")
+@app.get("/api/projects/detect", response_model=DetailResponse)
 async def detect_new_projects(force: bool = False):
     """Detect new projects from tasks."""
     # Find unique project names in tasks that aren't in projects table
@@ -3928,7 +3842,7 @@ async def detect_new_projects(force: bool = False):
     return {"detected": [dict(p) for p in new_projects], "total": len(new_projects)}
 
 
-@app.get("/api/projects/{project_id}")
+@app.get("/api/projects/{project_id}", response_model=DetailResponse)
 async def get_project_detail(project_id: str):
     """Get detailed project information."""
     project = store.get("projects", project_id)
@@ -3968,13 +3882,13 @@ async def get_project_detail(project_id: str):
     }
 
 
-@app.post("/api/sync/xero")
+@app.post("/api/sync/xero", response_model=DetailResponse)
 async def sync_xero():
     """Sync with Xero."""
     return collectors.sync(source="xero")
 
 
-@app.post("/api/tasks/link")
+@app.post("/api/tasks/link", response_model=DetailResponse)
 async def bulk_link_tasks(request: Request):
     """
     Bulk link tasks to projects/clients.
@@ -4016,14 +3930,14 @@ async def bulk_link_tasks(request: Request):
             store.update("tasks", task_id, updates)
             results.append({"task_id": task_id, "success": True, "linked": str(updates)})
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError) as e:
             results.append({"task_id": task_id, "success": False, "error": str(e)})
 
     succeeded = sum(1 for r in results if r.get("success"))
     return {"total": len(results), "succeeded": succeeded, "results": results}
 
 
-@app.post("/api/projects/propose")
+@app.post("/api/projects/propose", response_model=MutationResponse)
 async def propose_project(name: str, client_id: str | None = None, type: str = "retainer"):
     """Propose a new project."""
     import uuid
@@ -4046,43 +3960,14 @@ async def propose_project(name: str, client_id: str | None = None, type: str = "
     return {"success": True, "project": project_data}
 
 
-@app.get("/api/emails")
-async def get_email_queue(limit: int = 20):
-    """Get email queue."""
-    emails = store.query(
-        """
-        SELECT * FROM communications
-        WHERE type = 'email' AND (processed = 0 OR processed IS NULL)
-        ORDER BY received_at DESC
-        LIMIT ?
-    """,
-        [limit],
-    )
-
-    return {
-        "items": [
-            {
-                "id": e.get("id"),
-                "subject": e.get("subject"),
-                "from": e.get("from_address") or e.get("sender"),
-                "received": e.get("received_at") or e.get("created_at"),
-                "snippet": (e.get("snippet") or e.get("body") or "")[:100],
-                "thread_id": e.get("thread_id"),
-            }
-            for e in emails
-        ],
-        "total": store.count("communications", "(processed = 0 OR processed IS NULL)"),
-    }
-
-
-@app.post("/api/emails/{email_id}/dismiss")
+@app.post("/api/emails/{email_id}/dismiss", response_model=MutationResponse)
 async def dismiss_email(email_id: str):
     """Dismiss an email."""
     store.update("communications", email_id, {"processed": 1})
     return {"success": True, "id": email_id}
 
 
-@app.get("/api/digest/weekly")
+@app.get("/api/digest/weekly", response_model=DetailResponse)
 async def get_weekly_digest():
     """Get weekly digest."""
     from datetime import date
@@ -4147,7 +4032,7 @@ class BlockerRequest(BaseModel):
     blocker_id: str
 
 
-@app.post("/api/tasks/{task_id}/block")
+@app.post("/api/tasks/{task_id}/block", response_model=MutationResponse)
 async def add_blocker(task_id: str, body: BlockerRequest):
     """Add a blocker to a task."""
     task = store.get("tasks", task_id)
@@ -4175,7 +4060,7 @@ async def add_blocker(task_id: str, body: BlockerRequest):
     return {"success": True, "blockers": current}
 
 
-@app.delete("/api/tasks/{task_id}/block/{blocker_id}")
+@app.delete("/api/tasks/{task_id}/block/{blocker_id}", response_model=MutationResponse)
 async def remove_blocker(task_id: str, blocker_id: str):
     """Remove a blocker from a task."""
     task = store.get("tasks", task_id)
@@ -4199,7 +4084,7 @@ async def remove_blocker(task_id: str, blocker_id: str):
     return {"success": True, "blockers": current}
 
 
-@app.get("/api/dependencies")
+@app.get("/api/dependencies", response_model=DetailResponse)
 async def get_dependencies():
     """Get task dependency graph."""
     blocked = store.query("""
@@ -4242,7 +4127,7 @@ async def get_dependencies():
 # ==== Control Room API (V4) ====
 
 
-@app.get("/api/control-room/proposals")
+@app.get("/api/control-room/proposals", response_model=DetailResponse)
 async def get_proposals(
     limit: int = 7,
     status: str = "open",
@@ -4334,7 +4219,7 @@ async def get_proposals(
                 proposals.sort(key=lambda x: x.get("score", 0), reverse=True)
 
                 return {"items": proposals[:limit], "total": len(proposals)}
-        except Exception as svc_err:
+        except (sqlite3.Error, ValueError) as svc_err:
             logger.warning(f"ProposalService error: {svc_err}")
             pass
 
@@ -4486,18 +4371,12 @@ async def get_proposals(
         proposals.sort(key=lambda x: x["score"], reverse=True)
         conn.close()
         return {"items": proposals[:limit], "total": len(proposals)}
-    except Exception as e:
-        import traceback
-
-        return {
-            "items": [],
-            "total": 0,
-            "error": str(e),
-            "trace": traceback.format_exc(),
-        }
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.get("/api/control-room/issues")
+@app.get("/api/control-room/issues", response_model=DetailResponse)
 async def get_issues(
     limit: int = 5, days: int = 7, client_id: str | None = None, member_id: str | None = None
 ):
@@ -4655,8 +4534,9 @@ async def get_issues(
 
         conn.close()
         return {"items": issues, "total": len(issues)}
-    except Exception as e:
-        return {"items": [], "total": 0, "error": str(e)}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 class ResolveIssueRequest(BaseModel):
@@ -4664,7 +4544,7 @@ class ResolveIssueRequest(BaseModel):
     actor: str = "moh"
 
 
-@app.patch("/api/control-room/issues/{issue_id}/resolve")
+@app.patch("/api/control-room/issues/{issue_id}/resolve", response_model=MutationResponse)
 async def resolve_issue(issue_id: str, body: ResolveIssueRequest):
     """Resolve an issue."""
     try:
@@ -4696,8 +4576,9 @@ async def resolve_issue(issue_id: str, body: ResolveIssueRequest):
             "state": "resolved",
             "note": "Signal-based issue acknowledged",
         }
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 class ChangeIssueStateRequest(BaseModel):
@@ -4706,7 +4587,7 @@ class ChangeIssueStateRequest(BaseModel):
     actor: str = "moh"
 
 
-@app.patch("/api/control-room/issues/{issue_id}/state")
+@app.patch("/api/control-room/issues/{issue_id}/state", response_model=MutationResponse)
 async def change_issue_state(issue_id: str, body: ChangeIssueStateRequest):
     """Change an issue's state."""
     valid_states = ["open", "monitoring", "awaiting", "blocked", "resolved", "closed"]
@@ -4745,8 +4626,9 @@ async def change_issue_state(issue_id: str, body: ChangeIssueStateRequest):
             "state": body.state,
             "note": "Signal-based issue acknowledged",
         }
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 class AddIssueNoteRequest(BaseModel):
@@ -4754,7 +4636,7 @@ class AddIssueNoteRequest(BaseModel):
     actor: str = "moh"
 
 
-@app.post("/api/control-room/issues/{issue_id}/notes")
+@app.post("/api/control-room/issues/{issue_id}/notes", response_model=MutationResponse)
 async def add_issue_note(issue_id: str, body: AddIssueNoteRequest):
     """Add a note to an issue."""
     try:
@@ -4796,11 +4678,12 @@ async def add_issue_note(issue_id: str, body: AddIssueNoteRequest):
         conn.commit()
         conn.close()
         return {"success": True, "note_id": note_id, "issue_id": issue_id}
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.get("/api/control-room/watchers")
+@app.get("/api/control-room/watchers", response_model=DetailResponse)
 async def get_watchers(hours: int = 24):
     """Get issue watchers/alerts that have been triggered recently."""
     try:
@@ -4856,15 +4739,16 @@ async def get_watchers(hours: int = 24):
 
         conn.close()
         return {"items": items, "total": len(items)}
-    except Exception as e:
-        return {"items": [], "total": 0, "error": str(e)}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 class DismissWatcherRequest(BaseModel):
     actor: str = "moh"
 
 
-@app.post("/api/control-room/watchers/{watcher_id}/dismiss")
+@app.post("/api/control-room/watchers/{watcher_id}/dismiss", response_model=MutationResponse)
 async def dismiss_watcher(watcher_id: str, body: DismissWatcherRequest):
     """Dismiss a watcher (remove from active list)."""
     try:
@@ -4884,8 +4768,9 @@ async def dismiss_watcher(watcher_id: str, body: DismissWatcherRequest):
         conn.commit()
         conn.close()
         return {"success": True, "watcher_id": watcher_id, "action": "dismissed"}
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("dismiss_watcher failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 class SnoozeWatcherRequest(BaseModel):
@@ -4893,7 +4778,7 @@ class SnoozeWatcherRequest(BaseModel):
     actor: str = "moh"
 
 
-@app.post("/api/control-room/watchers/{watcher_id}/snooze")
+@app.post("/api/control-room/watchers/{watcher_id}/snooze", response_model=MutationResponse)
 async def snooze_watcher(watcher_id: str, body: SnoozeWatcherRequest):
     """Snooze a watcher for N hours."""
     try:
@@ -4919,11 +4804,12 @@ async def snooze_watcher(watcher_id: str, body: SnoozeWatcherRequest):
             "action": "snoozed",
             "hours": body.hours,
         }
-    except Exception as e:
-        return {"success": False, "error": str(e)}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("snooze_watcher failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.get("/api/control-room/fix-data")
+@app.get("/api/control-room/fix-data", response_model=DetailResponse)
 async def get_fix_data():
     """Get data quality issues for Fix tab."""
     try:
@@ -4981,14 +4867,9 @@ async def get_fix_data():
             "missing_mappings": [],
             "total": len(conflicts) + len(ambiguous),
         }
-    except Exception as e:
-        return {
-            "identity_conflicts": [],
-            "ambiguous_links": [],
-            "missing_mappings": [],
-            "total": 0,
-            "error": str(e),
-        }
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("handler failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # ==== Control Room POST Endpoints (Mutations) ====
@@ -4999,7 +4880,7 @@ class TagProposalRequest(BaseModel):
     actor: str = "moh"
 
 
-@app.post("/api/control-room/issues")
+@app.post("/api/control-room/issues", response_model=MutationResponse)
 async def create_issue_from_proposal(body: TagProposalRequest):
     """Tag a proposal to create a monitored Issue."""
     try:
@@ -5008,11 +4889,11 @@ async def create_issue_from_proposal(body: TagProposalRequest):
         if result.get("status") == "created":
             return {"success": True, **result}
         raise HTTPException(status_code=400, detail=result.get("error", "Failed to tag proposal"))
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.get("/api/control-room/proposals/{proposal_id}")
+@app.get("/api/control-room/proposals/{proposal_id}", response_model=DetailResponse)
 async def get_proposal_detail(proposal_id: str):
     """Get detailed view of a proposal with full signal information.
 
@@ -5140,7 +5021,7 @@ async def get_proposal_detail(proposal_id: str):
         }
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         import traceback
 
         raise HTTPException(status_code=500, detail=f"{str(e)}\n{traceback.format_exc()}") from e
@@ -5150,7 +5031,7 @@ class SnoozeProposalRequest(BaseModel):
     days: int = 7
 
 
-@app.post("/api/control-room/proposals/{proposal_id}/snooze")
+@app.post("/api/control-room/proposals/{proposal_id}/snooze", response_model=MutationResponse)
 async def snooze_proposal(proposal_id: str, body: SnoozeProposalRequest):
     """Snooze a proposal for N days."""
     try:
@@ -5164,7 +5045,7 @@ async def snooze_proposal(proposal_id: str, body: SnoozeProposalRequest):
         raise HTTPException(
             status_code=400, detail=result.get("error", "Failed to snooze proposal")
         )
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -5172,7 +5053,7 @@ class DismissProposalRequest(BaseModel):
     reason: str = "Dismissed by user"
 
 
-@app.post("/api/control-room/proposals/{proposal_id}/dismiss")
+@app.post("/api/control-room/proposals/{proposal_id}/dismiss", response_model=MutationResponse)
 async def dismiss_proposal(proposal_id: str, body: DismissProposalRequest):
     """Dismiss a proposal."""
     try:
@@ -5183,7 +5064,7 @@ async def dismiss_proposal(proposal_id: str, body: DismissProposalRequest):
         raise HTTPException(
             status_code=400, detail=result.get("error", "Failed to dismiss proposal")
         )
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
@@ -5192,7 +5073,9 @@ class ResolveFixDataRequest(BaseModel):
     actor: str = "moh"
 
 
-@app.post("/api/control-room/fix-data/{item_type}/{item_id}/resolve")
+@app.post(
+    "/api/control-room/fix-data/{item_type}/{item_id}/resolve", response_model=MutationResponse
+)
 async def resolve_fix_data_item(item_type: str, item_id: str, body: ResolveFixDataRequest):
     """Resolve a fix-data item (identity conflict or ambiguous link)."""
     try:
@@ -5247,11 +5130,11 @@ async def resolve_fix_data_item(item_type: str, item_id: str, body: ResolveFixDa
             "item_id": item_id,
             "resolution": body.resolution,
         }
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.get("/api/control-room/couplings")
+@app.get("/api/control-room/couplings", response_model=DetailResponse)
 async def get_couplings(anchor_type: str | None = None, anchor_id: str | None = None):
     """Get intersections/couplings."""
     try:
@@ -5261,11 +5144,12 @@ async def get_couplings(anchor_type: str | None = None, anchor_id: str | None = 
         else:
             couplings = svc.get_strongest_couplings(limit=100)
         return {"items": couplings, "total": len(couplings)}
-    except Exception as e:
-        return {"items": [], "total": 0, "error": str(e)}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("get_couplings failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.get("/api/control-room/clients")
+@app.get("/api/control-room/clients", response_model=DetailResponse)
 async def get_control_room_clients():
     """Get clients for control room."""
     try:
@@ -5286,11 +5170,12 @@ async def get_control_room_clients():
         clients = [dict(r) for r in cur.fetchall()]
         conn.close()
         return {"items": clients, "total": len(clients)}
-    except Exception as e:
-        return {"items": [], "total": 0, "error": str(e)}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("get_control_room_clients failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.get("/api/control-room/team")
+@app.get("/api/control-room/team", response_model=DetailResponse)
 async def get_control_room_team():
     """Get team members for control room."""
     try:
@@ -5311,11 +5196,12 @@ async def get_control_room_team():
         team = [dict(r) for r in cur.fetchall()]
         conn.close()
         return {"items": team, "total": len(team)}
-    except Exception as e:
-        return {"items": [], "total": 0, "error": str(e)}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("get_control_room_team failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@app.get("/api/control-room/evidence/{entity_type}/{entity_id}")
+@app.get("/api/control-room/evidence/{entity_type}/{entity_id}", response_model=DetailResponse)
 async def get_evidence(entity_type: str, entity_id: str):
     """Get evidence/proof for an entity."""
     try:
@@ -5341,14 +5227,15 @@ async def get_evidence(entity_type: str, entity_id: str):
 
         conn.close()
         return {"items": excerpts, "total": len(excerpts)}
-    except Exception as e:
-        return {"items": [], "total": 0, "error": str(e)}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("get_evidence failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # ==== Control Room Health ====
 
 
-@app.get("/api/control-room/health")
+@app.get("/api/control-room/health", response_model=DetailResponse)
 async def control_room_health():
     """Health check endpoint for the Control Room API."""
     import datetime
@@ -5376,19 +5263,15 @@ async def control_room_health():
                 "clients": client_count,
             },
         }
-    except Exception as e:
-        return {
-            "status": "unhealthy",
-            "version": "1.0.0",
-            "timestamp": datetime.datetime.now().isoformat(),
-            "error": str(e),
-        }
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("control_room_health failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # ==== Admin Endpoints ====
 
 
-@app.post("/api/admin/seed-identities")
+@app.post("/api/admin/seed-identities", response_model=MutationResponse)
 async def seed_identities():
     """Seed identity profiles from clients and people tables."""
     try:
@@ -5401,10 +5284,9 @@ async def seed_identities():
         people_stats = seed_identities_from_people()
 
         return {"success": True, "clients": client_stats, "people": people_stats}
-    except Exception as e:
-        import traceback
-
-        return {"success": False, "error": str(e), "trace": traceback.format_exc()}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("seed_identities failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # ==== SPA Fallback (MUST be last route) ====

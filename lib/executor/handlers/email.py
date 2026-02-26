@@ -3,6 +3,7 @@ Email Handler - Executes email-related actions.
 """
 
 import json
+import sqlite3
 from datetime import datetime
 
 
@@ -29,8 +30,8 @@ class EmailHandler:
 
         try:
             return handler(action)
-        except Exception as e:
-            return {"success": False, "error": str(e)}
+        except (sqlite3.Error, ValueError, OSError):
+            raise  # was silently swallowed
 
     def _create_draft(self, action: dict) -> dict:
         """Create an email draft (requires approval to send)."""

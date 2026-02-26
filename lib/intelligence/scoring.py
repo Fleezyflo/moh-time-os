@@ -11,7 +11,6 @@ Reference: data/scoring_model_20260213.md
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional
 
 
 class EntityType(Enum):
@@ -698,7 +697,7 @@ def _compute_dimension_raw_value(dimension: ScoringDimension, metrics: dict) -> 
         return max(0, balanced * 100)
 
     # Default: average of all metrics
-    values = [v for v in metrics.values() if isinstance(v, (int, float))]
+    values = [v for v in metrics.values() if isinstance(v, int | float)]
     return sum(values) / len(values) if values else 50.0
 
 

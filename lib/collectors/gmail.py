@@ -8,7 +8,7 @@ import hashlib
 import json
 import logging
 import os
-import re
+import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -32,7 +32,9 @@ class GmailCollector(BaseCollector):
     def __init__(self, config: dict, store=None):
         super().__init__(config, store)
         self._service = None
-        self._raw_data = None  # Store raw data for secondary table extraction
+        self._raw_data: dict[str, Any] | None = (
+            None  # Store raw data for secondary table extraction
+        )
 
     def _get_service(self, user: str = DEFAULT_USER):
         """Get Gmail API service using service account."""
@@ -49,7 +51,7 @@ class GmailCollector(BaseCollector):
             creds = creds.with_subject(user)
             self._service = build("gmail", "v1", credentials=creds)
             return self._service
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             self.logger.error(f"Failed to get Gmail service: {e}")
             raise
 
@@ -81,7 +83,7 @@ class GmailCollector(BaseCollector):
         """Get header value by name."""
         for h in headers:
             if h.get("name", "").lower() == name.lower():
-                return h.get("value", "")
+                return str(h.get("value", ""))
         return ""
 
     def collect(self) -> dict[str, Any]:
@@ -163,14 +165,14 @@ class GmailCollector(BaseCollector):
                             "labels": first_msg.get("labelIds", []),
                         }
                     )
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     self.logger.warning(f"Failed to fetch thread {ref['id']}: {e}")
                     continue
 
             self.logger.info(f"Collected {len(all_threads)} threads")
             return {"threads": all_threads}
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             self.logger.error(f"Gmail collection failed: {e}")
             return {"threads": []}
 
@@ -606,7 +608,7 @@ class GmailCollector(BaseCollector):
                 self._raw_data = retry_with_backoff(
                     collect_with_retry, self.retry_config, self.logger
                 )
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                 self.logger.error(f"Collect failed after retries: {e}")
                 self.circuit_breaker.record_failure()
                 self.store.update_sync_state(self.source_name, success=False, error=str(e))
@@ -619,8 +621,8 @@ class GmailCollector(BaseCollector):
 
             # Step 2: Transform to canonical format
             try:
-                transformed = self.transform(self._raw_data)
-            except Exception as e:
+                transformed = self.transform(self._raw_data or {})
+            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                 self.logger.warning(f"Transform failed: {e}. Attempting partial success.")
                 transformed = []
                 self.metrics["partial_failures"] += 1
@@ -631,8 +633,8 @@ class GmailCollector(BaseCollector):
             stored_primary = self.store.insert_many(self.target_table, transformed)
 
             # Step 4: Store secondary tables - failures don't block primary
-            secondary_stats = {}
-            for thread in self._raw_data.get("threads", []):
+            secondary_stats: dict[str, int] = {}
+            for thread in (self._raw_data or {}).get("threads", []):
                 thread_id = thread.get("id")
                 messages = thread.get("messages", [])
                 label_ids = thread.get("labels", [])
@@ -648,7 +650,7 @@ class GmailCollector(BaseCollector):
                         secondary_stats["participants"] = (
                             secondary_stats.get("participants", 0) + stored
                         )
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     self.logger.warning(f"Failed to store participants for {thread_id}: {e}")
 
                 try:
@@ -659,7 +661,7 @@ class GmailCollector(BaseCollector):
                         secondary_stats["attachments"] = (
                             secondary_stats.get("attachments", 0) + stored
                         )
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     self.logger.warning(f"Failed to store attachments for {thread_id}: {e}")
 
                 try:
@@ -668,7 +670,7 @@ class GmailCollector(BaseCollector):
                     if labels:
                         stored = self.store.insert_many("gmail_labels", labels)
                         secondary_stats["labels"] = secondary_stats.get("labels", 0) + stored
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     self.logger.warning(f"Failed to store labels for {thread_id}: {e}")
 
             # Step 5: Update sync state and record success
@@ -681,7 +683,7 @@ class GmailCollector(BaseCollector):
             result = {
                 "source": self.source_name,
                 "success": True,
-                "collected": len(self._raw_data.get("threads", [])),
+                "collected": len((self._raw_data or {}).get("threads", [])),
                 "transformed": len(transformed),
                 "stored_primary": stored_primary,
                 "stored_secondary": secondary_stats,
@@ -692,7 +694,7 @@ class GmailCollector(BaseCollector):
             self.logger.info(f"Sync completed: {result}")
             return result
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             self.logger.error(f"Sync failed for {self.source_name}: {e}")
             self.circuit_breaker.record_failure()
             self.store.update_sync_state(self.source_name, success=False, error=str(e))

@@ -19,17 +19,17 @@ Or via CLI:
     python cli_v2.py daemon start
 """
 
-import enum
 import json
 import logging
 import os
 import signal
-import subprocess
+import sqlite3
 import sys
 import threading
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from enum import StrEnum
 
 from lib import paths
 from lib.collectors.resilience import CircuitBreaker
@@ -47,7 +47,7 @@ def _load_collect_all():
         collect_all = _ca
 
 
-class JobHealth(str, enum.Enum):
+class JobHealth(StrEnum):
     """Health status for scheduled jobs."""
 
     HEALTHY = "healthy"
@@ -205,7 +205,7 @@ class TimeOSDaemon:
                         state.total_runs = state_data.get("total_runs", 0)
                         state.total_failures = state_data.get("total_failures", 0)
                 self.logger.info(f"Loaded state from {STATE_FILE}")
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 self.logger.warning(f"Failed to load state: {e}")
 
     def _save_state(self):
@@ -224,7 +224,7 @@ class TimeOSDaemon:
             STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
             with open(STATE_FILE, "w") as f:
                 json.dump(data, f, indent=2)
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             self.logger.warning(f"Failed to save state: {e}")
 
     def _initialize_circuit_breakers(self):
@@ -381,7 +381,7 @@ class TimeOSDaemon:
             self.logger.info(f"✓ {job_name} completed in {duration:.1f}s")
             return True
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             duration = (datetime.now() - start).total_seconds()
             state.last_error = str(e)[:500]
             state.total_failures += 1
@@ -400,7 +400,7 @@ class TimeOSDaemon:
             collect_all()
         except ImportError:
             self.logger.warning("scheduled_collect not available, skipping collect")
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             self.logger.error(f"Collect failed: {e}")
             raise
 
@@ -432,7 +432,7 @@ class TimeOSDaemon:
             snapshot = generator.generate()
             generator.save(snapshot)
             self.logger.info(f"Snapshot saved to {paths.out_dir() / 'agency_snapshot.json'}")
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             # Log the validation error but try to save minimal snapshot
             self.logger.warning(f"Snapshot validation failed: {e}")
             # Generate and save without strict validation
@@ -476,7 +476,7 @@ class TimeOSDaemon:
                 self.logger.info(f"Notification sent: {result.get('message_id')}")
             else:
                 self.logger.warning(f"Notification failed: {result.get('error')}")
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             self.logger.warning(f"Notification handler failed: {e}")
 
     def run_once(self):

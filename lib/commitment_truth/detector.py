@@ -9,6 +9,7 @@ Uses regex patterns and heuristics to identify:
 
 import logging
 import re
+import sqlite3
 from dataclasses import dataclass
 from datetime import date, timedelta
 
@@ -237,7 +238,7 @@ def extract_deadline(text: str) -> str | None:
             elif pattern_type == "asap":
                 return today.isoformat()
 
-        except Exception:
+        except (sqlite3.Error, ValueError, OSError):
             continue
 
     return None

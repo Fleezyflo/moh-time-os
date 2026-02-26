@@ -6,7 +6,6 @@ Brief 22 (SM), Task SM-3.1
 
 import sqlite3
 from datetime import datetime, timedelta
-from pathlib import Path
 
 import pytest
 
@@ -16,7 +15,6 @@ from lib.intelligence.signal_suppression import (
     REPEAT_DISMISS_SUPPRESS_DAYS,
     REPEAT_DISMISS_THRESHOLD,
     SignalSuppression,
-    SuppressionRecord,
 )
 
 

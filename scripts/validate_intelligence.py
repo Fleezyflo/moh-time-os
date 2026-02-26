@@ -16,8 +16,8 @@ Exit code: 0 if all checks pass, 1 if any fail
 
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 # Add repo root to path
 REPO_ROOT = Path(__file__).parent.parent
@@ -163,9 +163,7 @@ def check_scenario_engine() -> bool:
 
     try:
         from lib.intelligence.scenario_engine import (
-            ScenarioComparison,
             ScenarioEngine,
-            ScenarioResult,
             ScenarioType,
         )
 
@@ -215,14 +213,8 @@ def check_trajectory_engine() -> bool:
 
     try:
         from lib.intelligence.trajectory import (
-            AccelerationResult,
-            FullTrajectory,
-            ProjectionResult,
-            SeasonalityResult,
             TrajectoryEngine,
-            TrendAnalysis,
             TrendDirection,
-            VelocityResult,
         )
 
         # Check TrendDirection enum
@@ -310,10 +302,6 @@ def check_auto_resolution() -> bool:
     try:
         from lib.intelligence.auto_resolution import (
             AutoResolutionEngine,
-            BatchResult,
-            ResolutionAttempt,
-            ResolutionReport,
-            ResolutionRule,
         )
 
         required_methods = [
@@ -332,7 +320,7 @@ def check_auto_resolution() -> bool:
                 return False
 
         # Check rules cover all 7 issue types
-        engine = AutoResolutionEngine(db_path=Path("/tmp/dummy_validation.db"))
+        engine = AutoResolutionEngine(db_path=Path(tempfile.gettempdir()) / "dummy_validation.db")
         rules = engine.get_resolution_rules()
         rule_types = {r.issue_type for r in rules}
         print(f"   ✅ {len(rules)} resolution rules found: {rule_types}")

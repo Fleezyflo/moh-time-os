@@ -23,7 +23,6 @@ import time
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Optional
 
 from lib import paths
 
@@ -137,7 +136,7 @@ class AutoResolutionEngine:
             cursor = conn.cursor()
             cursor.execute(sql, params)
             return [dict(row) for row in cursor.fetchall()]
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Query execution failed: {e}")
             return []
         finally:
@@ -481,7 +480,7 @@ class AutoResolutionEngine:
                 reason="Default 30-day due date from creation",
                 rule_id="due_date_missing",
             )
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Failed to parse creation date: {e}")
             return ResolutionAttempt(
                 item_id=item.get("id", ""),
@@ -616,7 +615,7 @@ class AutoResolutionEngine:
                 reason="Standard net-30 terms",
                 rule_id="invoice_missing_due",
             )
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Failed to parse issue date: {e}")
             return ResolutionAttempt(
                 item_id=item.get("id", ""),
@@ -781,7 +780,7 @@ class AutoResolutionEngine:
                     ):
                         attempt.requires_review = True
 
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 logger.error(f"Error in {method_name} for item {item_id}: {e}")
                 continue
 
@@ -819,7 +818,7 @@ class AutoResolutionEngine:
                 else:
                     result.failed += 1
 
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 logger.error(f"Batch resolution failed for item {item.get('id')}: {e}")
                 result.failed += 1
                 result.results.append(
@@ -898,7 +897,7 @@ class AutoResolutionEngine:
             logger.info(f"Escalated item {item_id} as {escalation_id}: {reason}")
             return True
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Failed to escalate item {item_id}: {e}")
             return False
 
@@ -952,7 +951,7 @@ class AutoResolutionEngine:
                         else:
                             report.failed += 1
 
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError) as e:
                     logger.error(f"Error resolving item {item.get('id')}: {e}")
                     report.failed += 1
                     report.attempts.append(
@@ -965,7 +964,7 @@ class AutoResolutionEngine:
                         )
                     )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"scan_and_resolve failed: {e}")
             report.failed += 1
 

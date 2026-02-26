@@ -14,8 +14,6 @@ Run with: pytest tests/test_observability_contracts.py -v
 import sqlite3
 from datetime import datetime
 
-import pytest
-
 
 class TestRequestIdInfrastructure:
     """Verify request_id infrastructure works correctly."""

@@ -468,9 +468,9 @@ class TestEnvExampleFile:
                 if i > 0:
                     prev_line = lines[i - 1]
                     # Allow multiple comment lines
-                    assert prev_line.startswith("#") or lines[i - 2].startswith(
-                        "#"
-                    ), f"No description for {line.split('=')[0]}"
+                    assert prev_line.startswith("#") or lines[i - 2].startswith("#"), (
+                        f"No description for {line.split('=')[0]}"
+                    )
 
 
 # =============================================================================

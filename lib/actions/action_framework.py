@@ -11,12 +11,12 @@ Manages:
 
 import json
 import logging
+import sqlite3
 import time
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
 from uuid import uuid4
 
 logger = logging.getLogger(__name__)
@@ -319,7 +319,7 @@ class ActionFramework:
         try:
             for hook in self.before_execute_hooks:
                 hook(proposal)
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             error = f"Before-execute hook failed: {str(e)}"
             logger.error(error)
             return ActionResult(action_id=action_id, success=False, error=error)
@@ -364,7 +364,7 @@ class ActionFramework:
                         execution_time_ms=execution_time,
                     )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             execution_error = str(e)
             logger.error(f"Action execution failed: {execution_error}")
             execution_time = int((time.time() - start_time) * 1000)
@@ -380,7 +380,7 @@ class ActionFramework:
             try:
                 for hook in self.on_error_hooks:
                     hook(proposal, result)
-            except Exception as hook_error:
+            except (sqlite3.Error, ValueError, OSError) as hook_error:
                 logger.error(f"Error hook failed: {str(hook_error)}")
 
         # Store result
@@ -399,7 +399,7 @@ class ActionFramework:
         try:
             for hook in self.after_execute_hooks:
                 hook(proposal, result)
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"After-execute hook failed: {str(e)}")
 
         logger.info(

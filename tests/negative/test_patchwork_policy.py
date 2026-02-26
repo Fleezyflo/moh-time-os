@@ -8,6 +8,7 @@ The test imports the banned patterns and scans the critical paths,
 failing if any violations are found.
 """
 
+import logging
 import re
 import subprocess
 from pathlib import Path
@@ -73,7 +74,7 @@ def _find_patchwork_boundary_line(filepath: Path) -> int:
                 if "PATCHWORK_BOUNDARY" in line:
                     return lineno
     except Exception:
-        pass
+        logging.debug("Could not read %s for patchwork boundary", filepath)
     return 999999  # No boundary = scan entire file
 
 

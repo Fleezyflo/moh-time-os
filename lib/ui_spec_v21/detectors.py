@@ -8,9 +8,8 @@ import json
 import logging
 import sqlite3
 from dataclasses import dataclass
+from enum import StrEnum
 from uuid import uuid4
-
-from lib.compat import StrEnum
 
 from .evidence import create_flagged_signal_evidence, create_invoice_evidence
 from .suppression import (
@@ -78,8 +77,11 @@ class DetectorRunner:
             result.issues_created += r.issues_created
             result.flagged_signals_created += r.flagged_signals_created
             result.suppressed_count += r.suppressed_count
-        except Exception:
-            pass  # Schema mismatch, skip
+        except (sqlite3.Error, ValueError, OSError) as e:
+            logger.debug(
+                "run_all: invoice detector failed on schema mismatch, skipping invoice detection: %s",
+                e,
+            )
 
         # Run communications detector
         r = self.run_communications_detector()
@@ -232,9 +234,11 @@ class DetectorRunner:
                     ),
                 )
                 result.flagged_signals_created += 1
-            except Exception:
-                # Already exists or constraint violation
-                pass
+            except (sqlite3.Error, ValueError, OSError) as e:
+                logger.debug(
+                    "run_communications_detector: failed to create inbox item, constraint violation: %s",
+                    e,
+                )
 
         return result
 
@@ -576,8 +580,10 @@ def _test_invoice_precedence():
     cursor = conn.execute("SELECT COUNT(*) FROM issues WHERE type = 'financial'")
     issue_count = cursor.fetchone()[0]
 
-    assert flagged_count == 1, f"Expected 1 flagged_signal, got {flagged_count}"
-    assert issue_count == 0, f"Expected 0 issues, got {issue_count}"
+    if flagged_count != 1:
+        raise AssertionError(f"Expected 1 flagged_signal, got {flagged_count}")
+    if issue_count != 0:
+        raise AssertionError(f"Expected 0 issues, got {issue_count}")
     logger.info("✓ Test case 25 passed: sent past due creates flagged_signal")
     # Test Case 26: Overdue invoice → issue, no flagged_signal
     conn.execute("DELETE FROM inbox_items")
@@ -602,7 +608,8 @@ def _test_invoice_precedence():
     """)
     cursor.fetchone()[0]
 
-    assert issue_count == 1, f"Expected 1 issue, got {issue_count}"
+    if issue_count != 1:
+        raise AssertionError(f"Expected 1 issue, got {issue_count}")
     # Note: The old flagged_signal still exists, but no new one should be created
     logger.info("✓ Test case 26 passed: issue takes precedence, no double-create")
     conn.close()

@@ -5,12 +5,7 @@ Tests GmailWriter without calling real Gmail API.
 All Google API calls are mocked using unittest.mock.
 """
 
-import json
-import os
-from datetime import datetime
-from unittest.mock import ANY, MagicMock, Mock, call, patch
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 from lib.integrations.gmail_writer import GmailWriter, GmailWriteResult
 

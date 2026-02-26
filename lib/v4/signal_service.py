@@ -667,7 +667,7 @@ class SignalService:
                     resolved_at = datetime('now'),
                     resolution = 'task_completed'
                 WHERE signal_id IN ({})
-            """.format(",".join("?" * len(signal_ids))),
+            """.format(",".join("?" * len(signal_ids))),  # noqa: S608
                 signal_ids,
             )
 
@@ -707,7 +707,7 @@ class SignalService:
                 FROM signals
                 WHERE signal_id IN ({placeholders})
                 ORDER BY detected_at DESC
-            """,
+            """,  # noqa: S608
                 signal_ids,
             )
 
@@ -858,7 +858,7 @@ class SignalService:
                     )
                     stats["created"] += 1
 
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError) as e:
                     log.warning(f"Error persisting commitment from signal {signal_id}: {e}")
                     stats["errors"] += 1
 

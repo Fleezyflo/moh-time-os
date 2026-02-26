@@ -13,10 +13,9 @@ Per MOH_TIME_OS_DELEGATION.md:
 import json
 import logging
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 from lib import paths
-from lib.compat import UTC
 
 from .config_store import get
 from .delegation_graph import Delegatee, get_delegatee

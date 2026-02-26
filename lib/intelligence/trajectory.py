@@ -13,11 +13,11 @@ All computations use pure Python; no external dependencies beyond stdlib.
 """
 
 import logging
+import sqlite3
 import statistics
 from dataclasses import asdict, dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Optional
 
 from lib.query_engine import get_engine
 
@@ -272,7 +272,7 @@ class TrajectoryEngine:
         self.db_path = db_path
         try:
             self.engine = get_engine(db_path)
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.warning(f"Could not initialize query engine: {e}")
             self.engine = None
 
@@ -682,7 +682,7 @@ class TrajectoryEngine:
                 summary=summary,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error computing client trajectory: {e}", exc_info=True)
             return None
 
@@ -708,6 +708,6 @@ class TrajectoryEngine:
 
             return results
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error computing portfolio trajectory: {e}", exc_info=True)
             return []

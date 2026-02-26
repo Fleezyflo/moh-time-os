@@ -20,7 +20,6 @@ Run: python -m lib.migrations.v32_signal_lifecycle
 import logging
 import sqlite3
 from pathlib import Path
-from typing import Optional
 
 from lib import paths
 
@@ -130,7 +129,7 @@ def migrate(db_path: Path | None = None) -> dict:
         logger.info("v32 migration complete: %s", results)
         return results
 
-    except Exception as exc:
+    except (sqlite3.Error, ValueError, OSError) as exc:
         logger.error("v32 migration failed: %s", exc)
         conn.rollback()
         raise

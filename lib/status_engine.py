@@ -13,10 +13,10 @@ Implements status model from MOH_TIME_OS_STATUS.md:
 
 import json
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+from enum import StrEnum
 
 from lib import paths
-from lib.compat import UTC, StrEnum
 
 from .change_bundles import create_status_change_bundle
 from .config_store import get
@@ -284,7 +284,7 @@ def _execute_transition(proposal: TransitionProposal) -> bool:
         conn.commit()
         conn.close()
         return True
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.info(f"Error executing transition: {e}")
         return False
 

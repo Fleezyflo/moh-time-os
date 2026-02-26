@@ -21,7 +21,6 @@ import sqlite3
 import threading
 import time
 from dataclasses import dataclass
-from typing import Optional
 
 from lib.db_opt.db_adapter import DatabaseAdapter, SQLiteAdapter
 
@@ -227,7 +226,7 @@ class ConnectionPool:
                 # Simple health check: execute a no-op query
                 conn.execute("SELECT 1")
                 return True
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 logger.warning(f"ConnectionPool: health check failed: {e}")
                 return False
 
@@ -245,7 +244,7 @@ class ConnectionPool:
             if isinstance(conn, SQLiteAdapter):
                 conn.close()
             logger.debug("ConnectionPool: connection closed")
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"ConnectionPool: error closing connection: {e}")
 
 

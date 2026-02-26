@@ -13,19 +13,16 @@ Reference: data/scoring_model_20260213.md
 import logging
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
 
 from lib.intelligence.scoring import (
     CLIENT_DIMENSIONS,
     PERSON_DIMENSIONS,
     PORTFOLIO_DIMENSIONS,
     PROJECT_DIMENSIONS,
-    EntityScore,
     EntityType,
     NormMethod,
     ScoringDimension,
     classify_score,
-    normalize_percentile,
     score_dimension,
 )
 from lib.query_engine import QueryEngine
@@ -65,7 +62,7 @@ def score_client(client_id: str, db_path: Path | None = None) -> dict:
     try:
         trajectory = engine.client_trajectory(client_id, window_size_days=30, num_windows=3)
         trends = trajectory.get("trends", {})
-    except Exception:
+    except (sqlite3.Error, ValueError, OSError):
         trends = {}
 
     # Build metrics
@@ -140,7 +137,7 @@ def score_all_clients(db_path: Path | None = None) -> list[dict]:
                 all_comm_counts,
             )
             scorecards.append(scorecard)
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.warning(f"Failed to score client {client_id}: {e}")
 
     # Sort by composite score ascending (worst first)
@@ -243,7 +240,7 @@ def score_all_projects(db_path: Path | None = None) -> list[dict]:
         try:
             scorecard = _score_project_from_data(project)
             scorecards.append(scorecard)
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.warning(f"Failed to score project {project.get('project_id')}: {e}")
 
     scorecards.sort(key=lambda x: x.get("composite_score") or 0)
@@ -323,7 +320,7 @@ def score_all_persons(db_path: Path | None = None) -> list[dict]:
         try:
             scorecard = _score_person_from_data(person, all_dependency_scores)
             scorecards.append(scorecard)
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.warning(f"Failed to score person {person.get('person_id')}: {e}")
 
     scorecards.sort(key=lambda x: x.get("composite_score") or 0)
@@ -558,10 +555,10 @@ def get_score_distribution(entity_type: EntityType, db_path: Path | None = None)
 # SCORE HISTORY (Persistence for Trend Analysis)
 # =============================================================================
 
-import json
-import sqlite3
+import json  # noqa: E402 — conditional import
+import sqlite3  # noqa: E402 — conditional import
 
-from lib import paths
+from lib import paths  # noqa: E402 — conditional import
 
 
 def record_score(scorecard: dict, db_path: Path | None = None) -> bool:
@@ -610,7 +607,7 @@ def record_score(scorecard: dict, db_path: Path | None = None) -> bool:
         conn.close()
         return True
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.warning(f"Failed to record score: {e}")
         return False
 
@@ -654,7 +651,7 @@ def record_all_scores(db_path: Path | None = None) -> dict:
         if record_score(portfolio_scorecard, db_path):
             results["portfolio"] = 1
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.error(f"Error in record_all_scores: {e}")
         results["errors"].append(str(e))
 
@@ -763,7 +760,7 @@ def get_score_trend(
             "data_points": len(scores),
         }
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.error(f"Error getting score trend: {e}")
         return {
             "entity_type": entity_type,
@@ -822,6 +819,6 @@ def get_score_history_summary(db_path: Path | None = None) -> dict:
             "recent_days": recent_days,
         }
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         logger.error(f"Error getting score history summary: {e}")
         return {"error": str(e)}

@@ -10,6 +10,7 @@ Provides:
 
 import contextvars
 import secrets
+import sqlite3
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -228,7 +229,6 @@ def export_spans_otlp(endpoint: str = "http://localhost:4318/v1/traces") -> int:
 
     Returns number of spans exported.
     """
-    import json
     from urllib.parse import urlparse
 
     import httpx
@@ -271,5 +271,5 @@ def export_spans_otlp(endpoint: str = "http://localhost:4318/v1/traces") -> int:
             clear_span_buffer()
             return len(spans)
         return 0
-    except Exception:
+    except (sqlite3.Error, ValueError, OSError):
         return 0

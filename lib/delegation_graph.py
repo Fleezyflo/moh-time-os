@@ -13,10 +13,9 @@ Per spec 4.4:
 import json
 import logging
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from lib import paths
-from lib.compat import UTC
 
 logger = logging.getLogger(__name__)
 

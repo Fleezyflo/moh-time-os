@@ -5,11 +5,8 @@ Validates that pattern snapshots, cost snapshots, and intelligence events
 are correctly stored, queried, and lifecycle-managed.
 """
 
-import json
 import sqlite3
-import tempfile
 from datetime import datetime, timedelta
-from pathlib import Path
 
 import pytest
 

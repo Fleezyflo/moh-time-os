@@ -7,10 +7,7 @@ Brief 15 (BI), Task BI-1.1
 import pytest
 
 from lib.intelligence.revenue_analytics import (
-    PortfolioFinancials,
-    ProfitabilityForecast,
     RevenueAnalytics,
-    RevenueTrend,
     classify_tier,
     compute_hhi,
     compute_revenue_trend,

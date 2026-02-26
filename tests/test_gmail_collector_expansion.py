@@ -10,8 +10,7 @@ Tests the ~85% API coverage implementation including:
 All tests use mocks - NO live API calls.
 """
 
-from datetime import datetime
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 

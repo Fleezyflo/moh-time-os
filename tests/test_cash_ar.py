@@ -332,21 +332,21 @@ class TestPortfolioOrdering:
         conn.execute(f"""
             INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
             VALUES ('inv1', 10000, '{(today + timedelta(days=30)).isoformat()}', 'c1', 'sent', NULL)
-        """)
+        """)  # noqa: S608
 
         # Client 2: All 90+ (HIGH risk)
         conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c2', 'High Risk', 'B')")
         conn.execute(f"""
             INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
             VALUES ('inv2', 10000, '{(today - timedelta(days=100)).isoformat()}', 'c2', 'overdue', NULL)
-        """)
+        """)  # noqa: S608
 
         # Client 3: Mixed (MED risk)
         conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c3', 'Med Risk', 'B')")
         conn.execute(f"""
             INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
             VALUES ('inv3', 5000, '{(today - timedelta(days=45)).isoformat()}', 'c3', 'overdue', NULL)
-        """)
+        """)  # noqa: S608
 
         conn.commit()
         conn.close()
@@ -390,7 +390,7 @@ class TestInvoiceOrdering:
             conn.execute(f"""
                 INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date, aging_bucket)
                 VALUES ('{inv_id}', {amount}, '{due.isoformat()}', 'c1', '{status}', NULL, '{bucket}')
-            """)
+            """)  # noqa: S608
 
         conn.commit()
         conn.close()
@@ -420,7 +420,7 @@ class TestCaps:
             conn.execute(f"""
                 INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
                 VALUES ('inv{i}', 1000, '{(today - timedelta(days=i)).isoformat()}', 'c1', 'sent', NULL)
-            """)
+            """)  # noqa: S608
 
         conn.commit()
         conn.close()
@@ -437,20 +437,20 @@ class TestCaps:
 
         # Insert 15 clients with invoices
         for i in range(15):
-            conn.execute(f"INSERT INTO clients (id, name, tier) VALUES ('c{i}', 'Client {i}', 'B')")
+            conn.execute(f"INSERT INTO clients (id, name, tier) VALUES ('c{i}', 'Client {i}', 'B')")  # noqa: S608
             conn.execute(f"""
                 INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
                 VALUES ('inv{i}', 1000, '{(today - timedelta(days=i)).isoformat()}', 'c{i}', 'sent', NULL)
-            """)
+            """)  # noqa: S608
 
         conn.commit()
         conn.close()
 
         result = engine.generate(expanded=False)
 
-        assert (
-            len(result["portfolio"]) <= 12
-        ), f"Portfolio cap violated: {len(result['portfolio'])} > 12"
+        assert len(result["portfolio"]) <= 12, (
+            f"Portfolio cap violated: {len(result['portfolio'])} > 12"
+        )
 
     def test_portfolio_cap_30_expanded(self, test_db, engine):
         """Expanded portfolio max 30 clients."""
@@ -459,20 +459,20 @@ class TestCaps:
 
         # Insert 35 clients with invoices
         for i in range(35):
-            conn.execute(f"INSERT INTO clients (id, name, tier) VALUES ('c{i}', 'Client {i}', 'B')")
+            conn.execute(f"INSERT INTO clients (id, name, tier) VALUES ('c{i}', 'Client {i}', 'B')")  # noqa: S608
             conn.execute(f"""
                 INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
                 VALUES ('inv{i}', 1000, '{(today - timedelta(days=i)).isoformat()}', 'c{i}', 'sent', NULL)
-            """)
+            """)  # noqa: S608
 
         conn.commit()
         conn.close()
 
         result = engine.generate(expanded=True)
 
-        assert (
-            len(result["portfolio"]) <= 30
-        ), f"Expanded cap violated: {len(result['portfolio'])} > 30"
+        assert len(result["portfolio"]) <= 30, (
+            f"Expanded cap violated: {len(result['portfolio'])} > 30"
+        )
 
     def test_global_actions_cap_10(self, test_db, engine):
         """Global actions max 10."""
@@ -486,16 +486,16 @@ class TestCaps:
             conn.execute(f"""
                 INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
                 VALUES ('inv{i}', 1000, '{(today - timedelta(days=60 + i)).isoformat()}', 'c1', 'overdue', NULL)
-            """)
+            """)  # noqa: S608
 
         conn.commit()
         conn.close()
 
         result = engine.generate()
 
-        assert (
-            len(result["global_actions"]) <= 10
-        ), f"Global actions cap violated: {len(result['global_actions'])} > 10"
+        assert len(result["global_actions"]) <= 10, (
+            f"Global actions cap violated: {len(result['global_actions'])} > 10"
+        )
 
 
 class TestInvalidARActions:
@@ -538,7 +538,7 @@ class TestActionIdempotency:
         conn.execute(f"""
             INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
             VALUES ('inv1', 5000, '{(today - timedelta(days=30)).isoformat()}', 'c1', 'overdue', NULL)
-        """)
+        """)  # noqa: S608
         conn.commit()
         conn.close()
 
@@ -559,7 +559,7 @@ class TestActionIdempotency:
             conn.execute(f"""
                 INSERT INTO invoices (id, amount, due_date, client_id, status, payment_date)
                 VALUES ('inv{i}', 1000, '{(today - timedelta(days=30 + i * 30)).isoformat()}', 'c1', 'overdue', NULL)
-            """)
+            """)  # noqa: S608
 
         conn.commit()
         conn.close()

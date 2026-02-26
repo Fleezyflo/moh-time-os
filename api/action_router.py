@@ -11,11 +11,11 @@ Endpoints:
 - POST /api/actions/batch — batch propose multiple actions
 """
 
-import json
 import logging
-from typing import Optional
+import sqlite3
+from typing import Any
 
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from lib.actions import (
@@ -104,10 +104,42 @@ class ActionResponse(BaseModel):
     error: str | None = None
 
 
+class ActionStatusResponse(BaseModel):
+    """Response for action status changes (propose, approve, reject)."""
+
+    action_id: str
+    status: str
+
+
+class BatchActionResponse(BaseModel):
+    """Response for batch action proposal."""
+
+    count: int
+    action_ids: list[str]
+    status: str
+
+
+class ActionExecutionResponse(BaseModel):
+    """Response for action execution."""
+
+    action_id: str
+    success: bool
+    error: str | None = None
+    execution_time_ms: float | None = None
+    result_data: Any = None
+
+
+class ActionListResponse(BaseModel):
+    """Response for listing actions."""
+
+    count: int
+    actions: list[Any] = Field(default_factory=list)
+
+
 # Endpoints
 
 
-@router.post("/propose", response_model=dict)
+@router.post("/propose", response_model=ActionStatusResponse)
 async def propose_action(request: ProposalRequest):
     """Propose a new action for approval."""
     try:
@@ -130,12 +162,12 @@ async def propose_action(request: ProposalRequest):
     except ValueError as e:
         logger.error(f"Invalid request: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e)) from e
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Error proposing action: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
-@router.post("/batch", response_model=dict)
+@router.post("/batch", response_model=BatchActionResponse)
 async def batch_propose(request: BatchProposalRequest):
     """Batch propose multiple actions."""
     try:
@@ -161,12 +193,12 @@ async def batch_propose(request: BatchProposalRequest):
     except ValueError as e:
         logger.error(f"Invalid request: {str(e)}")
         raise HTTPException(status_code=400, detail=str(e)) from e
-    except Exception as e:
+    except sqlite3.Error as e:
         logger.error(f"Error batch proposing actions: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
-@router.post("/{action_id}/approve", response_model=dict)
+@router.post("/{action_id}/approve", response_model=ActionStatusResponse)
 async def approve_action(action_id: str, request: ApproveRequest):
     """Approve a pending action."""
     try:
@@ -185,12 +217,12 @@ async def approve_action(action_id: str, request: ApproveRequest):
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Error approving action: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
-@router.post("/{action_id}/reject", response_model=dict)
+@router.post("/{action_id}/reject", response_model=ActionStatusResponse)
 async def reject_action(action_id: str, request: RejectRequest):
     """Reject a pending action."""
     try:
@@ -207,12 +239,12 @@ async def reject_action(action_id: str, request: RejectRequest):
 
     except HTTPException:
         raise
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Error rejecting action: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
-@router.post("/{action_id}/execute", response_model=dict)
+@router.post("/{action_id}/execute", response_model=ActionExecutionResponse)
 async def execute_action(action_id: str, request: ExecuteRequest):
     """Execute an approved action."""
     try:
@@ -228,12 +260,12 @@ async def execute_action(action_id: str, request: ExecuteRequest):
             "result_data": result.result_data,
         }
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Error executing action: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
-@router.get("/pending", response_model=dict)
+@router.get("/pending", response_model=ActionListResponse)
 async def get_pending_actions(action_type: str | None = None, limit: int = 50):
     """Get pending actions awaiting approval."""
     try:
@@ -245,12 +277,12 @@ async def get_pending_actions(action_type: str | None = None, limit: int = 50):
 
         return {"count": len(actions), "actions": actions}
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Error fetching pending actions: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error") from e
 
 
-@router.get("/history", response_model=dict)
+@router.get("/history", response_model=ActionListResponse)
 async def get_action_history(
     entity_id: str | None = None, action_type: str | None = None, limit: int = 50
 ):
@@ -264,6 +296,6 @@ async def get_action_history(
 
         return {"count": len(actions), "actions": actions}
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError) as e:
         logger.error(f"Error fetching action history: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error") from e

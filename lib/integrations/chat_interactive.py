@@ -7,8 +7,8 @@ Uses httpx for HTTP calls with bot token or webhook URL.
 
 import logging
 import os
-from dataclasses import dataclass, field
-from typing import Any, Optional
+import sqlite3
+from dataclasses import dataclass
 
 try:
     import httpx
@@ -123,7 +123,7 @@ class ChatInteractive:
                 error_data = response.json()
                 if "error" in error_data:
                     error_msg = error_data["error"].get("message", error_msg)
-            except Exception:
+            except (sqlite3.Error, ValueError, OSError, KeyError):
                 error_msg += f": {response.text[:100]}"
 
             logger.error(f"send_message failed: {error_msg}")
@@ -132,7 +132,7 @@ class ChatInteractive:
                 error=error_msg,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             error_msg = str(e)
             logger.error(f"send_message exception: {error_msg}")
             return ChatWriteResult(
@@ -200,7 +200,7 @@ class ChatInteractive:
                 error_data = response.json()
                 if "error" in error_data:
                     error_msg = error_data["error"].get("message", error_msg)
-            except Exception:
+            except (sqlite3.Error, ValueError, OSError, KeyError):
                 error_msg += f": {response.text[:100]}"
 
             logger.error(f"send_card failed: {error_msg}")
@@ -209,7 +209,7 @@ class ChatInteractive:
                 error=error_msg,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             error_msg = str(e)
             logger.error(f"send_card exception: {error_msg}")
             return ChatWriteResult(
@@ -278,7 +278,7 @@ class ChatInteractive:
                 error_data = response.json()
                 if "error" in error_data:
                     error_msg = error_data["error"].get("message", error_msg)
-            except Exception:
+            except (sqlite3.Error, ValueError, OSError, KeyError):
                 error_msg += f": {response.text[:100]}"
 
             logger.error(f"update_message failed: {error_msg}")
@@ -287,7 +287,7 @@ class ChatInteractive:
                 error=error_msg,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             error_msg = str(e)
             logger.error(f"update_message exception: {error_msg}")
             return ChatWriteResult(
@@ -332,7 +332,7 @@ class ChatInteractive:
                 error_data = response.json()
                 if "error" in error_data:
                     error_msg = error_data["error"].get("message", error_msg)
-            except Exception:
+            except (sqlite3.Error, ValueError, OSError, KeyError):
                 error_msg += f": {response.text[:100]}"
 
             logger.error(f"delete_message failed: {error_msg}")
@@ -341,7 +341,7 @@ class ChatInteractive:
                 error=error_msg,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             error_msg = str(e)
             logger.error(f"delete_message exception: {error_msg}")
             return ChatWriteResult(
@@ -399,7 +399,7 @@ class ChatInteractive:
                 error_data = response.json()
                 if "error" in error_data:
                     error_msg = error_data["error"].get("message", error_msg)
-            except Exception:
+            except (sqlite3.Error, ValueError, OSError, KeyError):
                 error_msg += f": {response.text[:100]}"
 
             logger.error(f"create_space failed: {error_msg}")
@@ -408,7 +408,7 @@ class ChatInteractive:
                 error=error_msg,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             error_msg = str(e)
             logger.error(f"create_space exception: {error_msg}")
             return ChatWriteResult(
@@ -471,7 +471,7 @@ class ChatInteractive:
                 error_data = response.json()
                 if "error" in error_data:
                     error_msg = error_data["error"].get("message", error_msg)
-            except Exception:
+            except (sqlite3.Error, ValueError, OSError, KeyError):
                 error_msg += f": {response.text[:100]}"
 
             logger.error(f"add_member failed: {error_msg}")
@@ -480,7 +480,7 @@ class ChatInteractive:
                 error=error_msg,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             error_msg = str(e)
             logger.error(f"add_member exception: {error_msg}")
             return ChatWriteResult(

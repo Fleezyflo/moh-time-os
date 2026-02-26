@@ -328,7 +328,7 @@ def create_inbox_triggers(cursor):
     for trigger_sql in triggers:
         try:
             cursor.execute(trigger_sql)
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             if "already exists" not in str(e).lower():
                 logger.info(f"  Warning: {e}")
     logger.info("✓ Triggers created")
@@ -392,7 +392,7 @@ def run_migration():
         logger.info(f"{'=' * 60}")
         return True
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         conn.rollback()
         logger.info(f"\n✗ Migration failed: {e}")
         import traceback

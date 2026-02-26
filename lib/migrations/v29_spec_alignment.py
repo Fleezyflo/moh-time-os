@@ -375,7 +375,7 @@ def run_migration():
         logger.info(f"{'=' * 60}")
         return True
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         conn.rollback()
         logger.info(f"\n✗ Migration failed: {e}")
         import traceback

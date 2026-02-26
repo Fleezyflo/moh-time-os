@@ -8,12 +8,9 @@ Covers:
 - Full proposal generation
 """
 
-from pathlib import Path
-
 import pytest
 
 from lib.intelligence.proposals import (
-    PriorityScore,
     Proposal,
     ProposalType,
     ProposalUrgency,
@@ -26,21 +23,17 @@ from lib.intelligence.proposals import (
     _determine_urgency,
     _format_evidence,
     _format_evidence_item,
-    _generate_action,
     _generate_headline,
     # Helper functions
     _generate_proposal_id,
-    _generate_summary,
     _merge_proposals,
     _score_confidence,
     _score_impact,
     _score_recency,
     # Priority ranking
     _score_urgency,
-    compute_priority_score,
     generate_daily_briefing,
     # Main functions
-    generate_proposals,
     generate_proposals_from_live_data,
     get_proposals_by_type,
     get_top_proposals,

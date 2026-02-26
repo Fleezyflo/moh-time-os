@@ -6,6 +6,7 @@ Creates protected blocks for meetings and available blocks in gaps.
 """
 
 import logging
+import sqlite3
 from datetime import date, datetime, timedelta
 
 from lib.state_store import get_store
@@ -81,7 +82,7 @@ class CalendarSync:
                 blocks = self.generate_available_blocks(date_str, day_events)
                 results["blocks_created"] += len(blocks)
                 results["dates_processed"].append(date_str)
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                 results["errors"].append(f"{date_str}: {str(e)}")
 
             current += timedelta(days=1)

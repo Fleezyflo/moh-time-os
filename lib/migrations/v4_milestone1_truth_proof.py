@@ -300,7 +300,7 @@ def run_migration():
             logger.info(f"  {status} {t}")
         return True
 
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError) as e:
         conn.rollback()
         logger.info(f"ERROR: Migration failed: {e}")
         import traceback
@@ -337,7 +337,7 @@ def verify_migration():
         for table in expected_tables:
             if table in existing:
                 # Count rows
-                cursor.execute(f"SELECT COUNT(*) FROM {table}")
+                cursor.execute(f"SELECT COUNT(*) FROM {table}")  # noqa: S608
                 count = cursor.fetchone()[0]
                 logger.info(f"  ✓ {table}: {count} rows")
             else:

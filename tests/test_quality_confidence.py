@@ -7,7 +7,6 @@ Brief 27 (DQ), Task DQ-3.1
 import pytest
 
 from lib.intelligence.quality_confidence import (
-    AdjustedConfidence,
     QualityConfidenceAdjuster,
     QualityFactors,
 )

@@ -4,6 +4,7 @@ This is the WIRING that connects external data to the state store.
 """
 
 import logging
+import sqlite3
 from typing import Any
 
 import yaml
@@ -29,7 +30,7 @@ class CollectorOrchestrator:
     External Systems → Collectors → State Store
     """
 
-    def __init__(self, config_path: str = None, store: StateStore = None):
+    def __init__(self, config_path: str | None = None, store: StateStore | None = None):
         self.config_path = config_path or str(paths.config_dir())
         self.store = store or get_store()
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -87,7 +88,7 @@ class CollectorOrchestrator:
                 try:
                     self.collectors[source_name] = collector_class(source_config, self.store)
                     self.logger.info(f"Initialized collector: {source_name}")
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     self.logger.error(f"Failed to initialize {source_name}: {e}")
 
     def sync_all(self) -> dict[str, Any]:
@@ -96,14 +97,14 @@ class CollectorOrchestrator:
         """
         return self.force_sync(source=None)
 
-    def sync(self, source: str = None) -> dict[str, Any]:
+    def sync(self, source: str | None = None) -> dict[str, Any]:
         """
         Sync one or all collectors — delegates to canonical runner.
         Alias for force_sync (API compatibility).
         """
         return self.force_sync(source=source)
 
-    def force_sync(self, source: str = None) -> dict[str, Any]:
+    def force_sync(self, source: str | None = None) -> dict[str, Any]:
         """
         Force sync — delegates to canonical runner (scheduled_collect.py).
 
@@ -116,7 +117,7 @@ class CollectorOrchestrator:
 
         self.logger.info(f"Force sync delegating to canonical runner (source={source})")
 
-        sources = [source] if source else None
+        sources: list[str] | None = [source] if source else None
         try:
             # v4_ingest=False for API-triggered syncs (run pipeline separately)
             result = collect_all(sources=sources, v4_ingest=False)
@@ -128,7 +129,7 @@ class CollectorOrchestrator:
                     }
                 }
             return {source or "all": {"success": True, "result": result}}
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             self.logger.error(f"Force sync failed: {e}")
             return {source or "all": {"success": False, "error": str(e)}}
 
@@ -157,7 +158,7 @@ class CollectorOrchestrator:
         for name, collector in self.collectors.items():
             try:
                 results[name] = collector.health_check()
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                 self.logger.warning(f"Health check failed for {name}: {e}")
                 results[name] = False
         return results

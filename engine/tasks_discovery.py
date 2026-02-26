@@ -1,6 +1,6 @@
 import re
 from collections import Counter
-from datetime import UTC, datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from .gogcli import run_gog

@@ -6,6 +6,7 @@ Uses existing xero_client from engine/.
 """
 
 import logging
+import sqlite3
 from datetime import date, datetime
 from typing import Any
 
@@ -154,7 +155,7 @@ def sync_xero_clients() -> tuple[int, int, int, list[str]]:
                 # Data format issue - skip this contact
                 errors.append(f"{contact.get('Name', 'Unknown')}: {e}")
                 log.debug(f"Skipping contact due to data issue: {e}")
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 errors.append(f"{contact.get('Name', 'Unknown')}: {e}")
                 log.error(f"Error syncing contact {contact.get('Name')}: {e}", exc_info=True)
 
@@ -163,7 +164,7 @@ def sync_xero_clients() -> tuple[int, int, int, list[str]]:
     except ImportError as e:
         errors.append(f"Xero client not available: {e}")
         log.warning(f"Xero client not available: {e}")
-    except Exception as e:
+    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
         errors.append(f"Sync failed: {e}")
         log.error(f"Xero sync failed: {e}", exc_info=True)
 

@@ -222,22 +222,12 @@
     },
     {
       "method": "GET",
-      "path": "/api/delegations",
-      "source": "api/server.py"
-    },
-    {
-      "method": "GET",
       "path": "/api/dependencies",
       "source": "api/server.py"
     },
     {
       "method": "GET",
       "path": "/api/digest/weekly",
-      "source": "api/server.py"
-    },
-    {
-      "method": "GET",
-      "path": "/api/emails",
       "source": "api/server.py"
     },
     {
@@ -273,11 +263,6 @@
     {
       "method": "GET",
       "path": "/api/inbox",
-      "source": "api/server.py"
-    },
-    {
-      "method": "GET",
-      "path": "/api/insights",
       "source": "api/server.py"
     },
     {
@@ -492,6 +477,111 @@
     },
     {
       "method": "GET",
+      "path": "/intelligence/briefing",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence/clients/{client_id}/profile",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence/clients/{client_id}/trajectory",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence/critical",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence/entity/client/{client_id}",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence/entity/person/{person_id}",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence/entity/portfolio",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence/patterns",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence/patterns/catalog",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence/projects/{project_id}/state",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence/proposals",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence/scores/client/{client_id}",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence/scores/person/{person_id}",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence/scores/portfolio",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence/scores/project/{project_id}",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence/signals",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence/signals/active",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence/signals/history",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence/signals/summary",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence/team/{person_id}/profile",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/intelligence/team/{person_id}/trajectory",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
       "path": "/invoices",
       "source": "api/spec_router.py"
     },
@@ -544,6 +634,16 @@
       "method": "PATCH",
       "path": "/api/control-room/issues/{issue_id}/state",
       "source": "api/server.py"
+    },
+    {
+      "method": "PATCH",
+      "path": "/issues/{issue_id}/resolve",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "PATCH",
+      "path": "/issues/{issue_id}/state",
+      "source": "api/spec_router.py"
     },
     {
       "method": "POST",
@@ -717,22 +817,7 @@
     },
     {
       "method": "POST",
-      "path": "/api/priorities/{item_id}/complete",
-      "source": "api/server.py"
-    },
-    {
-      "method": "POST",
       "path": "/api/priorities/{item_id}/delegate",
-      "source": "api/server.py"
-    },
-    {
-      "method": "POST",
-      "path": "/api/priorities/{item_id}/delegate",
-      "source": "api/server.py"
-    },
-    {
-      "method": "POST",
-      "path": "/api/priorities/{item_id}/snooze",
       "source": "api/server.py"
     },
     {
@@ -812,12 +897,27 @@
     },
     {
       "method": "POST",
+      "path": "/fix-data/{item_type}/{item_id}/resolve",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "POST",
       "path": "/inbox/{item_id}/action",
       "source": "api/spec_router.py"
     },
     {
       "method": "POST",
       "path": "/inbox/{item_id}/read",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "POST",
+      "path": "/issues",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "POST",
+      "path": "/issues/{issue_id}/notes",
       "source": "api/spec_router.py"
     },
     {
@@ -833,6 +933,26 @@
     {
       "method": "POST",
       "path": "/jobs/snooze-expiry",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "POST",
+      "path": "/proposals/{proposal_id}/dismiss",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "POST",
+      "path": "/proposals/{proposal_id}/snooze",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "POST",
+      "path": "/watchers/{watcher_id}/dismiss",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "POST",
+      "path": "/watchers/{watcher_id}/snooze",
       "source": "api/spec_router.py"
     },
     {
@@ -1022,7 +1142,7 @@
   ],
   "generated_by": "scripts/generate_system_map.py",
   "summary": {
-    "api_routes_count": 171,
+    "api_routes_count": 195,
     "collectors_count": 9,
     "db_tables_count": 31,
     "ui_routes_count": 18

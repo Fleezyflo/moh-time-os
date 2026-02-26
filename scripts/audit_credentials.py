@@ -26,12 +26,10 @@ Exit code:
 - 1 if any FAIL
 """
 
-import os
 import re
 import sys
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional
 
 
 @dataclass

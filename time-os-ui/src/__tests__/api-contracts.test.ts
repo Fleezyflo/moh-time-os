@@ -48,10 +48,10 @@ describe('Compile-time API contracts', () => {
     expect(healthResponse.timestamp).toBeDefined();
   });
 
-  it('clients endpoint returns array', () => {
-    // Verify clients response is an array
-    const clientsResponse: ClientsResponse = [];
-    expect(Array.isArray(clientsResponse)).toBe(true);
+  it('clients endpoint returns detail response', () => {
+    // ClientsResponse is DetailResponse (generic dict) per OpenAPI spec
+    const clientsResponse: ClientsResponse = {};
+    expect(clientsResponse).toBeDefined();
   });
 });
 

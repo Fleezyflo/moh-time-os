@@ -6,12 +6,13 @@ Task: SYSPREP 1.1 — Remove Orphaned Modules
 GUARDRAILS: Document before delete. Every change observable.
 """
 
-import os
+import logging
 import re
-import shutil
 import subprocess
 from datetime import datetime
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).parent.parent
 DATA_DIR = REPO_ROOT / "data"
@@ -48,7 +49,7 @@ def load_orphans() -> list:
                     path = path_match.group(1)
                     try:
                         lines = int(parts[3].strip())
-                    except:
+                    except (ValueError, IndexError):
                         lines = 0
                     desc = parts[4].strip() if len(parts) > 4 else ""
                     orphans.append({"path": path, "lines": lines, "description": desc})
@@ -84,7 +85,7 @@ def grep_check(filename: str) -> list:
             if line and line != filename:
                 refs.append(line)
     except Exception:
-        pass
+        logger.debug("grep reference search failed for %s", filename, exc_info=True)
 
     return refs[:5]
 

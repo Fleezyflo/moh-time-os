@@ -19,16 +19,18 @@ Features:
 
 import json
 import logging
+import os
 import re
 import sqlite3
+import tempfile
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Optional
 
 from lib.data_lifecycle import get_lifecycle_manager
+from lib.db import validate_identifier
 from lib.governance.anonymizer import Anonymizer
 from lib.governance.audit_log import AuditLog
 
@@ -140,7 +142,7 @@ class SubjectAccessManager:
             conn.commit()
             conn.close()
             logger.info("Subject access request schema initialized")
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error initializing subject access schema: {e}")
             raise
 
@@ -207,7 +209,7 @@ class SubjectAccessManager:
             )
             return request_id
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error creating subject access request: {e}")
             raise
 
@@ -218,8 +220,9 @@ class SubjectAccessManager:
         Looks for email, name, and client_id patterns.
         """
         try:
+            safe_table = validate_identifier(table)
             conn = self._get_connection()
-            cursor = conn.execute(f"PRAGMA table_info({table})")
+            cursor = conn.execute(f"PRAGMA table_info({safe_table})")  # noqa: S608
             columns = cursor.fetchall()
             conn.close()
 
@@ -235,7 +238,7 @@ class SubjectAccessManager:
 
             return identifier_cols
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error finding identifier columns in {table}: {e}")
             return []
 
@@ -251,6 +254,7 @@ class SubjectAccessManager:
             if not identifier_cols:
                 return []
 
+            safe_table = validate_identifier(table)
             conn = self._get_connection()
 
             # Build WHERE clause for matching any identifier column
@@ -258,17 +262,18 @@ class SubjectAccessManager:
             params = []
 
             for col in identifier_cols:
+                safe_col = validate_identifier(col)
                 # Email match
                 if "email" in col.lower():
-                    where_conditions.append(f'"{col}" = ?')
+                    where_conditions.append(f'"{safe_col}" = ?')
                     params.append(subject_identifier)
                 # Name match (case-insensitive)
                 elif "name" in col.lower():
-                    where_conditions.append(f'LOWER("{col}") = LOWER(?)')
+                    where_conditions.append(f'LOWER("{safe_col}") = LOWER(?)')
                     params.append(subject_identifier)
                 # ID match
                 elif "id" in col.lower():
-                    where_conditions.append(f'"{col}" = ?')
+                    where_conditions.append(f'"{safe_col}" = ?')
                     params.append(subject_identifier)
 
             if not where_conditions:
@@ -276,7 +281,7 @@ class SubjectAccessManager:
                 return []
 
             where_clause = " OR ".join(where_conditions)
-            sql = f"SELECT * FROM {table} WHERE {where_clause}"
+            sql = f"SELECT * FROM {safe_table} WHERE {where_clause}"  # noqa: S608
 
             cursor = conn.execute(sql, params)
             rows = cursor.fetchall()
@@ -285,7 +290,7 @@ class SubjectAccessManager:
             # Convert rows to dicts
             return [dict(row) for row in rows]
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error searching table {table}: {e}")
             return []
 
@@ -326,7 +331,7 @@ class SubjectAccessManager:
                         data_by_table[table] = records
                         tables_with_data.append(table)
                         total_records += len(records)
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError) as e:
                     logger.warning(f"Error searching {table}: {e}")
                     continue
 
@@ -353,7 +358,7 @@ class SubjectAccessManager:
                 generated_at=timestamp,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error finding subject data: {e}")
             raise
 
@@ -378,7 +383,7 @@ class SubjectAccessManager:
             # Generate filename
             safe_subject = re.sub(r"[^\w\-@.]", "_", subject_identifier)
             filename = f"subject_data_{safe_subject}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.{format}"
-            file_path = f"/tmp/{filename}"
+            file_path = os.path.join(tempfile.gettempdir(), filename)
 
             if format == "json":
                 with open(file_path, "w") as f:
@@ -411,7 +416,7 @@ class SubjectAccessManager:
             logger.info(f"Exported subject data to {file_path}")
             return file_path
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error exporting subject data: {e}")
             raise
 
@@ -464,18 +469,20 @@ class SubjectAccessManager:
                     continue
 
                 # Build DELETE query with proper parameter binding
+                safe_table = validate_identifier(table)
                 where_conditions = []
                 params = []
 
                 for col in identifier_cols:
+                    safe_col = validate_identifier(col)
                     if "email" in col.lower():
-                        where_conditions.append(f'"{col}" = ?')
+                        where_conditions.append(f'"{safe_col}" = ?')
                         params.append(subject_identifier)
                     elif "name" in col.lower():
-                        where_conditions.append(f'LOWER("{col}") = LOWER(?)')
+                        where_conditions.append(f'LOWER("{safe_col}") = LOWER(?)')
                         params.append(subject_identifier)
                     elif "id" in col.lower():
-                        where_conditions.append(f'"{col}" = ?')
+                        where_conditions.append(f'"{safe_col}" = ?')
                         params.append(subject_identifier)
 
                 where_clause = " OR ".join(where_conditions)
@@ -484,7 +491,7 @@ class SubjectAccessManager:
                     # Execute delete
                     conn = self._get_connection()
                     conn.execute(
-                        f"DELETE FROM {table} WHERE {where_clause}",
+                        f"DELETE FROM {safe_table} WHERE {where_clause}",  # noqa: S608
                         params,
                     )
                     deleted = conn.total_changes
@@ -509,7 +516,7 @@ class SubjectAccessManager:
                     # Count rows that would be deleted
                     conn = self._get_connection()
                     cursor = conn.execute(
-                        f"SELECT COUNT(*) as cnt FROM {table} WHERE {where_clause}",
+                        f"SELECT COUNT(*) as cnt FROM {safe_table} WHERE {where_clause}",  # noqa: S608
                         params,
                     )
                     count = cursor.fetchone()["cnt"]
@@ -534,7 +541,7 @@ class SubjectAccessManager:
                 audit_log=audit_entries,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error deleting subject data: {e}")
             raise
 
@@ -581,13 +588,15 @@ class SubjectAccessManager:
 
                     if not dry_run:
                         # Build UPDATE query for this record
+                        safe_table = validate_identifier(table)
                         updates = []
                         params = []
 
                         for col, value in record.items():
                             if col in pii_columns and value:
+                                safe_col = validate_identifier(col)
                                 anon_value = self.anonymizer.anonymize_value(value, "text")
-                                updates.append(f'"{col}" = ?')
+                                updates.append(f'"{safe_col}" = ?')
                                 params.append(anon_value)
 
                         if updates:
@@ -599,11 +608,12 @@ class SubjectAccessManager:
                                     break
 
                             if pk_col and pk_col in record:
+                                safe_pk = validate_identifier(pk_col)
                                 params.append(record[pk_col])
                                 update_clause = ", ".join(updates)
                                 conn = self._get_connection()
                                 conn.execute(
-                                    f'UPDATE {table} SET {update_clause} WHERE "{pk_col}" = ?',
+                                    f'UPDATE {safe_table} SET {update_clause} WHERE "{safe_pk}" = ?',  # noqa: S608
                                     params,
                                 )
                                 conn.commit()
@@ -645,7 +655,7 @@ class SubjectAccessManager:
                 audit_log=audit_entries,
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error anonymizing subject data: {e}")
             raise
 
@@ -674,7 +684,7 @@ class SubjectAccessManager:
                 reason=row["reason"],
             )
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error getting request status: {e}")
             raise
 
@@ -721,6 +731,6 @@ class SubjectAccessManager:
 
             return requests
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error listing requests: {e}")
             raise

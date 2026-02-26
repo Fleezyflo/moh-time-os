@@ -4,6 +4,7 @@ Executor Engine - Processes and executes approved actions.
 
 import json
 import logging
+import sqlite3
 from datetime import datetime
 
 from lib import paths
@@ -163,7 +164,7 @@ class ExecutorEngine:
                 "bundle_id": bundle_id,
             }
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             error = str(e)
             logger.error(f"Action {action_id} failed: {error}")
 

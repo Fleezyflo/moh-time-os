@@ -12,7 +12,6 @@ Features:
 import logging
 import sqlite3
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import Any
 
 from lib.governance.retention_engine import RetentionEngine, RetentionReport
@@ -93,7 +92,7 @@ class RetentionScheduler:
 
             conn.commit()
             logger.debug("Scheduler schema tables created/verified")
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error creating scheduler schema: {e}")
             raise
         finally:
@@ -206,7 +205,7 @@ class RetentionScheduler:
                 "dry_run": bool(row[11]),
             }
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error getting last run: {e}")
             return None
         finally:
@@ -249,11 +248,11 @@ class RetentionScheduler:
                 conn.commit()
                 logger.debug(f"Lock acquired: {lock_key}")
                 return True
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 logger.warning(f"Failed to acquire lock for {lock_key}: {e}")
                 return False
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error acquiring lock: {e}")
             return False
         finally:
@@ -277,7 +276,7 @@ class RetentionScheduler:
             conn.commit()
             logger.debug(f"Lock released: {lock_key}")
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error releasing lock: {e}")
         finally:
             conn.close()
@@ -338,7 +337,7 @@ class RetentionScheduler:
                     f"deleted={report.total_rows_deleted}, "
                     f"errors={len(report.errors)}"
                 )
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError) as e:
                 logger.error(f"Error recording run: {e}")
             finally:
                 conn.close()

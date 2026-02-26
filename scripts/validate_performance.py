@@ -77,7 +77,9 @@ def main() -> int:
         check("Has CREATE INDEX IF NOT EXISTS", "CREATE INDEX IF NOT EXISTS" in code)
         # Count index definitions — indexes are defined as tuples in PERFORMANCE_INDEXES list
         # Each line like '    ("table", ["col"]),'' is one index definition
-        idx_count = len([l for l in code.split("\n") if l.strip().startswith('("') and "[" in l])
+        idx_count = len(
+            [line for line in code.split("\n") if line.strip().startswith('("') and "[" in line]
+        )
         check("Has 20+ indexes defined", idx_count >= 20, f"{idx_count} indexes")
 
     # Check 2: Cache Layer (PS-2.1)

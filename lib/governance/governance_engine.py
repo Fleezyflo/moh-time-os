@@ -6,6 +6,7 @@ THIS IS THE SAFETY LAYER - what the system can do automatically.
 
 import contextlib
 import json
+import sqlite3
 from collections import defaultdict
 from datetime import datetime
 from enum import Enum
@@ -262,14 +263,8 @@ class GovernanceEngine:
                 "updated_at": self._last_reset.isoformat() if self._last_reset else None,
                 "notes": ["Emergency brake active"] if self._emergency_brake_active else [],
             }
-        except Exception:
-            # Fallback if anything goes wrong - never raise
-            return {
-                "ok": False,
-                "counts": {},
-                "updated_at": None,
-                "notes": ["Governance status unavailable"],
-            }
+        except (sqlite3.Error, ValueError, OSError):
+            raise  # was silently swallowed
 
 
 # Singleton

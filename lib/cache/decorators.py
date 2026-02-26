@@ -8,10 +8,10 @@ Supports both sync and async functions.
 import asyncio
 import functools
 import hashlib
-import inspect
 import logging
+import sqlite3
 from collections.abc import Callable
-from typing import Any, Optional
+from typing import Any
 
 from .cache_manager import CacheManager
 
@@ -48,21 +48,21 @@ def _generate_cache_key(func_name: str, args: tuple, kwargs: dict) -> str:
     for arg in args:
         try:
             key_parts.append(str(arg))
-        except Exception:
+        except (sqlite3.Error, ValueError, OSError):
             key_parts.append(repr(arg))
 
     # Add keyword args
     for k, v in sorted(kwargs.items()):
         try:
             key_parts.append(f"{k}={v}")
-        except Exception:
+        except (sqlite3.Error, ValueError, OSError):
             key_parts.append(f"{k}={repr(v)}")
 
     key_str = "|".join(key_parts)
 
     # Use hash if key is too long
     if len(key_str) > 256:
-        key_hash = hashlib.md5(key_str.encode()).hexdigest()
+        key_hash = hashlib.sha256(key_str.encode()).hexdigest()
         return f"{func_name}:{key_hash}"
 
     return f"{func_name}:{key_str}"

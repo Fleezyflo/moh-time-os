@@ -7,7 +7,6 @@ Brief 23 (PS), Task PS-1.1
 import pytest
 
 from lib.intelligence.priority_scoring import (
-    PrioritizedEntity,
     PriorityScorer,
     classify_urgency,
     compute_data_quality_score,

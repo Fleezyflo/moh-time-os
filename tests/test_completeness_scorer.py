@@ -7,8 +7,6 @@ Brief 27 (DQ), Task DQ-2.1
 import pytest
 
 from lib.intelligence.completeness_scorer import (
-    EXPECTED_FIELDS,
-    CompletenessScore,
     CompletenessScorer,
     FieldCompleteness,
 )

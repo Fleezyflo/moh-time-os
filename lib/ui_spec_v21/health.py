@@ -220,36 +220,55 @@ def _test_client_health():
 
     # Test 1: Perfect health (no AR, no issues)
     result = client_health(0, 0, 0)
-    assert result.score == 100
-    assert result.ar_penalty == 0
-    assert result.issue_penalty == 0
+    if result.score != 100:
+        raise AssertionError(f"expected score 100, got {result.score}")
+    if result.ar_penalty != 0:
+        raise AssertionError(f"expected ar_penalty 0, got {result.ar_penalty}")
+    if result.issue_penalty != 0:
+        raise AssertionError(f"expected issue_penalty 0, got {result.issue_penalty}")
     logger.info("✓ Perfect health test passed")
     # Test 2: 50% AR overdue
     result = client_health(100000, 50000, 0)
-    assert result.ar_penalty == 30  # floor(0.5 * 60) = 30
-    assert result.score == 70
+    if result.ar_penalty != 30:
+        raise AssertionError(
+            f"expected ar_penalty 30, got {result.ar_penalty}"
+        )  # floor(0.5 * 60) = 30
+    if result.score != 70:
+        raise AssertionError(f"expected score 70, got {result.score}")
     logger.info("✓ 50% AR overdue test passed")
     # Test 3: Full AR overdue (100%)
     result = client_health(100000, 100000, 0)
-    assert result.ar_penalty == 40  # capped at 40
-    assert result.score == 60
+    if result.ar_penalty != 40:
+        raise AssertionError(f"expected ar_penalty 40, got {result.ar_penalty}")  # capped at 40
+    if result.score != 60:
+        raise AssertionError(f"expected score 60, got {result.score}")
     logger.info("✓ Full AR overdue test passed")
     # Test 4: Issues only
     result = client_health(0, 0, 2)
-    assert result.ar_penalty == 0
-    assert result.issue_penalty == 20  # 2 * 10
-    assert result.score == 80
+    if result.ar_penalty != 0:
+        raise AssertionError(f"expected ar_penalty 0, got {result.ar_penalty}")
+    if result.issue_penalty != 20:
+        raise AssertionError(f"expected issue_penalty 20, got {result.issue_penalty}")  # 2 * 10
+    if result.score != 80:
+        raise AssertionError(f"expected score 80, got {result.score}")
     logger.info("✓ Issues only test passed")
     # Test 5: Capped issue penalty
     result = client_health(0, 0, 5)
-    assert result.issue_penalty == 30  # capped at 30
-    assert result.score == 70
+    if result.issue_penalty != 30:
+        raise AssertionError(
+            f"expected issue_penalty 30, got {result.issue_penalty}"
+        )  # capped at 30
+    if result.score != 70:
+        raise AssertionError(f"expected score 70, got {result.score}")
     logger.info("✓ Capped issue penalty test passed")
     # Test 6: Combined penalties
     result = client_health(100000, 50000, 2)
-    assert result.ar_penalty == 30
-    assert result.issue_penalty == 20
-    assert result.score == 50
+    if result.ar_penalty != 30:
+        raise AssertionError(f"expected ar_penalty 30, got {result.ar_penalty}")
+    if result.issue_penalty != 20:
+        raise AssertionError(f"expected issue_penalty 20, got {result.issue_penalty}")
+    if result.score != 50:
+        raise AssertionError(f"expected score 50, got {result.score}")
     logger.info("✓ Combined penalties test passed")
     logger.info("All client health tests passed!")
 
@@ -259,34 +278,57 @@ def _test_engagement_health():
 
     # Test 1: No tasks in source
     result = engagement_health(0, 0, 0, 0.0)
-    assert result.score is None
-    assert result.gating_reason == "no_tasks"
+    if result.score is not None:
+        raise AssertionError(f"expected score None, got {result.score}")
+    if result.gating_reason != "no_tasks":
+        raise AssertionError(f"expected gating_reason 'no_tasks', got {result.gating_reason}")
     logger.info("✓ No tasks gating test passed")
     # Test 2: Low linking coverage (< 90%)
     result = engagement_health(10, 8, 0, 0.0)  # 80% linked
-    assert result.score is None
-    assert result.gating_reason == "task_linking_incomplete"
+    if result.score is not None:
+        raise AssertionError(f"expected score None, got {result.score}")
+    if result.gating_reason != "task_linking_incomplete":
+        raise AssertionError(
+            f"expected gating_reason 'task_linking_incomplete', got {result.gating_reason}"
+        )
     logger.info("✓ Low linking gating test passed")
     # Test 3: Perfect health (90%+ linked, no overdue, no late)
     result = engagement_health(10, 9, 0, 0.0)
-    assert result.score == 100
-    assert result.gating_reason is None
+    if result.score != 100:
+        raise AssertionError(f"expected score 100, got {result.score}")
+    if result.gating_reason is not None:
+        raise AssertionError(f"expected gating_reason None, got {result.gating_reason}")
     logger.info("✓ Perfect engagement health test passed")
     # Test 4: Some overdue tasks
     result = engagement_health(10, 10, 3, 0.0)  # 30% overdue
-    assert result.overdue_penalty == 24  # floor(0.3 * 80)
-    assert result.score == 76
+    if result.overdue_penalty != 24:
+        raise AssertionError(
+            f"expected overdue_penalty 24, got {result.overdue_penalty}"
+        )  # floor(0.3 * 80)
+    if result.score != 76:
+        raise AssertionError(f"expected score 76, got {result.score}")
     logger.info("✓ Overdue penalty test passed")
     # Test 5: Completion lag
     result = engagement_health(10, 10, 0, 4.0)  # 4 days avg late
-    assert result.completion_lag == 20  # floor(4 * 5)
-    assert result.score == 80
+    if result.completion_lag != 20:
+        raise AssertionError(
+            f"expected completion_lag 20, got {result.completion_lag}"
+        )  # floor(4 * 5)
+    if result.score != 80:
+        raise AssertionError(f"expected score 80, got {result.score}")
     logger.info("✓ Completion lag test passed")
     # Test 6: Combined penalties
     result = engagement_health(10, 10, 5, 6.0)  # 50% overdue, 6d late
-    assert result.overdue_penalty == 40  # floor(0.5 * 80)
-    assert result.completion_lag == 30  # capped at 30
-    assert result.score == 30
+    if result.overdue_penalty != 40:
+        raise AssertionError(
+            f"expected overdue_penalty 40, got {result.overdue_penalty}"
+        )  # floor(0.5 * 80)
+    if result.completion_lag != 30:
+        raise AssertionError(
+            f"expected completion_lag 30, got {result.completion_lag}"
+        )  # capped at 30
+    if result.score != 30:
+        raise AssertionError(f"expected score 30, got {result.score}")
     logger.info("✓ Combined engagement penalties test passed")
     logger.info("All engagement health tests passed!")
 

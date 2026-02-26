@@ -9,15 +9,14 @@ Covers:
 - WAL checkpoint integration
 """
 
-import shutil
+import logging
 from datetime import datetime, timedelta
 from pathlib import Path
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import patch
 
 import pytest
 
 from lib.backup import (
-    BACKUP_DIR,
     backup_status,
     create_backup,
     get_latest_backup,
@@ -111,8 +110,8 @@ class TestCreateBackup:
                     mock_datetime.now.return_value.strftime.return_value = "20240115_120000"
                     try:
                         create_backup(label="test-label")
-                    except:
-                        pass  # Error is ok for this mock test
+                    except Exception:
+                        logging.debug("Expected error in mock backup test")
 
     @patch("lib.backup.DB_PATH")
     @patch("lib.backup.db_exists")
@@ -161,8 +160,8 @@ class TestCreateBackup:
                 # Should log warning but continue
                 try:
                     create_backup()
-                except:
-                    pass  # Non-critical error
+                except Exception:
+                    logging.debug("Expected error in checkpoint failure test")
 
 
 # =============================================================================
@@ -196,7 +195,6 @@ class TestListBackups:
 
         # Make old_file actually older
         import os
-        import time
 
         old_stat = os.stat(old_file)
         os.utime(old_file, (old_stat.st_atime - 1000, old_stat.st_mtime - 1000))

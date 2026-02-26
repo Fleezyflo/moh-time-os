@@ -9,6 +9,7 @@ Expanded API coverage (~90%):
 
 import json
 import logging
+import sqlite3
 from datetime import date, datetime
 from typing import Any
 
@@ -63,6 +64,9 @@ class AsanaCollector(BaseCollector):
                 proj_gid = proj.get("gid")
                 proj_name = proj.get("name", "Unknown")
 
+                if not proj_gid:
+                    continue
+
                 try:
                     # Collect ALL tasks (not just incomplete)
                     tasks = list_tasks_in_project(proj_gid, opt_fields=TASK_OPT_FIELDS)
@@ -72,7 +76,7 @@ class AsanaCollector(BaseCollector):
                         task["_project_gid"] = proj_gid
                         all_tasks.append(task)
 
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     self.logger.warning(f"Failed to fetch tasks for project {proj_name}: {e}")
 
             # Secondary pulls for expanded data
@@ -90,7 +94,7 @@ class AsanaCollector(BaseCollector):
                         subtasks = list_subtasks(task_gid)
                         if subtasks:
                             subtasks_by_parent[task_gid] = subtasks
-                    except Exception as e:
+                    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                         self.logger.warning(f"Failed to fetch subtasks for {task_gid}: {e}")
 
                 # Pull stories (comments) - optional, don't block
@@ -98,7 +102,7 @@ class AsanaCollector(BaseCollector):
                     stories = list_stories(task_gid)
                     if stories:
                         stories_by_task[task_gid] = stories
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     self.logger.debug(f"Failed to fetch stories for {task_gid}: {e}")
 
                 # Pull dependencies - optional
@@ -106,7 +110,7 @@ class AsanaCollector(BaseCollector):
                     deps = list_task_dependencies(task_gid)
                     if deps:
                         dependencies_by_task[task_gid] = deps
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     self.logger.debug(f"Failed to fetch dependencies for {task_gid}: {e}")
 
                 # Pull attachments - optional
@@ -114,7 +118,7 @@ class AsanaCollector(BaseCollector):
                     attachments = list_task_attachments(task_gid)
                     if attachments:
                         attachments_by_task[task_gid] = attachments
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     self.logger.debug(f"Failed to fetch attachments for {task_gid}: {e}")
 
             # Pull portfolios and goals
@@ -122,12 +126,12 @@ class AsanaCollector(BaseCollector):
             goals = []
             try:
                 portfolios = list_portfolios(HRMNY_WORKSPACE_GID)
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                 self.logger.warning(f"Failed to fetch portfolios: {e}")
 
             try:
                 goals = list_goals(HRMNY_WORKSPACE_GID)
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                 self.logger.warning(f"Failed to fetch goals: {e}")
 
             return {
@@ -140,7 +144,7 @@ class AsanaCollector(BaseCollector):
                 "goals": goals,
             }
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             self.logger.error(f"Asana collection failed: {e}")
             return {
                 "tasks": [],
@@ -484,7 +488,7 @@ class AsanaCollector(BaseCollector):
 
             try:
                 raw_data = self.collect()
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                 self.logger.error(f"Collect failed: {e}")
                 self.circuit_breaker.record_failure()
                 self.store.update_sync_state(self.source_name, success=False, error=str(e))
@@ -498,7 +502,7 @@ class AsanaCollector(BaseCollector):
             # Step 2: Transform to canonical format
             try:
                 transformed_tasks = self.transform(raw_data)
-            except Exception as e:
+            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                 self.logger.warning(f"Transform failed: {e}. Attempting partial success.")
                 transformed_tasks = []
                 self.metrics["partial_failures"] += 1
@@ -534,7 +538,7 @@ class AsanaCollector(BaseCollector):
                 try:
                     stored = self.store.insert_many("asana_custom_fields", custom_fields_rows)
                     secondary_stats["custom_fields"] = stored
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     self.logger.warning(f"Failed to store custom_fields: {e}")
 
             # Subtasks
@@ -547,7 +551,7 @@ class AsanaCollector(BaseCollector):
                 try:
                     stored = self.store.insert_many("asana_subtasks", subtasks_rows)
                     secondary_stats["subtasks"] = stored
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     self.logger.warning(f"Failed to store subtasks: {e}")
 
             # Stories
@@ -560,7 +564,7 @@ class AsanaCollector(BaseCollector):
                 try:
                     stored = self.store.insert_many("asana_stories", stories_rows)
                     secondary_stats["stories"] = stored
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     self.logger.warning(f"Failed to store stories: {e}")
 
             # Dependencies
@@ -573,7 +577,7 @@ class AsanaCollector(BaseCollector):
                 try:
                     stored = self.store.insert_many("asana_task_dependencies", dependencies_rows)
                     secondary_stats["dependencies"] = stored
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     self.logger.warning(f"Failed to store dependencies: {e}")
 
             # Attachments
@@ -586,7 +590,7 @@ class AsanaCollector(BaseCollector):
                 try:
                     stored = self.store.insert_many("asana_attachments", attachments_rows)
                     secondary_stats["attachments"] = stored
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     self.logger.warning(f"Failed to store attachments: {e}")
 
             # Portfolios
@@ -595,7 +599,7 @@ class AsanaCollector(BaseCollector):
                 try:
                     stored = self.store.insert_many("asana_portfolios", portfolios_rows)
                     secondary_stats["portfolios"] = stored
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     self.logger.warning(f"Failed to store portfolios: {e}")
 
             # Goals
@@ -604,7 +608,7 @@ class AsanaCollector(BaseCollector):
                 try:
                     stored = self.store.insert_many("asana_goals", goals_rows)
                     secondary_stats["goals"] = stored
-                except Exception as e:
+                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     self.logger.warning(f"Failed to store goals: {e}")
 
             # Step 5: Update sync state and record success
@@ -625,7 +629,7 @@ class AsanaCollector(BaseCollector):
                 "timestamp": self.last_sync.isoformat(),
             }
 
-        except Exception as e:
+        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             self.logger.error(f"Sync failed for {self.source_name}: {e}")
             self.circuit_breaker.record_failure()
             self.store.update_sync_state(self.source_name, success=False, error=str(e))

@@ -5,14 +5,11 @@ Brief 22 (SM), Task SM-2.1
 """
 
 from datetime import datetime, timedelta
-from pathlib import Path
 
 import pytest
 
 from lib.intelligence.entity_memory import (
-    EntityInteraction,
     EntityMemory,
-    EntityMemoryState,
     classify_attention,
 )
 

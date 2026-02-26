@@ -28,7 +28,7 @@ ALLOWLIST_FILE = Path(".vulture-allowlist.py")
 TARGETS = ["api/", "lib/"]
 
 # Default allowlist entries (false positives)
-DEFAULT_ALLOWLIST = '''# Vulture allowlist - known false positives
+DEFAULT_ALLOWLIST = """# Vulture allowlist - known false positives
 # Format: one_unused_thing  # comment
 
 # FastAPI route handlers (discovered dynamically)
@@ -88,7 +88,7 @@ _.Header
 _.id
 _.created_at
 _.updated_at
-'''
+"""
 
 
 def ensure_allowlist() -> None:
@@ -103,10 +103,13 @@ def run_vulture() -> tuple[int, str]:
     ensure_allowlist()
 
     cmd = [
-        sys.executable, "-m", "vulture",
+        sys.executable,
+        "-m",
+        "vulture",
         *TARGETS,
         str(ALLOWLIST_FILE),
-        "--min-confidence", "80",
+        "--min-confidence",
+        "80",
     ]
 
     result = subprocess.run(cmd, capture_output=True, text=True)
@@ -122,11 +125,14 @@ def filter_output(output: str) -> list[str]:
         if not line.strip():
             continue
         # Skip common false positives not in allowlist
-        if any(skip in line for skip in [
-            "unused import",  # Handled by ruff
-            "__pycache__",
-            ".pyc",
-        ]):
+        if any(
+            skip in line
+            for skip in [
+                "unused import",  # Handled by ruff
+                "__pycache__",
+                ".pyc",
+            ]
+        ):
             continue
         filtered.append(line)
 
@@ -135,8 +141,9 @@ def filter_output(output: str) -> list[str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Check for dead code")
-    parser.add_argument("--update-allowlist", action="store_true",
-                        help="Regenerate default allowlist")
+    parser.add_argument(
+        "--update-allowlist", action="store_true", help="Regenerate default allowlist"
+    )
     args = parser.parse_args()
 
     if args.update_allowlist:
@@ -151,8 +158,9 @@ def main() -> int:
 
     # Check if vulture is installed
     try:
-        subprocess.run([sys.executable, "-m", "vulture", "--version"],
-                      capture_output=True, check=True)
+        subprocess.run(
+            [sys.executable, "-m", "vulture", "--version"], capture_output=True, check=True
+        )
     except subprocess.CalledProcessError:
         print("⚠️  vulture not installed, skipping dead code check")
         print("   Install with: uv pip install vulture")
