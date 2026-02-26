@@ -66,6 +66,27 @@ repos:
         types: [python]
 
   # ==========================================
+  # DERIVED FILE SYNC
+  # Regenerate derived files so they never drift
+  # ==========================================
+  - repo: local
+    hooks:
+      - id: sync-openapi-spec
+        name: Sync OpenAPI spec
+        entry: bash -c 'python scripts/export_openapi.py && git add docs/openapi.json'
+        language: system
+        pass_filenames: false
+        files: ^(api|lib)/.*\.py$
+        types: [python]
+
+      - id: sync-ui-types
+        name: Sync UI generated types
+        entry: bash -c 'bash scripts/generate_ui_types.sh && git add time-os-ui/src/types/generated.ts'
+        language: system
+        pass_filenames: false
+        files: ^(api|lib)/.*\.py$
+
+  # ==========================================
   # CONVENTIONAL COMMITS
   # ==========================================
   - repo: local
