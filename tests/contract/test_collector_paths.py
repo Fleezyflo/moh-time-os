@@ -57,9 +57,9 @@ class TestCollectorOrchestratorPathResolution:
                                 orch = CollectorOrchestrator()
 
         # Verify it read from our marker file
-        assert "_test_marker" in orch.config.get(
-            "sources", {}
-        ), "CollectorOrchestrator did not read sources.yaml from paths.config_dir()"
+        assert "_test_marker" in orch.config.get("sources", {}), (
+            "CollectorOrchestrator did not read sources.yaml from paths.config_dir()"
+        )
 
     def test_config_path_defaults_to_paths_config_dir(self, tmp_path, monkeypatch):
         """self.config_path must default to str(paths.config_dir())."""
@@ -82,9 +82,9 @@ class TestCollectorOrchestratorPathResolution:
                             with mock.patch("lib.collectors.orchestrator.XeroCollector"):
                                 orch = CollectorOrchestrator()
 
-        assert orch.config_path == str(
-            config_dir
-        ), f"config_path should default to paths.config_dir(), got {orch.config_path}"
+        assert orch.config_path == str(config_dir), (
+            f"config_path should default to paths.config_dir(), got {orch.config_path}"
+        )
 
     def test_no_hardcoded_path_in_source(self):
         """Source code must not contain Path(self.config_path) for sources.yaml."""
@@ -94,9 +94,9 @@ class TestCollectorOrchestratorPathResolution:
 
         source = inspect.getsource(CollectorOrchestrator._load_config)
 
-        assert (
-            "Path(self.config_path)" not in source
-        ), "_load_config must use paths.config_dir(), not Path(self.config_path)"
-        assert (
-            "paths.config_dir()" in source
-        ), "_load_config must use paths.config_dir() for sources.yaml resolution"
+        assert "Path(self.config_path)" not in source, (
+            "_load_config must use paths.config_dir(), not Path(self.config_path)"
+        )
+        assert "paths.config_dir()" in source, (
+            "_load_config must use paths.config_dir() for sources.yaml resolution"
+        )

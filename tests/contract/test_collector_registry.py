@@ -30,18 +30,18 @@ class TestSingleRegistry:
         spec.loader.exec_module(module)
 
         assert hasattr(module, "COLLECTOR_REGISTRY"), "COLLECTOR_REGISTRY must be defined"
-        assert (
-            len(module.COLLECTOR_REGISTRY) == 8
-        ), f"Expected 8 collectors, got {len(module.COLLECTOR_REGISTRY)}"
+        assert len(module.COLLECTOR_REGISTRY) == 8, (
+            f"Expected 8 collectors, got {len(module.COLLECTOR_REGISTRY)}"
+        )
 
     def test_scheduled_collect_uses_registry(self):
         """scheduled_collect.py must import from lib.collector_registry."""
         scheduled_path = PROJECT_ROOT / "collectors" / "scheduled_collect.py"
         content = scheduled_path.read_text()
 
-        assert (
-            "from lib.collector_registry import" in content
-        ), "scheduled_collect.py must import from lib.collector_registry"
+        assert "from lib.collector_registry import" in content, (
+            "scheduled_collect.py must import from lib.collector_registry"
+        )
 
     def test_scheduled_collect_uses_lock(self):
         """scheduled_collect.py must use CollectorLock."""
@@ -131,9 +131,9 @@ class TestOrchestratorDelegates:
         content = orch_path.read_text()
 
         # Must import from scheduled_collect
-        assert (
-            "from collectors.scheduled_collect import" in content
-        ), "orchestrator.force_sync must import from scheduled_collect"
+        assert "from collectors.scheduled_collect import" in content, (
+            "orchestrator.force_sync must import from scheduled_collect"
+        )
 
     def test_sync_all_delegates(self):
         """CollectorOrchestrator.sync_all must call force_sync."""

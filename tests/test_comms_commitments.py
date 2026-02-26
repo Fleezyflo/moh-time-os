@@ -263,9 +263,9 @@ class TestExpectedResponseByDerivation:
 
         expected = datetime.fromisoformat(thread["expected_response_by"])
         delta_hours = (expected - received).total_seconds() / 3600
-        assert (
-            23.9 <= delta_hours <= 24.1
-        ), f"Tier B should get ~24h deadline, got {delta_hours:.1f}h"
+        assert 23.9 <= delta_hours <= 24.1, (
+            f"Tier B should get ~24h deadline, got {delta_hours:.1f}h"
+        )
 
 
 class TestCommitmentBreachClassification:
@@ -405,9 +405,9 @@ class TestHotListCaps:
 
         result = engine.generate(expanded=True)
 
-        assert (
-            len(result["hot_list"]) <= 25
-        ), f"Expanded cap violated: {len(result['hot_list'])} > 25"
+        assert len(result["hot_list"]) <= 25, (
+            f"Expanded cap violated: {len(result['hot_list'])} > 25"
+        )
 
 
 class TestSnippetsCap:
@@ -435,9 +435,9 @@ class TestSnippetsCap:
 
         selected = result.get("selected_thread")
         assert selected is not None
-        assert (
-            len(selected["snippets"]) <= 8
-        ), f"Snippets cap violated: {len(selected['snippets'])} > 8"
+        assert len(selected["snippets"]) <= 8, (
+            f"Snippets cap violated: {len(selected['snippets'])} > 8"
+        )
 
 
 class TestThreadRoomStructure:

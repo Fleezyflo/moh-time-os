@@ -68,9 +68,9 @@ class TestResponseModels:
         proposals_path = paths.get("/api/control-room/proposals", {})
 
         assert "get" in proposals_path, "Proposals endpoint missing GET method"
-        assert "200" in proposals_path["get"].get(
-            "responses", {}
-        ), "Proposals endpoint missing 200 response"
+        assert "200" in proposals_path["get"].get("responses", {}), (
+            "Proposals endpoint missing 200 response"
+        )
 
 
 class TestSchemaStrictness:
@@ -137,9 +137,9 @@ class TestEndpointCount:
         min_expected = 100
         max_expected = 250
 
-        assert (
-            min_expected <= count <= max_expected
-        ), f"Endpoint count {count} outside expected range [{min_expected}, {max_expected}]"
+        assert min_expected <= count <= max_expected, (
+            f"Endpoint count {count} outside expected range [{min_expected}, {max_expected}]"
+        )
 
 
 class TestUiUsedEndpoints:
