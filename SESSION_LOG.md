@@ -2,9 +2,9 @@
 
 ## Current State
 
-- **Current phase:** Phase 0 COMPLETE (PR #30 — all CI green, awaiting merge). Phase 1 next.
+- **Current phase:** Phase 0 COMPLETE (PR #30 merged). Phase 1 next.
 - **Current track:** T1 (Design System & Foundation)
-- **Blocked by:** Nothing. Merge PR #30, then Phase 1 is unblocked.
+- **Blocked by:** Nothing. Phase 1 is unblocked.
 - **D1/D2:** Resolved. Blue `#3b82f6`, slate-400 at 5.1:1.
 - **Next session:** Type A build — Phase 1 (Slate Migration). Replace 396 hardcoded `slate-*` Tailwind classes across 51 files with `var(--token)` equivalents. See BUILD_PLAN.md §Phase 1. Batch by prefix: `bg-slate-*` (140), `text-slate-*` (261), `border-slate-*` (75). Verify per batch: `tsc --noEmit` + visual check.
 
@@ -200,7 +200,7 @@
   - `npx tsc --noEmit` — clean
   - All 7 pre-push gates passed
   - CI: 26/26 checks passed (after prettier fix — see lessons learned)
-- **PRs:** #30 — all CI checks green, ready to merge
+- **PRs:** #30 — all 26 CI checks green, merged to main
 - **Commits:** `83d375a` on `feat/phase-0-design-system-foundation` (amended to fix prettier + commit msg casing)
 - **Discovered work:** None
 - **Lessons learned:**
