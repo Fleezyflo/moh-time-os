@@ -129,3 +129,35 @@
   - Created HANDOFF.md with exact state for next session
 - **PRs:** Documentation changes ready for commit
 - **Next session:** Type A build — Phase 0 (Design System Foundation)
+
+### Session 4 (CI fixes + PR #28 merge) — 2026-02-26
+
+- **Type:** A (Build) — CI remediation and merge
+- **Work done:**
+  - Fixed S101 in `scripts/flags_smoke.py` and `scripts/trace_smoke.py` (assert → RuntimeError)
+  - Fixed S110 in 4 test files (5 instances): `tests/negative/test_patchwork_policy.py`, `tests/test_autonomous_loop.py`, `tests/test_backup.py`, `tests/test_sse_events.py`
+  - Fixed B608 in `lib/migrations/migrate_to_spec_v12.py` — eliminated f-string SQL with two hardcoded branches
+  - Deduplicated B608/S608: bandit skips B608, ruff S608 owns SQL injection checking
+  - Fixed TypeScript type error in `time-os-ui/src/__tests__/api-contracts.test.ts` (ClientsResponse = {} not [])
+  - Created ADR-0006 for Phase -1 decisions
+  - Pinned ruff to 0.15.1 in both pre-commit and pyproject.toml (eliminated version mismatch)
+  - Pinned bandit to 1.9.3
+  - Added `types-PyYAML>=6.0` to dev dependencies (mypy needed it for lib/collectors/ scope)
+  - Fixed CI test path: `lib/ui_spec_v21/tests/` → `tests/ui_spec_v21/` in blessed ci.yml
+  - Added `pnpm install` step to Python Quality CI job for UI type generation
+  - Formatted 10 test files using `pre-commit run ruff-format --files` (not sandbox ruff — version mismatch root cause)
+- **Commits:** 8 commits on `feat/wire-intelligence-routes`:
+  - `82f8942` — refactor: fix ruff violations, move tests, cleanup (ADR-0006)
+  - `0fc8d05` — ci: sync ci.yml — add pnpm install for UI type gen
+  - `d511fc8` — ci: pin ruff 0.15.1, sync with blessed
+  - `61cf6ab` — ci: pin bandit 1.9.3, sync with blessed
+  - `77b2fdd` — ci: add types-PyYAML, sync with blessed
+  - + ci: retrigger, test path fix, governance keyword commits
+- **PR:** #28 — all 26 CI checks passed, merged to main (merge commit, no squash)
+- **Lessons learned:**
+  1. Never format files from the sandbox — use `uv run pre-commit run ruff-format --files` on Mac (sandbox ruff version differs from pre-commit's pinned version)
+  2. Always verify zero unstaged files (`git diff --stat`) before committing — prevents stash conflicts
+  3. Governance `check_change_size.sh` reads `git log -1` — HEAD commit needs "large-change" and deletion keywords for large PRs
+  4. Protected file changes only take effect after blessing in the enforcement repo
+  5. CI `pnpm install` needed in Python Quality job for sync-ui-types hook
+- **Next session:** Type A build — Phase 0 (Design System Foundation)

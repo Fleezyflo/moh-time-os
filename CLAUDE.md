@@ -42,6 +42,8 @@ The sandbox (Linux x86) and Molham's Mac (Darwin ARM) share the same repo folder
 
 **Sandbox CAN do:** read files, write/edit source code, run ruff/mypy/bandit via system Python, run git operations (but not commit — see Git Rules).
 
+**NEVER format files from the sandbox.** The sandbox ruff version (0.15.2) differs from pre-commit's pinned version (0.15.1). Formatting from the sandbox produces different output, causing pre-commit stash conflicts that loop infinitely. Always give Molham `uv run pre-commit run ruff-format --files <paths>` to format on his Mac.
+
 **Molham runs on his Mac:** commits, pushes, dev servers, installs. When work is done, give him a single copy-paste block.
 
 ## Git Rules
@@ -99,11 +101,13 @@ Before giving Molham a push command, verify the full 7-gate pre-push will pass:
 
 ## Session Discipline
 
-1. Update SESSION_LOG.md after EACH commit, not at session end
-2. Never defer documentation — if you changed something, log it immediately
-3. If you discover a new rule or pattern, add it to CLAUDE.md in the same session
-4. Read the entry checklist in BUILD_STRATEGY.md §3 before any work
-5. Read the exit checklist in BUILD_STRATEGY.md §3 before ending
+1. **Start every session by reading HANDOFF.md.** It has the exact next task, file paths, and verification steps. Then read the documents it references (BUILD_STRATEGY.md, SESSION_LOG.md, BUILD_PLAN.md, CLAUDE.md).
+2. Read the entry checklist in BUILD_STRATEGY.md §3 before any work
+3. Read the exit checklist in BUILD_STRATEGY.md §3 before ending
+4. Update SESSION_LOG.md after EACH commit, not at session end
+5. Update HANDOFF.md at the end of each session with the next session's exact task
+6. Never defer documentation — if you changed something, log it immediately
+7. If you discover a new rule or pattern, add it to CLAUDE.md in the same session
 
 ## Skills
 

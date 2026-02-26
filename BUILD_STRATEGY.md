@@ -255,6 +255,7 @@ Every session begins by reading this section and executing the checklist.
 #### Entry checklist (MANDATORY — do this before writing any code)
 
 ```
+0. Read HANDOFF.md FIRST — it has the exact next task, file paths, and rules
 1. Read BUILD_STRATEGY.md (this file) — understand the full buildout
 2. Read BUILD_PLAN.md §1 + the section for the current phase — understand the spec
 3. Read SESSION_LOG.md — understand what's been done and what's next
