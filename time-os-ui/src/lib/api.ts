@@ -225,6 +225,48 @@ export async function fetchAllCouplings(): Promise<ApiListResponse<Coupling>> {
   return fetchJson(`${API_BASE}/couplings`);
 }
 
+// ==== Client Detail Endpoints (spec_router /api/v2/clients*) ====
+
+/** Full client detail from GET /api/v2/clients/{clientId} */
+export async function fetchClientDetail(clientId: string): Promise<Record<string, unknown>> {
+  return fetchJson(`${API_BASE}/clients/${clientId}`);
+}
+
+/** Client team involvement from GET /api/v2/clients/{clientId}/team */
+export async function fetchClientTeam(
+  clientId: string
+): Promise<{ items: Record<string, unknown>[]; total: number }> {
+  return fetchJson(`${API_BASE}/clients/${clientId}/team`);
+}
+
+/** Client invoices from GET /api/v2/clients/{clientId}/invoices */
+export async function fetchClientInvoices(
+  clientId: string
+): Promise<{ items: Record<string, unknown>[]; total: number }> {
+  return fetchJson(`${API_BASE}/clients/${clientId}/invoices`);
+}
+
+/** Client AR aging from GET /api/v2/clients/{clientId}/ar-aging */
+export async function fetchClientARAging(clientId: string): Promise<Record<string, unknown>> {
+  return fetchJson(`${API_BASE}/clients/${clientId}/ar-aging`);
+}
+
+// ==== Team Workload Endpoint (server.py /api/team/workload) ====
+
+export interface TeamWorkloadMember {
+  name: string;
+  total: number;
+  overdue: number;
+  due_today: number;
+  avg_priority: number;
+  status: 'overloaded' | 'busy' | 'available';
+}
+
+/** Team workload distribution from GET /api/team/workload */
+export async function fetchTeamWorkload(): Promise<{ team: TeamWorkloadMember[] }> {
+  return fetchJson('/api/team/workload');
+}
+
 // ==== Inbox Endpoints (spec_router /api/v2/inbox*) ====
 
 import type { InboxResponse, InboxCounts, InboxItemType, Severity } from '../types/spec';

@@ -40,7 +40,9 @@ The sandbox (Linux x86) and Molham's Mac (Darwin ARM) share the same repo folder
 
 **NEVER from the sandbox:** uv sync, uv pip install, pip install into .venv, pnpm install, npm install, uvicorn, vite, pnpm dev, npx — anything that modifies .venv/ or node_modules/ or runs a dev server.
 
-**Sandbox CAN do:** read files, write/edit source code, run ruff/mypy/bandit via system Python, run git operations (but not commit — see Git Rules).
+**Sandbox CAN do:** read files, write/edit source code, run ruff/mypy/bandit via system Python.
+
+**NEVER run git commands from the sandbox (Session 8).** Any git command (`git status`, `git diff`, `git branch`, etc.) creates `.git/index.lock` which the sandbox cannot clean up, blocking Molham's next git command on Mac. Use Read/Glob/Grep tools to inspect files and `git` commands only in the commit block for Molham.
 
 **NEVER format files from the sandbox.** The sandbox ruff version (0.15.2) differs from pre-commit's pinned version (0.15.1). Formatting from the sandbox produces different output, causing pre-commit stash conflicts that loop infinitely. Always give Molham `uv run pre-commit run ruff-format --files <paths>` to format on his Mac.
 

@@ -10,6 +10,8 @@ import { formatRelative } from '../lib/datetime';
 import type { Proposal, Issue } from '../types/api';
 import type { IssueState } from '../lib/api';
 import { useTeam, useProposals, useIssues, useTasks } from '../lib/hooks';
+import { usePersonTrajectory } from '../intelligence/hooks';
+import { TrajectorySparkline } from '../components/layout/TrajectorySparkline';
 import * as api from '../lib/api';
 
 const taskPriorityColors: Record<string, string> = {
@@ -60,6 +62,13 @@ export function TeamDetail() {
   );
   const { data: apiIssues, refetch: refetchIssues } = useIssues(20, 7, undefined, id);
   const { data: apiTasks } = useTasks(id, undefined, 20);
+
+  // Trajectory sparkline data — must be before early returns (React hooks rule)
+  const { data: trajectoryData } = usePersonTrajectory(id);
+  const trajectoryPoints = (trajectoryData?.windows || []).map((w) => ({
+    date: w.start,
+    value: w.metrics?.composite_score ?? w.metrics?.performance_score ?? 0,
+  }));
 
   const member = apiTeam?.items?.find((m) => m.id === id);
 
@@ -154,15 +163,27 @@ export function TeamDetail() {
 
       {/* Member Details */}
       <div className="bg-[var(--grey-dim)] rounded-lg p-4 mb-6">
-        <p className="text-[var(--grey)] mb-2">
-          {member.role || member.department || 'Team Member'}
-          {member.company && (
-            <span className="ml-2 text-[var(--grey-light)]">• {member.company}</span>
+        <div className="flex items-start justify-between">
+          <div>
+            <p className="text-[var(--grey)] mb-2">
+              {member.role || member.department || 'Team Member'}
+              {member.company && (
+                <span className="ml-2 text-[var(--grey-light)]">• {member.company}</span>
+              )}
+            </p>
+            {member.email && <p className="text-sm text-[var(--grey)]">{member.email}</p>}
+            <div className="mt-3">
+              <span className={`px-3 py-1 rounded text-sm ${load.bg} ${load.text}`}>
+                {load.label}
+              </span>
+            </div>
+          </div>
+          {trajectoryPoints.length >= 2 && (
+            <div className="flex flex-col items-end">
+              <span className="text-xs text-[var(--grey-light)] mb-1">Trajectory</span>
+              <TrajectorySparkline data={trajectoryPoints} width={140} height={36} showArea />
+            </div>
           )}
-        </p>
-        {member.email && <p className="text-sm text-[var(--grey)]">{member.email}</p>}
-        <div className="mt-3">
-          <span className={`px-3 py-1 rounded text-sm ${load.bg} ${load.text}`}>{load.label}</span>
         </div>
       </div>
 
