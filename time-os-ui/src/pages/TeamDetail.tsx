@@ -1,7 +1,7 @@
 // Team Member Detail page - Rich profile with workload visualization
 import { useState } from 'react';
 import { Link, useParams } from '@tanstack/react-router';
-import { RoomDrawer, IssueDrawer } from '../components';
+import { RoomDrawer, IssueDrawer, SkeletonCardList } from '../components';
 import { PageLayout } from '../components/layout/PageLayout';
 import { SummaryGrid } from '../components/layout/SummaryGrid';
 import { MetricCard } from '../components/layout/MetricCard';
@@ -72,8 +72,7 @@ export function TeamDetail() {
 
   const member = apiTeam?.items?.find((m) => m.id === id);
 
-  if (teamLoading)
-    return <div className="text-[var(--grey-light)] p-8 text-center">Loading...</div>;
+  if (teamLoading) return <SkeletonCardList count={3} />;
   if (!member)
     return <div className="text-[var(--grey-light)] p-8 text-center">Team member not found</div>;
 

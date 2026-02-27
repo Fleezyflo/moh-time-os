@@ -3,6 +3,7 @@
  */
 
 import { useState } from 'react';
+import { CHART_COLORS } from './chartColors';
 
 interface Segment {
   label: string;
@@ -16,15 +17,6 @@ interface DistributionChartProps {
   showValues?: boolean;
   height?: number;
 }
-
-const DEFAULT_COLORS = [
-  'rgb(59 130 246)', // blue-500
-  'rgb(16 185 129)', // emerald-500
-  'rgb(168 85 247)', // purple-500
-  'rgb(245 158 11)', // amber-500
-  'rgb(236 72 153)', // pink-500
-  'rgb(100 116 139)', // slate-500
-];
 
 export function DistributionChart({
   segments = [],
@@ -44,7 +36,7 @@ export function DistributionChart({
     ...s,
     pct: (s.value / total) * 100,
     displayPct: Math.max(3, (s.value / total) * 100),
-    color: s.color || DEFAULT_COLORS[i % DEFAULT_COLORS.length],
+    color: s.color || CHART_COLORS[i % CHART_COLORS.length],
   }));
 
   return (

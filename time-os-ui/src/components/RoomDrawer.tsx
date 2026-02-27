@@ -261,6 +261,39 @@ export function RoomDrawer({
 
   const drawerRef = useRef<HTMLDivElement>(null);
 
+  // Focus trap — keep focus within drawer
+  useEffect(() => {
+    if (!open || !drawerRef.current) return;
+
+    // Focus first focusable element
+    const firstFocusable = drawerRef.current.querySelector<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    firstFocusable?.focus();
+
+    // Trap focus within drawer
+    const handleTab = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab' || !drawerRef.current) return;
+
+      const focusables = drawerRef.current.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last?.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first?.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleTab);
+    return () => document.removeEventListener('keydown', handleTab);
+  }, [open]);
+
   if (!open || !proposal) return null;
 
   const p = detail || proposal;
@@ -287,6 +320,7 @@ export function RoomDrawer({
         ref={drawerRef}
         role="dialog"
         aria-modal="true"
+        aria-labelledby="room-drawer-title"
         className="absolute right-0 top-0 h-full w-full max-w-xl bg-[var(--black)] border-l border-[var(--grey)] shadow-2xl overflow-y-auto"
       >
         {/* Header with hierarchy */}
@@ -311,6 +345,7 @@ export function RoomDrawer({
             </div>
             <button
               onClick={onClose}
+              aria-label="Close drawer"
               className="text-[var(--grey-light)] hover:text-[var(--white)] p-1 rounded hover:bg-[var(--grey)]/50"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -327,7 +362,7 @@ export function RoomDrawer({
           {/* Title with badges */}
           <div className="flex items-start gap-3">
             <div className="flex-1">
-              <h2 className="text-xl font-semibold text-[var(--white)]">
+              <h2 id="room-drawer-title" className="text-xl font-semibold text-[var(--white)]">
                 {p.scope_name || p.headline?.split(':')[0] || 'Proposal'}
               </h2>
               <p className="text-sm text-[var(--grey-light)] mt-1">
@@ -529,18 +564,21 @@ export function RoomDrawer({
           <div className="flex items-center gap-2">
             <button
               onClick={onTag}
+              aria-label="Tag and monitor this proposal"
               className="flex-1 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium rounded-lg transition-colors"
             >
               Tag & Monitor
             </button>
             <button
               onClick={onSnooze}
+              aria-label="Snooze this proposal"
               className="px-4 py-2.5 bg-[var(--grey)] hover:bg-[var(--grey-mid)] text-[var(--white)] text-sm rounded-lg transition-colors"
             >
               Snooze
             </button>
             <button
               onClick={onDismiss}
+              aria-label="Dismiss this proposal"
               className="px-4 py-2.5 bg-[var(--grey-dim)] hover:bg-[var(--grey)] text-[var(--grey-light)] text-sm rounded-lg transition-colors"
             >
               Dismiss

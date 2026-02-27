@@ -3,6 +3,7 @@
  */
 
 import { useMemo, useState } from 'react';
+import { SPARKLINE_COLORS } from './chartColors';
 
 // Constant padding — defined outside component to avoid recreation
 const PADDING = { top: 4, right: 4, bottom: 4, left: 4 } as const;
@@ -44,7 +45,7 @@ export function Sparkline({
         points: [],
         linePath: '',
         areaPath: '',
-        lineColor: 'rgb(148 163 184)',
+        lineColor: SPARKLINE_COLORS.neutral,
         thresholdY: null,
       };
     }
@@ -78,11 +79,19 @@ export function Sparkline({
 
     let color: string;
     if (polarity === 'neutral') {
-      color = 'rgb(148 163 184)'; // slate-400
+      color = SPARKLINE_COLORS.neutral;
     } else if (polarity === 'positive') {
-      color = trendUp ? 'rgb(74 222 128)' : trendDown ? 'rgb(248 113 113)' : 'rgb(148 163 184)'; // green-400, red-400, slate-400
+      color = trendUp
+        ? SPARKLINE_COLORS.positive
+        : trendDown
+          ? SPARKLINE_COLORS.negative
+          : SPARKLINE_COLORS.neutral;
     } else {
-      color = trendUp ? 'rgb(248 113 113)' : trendDown ? 'rgb(74 222 128)' : 'rgb(148 163 184)';
+      color = trendUp
+        ? SPARKLINE_COLORS.negative
+        : trendDown
+          ? SPARKLINE_COLORS.positive
+          : SPARKLINE_COLORS.neutral;
     }
 
     let threshY: number | null = null;
@@ -130,7 +139,7 @@ export function Sparkline({
           y1={thresholdY}
           x2={width - PADDING.right}
           y2={thresholdY}
-          stroke="rgb(100 116 139)"
+          stroke={SPARKLINE_COLORS.threshold}
           strokeWidth="1"
           strokeDasharray="4,3"
         />
@@ -153,7 +162,7 @@ export function Sparkline({
             cy={p.y}
             r={hoverIndex === i ? 4 : 2.5}
             fill={lineColor}
-            stroke="rgb(30 41 59)"
+            stroke={SPARKLINE_COLORS.stroke}
             strokeWidth="1.5"
           />
         ))}
@@ -177,7 +186,7 @@ export function Sparkline({
             width="60"
             height="22"
             rx="3"
-            fill="rgb(30 41 59)"
+            fill={SPARKLINE_COLORS.stroke}
             opacity="0.95"
           />
           <text
