@@ -50,7 +50,7 @@ const TYPE_PILL_STYLES: Record<EntityType, string> = {
 const CLASSIFICATION_STYLES: Record<string, string> = {
   critical: 'bg-red-500/20 text-red-400',
   'at-risk': 'bg-amber-500/20 text-amber-400',
-  stable: 'bg-slate-500/20 text-slate-400',
+  stable: 'bg-[var(--grey-muted)]/20 text-[var(--grey-light)]',
   healthy: 'bg-green-500/20 text-green-400',
   strong: 'bg-emerald-500/20 text-emerald-400',
 };
@@ -64,7 +64,7 @@ const TREND_ICONS: Record<TrendDirection, string> = {
 const TREND_COLORS: Record<TrendDirection, string> = {
   increasing: 'text-green-400',
   declining: 'text-red-400',
-  stable: 'text-slate-400',
+  stable: 'text-[var(--grey-light)]',
 };
 
 export function ProfileHeader({
@@ -81,7 +81,7 @@ export function ProfileHeader({
   const classKey = classification?.toLowerCase().replace('_', '-') || '';
 
   return (
-    <div className="p-5 bg-slate-800 border border-slate-700 rounded-lg mb-6">
+    <div className="p-5 bg-[var(--grey-dim)] border border-[var(--grey)] rounded-lg mb-6">
       {/* Row 1: type pill + name + actions */}
       <div className="flex justify-between items-start mb-3">
         <div className="flex items-center gap-3 min-w-0">
@@ -100,7 +100,7 @@ export function ProfileHeader({
         {score != null && <HealthScore score={score} size="md" />}
         {classification && (
           <span
-            className={`text-sm font-semibold px-2 py-0.5 rounded ${CLASSIFICATION_STYLES[classKey] || 'bg-slate-700 text-slate-300'}`}
+            className={`text-sm font-semibold px-2 py-0.5 rounded ${CLASSIFICATION_STYLES[classKey] || 'bg-[var(--grey)] text-[var(--grey-subtle)]'}`}
           >
             {classification.replace('_', ' ')}
           </span>
@@ -115,12 +115,12 @@ export function ProfileHeader({
 
       {/* Row 3: quick stats */}
       {statEntries.length > 0 && (
-        <div className="flex items-center gap-3 flex-wrap pb-3 border-b border-slate-700/50">
+        <div className="flex items-center gap-3 flex-wrap pb-3 border-b border-[var(--grey)]/50">
           {statEntries.map(([label, value], i) => (
             <div key={label} className="flex items-center gap-3">
-              {i > 0 && <span className="w-px h-5 bg-slate-700" />}
+              {i > 0 && <span className="w-px h-5 bg-[var(--grey)]" />}
               <div className="text-sm">
-                <span className="text-slate-400">{label}: </span>
+                <span className="text-[var(--grey-light)]">{label}: </span>
                 <span className="text-white font-medium">{value}</span>
               </div>
             </div>
@@ -132,7 +132,7 @@ export function ProfileHeader({
       {primarySignal && (
         <div className="flex items-center gap-2 pt-3">
           <SeverityBadge severity={primarySignal.severity} />
-          <span className="text-sm text-slate-300">{primarySignal.headline}</span>
+          <span className="text-sm text-[var(--grey-subtle)]">{primarySignal.headline}</span>
         </div>
       )}
     </div>

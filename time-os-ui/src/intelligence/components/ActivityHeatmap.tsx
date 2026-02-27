@@ -35,7 +35,7 @@ export function ActivityHeatmap({
   const displayData = data.slice(-weeks);
 
   function getIntensityClass(level: number): string {
-    if (level === 0) return 'bg-slate-700/30';
+    if (level === 0) return 'bg-[var(--grey)]/30';
     const ratio = level / maxActivity;
     if (ratio <= 0.25) return 'bg-green-500/30';
     if (ratio <= 0.5) return 'bg-green-500/55';
@@ -44,12 +44,12 @@ export function ActivityHeatmap({
   }
 
   if (displayData.length === 0) {
-    return <div className="text-sm text-slate-500">No activity data</div>;
+    return <div className="text-sm text-[var(--grey-muted)]">No activity data</div>;
   }
 
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-xs text-slate-500 font-medium">{label}</span>
+      <span className="text-xs text-[var(--grey-muted)] font-medium">{label}</span>
       <div className="flex gap-[3px] flex-wrap">
         {displayData.map((week, i) => (
           <div
@@ -62,19 +62,19 @@ export function ActivityHeatmap({
         ))}
       </div>
       {hoverWeek != null && displayData[hoverWeek] && (
-        <div className="text-xs text-slate-400 py-1">
+        <div className="text-xs text-[var(--grey-light)] py-1">
           Week of {formatWeekLabel(displayData[hoverWeek].week_start)}:{' '}
           {displayData[hoverWeek].activity_level} activities
         </div>
       )}
       <div className="flex items-center gap-[3px] mt-1">
-        <span className="text-[10px] text-slate-500">Less</span>
-        <div className="w-3.5 h-3.5 rounded-[3px] bg-slate-700/30" />
+        <span className="text-[10px] text-[var(--grey-muted)]">Less</span>
+        <div className="w-3.5 h-3.5 rounded-[3px] bg-[var(--grey)]/30" />
         <div className="w-3.5 h-3.5 rounded-[3px] bg-green-500/30" />
         <div className="w-3.5 h-3.5 rounded-[3px] bg-green-500/55" />
         <div className="w-3.5 h-3.5 rounded-[3px] bg-green-500/80" />
         <div className="w-3.5 h-3.5 rounded-[3px] bg-green-500" />
-        <span className="text-[10px] text-slate-500">More</span>
+        <span className="text-[10px] text-[var(--grey-muted)]">More</span>
       </div>
     </div>
   );

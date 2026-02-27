@@ -37,7 +37,7 @@ export function DistributionChart({
   const total = segments.reduce((sum, s) => sum + (s.value || 0), 0);
 
   if (total === 0 || segments.length === 0) {
-    return <div className="text-sm text-slate-500">No data</div>;
+    return <div className="text-sm text-[var(--grey-muted)]">No data</div>;
   }
 
   const processedSegments = segments.map((s, i) => ({
@@ -78,8 +78,10 @@ export function DistributionChart({
                 className="w-2 h-2 rounded-full flex-shrink-0"
                 style={{ background: seg.color }}
               />
-              <span className="text-slate-400">{seg.label}</span>
-              {showValues && <span className="text-slate-500">{Math.round(seg.pct)}%</span>}
+              <span className="text-[var(--grey-light)]">{seg.label}</span>
+              {showValues && (
+                <span className="text-[var(--grey-muted)]">{Math.round(seg.pct)}%</span>
+              )}
             </div>
           ))}
         </div>
@@ -89,7 +91,7 @@ export function DistributionChart({
       {hoverIndex != null &&
         processedSegments[hoverIndex] &&
         processedSegments[hoverIndex].pct < 10 && (
-          <div className="text-xs text-slate-400 py-1">
+          <div className="text-xs text-[var(--grey-light)] py-1">
             {processedSegments[hoverIndex].label}: {processedSegments[hoverIndex].value} (
             {Math.round(processedSegments[hoverIndex].pct)}%)
           </div>

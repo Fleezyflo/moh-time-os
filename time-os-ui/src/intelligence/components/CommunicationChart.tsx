@@ -47,7 +47,7 @@ export function CommunicationChart({ data = {} }: CommunicationChartProps) {
       {/* Channel distribution */}
       {channelSegments.length > 0 && (
         <div>
-          <h5 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">
+          <h5 className="text-xs font-semibold text-[var(--grey-light)] uppercase tracking-wide mb-2">
             By Channel
           </h5>
           <DistributionChart segments={channelSegments} height={28} />
@@ -57,7 +57,7 @@ export function CommunicationChart({ data = {} }: CommunicationChartProps) {
       {/* Direction balance */}
       {totalComm > 0 && (
         <div>
-          <h5 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">
+          <h5 className="text-xs font-semibold text-[var(--grey-light)] uppercase tracking-wide mb-2">
             Direction Balance
             {isImbalanced && (
               <span className="text-amber-400 normal-case tracking-normal"> — Imbalanced</span>
@@ -87,7 +87,7 @@ export function CommunicationChart({ data = {} }: CommunicationChartProps) {
       {/* Top participants */}
       {topParticipants.length > 0 && (
         <div>
-          <h5 className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">
+          <h5 className="text-xs font-semibold text-[var(--grey-light)] uppercase tracking-wide mb-2">
             Top Participants
           </h5>
           <div className="flex flex-col gap-2">
@@ -96,14 +96,14 @@ export function CommunicationChart({ data = {} }: CommunicationChartProps) {
                 key={p.person_id || p.name}
                 className="grid grid-cols-[120px_1fr_40px] gap-2 items-center"
               >
-                <span className="text-sm text-slate-400 truncate">{p.name}</span>
-                <div className="h-1.5 bg-slate-700/50 rounded-full">
+                <span className="text-sm text-[var(--grey-light)] truncate">{p.name}</span>
+                <div className="h-1.5 bg-[var(--grey)]/50 rounded-full">
                   <div
                     className="h-full bg-purple-500 rounded-full transition-all"
                     style={{ width: `${(p.volume / maxParticipantVolume) * 100}%` }}
                   />
                 </div>
-                <span className="text-xs text-slate-500 text-right">{p.volume}</span>
+                <span className="text-xs text-[var(--grey-muted)] text-right">{p.volume}</span>
               </div>
             ))}
           </div>

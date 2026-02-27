@@ -26,7 +26,7 @@ export function BreakdownChart({ dimensions = [], compositeScore }: BreakdownCha
       {compositeScore != null && (
         <div className="flex items-center gap-3 mb-4">
           <HealthScore score={compositeScore} size="lg" />
-          <span className="text-sm text-slate-500">Overall</span>
+          <span className="text-sm text-[var(--grey-muted)]">Overall</span>
         </div>
       )}
       <div className="flex flex-col gap-1">

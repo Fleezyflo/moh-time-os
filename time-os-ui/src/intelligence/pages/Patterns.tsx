@@ -39,7 +39,7 @@ export default function Patterns() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Detected Patterns</h1>
-        <div className="text-sm text-slate-500">{data?.total_detected ?? 0} detected</div>
+        <div className="text-sm text-[var(--grey-muted)]">{data?.total_detected ?? 0} detected</div>
       </div>
 
       {patterns.length === 0 ? (
@@ -77,7 +77,7 @@ export default function Patterns() {
           {/* Informational */}
           {informational.length > 0 && (
             <div>
-              <h2 className="text-lg font-medium text-slate-400 mb-3">
+              <h2 className="text-lg font-medium text-[var(--grey-light)] mb-3">
                 Informational ({informational.length})
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

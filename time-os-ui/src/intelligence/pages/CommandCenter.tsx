@@ -100,13 +100,13 @@ export default function CommandCenter() {
         <div className="flex gap-2">
           <Link
             to="/intel/briefing"
-            className="text-sm text-slate-400 hover:text-white px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 transition-colors"
+            className="text-sm text-[var(--grey-light)] hover:text-white px-3 py-1 rounded bg-[var(--grey-dim)] hover:bg-[var(--grey)] transition-colors"
           >
             📋 Briefing
           </Link>
           <Link
             to="/intel/proposals"
-            className="text-sm text-slate-400 hover:text-white px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 transition-colors"
+            className="text-sm text-[var(--grey-light)] hover:text-white px-3 py-1 rounded bg-[var(--grey-dim)] hover:bg-[var(--grey)] transition-colors"
           >
             📊 All Proposals
           </Link>
@@ -117,10 +117,10 @@ export default function CommandCenter() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <HealthScore score={portfolioScore} label="Portfolio Health" />
 
-        <div className="md:col-span-3 bg-slate-800 rounded-lg p-4">
+        <div className="md:col-span-3 bg-[var(--grey-dim)] rounded-lg p-4">
           <div className="flex items-center justify-between mb-3">
-            <div className="text-sm text-slate-400">Signal Summary</div>
-            <Link to="/intel/signals" className="text-xs text-slate-500 hover:text-white">
+            <div className="text-sm text-[var(--grey-light)]">Signal Summary</div>
+            <Link to="/intel/signals" className="text-xs text-[var(--grey-muted)] hover:text-white">
               View all →
             </Link>
           </div>
@@ -129,7 +129,7 @@ export default function CommandCenter() {
             <CountBadge severity="warning" count={signalSummary?.by_severity?.warning ?? 0} />
             <CountBadge severity="watch" count={signalSummary?.by_severity?.watch ?? 0} />
           </div>
-          <div className="text-sm text-slate-500 mt-3">
+          <div className="text-sm text-[var(--grey-muted)] mt-3">
             {signalSummary?.total_active ?? 0} active signals •{' '}
             {signalSummary?.new_since_last_check ?? 0} new
           </div>
@@ -146,7 +146,7 @@ export default function CommandCenter() {
             <Link
               to="/intel/proposals"
               search={{ urgency: 'immediate' }}
-              className="text-xs text-slate-500 hover:text-white"
+              className="text-xs text-[var(--grey-muted)] hover:text-white"
             >
               View all →
             </Link>
@@ -155,8 +155,8 @@ export default function CommandCenter() {
             {criticalItems.slice(0, 4).map((item, i) => (
               <div key={i} className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
                 <div className="font-medium text-red-400">{item.headline}</div>
-                <div className="text-sm text-slate-400 mt-1">{item.entity.name}</div>
-                <div className="text-sm text-slate-500 mt-2">→ {item.implied_action}</div>
+                <div className="text-sm text-[var(--grey-light)] mt-1">{item.entity.name}</div>
+                <div className="text-sm text-[var(--grey-muted)] mt-2">→ {item.implied_action}</div>
               </div>
             ))}
           </div>
@@ -173,7 +173,7 @@ export default function CommandCenter() {
             <Link
               to="/intel/proposals"
               search={{ urgency: 'this_week' }}
-              className="text-xs text-slate-500 hover:text-white"
+              className="text-xs text-[var(--grey-muted)] hover:text-white"
             >
               View all →
             </Link>
@@ -193,7 +193,10 @@ export default function CommandCenter() {
             <h2 className="text-lg font-medium text-orange-400">
               🔺 Structural Patterns ({structuralPatterns.length})
             </h2>
-            <Link to="/intel/patterns" className="text-xs text-slate-500 hover:text-white">
+            <Link
+              to="/intel/patterns"
+              className="text-xs text-[var(--grey-muted)] hover:text-white"
+            >
               View all →
             </Link>
           </div>

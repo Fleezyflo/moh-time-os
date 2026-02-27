@@ -29,10 +29,10 @@ export function FixDataSummary({ fixData, onClick }: FixDataSummaryProps) {
             {total} data quality issue{total !== 1 ? 's' : ''}
           </span>
         </div>
-        <span className="text-slate-400 text-sm">Fix →</span>
+        <span className="text-[var(--grey-light)] text-sm">Fix →</span>
       </div>
       {fixData && (
-        <div className="flex items-center gap-4 mt-2 text-sm text-slate-400">
+        <div className="flex items-center gap-4 mt-2 text-sm text-[var(--grey-light)]">
           {fixData.identity_conflicts.length > 0 && (
             <span>🔀 {fixData.identity_conflicts.length} identity conflicts</span>
           )}
@@ -72,33 +72,37 @@ export function FixDataCard({ type, item, onResolve, isResolving }: FixDataCardP
   const config = typeConfig[type] || typeConfig.identity_conflict;
 
   return (
-    <div className={`bg-slate-800 border ${config.color} rounded-lg p-4`}>
+    <div className={`bg-[var(--grey-dim)] border ${config.color} rounded-lg p-4`}>
       <div className="flex items-start gap-3">
         <span className="text-lg">{config.icon}</span>
         <div className="flex-1 min-w-0">
-          <div className="text-xs text-slate-400 uppercase tracking-wide">{config.label}</div>
-          <h3 className="font-medium text-slate-100 mt-1">
+          <div className="text-xs text-[var(--grey-light)] uppercase tracking-wide">
+            {config.label}
+          </div>
+          <h3 className="font-medium text-[var(--white)] mt-1">
             {item.display_name || item.entity_id || item.id}
           </h3>
-          {item.source && <div className="text-sm text-slate-500 mt-1">Source: {item.source}</div>}
+          {item.source && (
+            <div className="text-sm text-[var(--grey-muted)] mt-1">Source: {item.source}</div>
+          )}
           {item.confidence_score !== undefined && (
-            <div className="text-sm text-slate-500 mt-1">
+            <div className="text-sm text-[var(--grey-muted)] mt-1">
               Confidence: {(item.confidence_score * 100).toFixed(0)}%
             </div>
           )}
           {item.entity_type && item.linked_type && (
-            <div className="text-sm text-slate-500 mt-1">
+            <div className="text-sm text-[var(--grey-muted)] mt-1">
               {item.entity_type} → {item.linked_type}
             </div>
           )}
         </div>
       </div>
       {onResolve && (
-        <div className="mt-3 pt-3 border-t border-slate-700">
+        <div className="mt-3 pt-3 border-t border-[var(--grey)]">
           <button
             onClick={onResolve}
             disabled={isResolving}
-            className={`text-sm ${isResolving ? 'text-slate-500 cursor-not-allowed' : 'text-blue-400 hover:text-blue-300'}`}
+            className={`text-sm ${isResolving ? 'text-[var(--grey-muted)] cursor-not-allowed' : 'text-blue-400 hover:text-blue-300'}`}
           >
             {isResolving ? 'Resolving...' : 'Resolve →'}
           </button>

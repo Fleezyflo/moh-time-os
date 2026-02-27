@@ -36,7 +36,7 @@ export function HealthScore({
   const trendColor = {
     up: 'text-green-400',
     down: 'text-red-400',
-    stable: 'text-slate-400',
+    stable: 'text-[var(--grey-light)]',
   };
 
   return (
@@ -45,7 +45,7 @@ export function HealthScore({
         <span className={`${sizeClasses[size]} font-bold ${color}`}>{Math.round(score)}</span>
         {showTrend && <span className={`text-xl ${trendColor[trend]}`}>{trendIcon[trend]}</span>}
       </div>
-      {label && <div className="text-slate-400 mt-2">{label}</div>}
+      {label && <div className="text-[var(--grey-light)] mt-2">{label}</div>}
     </div>
   );
 }

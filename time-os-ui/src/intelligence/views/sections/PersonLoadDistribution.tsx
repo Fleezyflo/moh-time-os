@@ -17,7 +17,7 @@ export function PersonLoadDistribution({ profile }: PersonLoadDistributionProps)
   if (!profile || !profile.projects || profile.projects.length === 0) {
     return (
       <ProfileSection title="Load Distribution" description="Work allocation across projects.">
-        <div className="text-sm text-slate-500 italic">No project assignments found</div>
+        <div className="text-sm text-[var(--grey-muted)] italic">No project assignments found</div>
       </ProfileSection>
     );
   }
@@ -61,12 +61,14 @@ export function PersonLoadDistribution({ profile }: PersonLoadDistributionProps)
           return (
             <div
               key={p.project_id || i}
-              className="grid grid-cols-[1fr_100px_50px_50px] gap-2 items-center py-2 border-b border-slate-700/50 last:border-0 text-sm"
+              className="grid grid-cols-[1fr_100px_50px_50px] gap-2 items-center py-2 border-b border-[var(--grey)]/50 last:border-0 text-sm"
             >
               <span className="text-white truncate">{p.project_name}</span>
-              <span className="text-slate-500 truncate">{p.client_name}</span>
-              <span className="text-slate-400 text-right">{p.tasks_on_project}</span>
-              <span className="text-slate-300 font-medium text-right">{Math.round(sharePct)}%</span>
+              <span className="text-[var(--grey-muted)] truncate">{p.client_name}</span>
+              <span className="text-[var(--grey-light)] text-right">{p.tasks_on_project}</span>
+              <span className="text-[var(--grey-subtle)] font-medium text-right">
+                {Math.round(sharePct)}%
+              </span>
             </div>
           );
         })}

@@ -32,7 +32,7 @@ export function ProjectHealthSignals({ project, signals = [] }: ProjectHealthSig
           {healthScore != null ? (
             <HealthScore score={healthScore} label="Project Health" size="lg" />
           ) : (
-            <div className="text-slate-500 text-sm italic">No score available</div>
+            <div className="text-[var(--grey-muted)] text-sm italic">No score available</div>
           )}
         </div>
 
@@ -44,7 +44,7 @@ export function ProjectHealthSignals({ project, signals = [] }: ProjectHealthSig
                 <SignalCard key={signal.signal_id || i} signal={signal} compact />
               ))}
               {signalCount > 5 && (
-                <div className="text-xs text-slate-500 text-center py-2">
+                <div className="text-xs text-[var(--grey-muted)] text-center py-2">
                   +{signalCount - 5} more signals
                 </div>
               )}

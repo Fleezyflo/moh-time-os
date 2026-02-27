@@ -59,8 +59,8 @@ export const priorityColors: Record<string, string> = {
   critical: 'text-red-400',
   high: 'text-orange-400',
   medium: 'text-amber-400',
-  low: 'text-slate-400',
-  info: 'text-slate-500',
+  low: 'text-[var(--grey-light)]',
+  info: 'text-[var(--grey-muted)]',
 };
 
 // ─── Issue field accessors (v29 + legacy) ────────────────────────────────

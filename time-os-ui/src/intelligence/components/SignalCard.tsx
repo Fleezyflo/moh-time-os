@@ -21,7 +21,7 @@ export function SignalCard({ signal, compact = false, onClick }: SignalCardProps
       ? 'bg-red-500/5 border-red-500/30'
       : signal.severity === 'warning'
         ? 'bg-amber-500/5 border-amber-500/30'
-        : 'bg-slate-800 border-slate-700';
+        : 'bg-[var(--grey-dim)] border-[var(--grey)]';
 
   const handleClick = () => {
     if (onClick) {
@@ -34,12 +34,12 @@ export function SignalCard({ signal, compact = false, onClick }: SignalCardProps
   if (compact) {
     return (
       <div
-        className={`rounded-lg p-3 border ${bgColor} cursor-pointer hover:border-slate-600 transition-colors`}
+        className={`rounded-lg p-3 border ${bgColor} cursor-pointer hover:border-[var(--grey-mid)] transition-colors`}
         onClick={handleClick}
       >
         <div className="flex items-center gap-2 mb-1">
           <SeverityBadge severity={signal.severity} />
-          <span className="text-xs text-slate-500">{signal.entity_type}</span>
+          <span className="text-xs text-[var(--grey-muted)]">{signal.entity_type}</span>
         </div>
         <div className="text-sm font-medium truncate">{signal.name}</div>
       </div>
@@ -53,25 +53,25 @@ export function SignalCard({ signal, compact = false, onClick }: SignalCardProps
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
               <SeverityBadge severity={signal.severity} />
-              <span className="text-sm text-slate-500">{signal.entity_type}</span>
+              <span className="text-sm text-[var(--grey-muted)]">{signal.entity_type}</span>
             </div>
             <div className="font-medium">{signal.name}</div>
-            <div className="text-sm text-slate-400 mt-1">
+            <div className="text-sm text-[var(--grey-light)] mt-1">
               {signal.entity_name || signal.entity_id}
             </div>
           </div>
-          <div className="text-xs text-slate-500">{expanded ? '▲' : '▼'}</div>
+          <div className="text-xs text-[var(--grey-muted)]">{expanded ? '▲' : '▼'}</div>
         </div>
       </div>
 
       {expanded && (
-        <div className="px-4 pb-4 border-t border-slate-700 pt-4">
+        <div className="px-4 pb-4 border-t border-[var(--grey)] pt-4">
           {/* Evidence */}
-          <div className="text-sm text-slate-300 mb-4">{signal.evidence}</div>
+          <div className="text-sm text-[var(--grey-subtle)] mb-4">{signal.evidence}</div>
 
           {/* Entity link */}
           <div className="mb-4">
-            <div className="text-xs text-slate-500 mb-1">Entity</div>
+            <div className="text-xs text-[var(--grey-muted)] mb-1">Entity</div>
             <EntityLink
               entity={{
                 type: signal.entity_type,
@@ -82,8 +82,8 @@ export function SignalCard({ signal, compact = false, onClick }: SignalCardProps
           </div>
 
           {/* Implied action */}
-          <div className="bg-slate-700/50 rounded p-3">
-            <div className="text-xs text-slate-500 uppercase tracking-wide mb-1">
+          <div className="bg-[var(--grey)]/50 rounded p-3">
+            <div className="text-xs text-[var(--grey-muted)] uppercase tracking-wide mb-1">
               Recommended Action
             </div>
             <div className="text-sm">{signal.implied_action}</div>
@@ -91,7 +91,7 @@ export function SignalCard({ signal, compact = false, onClick }: SignalCardProps
 
           {/* Detection time */}
           {signal.detected_at && (
-            <div className="text-xs text-slate-500 mt-3">
+            <div className="text-xs text-[var(--grey-muted)] mt-3">
               Detected: {new Date(signal.detected_at).toLocaleString()}
             </div>
           )}

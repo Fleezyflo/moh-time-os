@@ -49,8 +49,8 @@ describe('Priority utilities', () => {
       expect(priorityBadgeClass(50)).toContain('yellow');
     });
 
-    it('returns slate class for low priority', () => {
-      expect(priorityBadgeClass(20)).toContain('slate');
+    it('returns grey token class for low priority', () => {
+      expect(priorityBadgeClass(20)).toContain('var(--grey)');
     });
   });
 

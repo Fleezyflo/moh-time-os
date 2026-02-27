@@ -2,11 +2,11 @@
 
 ## Current State
 
-- **Current phase:** Phase 0 COMPLETE (PR #30 merged). Phase 1 next.
+- **Current phase:** Phase 1 COMPLETE (Slate Migration). Phase 2 next.
 - **Current track:** T1 (Design System & Foundation)
-- **Blocked by:** Nothing. Phase 1 is unblocked.
+- **Blocked by:** Nothing. Phase 2 is unblocked.
 - **D1/D2:** Resolved. Blue `#3b82f6`, slate-400 at 5.1:1.
-- **Next session:** Type A build — Phase 1 (Slate Migration). Replace 396 hardcoded `slate-*` Tailwind classes across 51 files with `var(--token)` equivalents. See BUILD_PLAN.md §Phase 1. Batch by prefix: `bg-slate-*` (140), `text-slate-*` (261), `border-slate-*` (75). Verify per batch: `tsc --noEmit` + visual check.
+- **Next session:** Type A build — Phase 2 (Layout Adoption). Wrap 9 pages with `PageLayout` + `SummaryGrid` + `MetricCard`. See BUILD_PLAN.md §Phase 2.
 
 ## Session History
 
@@ -209,3 +209,31 @@
   3. Intelligence pages had inline card/badge components that duplicated richer versions already in `intelligence/components/`. Step 0.9 dedup is really about wiring pages to existing shared components.
   4. **New .tsx files must be prettier-formatted before commit.** CI runs `prettier --check` on `src/**/*.{ts,tsx,css}`. Sandbox can't run prettier. Always include `cd time-os-ui && pnpm exec prettier --write <new files> && cd ..` in commit commands for new UI files. Added to CLAUDE.md.
   5. Conventional commit description must start with lowercase (`feat: phase 0` not `feat: Phase 0`).
+
+### Session 6 (Phase 1 — Slate Migration) — 2026-02-27
+
+- **Type:** A (Build)
+- **Phase:** Phase 1 (T1 — Design System & Foundation)
+- **Work done:**
+  - **Discovery** — Actual counts post-Phase 0: `bg-slate-*` 130 (39 files), `text-slate-*` 238 (45 files), `border-slate-*` 68 (25 files), total 365 unique lines across 52 files. Also found: `ring-slate-*` (2), `placeholder-slate-*` (1), `fill-slate-*` (1), `focus:ring-slate-*` (2), `focus:ring-offset-slate-*` (1), plus hover/disabled/active variants.
+  - **Built migration script** (`slate_migration.py`, deleted after use) with regex-based replacement handling all Tailwind variant prefixes and property prefixes. Dry-run verified before applying.
+  - **Applied 466 replacements** across 51 files (51 files changed, 360+/360- lines — pure symmetrical replacement, no structural changes).
+  - **Extended mapping** beyond BUILD_PLAN spec: added `slate-100` → `var(--white)` (7 headings, hex `#f1f5f9` matches token), `slate-750` → `var(--grey)` (1 non-standard class in Inbox.tsx, closest token).
+  - **Additional property prefixes** handled beyond bg/text/border: `ring-`, `placeholder-`, `fill-`, `focus:ring-`, `focus:ring-offset-`, `disabled:`, `hover:`, `[&.active]:`.
+  - **Opacity modifiers** preserved: `bg-[var(--grey)]/50`, `bg-[var(--grey-dim)]/90`, etc.
+  - **Remaining non-Tailwind slate refs:** 3 inline RGB values in Sparkline.tsx and DistributionChart.tsx (SVG stroke/fill colors, not Tailwind classes — deferred to future token-ification of inline styles).
+- **Files changed:** 51 modified, 0 new. +360/-360 lines (net 0).
+- **Verification completed:**
+  - `grep -r "slate-" src/ --include="*.tsx" --include="*.ts"` → 0 Tailwind class hits (remaining 5 matches are false positives: 2× `-translate-y-*`, 3× code comments on RGB values)
+  - Syntax spot-check of top-3 files (RoomDrawer, IssueDrawer, ProposalCard): all arbitrary value brackets matched, opacity modifiers correct, variant prefixes intact
+- **Verification needed (Mac):**
+  - `npx tsc --noEmit` — must compile clean
+  - `cd time-os-ui && pnpm exec prettier --write src/ && cd ..` — format all touched files
+  - Visual check: pages should look identical (token values = slate hex values)
+- **PRs:** Pending — commit commands provided to Molham
+- **Discovered work:** None
+- **Lessons learned:**
+  1. Script-based migration is the right approach for 400+ replacements — manual editing would be error-prone and slow.
+  2. The BUILD_PLAN mapping was missing `slate-100` and `slate-750`. Extended mapping in-session.
+  3. The BUILD_PLAN counts (396 across 51 files) were close but not exact — actual was 466 replacements across 51 files after accounting for variant prefixes and additional property types not counted in original grep.
+  4. Inline RGB values in SVG/canvas components (Sparkline, DistributionChart) are a separate concern from Tailwind class migration — these will need their own token-ification pass when the design system supports runtime theme switching.

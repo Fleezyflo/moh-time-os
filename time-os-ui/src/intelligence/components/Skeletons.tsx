@@ -10,7 +10,7 @@
 // =============================================================================
 
 function Bone({ className = '' }: { className?: string }) {
-  return <div className={`animate-pulse bg-slate-700/50 rounded ${className}`} />;
+  return <div className={`animate-pulse bg-[var(--grey)]/50 rounded ${className}`} />;
 }
 
 // =============================================================================
@@ -27,7 +27,7 @@ function Bone({ className = '' }: { className?: string }) {
  */
 export function SkeletonSignalCard() {
   return (
-    <div className="rounded-lg border border-slate-700 bg-slate-800">
+    <div className="rounded-lg border border-[var(--grey)] bg-[var(--grey-dim)]">
       <div className="p-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
@@ -59,7 +59,7 @@ export function SkeletonSignalCard() {
  */
 export function SkeletonProposalCard() {
   return (
-    <div className="rounded-lg border border-slate-700 bg-slate-800">
+    <div className="rounded-lg border border-[var(--grey)] bg-[var(--grey-dim)]">
       <div className="p-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
@@ -94,7 +94,7 @@ export function SkeletonProposalCard() {
  */
 export function SkeletonPatternCard() {
   return (
-    <div className="rounded-lg border border-slate-700 bg-slate-800">
+    <div className="rounded-lg border border-[var(--grey)] bg-[var(--grey-dim)]">
       <div className="p-4">
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
@@ -120,11 +120,11 @@ export function SkeletonPatternCard() {
  * Matches HealthScore (lg size)
  * - Container: bg-*-500/10 rounded-lg p-6 text-center
  * - Score: text-5xl font-bold
- * - Label: text-slate-400 mt-2
+ * - Label: text-[var(--grey-light)] mt-2
  */
 export function SkeletonHealthScore() {
   return (
-    <div className="bg-slate-800 rounded-lg p-6 text-center">
+    <div className="bg-[var(--grey-dim)] rounded-lg p-6 text-center">
       <Bone className="h-12 w-16 mx-auto" /> {/* text-5xl score */}
       <Bone className="h-4 w-28 mx-auto mt-2" /> {/* label */}
     </div>
@@ -166,7 +166,7 @@ export function SkeletonSectionHeader({ width = 'w-32' }: { width?: string }) {
  */
 export function SkeletonFilterBar() {
   return (
-    <div className="flex flex-wrap gap-4 bg-slate-800 rounded-lg p-4">
+    <div className="flex flex-wrap gap-4 bg-[var(--grey-dim)] rounded-lg p-4">
       <div>
         <Bone className="h-4 w-14 mb-1" /> {/* label */}
         <Bone className="h-9 w-28 rounded" /> {/* select */}
@@ -187,7 +187,7 @@ export function SkeletonFilterBar() {
  */
 export function SkeletonAlertCard() {
   return (
-    <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4">
+    <div className="bg-[var(--grey-dim)]/50 border border-[var(--grey)] rounded-lg p-4">
       <Bone className="h-5 w-3/4 mb-2" /> {/* headline */}
       <Bone className="h-4 w-1/2 mb-2" /> {/* entity */}
       <Bone className="h-4 w-2/3" /> {/* action */}
@@ -217,7 +217,7 @@ export function SkeletonCommandCenter() {
       {/* Portfolio Health + Signal Summary row */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <SkeletonHealthScore />
-        <div className="md:col-span-3 bg-slate-800 rounded-lg p-4">
+        <div className="md:col-span-3 bg-[var(--grey-dim)] rounded-lg p-4">
           <div className="flex items-center justify-between mb-3">
             <Bone className="h-4 w-28" /> {/* "Signal Summary" */}
             <Bone className="h-3 w-16" /> {/* "View all →" */}
@@ -331,12 +331,12 @@ export function SkeletonBriefingPage() {
       </div>
 
       {/* Summary card */}
-      <div className="bg-slate-800 rounded-lg p-6">
+      <div className="bg-[var(--grey-dim)] rounded-lg p-6">
         <Bone className="h-5 w-full" />
       </div>
 
       {/* Top Priority */}
-      <div className="bg-slate-800 border-l-4 border-slate-600 rounded-lg p-6">
+      <div className="bg-[var(--grey-dim)] border-l-4 border-[var(--grey-mid)] rounded-lg p-6">
         <Bone className="h-3 w-20 mb-2" /> {/* "Top Priority" */}
         <Bone className="h-5 w-3/4" />
       </div>
@@ -358,7 +358,7 @@ export function SkeletonBriefingPage() {
       </div>
 
       {/* Portfolio Health */}
-      <div className="bg-slate-800 rounded-lg p-6">
+      <div className="bg-[var(--grey-dim)] rounded-lg p-6">
         <Bone className="h-3 w-28 mb-3" /> {/* "Portfolio Health" */}
         <div className="flex items-center gap-4">
           <Bone className="h-10 w-12" /> {/* score */}

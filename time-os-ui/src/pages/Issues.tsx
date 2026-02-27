@@ -342,7 +342,7 @@ export function Issues() {
                   ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
                   : node.tier === 'B'
                     ? 'bg-[var(--info)]/20 text-[var(--info)] border-blue-500/30'
-                    : 'bg-slate-500/20 text-[var(--grey-light)] border-slate-500/30'
+                    : 'bg-[var(--grey-muted)]/20 text-[var(--grey-light)] border-[var(--grey-muted)]/30'
               }`}
             >
               {node.tier}

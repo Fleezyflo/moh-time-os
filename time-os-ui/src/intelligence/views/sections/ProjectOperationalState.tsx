@@ -19,9 +19,9 @@ interface MetricDisplayProps {
 
 function MetricDisplay({ label, value, warning }: MetricDisplayProps) {
   return (
-    <div className="p-3 bg-slate-800 rounded-lg text-center">
+    <div className="p-3 bg-[var(--grey-dim)] rounded-lg text-center">
       <div className={`text-2xl font-bold ${warning ? 'text-red-400' : 'text-white'}`}>{value}</div>
-      <div className="text-xs text-slate-500 mt-1">{label}</div>
+      <div className="text-xs text-[var(--grey-muted)] mt-1">{label}</div>
     </div>
   );
 }
@@ -62,7 +62,7 @@ export function ProjectOperationalState({ project }: ProjectOperationalStateProp
       {/* Task distribution bar */}
       {totalTasks > 0 && (
         <div>
-          <div className="text-xs text-slate-500 mb-2">Task Distribution</div>
+          <div className="text-xs text-[var(--grey-muted)] mb-2">Task Distribution</div>
           <DistributionChart segments={taskSegments} height={24} />
         </div>
       )}

@@ -30,8 +30,10 @@ export function EmptyState({ icon, title, description, action }: EmptyStateProps
       <span className="text-4xl mb-4" role="img" aria-hidden="true">
         {displayIcon}
       </span>
-      <h3 className="text-lg font-medium text-slate-300 mb-2">{title}</h3>
-      {description && <p className="text-sm text-slate-500 max-w-sm mb-4">{description}</p>}
+      <h3 className="text-lg font-medium text-[var(--grey-subtle)] mb-2">{title}</h3>
+      {description && (
+        <p className="text-sm text-[var(--grey-muted)] max-w-sm mb-4">{description}</p>
+      )}
       {action && (
         <button
           onClick={action.onClick}
@@ -200,7 +202,7 @@ export function SuccessState({ icon = '✓', title, description }: SuccessStateP
         {icon}
       </span>
       <h3 className="text-lg font-medium text-green-400 mb-1">{title}</h3>
-      {description && <p className="text-sm text-slate-400 max-w-sm">{description}</p>}
+      {description && <p className="text-sm text-[var(--grey-light)] max-w-sm">{description}</p>}
     </div>
   );
 }

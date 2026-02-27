@@ -107,7 +107,7 @@ export function Sparkline({
           y={height / 2}
           textAnchor="middle"
           dominantBaseline="middle"
-          className="text-[10px] fill-slate-500"
+          className="text-[10px] fill-[var(--grey-muted)]"
         >
           No data
         </text>

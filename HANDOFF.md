@@ -1,71 +1,47 @@
 # Session Handoff
 
-**Last updated:** 2026-02-27, end of Session 5
-**Branch:** `main` (PR #30 merged)
+**Last updated:** 2026-02-27, end of Session 6
+**Branch:** `main` (Phase 1 PR pending merge)
 
 ## What Just Happened
 
-Phase 0 (Design System Foundation) is complete. PR #30 merged with all 26 CI checks passing. Key work in Session 5:
+Phase 1 (Slate Migration) is complete. 466 replacements across 51 files — all hardcoded `slate-*` Tailwind classes replaced with `var(--token)` equivalents. Key work in Session 6:
 
-1. Updated 5 neutral tokens to slate equivalents, added 3 new tokens (`--grey-mid`, `--grey-muted`, `--grey-subtle`), switched accent from red to blue (`#3b82f6`)
-2. Removed orphan `:root` override block from `time-os-ui/src/index.css`
-3. Created 3 layout components: `PageLayout`, `SummaryGrid`, `MetricCard` in `time-os-ui/src/components/layout/`
-4. Extracted shared issue styles into `time-os-ui/src/lib/issueStyles.ts` (IssueCard + IssueDrawer now import from it)
-5. Deduped 6 inline components from intelligence pages — Signals, Patterns, Proposals now use shared components from `intelligence/components/`
-6. Fixed 4 incorrect `tokens.css` path references in BUILD_PLAN.md and HANDOFF.md
-7. Added prettier rule to CLAUDE.md (new `.tsx`/`.ts` files must be prettier-formatted on Mac before commit)
+1. Discovered actual counts: 130 bg + 238 text + 68 border + extras = 466 total replacements across 51 files
+2. Built regex-based migration script handling all Tailwind variant prefixes (hover, focus, disabled, [&.active]) and property prefixes (bg, text, border, ring, placeholder, fill, focus:ring, focus:ring-offset)
+3. Extended mapping beyond BUILD_PLAN spec: added `slate-100` → `var(--white)` and `slate-750` → `var(--grey)`
+4. Preserved opacity modifiers: `bg-[var(--grey)]/50`, `bg-[var(--grey-dim)]/90`, etc.
+5. Zero remaining Tailwind `slate-*` classes (3 inline RGB values in SVG components deferred)
+6. Updated SESSION_LOG.md with full Session 6 record
 
 ## What's Next
 
-**Phase 1: Slate Migration** — Type A build session.
+**Phase 2: Layout Adoption** — Type A build session.
 
-Read BUILD_PLAN.md "Phase 1: Slate Migration" section (line 949) for the full spec. This is a mechanical find-and-replace phase — no new components, no new logic. Replace 396 hardcoded `slate-*` Tailwind classes across 51 files with `var(--token)` equivalents.
+Read BUILD_PLAN.md "Phase 2: Layout Adoption" section (line 990) for the full spec. Wrap 9 pages with `PageLayout` + `SummaryGrid` + `MetricCard` components created in Phase 0. ~15 page files modified, ~30 lines added per file.
 
-### Batch plan
+### Steps
 
-| Batch | Target | Count | Files | Example replacement |
-|-------|--------|-------|-------|-------------------|
-| 1a | `bg-slate-*` | 140 | 40 | `bg-slate-800` → `bg-[var(--grey-dim)]` |
-| 1b | `text-slate-*` | 261 | 44 | `text-slate-400` → `text-[var(--grey-light)]` |
-| 1c | `border-slate-*` | 75 | 26 | `border-slate-700` → `border-[var(--grey)]` |
-
-### Replacement mapping
-
-| Tailwind Class | CSS Variable | Hex Value |
-|---------------|-------------|-----------|
-| `slate-900` | `var(--black)` | `#0f172a` |
-| `slate-800` | `var(--grey-dim)` | `#1e293b` |
-| `slate-700` | `var(--grey)` | `#334155` |
-| `slate-600` | `var(--grey-mid)` | `#475569` |
-| `slate-500` | `var(--grey-muted)` | `#64748b` |
-| `slate-400` | `var(--grey-light)` | `#94a3b8` |
-| `slate-300` | `var(--grey-subtle)` | `#cbd5e1` |
-| `slate-200` | `var(--white)` | `#f1f5f9` |
-
-### Priority files (highest slate counts)
-
-1. `RoomDrawer.tsx` — 48 refs
-2. `IssueDrawer.tsx` — 22 refs
-3. `ProposalCard.tsx` (intelligence) — 21 refs
-4. `Proposals.tsx` — 21 refs
-5. `ConnectedEntities.tsx` — 17 refs
-6. `Briefing.tsx` — 16 refs
-
-### Execution approach
-
-1. **Discover actual counts first.** Run `grep -r "bg-slate-" time-os-ui/src/ --include="*.tsx" --include="*.ts" | wc -l` (and same for `text-slate-`, `border-slate-`). The BUILD_PLAN.md counts (140, 261, 75) were from Session 0 — they may have shifted after Phase 0 dedup.
-2. **Replace one batch at a time.** Do all `bg-slate-*` first, verify, then `text-slate-*`, verify, then `border-slate-*`.
-3. **Verify after each batch:** `tsc --noEmit` on Mac. Colors should be visually identical since token values = slate hex values.
-4. **After all batches:** `grep -r "slate-" time-os-ui/src/ --include="*.tsx" --include="*.ts"` must return 0 hits.
-5. **Prettier:** Run `cd time-os-ui && pnpm exec prettier --write src/ && cd ..` after all replacements (since this touches many files).
+| Step | Page | SummaryGrid Metrics | Data Source |
+|------|------|-------------------|------------|
+| 2.1 | Inbox (`/`) | Total, Unread, Critical, Categories | Wire `fetchInboxCounts()` (new) |
+| 2.2 | Issues (`/issues`) | Open, Investigating, Critical, Total | Derived from `useIssues()` |
+| 2.3 | Client Index (`/clients`) | Total, Active, At-risk, Overdue AR | Derived from `useClients()` |
+| 2.4 | Team Index (`/team`) | Team size, Avg score, Overloaded | Derived from `useTeam()` |
+| 2.5 | Fix Data (Ops) | Fix items, Identity issues, Link issues | From `useFixData()` |
+| 2.6 | Signals (`/intel/signals`) | Total active, Critical, Warning, Watch | From `useSignalSummary()` (exists) |
+| 2.7 | Patterns (`/intel/patterns`) | Total detected, Structural, Operational | Derived from `usePatterns()` |
+| 2.8 | Client Detail | Health score, AR total, Active projects, Open issues | From `useClientProfile()` (exists) |
+| 2.9 | Team Detail | Health score, Active tasks, Overdue, Projects | From `usePersonProfile()` (exists) |
 
 ### Verification
 
-- `npx tsc --noEmit` — must compile clean after each batch
-- `grep -r "slate-" time-os-ui/src/ --include="*.tsx" --include="*.ts"` → 0 hits after all batches
-- Visual check: open app, pages should look identical (tokens match slate hex values)
+- Every page renders with consistent header positioning and max-width
+- SummaryGrid shows real numbers from API
+- No layout shift on page transitions
+- `npx tsc --noEmit` clean
 
-## Key Rules (learned hard way in Sessions 1-5)
+## Key Rules (learned hard way in Sessions 1-6)
 
 1. **No bypasses.** Never add `nosec`, `noqa`, or `type: ignore`. Fix the root cause.
 2. **Stage everything.** Before committing, `git add` all modified files to prevent ruff-format stash conflicts.
@@ -77,15 +53,16 @@ Read BUILD_PLAN.md "Phase 1: Slate Migration" section (line 949) for the full sp
 8. **Governance keywords on HEAD.** Large PRs need "large-change" and deletion rationale in the latest commit message.
 9. **Prettier for new/modified .tsx/.ts files.** CI runs `prettier --check` on `src/**/*.{ts,tsx,css}`. Sandbox can't run prettier. Include `cd time-os-ui && pnpm exec prettier --write <files> && cd ..` in commit commands. (Session 5: PR #30 failed CI until prettier was applied.)
 10. **Conventional commit casing.** Description starts lowercase after type prefix: `feat: phase 1` not `feat: Phase 1`. (Session 5: linter flagged uppercase.)
-11. **Discovery before fix commands.** Investigate actual state before giving fix commands. Never use placeholders in command blocks. (Session 5: `<new files>` placeholder caused parse error.)
+11. **Discovery before fix commands.** Investigate actual state before giving fix commands. Never use placeholders in command blocks.
 12. **Don't claim readiness without reading all files.** Read HANDOFF.md, CLAUDE.md, BUILD_STRATEGY.md, BUILD_PLAN.md, SESSION_LOG.md, AND the source files for the assigned work before starting.
+13. **Script-based migration for bulk replacements.** For 400+ changes, write a script with dry-run mode, verify output, then apply. (Session 6: slate migration.)
 
 ## Documents to Read (in order)
 
 1. **This file (HANDOFF.md)** — you're reading it, now follow the order below
 2. `CLAUDE.md` — coding standards, sandbox rules, verification requirements
 3. `BUILD_STRATEGY.md` §3 — entry/exit checklists, session contract
-4. `BUILD_PLAN.md` "Phase 1: Slate Migration" (line 949) — the full spec with replacement mapping
+4. `BUILD_PLAN.md` "Phase 2: Layout Adoption" (line 990) — the full spec
 5. `SESSION_LOG.md` — what's done, current state, lessons learned
 
 ## Quick Reference

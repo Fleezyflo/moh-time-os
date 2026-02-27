@@ -22,20 +22,20 @@ export function IssueCard({ issue, onOpen }: IssueCardProps) {
 
   return (
     <div
-      className={`${stateStyle.bg} border border-slate-700 rounded-lg p-4 cursor-pointer hover:border-slate-600 transition-colors`}
+      className={`${stateStyle.bg} border border-[var(--grey)] rounded-lg p-4 cursor-pointer hover:border-[var(--grey-mid)] transition-colors`}
       onClick={onOpen}
     >
       <div className="flex items-start gap-3">
         <span className={`text-lg ${stateStyle.color}`}>{stateStyle.icon}</span>
         <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-slate-100 leading-tight">{getTitle(issue)}</h3>
+          <h3 className="font-medium text-[var(--white)] leading-tight">{getTitle(issue)}</h3>
           <div className="flex items-center gap-3 mt-2 text-sm">
             <span className={stateStyle.color}>{issue.state}</span>
             <span className={priorityInfo.color}>{priorityInfo.label}</span>
-            <span className="text-slate-500">{getType(issue)}</span>
+            <span className="text-[var(--grey-muted)]">{getType(issue)}</span>
           </div>
           {lastActivity && (
-            <div className="text-xs text-slate-500 mt-2">
+            <div className="text-xs text-[var(--grey-muted)] mt-2">
               Last activity: {new Date(lastActivity).toLocaleString()}
             </div>
           )}
@@ -52,11 +52,11 @@ export function IssueRow({ issue, onOpen }: IssueCardProps) {
 
   return (
     <div
-      className="flex items-center gap-3 px-3 py-2 rounded hover:bg-slate-800 cursor-pointer transition-colors"
+      className="flex items-center gap-3 px-3 py-2 rounded hover:bg-[var(--grey-dim)] cursor-pointer transition-colors"
       onClick={onOpen}
     >
       <span className={`${stateStyle.color}`}>{stateStyle.icon}</span>
-      <span className="flex-1 text-sm text-slate-200 truncate">{getTitle(issue)}</span>
+      <span className="flex-1 text-sm text-[var(--white)] truncate">{getTitle(issue)}</span>
       <span className={`text-xs ${priorityInfo.color}`}>{priorityInfo.label}</span>
     </div>
   );

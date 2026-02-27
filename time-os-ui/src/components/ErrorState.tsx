@@ -114,7 +114,7 @@ export function ErrorState({
     >
       <div className="text-red-400 text-2xl mb-2">{errorInfo.icon}</div>
       <div className="text-red-300 text-lg font-medium mb-2">{errorInfo.title}</div>
-      <p className="text-slate-400 text-sm mb-4">{errorInfo.message}</p>
+      <p className="text-[var(--grey-light)] text-sm mb-4">{errorInfo.message}</p>
       {onRetry && errorInfo.canRetry && (
         <button
           onClick={onRetry}
