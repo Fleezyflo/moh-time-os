@@ -51,6 +51,7 @@ The sandbox (Linux x86) and Molham's Mac (Darwin ARM) share the same repo folder
 ## Git Rules
 
 - Always work on branches, never commit to main
+- **Main is protected.** Cannot push directly to main — ALL changes (including doc-only) require a feature branch + PR + CI pass + merge. Never give `git push origin main`. Always: `git checkout -b <branch>`, push, create PR, `gh pr merge <N> --merge --auto`.
 - Let pre-commit hooks run normally — never use --no-verify on commits. The pre-push hook checks for a marker file that pre-commit creates. Skipping pre-commit breaks push.
 - Never commit from the sandbox — give Molham the commit command
 - Include "Deletion rationale:" in commit body when removing 20+ lines

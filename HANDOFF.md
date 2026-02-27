@@ -91,6 +91,7 @@ Read BUILD_PLAN.md "Phase 1: Slate Migration" section (line 949) for the full sp
 ## Quick Reference
 
 - **Repo:** `moh-time-os` on branch `main`
+- **Main is protected.** Cannot push directly. ALL changes (including docs) need a feature branch + PR + CI green + merge. Use `gh pr merge <N> --merge --auto` to auto-merge once checks pass.
 - **UI root:** `time-os-ui/src/`
 - **Design tokens:** `design/system/tokens.css`
 - **Accent color (D1):** `#3b82f6` (blue)
