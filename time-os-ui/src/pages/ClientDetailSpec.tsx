@@ -1,14 +1,16 @@
 // Client Detail Page — Spec §3
 // 5 Tabs: Overview, Engagements, Financials, Signals, Team
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useParams } from '@tanstack/react-router';
 import { PageLayout } from '../components/layout/PageLayout';
 import { SummaryGrid } from '../components/layout/SummaryGrid';
 import { MetricCard } from '../components/layout/MetricCard';
+import { TabContainer, type TabDef } from '../components/layout/TabContainer';
+import { TrajectorySparkline } from '../components/layout/TrajectorySparkline';
+import * as api from '../lib/api';
+import { useClientTrajectory } from '../intelligence/hooks';
 import type { Tier, Severity } from '../types/spec';
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v2';
 
 // Types for this page
 interface ClientDetail {
@@ -123,7 +125,7 @@ interface TeamMember {
 // Tab definitions
 type TabId = 'overview' | 'engagements' | 'financials' | 'signals' | 'team';
 
-const TABS: { id: TabId; label: string }[] = [
+const TABS: TabDef<TabId>[] = [
   { id: 'overview', label: 'Overview' },
   { id: 'engagements', label: 'Engagements' },
   { id: 'financials', label: 'Financials' },
@@ -186,76 +188,77 @@ export function ClientDetailSpec() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function fetchClient() {
-      setLoading(true);
-      try {
-        const res = await fetch(`${API_BASE}/clients/${clientId}`);
-        if (!res.ok) throw new Error('Failed to fetch client');
-        const data = await res.json();
+  // Trajectory data for sparkline (from intelligence API) — must be before early returns
+  const { data: trajectoryData } = useClientTrajectory(clientId);
+  const trajectoryPoints = (trajectoryData?.windows || []).map((w) => ({
+    date: w.start,
+    value: w.metrics?.composite_score ?? w.metrics?.health_score ?? 0,
+  }));
 
-        // Transform nested API response to flat structure expected by UI
-        const financials = data.financials || {};
-        const overview = data.overview || {};
-        const signals = data.signals || {};
-        const engagements = data.engagements || {};
+  const loadClient = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await api.fetchClientDetail(clientId);
 
-        const transformed: ClientDetail = {
-          ...data,
-          // Flatten financials
-          issued_ytd: financials.issued_ytd || 0,
-          issued_year: financials.issued_prior_year || 0,
-          paid_ytd: financials.paid_ytd || 0,
-          paid_year: financials.paid_prior_year || 0,
-          issued_lifetime: financials.issued_lifetime || 0,
-          paid_lifetime: financials.paid_lifetime || 0,
-          ar_outstanding: financials.ar_outstanding || 0,
-          ar_overdue: financials.ar_overdue || 0,
-          ar_overdue_pct: financials.ar_overdue_pct || 0,
-          // Flatten overview
-          top_issues: overview.top_issues || [],
-          recent_positive_signals: overview.recent_positive_signals || [],
-          // Flatten signals summary
-          signals_good: signals.good || 0,
-          signals_neutral: signals.neutral || 0,
-          signals_bad: signals.bad || 0,
-          // Flatten engagements
-          brands: engagements.brands || [],
-          active_engagements: (engagements.brands || []).reduce(
-            (sum: number, b: Brand) => sum + (b.engagements?.length || 0),
-            0
-          ),
-          // Defaults for other fields
-          open_tasks: 0,
-          tasks_overdue: 0,
-          invoices: [],
-          ar_aging: [],
-          team_members: [],
-          signals: [],
-        };
+      // Transform nested API response to flat structure expected by UI
+      const financials = (data.financials || {}) as Record<string, unknown>;
+      const overview = (data.overview || {}) as Record<string, unknown>;
+      const signals = (data.signals || {}) as Record<string, unknown>;
+      const engagements = (data.engagements || {}) as Record<string, unknown>;
+      const brands = (engagements.brands || []) as Brand[];
 
-        setClient(transformed);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : 'Unknown error');
-      } finally {
-        setLoading(false);
-      }
+      const transformed: ClientDetail = {
+        ...(data as unknown as ClientDetail),
+        // Flatten financials
+        issued_ytd: (financials.issued_ytd as number) || 0,
+        issued_year: (financials.issued_prior_year as number) || 0,
+        paid_ytd: (financials.paid_ytd as number) || 0,
+        paid_year: (financials.paid_prior_year as number) || 0,
+        issued_lifetime: (financials.issued_lifetime as number) || 0,
+        paid_lifetime: (financials.paid_lifetime as number) || 0,
+        ar_outstanding: (financials.ar_outstanding as number) || 0,
+        ar_overdue: (financials.ar_overdue as number) || 0,
+        ar_overdue_pct: (financials.ar_overdue_pct as number) || 0,
+        // Flatten overview
+        top_issues: (overview.top_issues as ClientIssue[]) || [],
+        recent_positive_signals: (overview.recent_positive_signals as Signal[]) || [],
+        // Flatten signals summary
+        signals_good: (signals.good as number) || 0,
+        signals_neutral: (signals.neutral as number) || 0,
+        signals_bad: (signals.bad as number) || 0,
+        // Flatten engagements
+        brands,
+        active_engagements: brands.reduce(
+          (sum: number, b: Brand) => sum + (b.engagements?.length || 0),
+          0
+        ),
+        // Defaults for other fields
+        open_tasks: 0,
+        tasks_overdue: 0,
+        invoices: [],
+        ar_aging: [],
+        team_members: [],
+        signals: [],
+      };
+
+      setClient(transformed);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Unknown error');
+    } finally {
+      setLoading(false);
     }
-    fetchClient();
   }, [clientId]);
 
-  // Execute issue action
+  useEffect(() => {
+    loadClient();
+  }, [loadClient]);
+
+  // Execute issue action via typed API
   const executeIssueAction = async (issueId: string, action: string) => {
     try {
-      const res = await fetch(`${API_BASE}/issues/${issueId}/transition?actor=user`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action }),
-      });
-      if (!res.ok) throw new Error('Action failed');
-      // Refresh client data
-      const clientRes = await fetch(`${API_BASE}/clients/${clientId}`);
-      if (clientRes.ok) setClient(await clientRes.json());
+      await api.changeIssueState(issueId, action as api.IssueState);
+      loadClient();
     } catch (e) {
       alert(e instanceof Error ? e.message : 'Action failed');
     }
@@ -313,14 +316,19 @@ export function ClientDetailSpec() {
         />
       </SummaryGrid>
 
-      {/* Health bar */}
+      {/* Health bar with trajectory sparkline */}
       <div className="bg-[var(--grey-dim)] rounded-lg p-4 mb-4">
         <div className="flex items-center justify-between text-sm mb-2">
           <span className="text-[var(--grey-light)]">Health Progress</span>
-          <span className={`font-medium ${getHealthColor(healthScore)}`}>
-            {healthScore}
-            <span className="text-[var(--grey)]"> ({client.health_label || 'provisional'})</span>
-          </span>
+          <div className="flex items-center gap-3">
+            {trajectoryPoints.length >= 2 && (
+              <TrajectorySparkline data={trajectoryPoints} width={120} height={28} showArea />
+            )}
+            <span className={`font-medium ${getHealthColor(healthScore)}`}>
+              {healthScore}
+              <span className="text-[var(--grey)]"> ({client.health_label || 'provisional'})</span>
+            </span>
+          </div>
         </div>
         <div className="h-2 bg-[var(--grey)] rounded-full overflow-hidden">
           <div
@@ -331,43 +339,33 @@ export function ClientDetailSpec() {
       </div>
 
       {/* Tabs */}
-      <div className="bg-[var(--grey-dim)] rounded-lg p-4">
-        <div className="flex gap-1 border-b border-[var(--grey)] -mb-4 -mx-4 px-4">
-          {TABS.map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 text-sm font-medium rounded-t transition-colors ${
-                activeTab === tab.id
-                  ? 'bg-[var(--black)] text-[var(--white)]'
-                  : 'text-[var(--grey-light)] hover:text-[var(--white)] hover:bg-[var(--grey)]'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Tab Content */}
-        <div className="pt-4">
-          {activeTab === 'overview' && (
-            <OverviewTab client={client} onIssueAction={executeIssueAction} />
-          )}
-          {activeTab === 'engagements' && <EngagementsTab brands={client.brands || []} />}
-          {activeTab === 'financials' && <FinancialsTab client={client} />}
-          {activeTab === 'signals' && (
-            <SignalsTab
-              signals={client.signals || []}
-              summary={{
-                good: client.signals_good || 0,
-                neutral: client.signals_neutral || 0,
-                bad: client.signals_bad || 0,
-              }}
-            />
-          )}
-          {activeTab === 'team' && <TeamTab members={client.team_members || []} />}
-        </div>
-      </div>
+      <TabContainer tabs={TABS} activeTab={activeTab} onTabChange={setActiveTab}>
+        {(tab) => {
+          switch (tab) {
+            case 'overview':
+              return <OverviewTab client={client} onIssueAction={executeIssueAction} />;
+            case 'engagements':
+              return <EngagementsTab brands={client.brands || []} />;
+            case 'financials':
+              return <FinancialsTab client={client} />;
+            case 'signals':
+              return (
+                <SignalsTab
+                  signals={client.signals || []}
+                  summary={{
+                    good: client.signals_good || 0,
+                    neutral: client.signals_neutral || 0,
+                    bad: client.signals_bad || 0,
+                  }}
+                />
+              );
+            case 'team':
+              return <TeamTab members={client.team_members || []} />;
+            default:
+              return null;
+          }
+        }}
+      </TabContainer>
     </PageLayout>
   );
 }

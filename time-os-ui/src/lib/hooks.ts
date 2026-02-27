@@ -118,6 +118,31 @@ export function useEvidence(entityType: string, entityId: string) {
   return useFetch(() => api.fetchEvidence(entityType, entityId), [entityType, entityId]);
 }
 
+// Client detail (full detail with nested sections)
+export function useClientDetail(clientId: string) {
+  return useFetch(() => api.fetchClientDetail(clientId), [clientId]);
+}
+
+// Client team involvement
+export function useClientTeam(clientId: string) {
+  return useFetch(() => api.fetchClientTeam(clientId), [clientId]);
+}
+
+// Client invoices
+export function useClientInvoices(clientId: string) {
+  return useFetch(() => api.fetchClientInvoices(clientId), [clientId]);
+}
+
+// Client AR aging
+export function useClientARAging(clientId: string) {
+  return useFetch(() => api.fetchClientARAging(clientId), [clientId]);
+}
+
+// Team workload distribution
+export function useTeamWorkload() {
+  return useFetch(() => api.fetchTeamWorkload(), []);
+}
+
 // Inbox items with filters
 export function useInbox(filters: api.InboxFilters = {}) {
   return useFetch(

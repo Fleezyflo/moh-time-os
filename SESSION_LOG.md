@@ -2,11 +2,11 @@
 
 ## Current State
 
-- **Current phase:** Phase 3 IN PROGRESS (Page Redesign -- Core). Sub-phases 3.1 (Portfolio) merged, 3.2 (Inbox Enhancement) in progress.
+- **Current phase:** Phase 3 IN PROGRESS (Page Redesign -- Core). Sub-phases 3.1-3.2 merged, 3.3+3.4 code ready pending commit.
 - **Current track:** T2 (Existing Page Redesign)
 - **Blocked by:** Nothing -- main is clean.
 - **D1/D2:** Resolved. Blue `#3b82f6`, slate-400 at 5.1:1.
-- **Next session:** Complete Phase 3 -- sub-phases 3.3-3.5 after 3.2 merges.
+- **Next session:** Complete Phase 3 -- 3.3+3.4 commit/merge, then 3.5 (Operations page).
 
 ## Session History
 
@@ -318,5 +318,28 @@
 - **Files changed:** 4 modified, 2 new.
   - Modified: `lib/api.ts`, `lib/hooks.ts`, `pages/Inbox.tsx`, `SESSION_LOG.md`
   - New: `components/inbox/InboxCategoryTabs.tsx`, `components/inbox/index.ts`
+- **No new routes** -- no system-map regen needed.
+- **PRs:** PR #36 (merged).
+- **Lessons:**
+  4. Always regenerate system-map when adding UI routes to `router.tsx`.
+  5. Never run git commands from sandbox -- causes stale `.git/index.lock`.
+  6. Governance checks need "delet|remov|deprecat|cleanup" keyword when >20 deletions -- "Removed" works.
+  7. Run prettier on ALL modified .ts/.tsx files (not just new ones) before committing.
+
+### Session 8 (Phase 3.3+3.4: Client + Team Enhancement) -- 2026-02-27
+
+- **Type:** A (Build)
+- **Phase:** Phase 3 (T2), sub-phases 3.3+3.4
+- **Work done:**
+  - **TabContainer** (`components/layout/TabContainer.tsx`): Reusable generic tab component extracted from ClientDetailSpec inline pattern. Supports controlled/uncontrolled mode, render-prop children, optional badge counts. Uses same styling as original.
+  - **TrajectorySparkline** (`components/layout/TrajectorySparkline.tsx`): Semantic re-export of `intelligence/components/Sparkline` for page headers.
+  - **New API functions** in `lib/api.ts`: `fetchClientDetail()`, `fetchClientTeam()`, `fetchClientInvoices()`, `fetchClientARAging()`, `fetchTeamWorkload()` (with `TeamWorkloadMember` interface).
+  - **New hooks** in `lib/hooks.ts`: `useClientDetail()`, `useClientTeam()`, `useClientInvoices()`, `useClientARAging()`, `useTeamWorkload()`.
+  - **ClientDetailSpec refactored** (`pages/ClientDetailSpec.tsx`): Replaced inline `fetch()` with `api.fetchClientDetail()`. Replaced inline issue action fetch with `api.changeIssueState()`. Replaced inline tab rendering with `TabContainer`. Added `TrajectorySparkline` in health bar header using `useClientTrajectory()` from intelligence hooks.
+  - **TeamDetail enhanced** (`pages/TeamDetail.tsx`): Added trajectory sparkline in member details header using `usePersonTrajectory()`. Shows alongside load level badge.
+  - **CLAUDE.md updated**: Added sandbox rule "never run git from sandbox" (Session 8).
+- **Files changed:** 6 modified, 2 new.
+  - Modified: `lib/api.ts`, `lib/hooks.ts`, `pages/ClientDetailSpec.tsx`, `pages/TeamDetail.tsx`, `SESSION_LOG.md`, `HANDOFF.md`
+  - New: `components/layout/TabContainer.tsx`, `components/layout/TrajectorySparkline.tsx`
 - **No new routes** -- no system-map regen needed.
 - **PRs:** Pending commit and PR creation.

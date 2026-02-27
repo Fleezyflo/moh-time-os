@@ -1,42 +1,36 @@
 # Session Handoff
 
-**Last updated:** 2026-02-27, Session 7 continued (Phase 3.2 complete, pending commit)
-**Branch:** `main` (Phase 3.1 merged as PR #35)
+**Last updated:** 2026-02-27, Session 8 (Phase 3.3+3.4 code ready, pending commit)
+**Branch:** `main` (Phases 3.1-3.2 merged as PR #35, #36)
 
 ## What Just Happened
 
-Session 7 continued: Phase 3.1 (Portfolio Page) merged as PR #35. Phase 3.2 (Inbox Enhancement) code complete, pending commit.
+Session 8: Phase 3.2 (Inbox Enhancement) merged as PR #36. Phase 3.3+3.4 (Client + Team Enhancement) code complete, pending commit.
 
-### Phase 3.1 -- Portfolio Page (MERGED, PR #35)
-- All 26 CI checks green after regenerating `docs/system-map.json`
-- New rule: always regenerate system-map when adding UI routes to `router.tsx`
+### Phase 3.2 -- Inbox Enhancement (MERGED, PR #36)
+- All 26 CI checks green after fixing prettier on modified files and adding "Removed" keyword for governance
 
-### Phase 3.2 -- Inbox Enhancement (code ready, needs commit)
-- New fetch functions in `lib/api.ts`: `fetchInbox()`, `fetchInboxCounts()`, `fetchInboxRecent()`, `executeInboxAction()` with typed `InboxFilters` interface
-- New hooks in `lib/hooks.ts`: `useInbox()`, `useInboxCounts()`, `useInboxRecent()`
-- New `components/inbox/InboxCategoryTabs.tsx` -- pill-style category tabs for filtering by `InboxItemType`, with counts from API
-- Refactored `pages/Inbox.tsx` to use `api.*` functions instead of raw `fetch()`, added category filter with server-side type filtering
+### Phase 3.3+3.4 -- Client + Team Enhancement (code ready, needs commit)
+- New `TabContainer` component in `components/layout/TabContainer.tsx` -- generic reusable tab component with controlled/uncontrolled mode, render-prop children, optional badge counts
+- New `TrajectorySparkline` re-export in `components/layout/TrajectorySparkline.tsx`
+- New API functions in `lib/api.ts`: `fetchClientDetail()`, `fetchClientTeam()`, `fetchClientInvoices()`, `fetchClientARAging()`, `fetchTeamWorkload()` with `TeamWorkloadMember` interface
+- New hooks in `lib/hooks.ts`: `useClientDetail()`, `useClientTeam()`, `useClientInvoices()`, `useClientARAging()`, `useTeamWorkload()`
+- Refactored `ClientDetailSpec.tsx`: replaced inline `fetch()` with `api.fetchClientDetail()`, replaced inline tabs with `TabContainer`, added `TrajectorySparkline` in health bar
+- Enhanced `TeamDetail.tsx`: added trajectory sparkline in member details header
 
 ## What's Next
 
-### Immediate: commit and merge Phase 3.2
+### Immediate: commit and merge Phase 3.3+3.4
 
-1. Create branch `feat/phase-3-inbox-hooks` from main
-2. Run prettier on new files: `cd time-os-ui && pnpm exec prettier --write src/components/inbox/InboxCategoryTabs.tsx src/components/inbox/index.ts && cd ..`
+1. Pull latest main (PR #36 merged), create branch `feat/phase-3-client-team`
+2. Run prettier on new/modified files
 3. Run tsc: `cd time-os-ui && npx tsc --noEmit && cd ..`
 4. Commit, push, create PR, auto-merge
 5. No system-map regen needed (no new routes)
 
-### After Phase 3.2 merges: Phase 3.3+3.4 (Client + Team Enhancement)
-- Create reusable `TabContainer` component (extracted from inline tab patterns)
-- Create `TrajectorySparkline` component (reusable sparkline for health scores)
-- Refactor `ClientDetailSpec.tsx` to use named hook instead of inline fetch
-- Wire `useTeamWorkload()` hook to `/api/team/workload` endpoint
-- See BUILD_PLAN.md line 1061
-
-### After 3.3+3.4: Phase 3.5 (Operations Page)
+### After 3.3+3.4 merges: Phase 3.5 (Operations Page)
 - New `Operations.tsx` page at `/ops` with tabs for data quality, watchers, couplings
-- **Must regenerate system-map** (new route)
+- **Must regenerate system-map** (new route in router.tsx)
 
 ## Key Rules (learned hard way in Sessions 1-7)
 
@@ -63,6 +57,8 @@ Session 7 continued: Phase 3.1 (Portfolio Page) merged as PR #35. Phase 3.2 (Inb
 21. **Auto-merge PRs.** Always `gh pr merge --merge --auto` after creating. Watch with `gh pr checks <N> --watch`.
 22. **Force-push after amend.** If you amend a pushed commit, use `git push --force-with-lease`.
 23. **Regenerate system-map after adding UI routes.** `uv run python scripts/generate_system_map.py` then include `docs/system-map.json` in the commit. (Session 7: PR #35 CI failed until system-map was regenerated.)
+24. **Never run git from sandbox.** Creates stale `.git/index.lock` that blocks Mac operations. Use Read/Glob/Grep tools instead. (Session 8.)
+25. **Prettier ALL modified .ts/.tsx files.** Not just new files -- modified files also need prettier before committing. (Session 8: PR #36 CI failed until Inbox.tsx was formatted.)
 
 ## Documents to Read (in order)
 
