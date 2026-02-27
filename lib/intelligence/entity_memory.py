@@ -16,6 +16,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from lib import safe_sql
+
 logger = logging.getLogger(__name__)
 
 
@@ -262,15 +264,15 @@ class EntityMemory:
         conn.row_factory = sqlite3.Row
         try:
             if interaction_types:
-                placeholders = ",".join("?" for _ in interaction_types)
+                placeholders = safe_sql.in_placeholders(len(interaction_types))
+                where = (
+                    f"entity_type = ? AND entity_id = ? AND interaction_type IN ({placeholders})"
+                )
+                sql = safe_sql.select(
+                    "entity_interactions", where=where, order_by="created_at DESC", suffix="LIMIT ?"
+                )
                 rows = conn.execute(
-                    f"""
-                    SELECT * FROM entity_interactions
-                    WHERE entity_type = ? AND entity_id = ?
-                    AND interaction_type IN ({placeholders})
-                    ORDER BY created_at DESC
-                    LIMIT ?
-                    """,  # noqa: S608
+                    sql,
                     (entity_type, entity_id, *interaction_types, limit),
                 ).fetchall()
             else:

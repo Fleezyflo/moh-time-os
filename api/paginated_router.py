@@ -24,7 +24,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from lib import paths
+from lib import paths, safe_sql
 from lib.api.pagination import PaginatedResponse, PaginationParams, paginate, pagination_params
 
 logger = logging.getLogger(__name__)
@@ -64,11 +64,9 @@ def _query_table(
     try:
         cursor = conn.cursor()
         # Table and column names are hardcoded strings from this file,
-        # not user input — safe to use directly.
-        cursor.execute(
-            f"SELECT {columns} FROM {table} ORDER BY {order_by} LIMIT ?",  # noqa: S608
-            (limit,),
-        )
+        # not user input — safe to validate directly.
+        sql = safe_sql.select(table, columns=columns, order_by=order_by, suffix="LIMIT ?")
+        cursor.execute(sql, (limit,))
         return [dict(row) for row in cursor.fetchall()]
     except sqlite3.OperationalError as e:
         logger.error("Query failed on table '%s': %s", table, e)

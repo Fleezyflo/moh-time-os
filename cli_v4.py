@@ -64,28 +64,24 @@ def cmd_status():
 
     # Artifacts
     a = status["artifacts"]
-    print(
-        f"\n📦 ARTIFACTS: {a['total_artifacts']} total, {a['total_excerpts']} excerpts"
-    )
+    print(f"\n📦 ARTIFACTS: {a['total_artifacts']} total, {a['total_excerpts']} excerpts")
     if a["by_source"]:
         sources = ", ".join(f"{k}:{v}" for k, v in list(a["by_source"].items())[:5])
         print(f"   Sources: {sources}")
 
     # Identities
     i = status["identities"]
-    print(
-        f"\n👤 IDENTITIES: {i['active_profiles']} profiles, {i['active_claims']} claims"
-    )
+    print(f"\n👤 IDENTITIES: {i['active_profiles']} profiles, {i['active_claims']} claims")
     if i["by_type"]:
         types = ", ".join(f"{k}:{v}" for k, v in i["by_type"].items())
         print(f"   Types: {types}")
 
     # Links
-    l = status["links"]
-    total_links = sum(l.get("links_by_status", {}).values())
+    link_data = status["links"]
+    total_links = sum(link_data.get("links_by_status", {}).values())
     print(f"\n🔗 ENTITY LINKS: {total_links} total")
-    if l.get("links_by_status"):
-        statuses = ", ".join(f"{k}:{v}" for k, v in l["links_by_status"].items())
+    if link_data.get("links_by_status"):
+        statuses = ", ".join(f"{k}:{v}" for k, v in link_data["links_by_status"].items())
         print(f"   Status: {statuses}")
 
     # Signals
@@ -127,9 +123,7 @@ def cmd_status():
 
     # Reports
     r = status.get("reports", {})
-    print(
-        f"\n📊 REPORTS: {r.get('templates', 0)} templates, {r.get('snapshots', 0)} snapshots"
-    )
+    print(f"\n📊 REPORTS: {r.get('templates', 0)} templates, {r.get('snapshots', 0)} snapshots")
 
     # Policy
     pol = status.get("policy", {})
@@ -175,9 +169,7 @@ def cmd_cycle():
                     print(f"    {d['detector_id']}: {sig_count} signals")
 
         if stage == "proposals":
-            print(
-                f"    Created: {data.get('created', 0)}, Updated: {data.get('updated', 0)}"
-            )
+            print(f"    Created: {data.get('created', 0)}, Updated: {data.get('updated', 0)}")
 
 
 def cmd_brief():
@@ -194,9 +186,7 @@ def cmd_brief():
     print(
         f"   Active Signals: {s['active_signals']} ({s['critical_signals']} critical, {s['high_signals']} high)"
     )
-    print(
-        f"   Open Proposals: {s['open_proposals']} ({s['surfaceable_proposals']} surfaceable)"
-    )
+    print(f"   Open Proposals: {s['open_proposals']} ({s['surfaceable_proposals']} surfaceable)")
     print(f"   Open Issues: {s['open_issues']} (watchers: {s['active_watchers']})")
 
     if brief["proposals"]:
@@ -204,11 +194,7 @@ def cmd_brief():
         print("-" * 70)
         for p in brief["proposals"][:5]:
             trend_icon = (
-                "↑"
-                if p["trend"] == "worsening"
-                else "↓"
-                if p["trend"] == "improving"
-                else "→"
+                "↑" if p["trend"] == "worsening" else "↓" if p["trend"] == "improving" else "→"
             )
             print(f"  [{p['proposal_id'][:12]}] {p['headline'][:50]}")
             print(
@@ -220,17 +206,13 @@ def cmd_brief():
         print("-" * 70)
         for i in brief["issues"][:5]:
             print(f"  [{i['issue_id'][:12]}] {i['headline'][:50]}")
-            print(
-                f"     State: {i['state']} | Priority: {i['priority']} | Type: {i['issue_type']}"
-            )
+            print(f"     State: {i['state']} | Priority: {i['priority']} | Type: {i['issue_type']}")
 
     if brief["critical_signals"]:
         print("\n🚨 CRITICAL SIGNALS")
         print("-" * 70)
         for sig in brief["critical_signals"]:
-            print(
-                f"  {sig['signal_type']}: {sig['entity_ref_type']}/{sig['entity_ref_id'][:12]}"
-            )
+            print(f"  {sig['signal_type']}: {sig['entity_ref_type']}/{sig['entity_ref_id'][:12]}")
 
     print("\n" + "=" * 70)
 
@@ -319,9 +301,7 @@ def cmd_signals(signal_type: str = None):
 
     for s in signals:
         sev = s["severity"].upper()[:4]
-        print(
-            f"  [{sev}] {s['signal_type']:25} {s['entity_ref_type']}/{s['entity_ref_id'][:12]}"
-        )
+        print(f"  [{sev}] {s['signal_type']:25} {s['entity_ref_type']}/{s['entity_ref_id'][:12]}")
 
 
 def cmd_detect():
@@ -336,9 +316,7 @@ def cmd_detect():
         if "error" in d:
             print(f"  ✗ {d['detector_id']}: {d['error']}")
         else:
-            print(
-                f"  ✓ {d['detector_id']}: {d['signals_created']} signals ({d['duration_ms']}ms)"
-            )
+            print(f"  ✓ {d['detector_id']}: {d['signals_created']} signals ({d['duration_ms']}ms)")
 
 
 def cmd_proposals():
@@ -351,13 +329,7 @@ def cmd_proposals():
 
     for p in proposals:
         exp = p["ui_exposure_level"][:4]
-        trend = (
-            "↑"
-            if p["trend"] == "worsening"
-            else "↓"
-            if p["trend"] == "improving"
-            else "→"
-        )
+        trend = "↑" if p["trend"] == "worsening" else "↓" if p["trend"] == "improving" else "→"
         print(f"  [{p['proposal_id'][:12]}] score={p['score']:.1f} {trend} [{exp}]")
         print(f"      {p['headline'][:65]}")
 
@@ -486,9 +458,7 @@ def cmd_reports():
         return
 
     for s in snapshots:
-        print(
-            f"  [{s['snapshot_id'][:12]}] {s['scope_ref_type']}/{s['scope_ref_id'][:12]}"
-        )
+        print(f"  [{s['snapshot_id'][:12]}] {s['scope_ref_type']}/{s['scope_ref_id'][:12]}")
         print(f"      Period: {s['period_start'][:10]} to {s['period_end'][:10]}")
 
 

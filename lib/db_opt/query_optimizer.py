@@ -16,6 +16,8 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
+from lib import safe_sql
+
 logger = logging.getLogger(__name__)
 
 
@@ -102,17 +104,15 @@ class BatchLoader:
             return {}
 
         # Build parameterized IN query
-        placeholders = ",".join("?" * len(self.ids))
+        placeholders = safe_sql.in_placeholders(len(self.ids))
         column_list = ", ".join([self.id_column] + self.columns)
 
-        sql = f"""
-            SELECT {column_list}
-            FROM {self.table}
-            WHERE {self.id_column} IN ({placeholders})
-        """  # noqa: S608
+        sql = safe_sql.select_columns_from_table_where_in(
+            column_list, self.table, self.id_column, placeholders
+        )
 
         try:
-            cursor = self.conn.execute(sql, list(self.ids))  # noqa: S608
+            cursor = self.conn.execute(sql, list(self.ids))
             for row in cursor.fetchall():
                 row_dict = dict(row)
                 id_val = row_dict[self.id_column]
@@ -161,13 +161,11 @@ def prefetch_related(
         columns = ["*"]
 
     column_list = ", ".join(columns)
-    placeholders = ",".join("?" * len(ids))
+    placeholders = safe_sql.in_placeholders(len(ids))
 
-    sql = f"""
-        SELECT {id_column}, {column_list}
-        FROM {table}
-        WHERE {id_column} IN ({placeholders})
-    """  # noqa: S608
+    sql = safe_sql.select_columns_from_table_where_in(
+        id_column + ", " + column_list, table, id_column, placeholders
+    )
 
     try:
         cursor = conn.execute(sql, ids)

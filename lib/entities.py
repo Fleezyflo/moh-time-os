@@ -4,6 +4,7 @@ import json
 import uuid
 from dataclasses import dataclass, field
 
+from . import safe_sql
 from .db import validate_identifier
 from .store import get_connection, now_iso
 
@@ -227,11 +228,11 @@ def update_client(client_id: str, **changes) -> bool:
 
     for k in updates:
         validate_identifier(k)
-    set_clause = ", ".join(f"{k} = ?" for k in updates)
     values = list(updates.values()) + [client_id]
 
     with get_connection() as conn:
-        cursor = conn.execute(f"UPDATE clients SET {set_clause} WHERE id = ?", values)  # noqa: S608
+        sql = safe_sql.update("clients", list(updates.keys()))
+        cursor = conn.execute(sql, values)
         return cursor.rowcount > 0
 
 
@@ -248,14 +249,12 @@ def list_clients(tier: str = None, health: str = None, limit: int = 500) -> list
         params.append(health)
 
     # where is built from hardcoded condition strings above (all parameterized)
-    where = " AND ".join(conditions) if conditions else "1=1"
+    where = " AND ".join(conditions) if conditions else None
     params.append(limit)
 
     with get_connection() as conn:
-        rows = conn.execute(
-            f"SELECT * FROM clients WHERE {where} ORDER BY tier, name LIMIT ?",  # noqa: S608
-            params,
-        ).fetchall()
+        sql = safe_sql.select("clients", where=where, order_by="tier, name", suffix="LIMIT ?")
+        rows = conn.execute(sql, params).fetchall()
 
         return [_row_to_client(row) for row in rows]
 
@@ -466,11 +465,11 @@ def update_person(person_id: str, **changes) -> bool:
 
     for k in updates:
         validate_identifier(k)
-    set_clause = ", ".join(f"{k} = ?" for k in updates)
     values = list(updates.values()) + [person_id]
 
     with get_connection() as conn:
-        cursor = conn.execute(f"UPDATE people SET {set_clause} WHERE id = ?", values)  # noqa: S608
+        sql = safe_sql.update("people", list(updates.keys()))
+        cursor = conn.execute(sql, values)
         return cursor.rowcount > 0
 
 
@@ -487,14 +486,12 @@ def list_people(type: str = None, client_id: str = None, limit: int = 500) -> li
         params.append(client_id)
 
     # where is built from hardcoded condition strings above (all parameterized)
-    where = " AND ".join(conditions) if conditions else "1=1"
+    where = " AND ".join(conditions) if conditions else None
     params.append(limit)
 
     with get_connection() as conn:
-        rows = conn.execute(
-            f"SELECT * FROM people WHERE {where} ORDER BY name LIMIT ?",  # noqa: S608
-            params,
-        ).fetchall()
+        sql = safe_sql.select("people", where=where, order_by="name", suffix="LIMIT ?")
+        rows = conn.execute(sql, params).fetchall()
 
         return [_row_to_person(row) for row in rows]
 
@@ -696,11 +693,11 @@ def update_project(project_id: str, **changes) -> bool:
 
     for k in updates:
         validate_identifier(k)
-    set_clause = ", ".join(f"{k} = ?" for k in updates)
     values = list(updates.values()) + [project_id]
 
     with get_connection() as conn:
-        cursor = conn.execute(f"UPDATE projects SET {set_clause} WHERE id = ?", values)  # noqa: S608
+        sql = safe_sql.update("projects", list(updates.keys()))
+        cursor = conn.execute(sql, values)
         return cursor.rowcount > 0
 
 
@@ -722,14 +719,12 @@ def list_projects(
         params.append(health)
 
     # where is built from hardcoded condition strings above (all parameterized)
-    where = " AND ".join(conditions) if conditions else "1=1"
+    where = " AND ".join(conditions) if conditions else None
     params.append(limit)
 
     with get_connection() as conn:
-        rows = conn.execute(
-            f"SELECT * FROM projects WHERE {where} ORDER BY name LIMIT ?",  # noqa: S608
-            params,
-        ).fetchall()
+        sql = safe_sql.select("projects", where=where, order_by="name", suffix="LIMIT ?")
+        rows = conn.execute(sql, params).fetchall()
 
         return [_row_to_project(row) for row in rows]
 

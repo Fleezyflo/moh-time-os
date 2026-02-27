@@ -13,7 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from lib import db as db_module
-from lib import paths
+from lib import paths, safe_sql
 
 logger = logging.getLogger(__name__)
 
@@ -76,13 +76,10 @@ class StateStore:
         columns = list(data.keys())
         for col in columns:
             db_module.validate_identifier(col)
-        placeholders = ["?" for _ in columns]
         values = [json.dumps(v) if isinstance(v, dict | list) else v for v in data.values()]
 
         with self._get_conn() as conn:
-            cols_sql = ",".join(columns)
-            vals_sql = ",".join(placeholders)
-            sql = f"INSERT OR REPLACE INTO {table} ({cols_sql}) VALUES ({vals_sql})"  # noqa: S608  # nosec B608
+            sql = safe_sql.insert_or_replace(table, columns)
             conn.execute(sql, values)
 
         return data.get("id", "")
@@ -96,11 +93,8 @@ class StateStore:
         columns = list(items[0].keys())
         for col in columns:
             db_module.validate_identifier(col)
-        placeholders = ["?" for _ in columns]
 
-        cols_sql = ",".join(columns)
-        vals_sql = ",".join(placeholders)
-        sql = f"INSERT OR REPLACE INTO {table} ({cols_sql}) VALUES ({vals_sql})"  # noqa: S608  # nosec B608
+        sql = safe_sql.insert_or_replace(table, columns)
 
         with self._get_conn() as conn:
             for item in items:
@@ -113,7 +107,7 @@ class StateStore:
         """Get a single row by ID."""
         db_module.validate_identifier(table)
         with self._get_conn() as conn:
-            sql = f"SELECT * FROM {table} WHERE id = ?"  # noqa: S608  # nosec B608
+            sql = safe_sql.select(table, where="id = ?")
             row = conn.execute(sql, [id]).fetchone()
             return dict(row) if row else None
 
@@ -125,22 +119,19 @@ class StateStore:
         db_module.validate_identifier(table)
         for k in data:
             db_module.validate_identifier(k)
-        sets = [f"{k} = ?" for k in data]
         values = [json.dumps(v) if isinstance(v, dict | list) else v for v in data.values()]
         values.append(id)
 
         with self._get_conn() as conn:
-            result = conn.execute(
-                f"UPDATE {table} SET {','.join(sets)} WHERE id = ?",  # noqa: S608  # nosec B608
-                values,
-            )
+            sql = safe_sql.update(table, list(data.keys()))
+            result = conn.execute(sql, values)
             return result.rowcount > 0
 
     def delete(self, table: str, id: str) -> bool:
         """Delete a row."""
         db_module.validate_identifier(table)
         with self._get_conn() as conn:
-            sql = f"DELETE FROM {table} WHERE id = ?"  # noqa: S608  # nosec B608
+            sql = safe_sql.delete(table)
             result = conn.execute(sql, [id])
             return result.rowcount > 0
 
@@ -153,9 +144,7 @@ class StateStore:
     def count(self, table: str, where: str = None, params: list = None) -> int:
         """Count rows."""
         db_module.validate_identifier(table)
-        sql = f"SELECT COUNT(*) as c FROM {table}"  # noqa: S608  # nosec B608
-        if where:
-            sql += f" WHERE {where}"
+        sql = safe_sql.select_count(table, where=where)
 
         with self._get_conn() as conn:
             row = conn.execute(sql, params or []).fetchone()

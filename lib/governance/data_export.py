@@ -21,6 +21,7 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
+from lib import safe_sql
 from lib.data_lifecycle import get_lifecycle_manager
 from lib.db import validate_identifier
 from lib.governance.anonymizer import Anonymizer
@@ -100,9 +101,8 @@ class DataExporter:
     def _get_table_columns(self, table: str) -> list[str]:
         """Get column names for a table."""
         try:
-            safe_table = validate_identifier(table)
             conn = self._get_connection()
-            cursor = conn.execute(f"PRAGMA table_info({safe_table})")  # noqa: S608
+            cursor = conn.execute(safe_sql.pragma_table_info(table))
             columns = [row[1] for row in cursor.fetchall()]
             conn.close()
             return columns
@@ -118,8 +118,6 @@ class DataExporter:
         columns: list[str] | None = None,
     ) -> tuple[str, list]:
         """Build SELECT query with WHERE clause."""
-        safe_table = validate_identifier(table)
-
         # Get all columns if not specified
         if not columns:
             columns = self._get_table_columns(table)
@@ -128,7 +126,7 @@ class DataExporter:
             raise ValueError(f"Table '{table}' does not exist or has no columns")
 
         col_list = ", ".join([f'"{validate_identifier(col)}"' for col in columns])
-        sql = f"SELECT {col_list} FROM {safe_table}"  # noqa: S608
+        sql = safe_sql.select(table, columns=col_list)
         params = []
 
         conditions = []
@@ -167,8 +165,7 @@ class DataExporter:
 
             try:
                 conn = self._get_connection()
-                safe_name = validate_identifier(table_name)
-                cursor = conn.execute(f"SELECT COUNT(*) as count FROM {safe_name}")  # noqa: S608
+                cursor = conn.execute(safe_sql.select_count(table_name))
                 row_count = cursor.fetchone()[0]
                 conn.close()
 
@@ -195,9 +192,8 @@ class DataExporter:
             return {"error": f"Table {table} is not exportable"}
 
         try:
-            safe_table = validate_identifier(table)
             conn = self._get_connection()
-            cursor = conn.execute(f"PRAGMA table_info({safe_table})")  # noqa: S608
+            cursor = conn.execute(safe_sql.pragma_table_info(table))
 
             columns = []
             for row in cursor.fetchall():
@@ -211,7 +207,7 @@ class DataExporter:
                     }
                 )
 
-            cursor = conn.execute(f"SELECT COUNT(*) as count FROM {safe_table}")  # noqa: S608
+            cursor = conn.execute(safe_sql.select_count(table))
             row_count = cursor.fetchone()[0]
             conn.close()
 
@@ -318,9 +314,8 @@ class DataExporter:
                 result_files[table] = file_path
 
                 # Count rows
-                safe_table = validate_identifier(table)
                 conn = self._get_connection()
-                cursor = conn.execute(f"SELECT COUNT(*) FROM {safe_table}")  # noqa: S608
+                cursor = conn.execute(safe_sql.select_count_bare(table))
                 count = cursor.fetchone()[0]
                 conn.close()
                 total_rows += count

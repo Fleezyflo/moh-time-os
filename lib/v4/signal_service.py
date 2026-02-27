@@ -12,6 +12,8 @@ import sqlite3
 import uuid
 from typing import Any
 
+from lib import safe_sql
+
 log = logging.getLogger("moh_time_os.v4.signal_service")
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "moh_time_os.db")
@@ -660,16 +662,14 @@ class SignalService:
                 return {"resolved_count": 0, "signal_ids": []}
 
             # Resolve each signal
-            cursor.execute(
-                """
-                UPDATE signals
-                SET status = 'resolved',
-                    resolved_at = datetime('now'),
-                    resolution = 'task_completed'
-                WHERE signal_id IN ({})
-            """.format(",".join("?" * len(signal_ids))),  # noqa: S608
-                signal_ids,
+            placeholders = safe_sql.in_placeholders(len(signal_ids))
+            sql = safe_sql.update_where_in(
+                "signals",
+                "status = 'resolved', resolved_at = datetime('now'), resolution = 'task_completed'",
+                "signal_id",
+                placeholders,
             )
+            cursor.execute(sql, signal_ids)
 
             conn.commit()
             return {"resolved_count": len(signal_ids), "signal_ids": signal_ids}
@@ -699,17 +699,15 @@ class SignalService:
             if not signal_ids:
                 return []
 
-            placeholders = ",".join("?" * len(signal_ids))
-            cursor.execute(
-                f"""
-                SELECT signal_id, signal_type, entity_ref_type, entity_ref_id,
-                       value, severity, status, detected_at, resolved_at, resolution
-                FROM signals
-                WHERE signal_id IN ({placeholders})
-                ORDER BY detected_at DESC
-            """,  # noqa: S608
-                signal_ids,
+            placeholders = safe_sql.in_placeholders(len(signal_ids))
+            sql = safe_sql.select_with_in(
+                "signal_id, signal_type, entity_ref_type, entity_ref_id, value, severity, status, detected_at, resolved_at, resolution",
+                "signals",
+                "signal_id",
+                placeholders,
+                suffix="ORDER BY detected_at DESC",
             )
+            cursor.execute(sql, signal_ids)
 
             signals = []
             for row in cursor.fetchall():

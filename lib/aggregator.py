@@ -313,16 +313,19 @@ class SnapshotAggregator:
         today_str = self.today.isoformat()
 
         # Overdue tasks
-        overdue = self._query_all(f"""
+        overdue = self._query_all(
+            """
             SELECT id, title, due_date, priority,
-                   julianday('{today_str}') - julianday(due_date) as days_overdue
+                   julianday(?) - julianday(due_date) as days_overdue
             FROM tasks
             WHERE status != 'done'
             AND due_date IS NOT NULL
-            AND due_date < '{today_str}'
+            AND due_date < ?
             ORDER BY days_overdue DESC
             LIMIT 5
-        """)  # noqa: S608
+        """,
+            (today_str, today_str),
+        )
 
         for task in overdue:
             score = 40 + min(task["days_overdue"] * 5, 25)
@@ -342,16 +345,19 @@ class SnapshotAggregator:
             )
 
         # Off-track projects
-        off_track = self._query_all(f"""
+        off_track = self._query_all(
+            """
             SELECT p.id, p.name,
-                   COUNT(CASE WHEN t.due_date < '{today_str}' AND t.status != 'done' THEN 1 END) as overdue_count
+                   COUNT(CASE WHEN t.due_date < ? AND t.status != 'done' THEN 1 END) as overdue_count
             FROM projects p
             LEFT JOIN tasks t ON t.project_id = p.id
             WHERE p.is_internal = 0
             GROUP BY p.id
             HAVING overdue_count >= 2
             LIMIT 3
-        """)  # noqa: S608
+        """,
+            (today_str,),
+        )
 
         for proj in off_track:
             risks.append(
@@ -555,16 +561,19 @@ class SnapshotAggregator:
         today_str = self.today.isoformat()
 
         metrics = (
-            self._query_one(f"""
+            self._query_one(
+                """
             SELECT
                 COUNT(DISTINCT CASE WHEN p.is_internal = 0 THEN p.id END) as total_projects,
-                COUNT(CASE WHEN t.due_date < '{today_str}' AND t.status != 'done' THEN 1 END) as overdue_tasks,
+                COUNT(CASE WHEN t.due_date < ? AND t.status != 'done' THEN 1 END) as overdue_tasks,
                 COUNT(CASE WHEN t.project_link_status = 'unlinked' THEN 1 END) as unlinked_tasks,
                 COUNT(CASE WHEN t.project_link_status = 'partial' THEN 1 END) as partial_tasks,
-                COUNT(CASE WHEN t.due_date BETWEEN '{today_str}' AND date('{today_str}', '+7 days') AND t.status != 'done' THEN 1 END) as due_7d_count
+                COUNT(CASE WHEN t.due_date BETWEEN ? AND date(?, '+7 days') AND t.status != 'done' THEN 1 END) as due_7d_count
             FROM tasks t
             LEFT JOIN projects p ON t.project_id = p.id
-        """)  # noqa: S608
+        """,
+                (today_str, today_str, today_str),
+            )
             or {}
         )
 

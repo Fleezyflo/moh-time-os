@@ -125,10 +125,20 @@ class TestResponseStatusDerivation:
         past = (datetime.now() - timedelta(hours=5)).isoformat()
 
         conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'B')")
-        conn.execute(f"""
-            INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)
-            VALUES ('comm1', 'thread1', 'test@example.com', 'Test', '{datetime.now().isoformat()}', 'c1', '{past}', 'linked')
-        """)  # noqa: S608
+        conn.execute(
+            "INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "comm1",
+                "thread1",
+                "test@example.com",
+                "Test",
+                datetime.now().isoformat(),
+                "c1",
+                past,
+                "linked",
+            ),
+        )
         conn.commit()
         conn.close()
 
@@ -145,10 +155,20 @@ class TestResponseStatusDerivation:
         future = (datetime.now() + timedelta(hours=2)).isoformat()
 
         conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'B')")
-        conn.execute(f"""
-            INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)
-            VALUES ('comm1', 'thread1', 'test@example.com', 'Test', '{datetime.now().isoformat()}', 'c1', '{future}', 'linked')
-        """)  # noqa: S608
+        conn.execute(
+            "INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "comm1",
+                "thread1",
+                "test@example.com",
+                "Test",
+                datetime.now().isoformat(),
+                "c1",
+                future,
+                "linked",
+            ),
+        )
         conn.commit()
         conn.close()
 
@@ -171,10 +191,20 @@ class TestResponseStatusDerivation:
         future = (datetime.now() + timedelta(hours=48)).isoformat()
 
         conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'C')")
-        conn.execute(f"""
-            INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)
-            VALUES ('comm1', 'thread1', 'test@example.com', 'Test', '{datetime.now().isoformat()}', 'c1', '{future}', 'linked')
-        """)  # noqa: S608
+        conn.execute(
+            "INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "comm1",
+                "thread1",
+                "test@example.com",
+                "Test",
+                datetime.now().isoformat(),
+                "c1",
+                future,
+                "linked",
+            ),
+        )
         conn.commit()
         conn.close()
 
@@ -196,10 +226,20 @@ class TestExpectedResponseByDerivation:
         stored_deadline = (datetime.now() + timedelta(hours=5)).isoformat()
 
         conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'B')")
-        conn.execute(f"""
-            INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)
-            VALUES ('comm1', 'thread1', 'test@example.com', 'Test', '{datetime.now().isoformat()}', 'c1', '{stored_deadline}', 'linked')
-        """)  # noqa: S608
+        conn.execute(
+            "INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "comm1",
+                "thread1",
+                "test@example.com",
+                "Test",
+                datetime.now().isoformat(),
+                "c1",
+                stored_deadline,
+                "linked",
+            ),
+        )
         conn.commit()
         conn.close()
 
@@ -221,10 +261,11 @@ class TestExpectedResponseByDerivation:
 
         # Tier A = VIP
         conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'VIP Client', 'A')")
-        conn.execute(f"""
-            INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, link_status)
-            VALUES ('comm1', 'thread1', 'vip@example.com', 'Test', '{received.isoformat()}', 'c1', 'linked')
-        """)  # noqa: S608
+        conn.execute(
+            "INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, link_status)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?)",
+            ("comm1", "thread1", "vip@example.com", "Test", received.isoformat(), "c1", "linked"),
+        )
         conn.commit()
         conn.close()
 
@@ -249,10 +290,19 @@ class TestExpectedResponseByDerivation:
         received = datetime.now()
 
         conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Regular Client', 'B')")
-        conn.execute(f"""
-            INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, link_status)
-            VALUES ('comm1', 'thread1', 'client@example.com', 'Test', '{received.isoformat()}', 'c1', 'linked')
-        """)  # noqa: S608
+        conn.execute(
+            "INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, link_status)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                "comm1",
+                "thread1",
+                "client@example.com",
+                "Test",
+                received.isoformat(),
+                "c1",
+                "linked",
+            ),
+        )
         conn.commit()
         conn.close()
 
@@ -277,14 +327,33 @@ class TestCommitmentBreachClassification:
         past = (datetime.now() - timedelta(days=1)).isoformat()
 
         conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'B')")
-        conn.execute(f"""
-            INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, link_status)
-            VALUES ('comm1', 'thread1', 'test@example.com', 'Test', '{datetime.now().isoformat()}', 'c1', 'linked')
-        """)  # noqa: S608
-        conn.execute(f"""
-            INSERT INTO commitments (id, type, text, deadline, status, source_type, source_id, client_id)
-            VALUES ('commit1', 'promise', 'We will deliver', '{past}', 'open', 'communication', 'thread1', 'c1')
-        """)  # noqa: S608
+        conn.execute(
+            "INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, link_status)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                "comm1",
+                "thread1",
+                "test@example.com",
+                "Test",
+                datetime.now().isoformat(),
+                "c1",
+                "linked",
+            ),
+        )
+        conn.execute(
+            "INSERT INTO commitments (id, type, text, deadline, status, source_type, source_id, client_id)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "commit1",
+                "promise",
+                "We will deliver",
+                past,
+                "open",
+                "communication",
+                "thread1",
+                "c1",
+            ),
+        )
         conn.commit()
         conn.close()
 
@@ -300,14 +369,33 @@ class TestCommitmentBreachClassification:
         soon = (datetime.now() + timedelta(hours=4)).isoformat()
 
         conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'B')")
-        conn.execute(f"""
-            INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, link_status)
-            VALUES ('comm1', 'thread1', 'test@example.com', 'Test', '{datetime.now().isoformat()}', 'c1', 'linked')
-        """)  # noqa: S608
-        conn.execute(f"""
-            INSERT INTO commitments (id, type, text, deadline, status, source_type, source_id, client_id)
-            VALUES ('commit1', 'promise', 'We will deliver', '{soon}', 'open', 'communication', 'thread1', 'c1')
-        """)  # noqa: S608
+        conn.execute(
+            "INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, link_status)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (
+                "comm1",
+                "thread1",
+                "test@example.com",
+                "Test",
+                datetime.now().isoformat(),
+                "c1",
+                "linked",
+            ),
+        )
+        conn.execute(
+            "INSERT INTO commitments (id, type, text, deadline, status, source_type, source_id, client_id)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "commit1",
+                "promise",
+                "We will deliver",
+                soon,
+                "open",
+                "communication",
+                "thread1",
+                "c1",
+            ),
+        )
         conn.commit()
         conn.close()
 
@@ -329,22 +417,52 @@ class TestHotListOrdering:
         conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c3', 'Client 3', 'B')")
 
         # Thread 1: OK (far future deadline)
-        conn.execute(f"""
-            INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)
-            VALUES ('comm1', 'thread1', 't1@example.com', 'OK Thread', '{now.isoformat()}', 'c1', '{(now + timedelta(days=7)).isoformat()}', 'linked')
-        """)  # noqa: S608
+        conn.execute(
+            "INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "comm1",
+                "thread1",
+                "t1@example.com",
+                "OK Thread",
+                now.isoformat(),
+                "c1",
+                (now + timedelta(days=7)).isoformat(),
+                "linked",
+            ),
+        )
 
         # Thread 2: OVERDUE
-        conn.execute(f"""
-            INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)
-            VALUES ('comm2', 'thread2', 't2@example.com', 'Overdue Thread', '{now.isoformat()}', 'c2', '{(now - timedelta(hours=5)).isoformat()}', 'linked')
-        """)  # noqa: S608
+        conn.execute(
+            "INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "comm2",
+                "thread2",
+                "t2@example.com",
+                "Overdue Thread",
+                now.isoformat(),
+                "c2",
+                (now - timedelta(hours=5)).isoformat(),
+                "linked",
+            ),
+        )
 
         # Thread 3: DUE (soon)
-        conn.execute(f"""
-            INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)
-            VALUES ('comm3', 'thread3', 't3@example.com', 'Due Thread', '{now.isoformat()}', 'c3', '{(now + timedelta(hours=2)).isoformat()}', 'linked')
-        """)  # noqa: S608
+        conn.execute(
+            "INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "comm3",
+                "thread3",
+                "t3@example.com",
+                "Due Thread",
+                now.isoformat(),
+                "c3",
+                (now + timedelta(hours=2)).isoformat(),
+                "linked",
+            ),
+        )
 
         conn.commit()
         conn.close()
@@ -374,11 +492,23 @@ class TestHotListCaps:
 
         # Create 15 threads
         for i in range(15):
-            conn.execute(f"INSERT INTO clients (id, name, tier) VALUES ('c{i}', 'Client {i}', 'B')")  # noqa: S608
-            conn.execute(f"""
-                INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)
-                VALUES ('comm{i}', 'thread{i}', 't{i}@example.com', 'Thread {i}', '{now.isoformat()}', 'c{i}', '{(now - timedelta(hours=i + 1)).isoformat()}', 'linked')
-            """)  # noqa: S608
+            conn.execute(
+                "INSERT INTO clients (id, name, tier) VALUES (?, ?, 'B')",
+                (f"c{i}", f"Client {i}"),
+            )
+            conn.execute(
+                "INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, 'linked')",
+                (
+                    f"comm{i}",
+                    f"thread{i}",
+                    f"t{i}@example.com",
+                    f"Thread {i}",
+                    now.isoformat(),
+                    f"c{i}",
+                    (now - timedelta(hours=i + 1)).isoformat(),
+                ),
+            )
 
         conn.commit()
         conn.close()
@@ -394,11 +524,23 @@ class TestHotListCaps:
 
         # Create 30 threads
         for i in range(30):
-            conn.execute(f"INSERT INTO clients (id, name, tier) VALUES ('c{i}', 'Client {i}', 'B')")  # noqa: S608
-            conn.execute(f"""
-                INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)
-                VALUES ('comm{i}', 'thread{i}', 't{i}@example.com', 'Thread {i}', '{now.isoformat()}', 'c{i}', '{(now - timedelta(hours=i + 1)).isoformat()}', 'linked')
-            """)  # noqa: S608
+            conn.execute(
+                "INSERT INTO clients (id, name, tier) VALUES (?, ?, 'B')",
+                (f"c{i}", f"Client {i}"),
+            )
+            conn.execute(
+                "INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, 'linked')",
+                (
+                    f"comm{i}",
+                    f"thread{i}",
+                    f"t{i}@example.com",
+                    f"Thread {i}",
+                    now.isoformat(),
+                    f"c{i}",
+                    (now - timedelta(hours=i + 1)).isoformat(),
+                ),
+            )
 
         conn.commit()
         conn.close()
@@ -423,10 +565,20 @@ class TestSnippetsCap:
         # Create thread with 15 messages
         for i in range(15):
             msg_time = (now - timedelta(hours=i)).isoformat()
-            conn.execute(f"""
-                INSERT INTO communications (id, thread_id, from_email, subject, snippet, received_at, client_id, link_status)
-                VALUES ('comm{i}', 'thread1', 'test@example.com', 'Test Thread', 'Message {i} content here', '{msg_time}', 'c1', 'linked')
-            """)  # noqa: S608
+            conn.execute(
+                "INSERT INTO communications (id, thread_id, from_email, subject, snippet, received_at, client_id, link_status)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    f"comm{i}",
+                    "thread1",
+                    "test@example.com",
+                    "Test Thread",
+                    f"Message {i} content here",
+                    msg_time,
+                    "c1",
+                    "linked",
+                ),
+            )
 
         conn.commit()
         conn.close()
@@ -449,10 +601,21 @@ class TestThreadRoomStructure:
         now = datetime.now()
 
         conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'B')")
-        conn.execute(f"""
-            INSERT INTO communications (id, thread_id, from_email, subject, snippet, received_at, client_id, response_deadline, link_status)
-            VALUES ('comm1', 'thread1', 'test@example.com', 'Test', 'Test snippet', '{now.isoformat()}', 'c1', '{(now - timedelta(hours=2)).isoformat()}', 'linked')
-        """)  # noqa: S608
+        conn.execute(
+            "INSERT INTO communications (id, thread_id, from_email, subject, snippet, received_at, client_id, response_deadline, link_status)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "comm1",
+                "thread1",
+                "test@example.com",
+                "Test",
+                "Test snippet",
+                now.isoformat(),
+                "c1",
+                (now - timedelta(hours=2)).isoformat(),
+                "linked",
+            ),
+        )
         conn.commit()
         conn.close()
 
@@ -492,12 +655,21 @@ class TestUnlinkedComms:
         now = datetime.now()
 
         # Unlinked comm with actionable content
-        conn.execute(f"""
-            INSERT INTO communications (id, thread_id, from_email, subject, body_text, received_at, client_id, link_status, is_important)
-            VALUES ('comm1', 'thread1', 'unknown@example.com', 'Need help',
-                    'Can you please help me with this invoice payment issue? We need to resolve this urgently.',
-                    '{now.isoformat()}', NULL, 'unlinked', 1)
-        """)  # noqa: S608
+        conn.execute(
+            "INSERT INTO communications (id, thread_id, from_email, subject, body_text, received_at, client_id, link_status, is_important)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "comm1",
+                "thread1",
+                "unknown@example.com",
+                "Need help",
+                "Can you please help me with this invoice payment issue? We need to resolve this urgently.",
+                now.isoformat(),
+                None,
+                "unlinked",
+                1,
+            ),
+        )
         conn.commit()
         conn.close()
 
@@ -516,12 +688,21 @@ class TestUnlinkedComms:
         now = datetime.now()
 
         # Unlinked comm
-        conn.execute(f"""
-            INSERT INTO communications (id, thread_id, from_email, subject, body_text, received_at, client_id, link_status, is_important)
-            VALUES ('comm1', 'thread1', 'unknown@example.com', 'Request',
-                    'Please can you help me with this request? It is very important and urgent.',
-                    '{now.isoformat()}', NULL, 'unlinked', 1)
-        """)  # noqa: S608
+        conn.execute(
+            "INSERT INTO communications (id, thread_id, from_email, subject, body_text, received_at, client_id, link_status, is_important)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "comm1",
+                "thread1",
+                "unknown@example.com",
+                "Request",
+                "Please can you help me with this request? It is very important and urgent.",
+                now.isoformat(),
+                None,
+                "unlinked",
+                1,
+            ),
+        )
         conn.commit()
         conn.close()
 
@@ -554,10 +735,20 @@ class TestActionIdempotency:
         now = datetime.now()
 
         conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'B')")
-        conn.execute(f"""
-            INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)
-            VALUES ('comm1', 'thread1', 'test@example.com', 'Test', '{now.isoformat()}', 'c1', '{(now - timedelta(hours=5)).isoformat()}', 'linked')
-        """)  # noqa: S608
+        conn.execute(
+            "INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "comm1",
+                "thread1",
+                "test@example.com",
+                "Test",
+                now.isoformat(),
+                "c1",
+                (now - timedelta(hours=5)).isoformat(),
+                "linked",
+            ),
+        )
         conn.commit()
         conn.close()
 
@@ -574,11 +765,23 @@ class TestActionIdempotency:
 
         # Create multiple threads
         for i in range(5):
-            conn.execute(f"INSERT INTO clients (id, name, tier) VALUES ('c{i}', 'Client {i}', 'B')")  # noqa: S608
-            conn.execute(f"""
-                INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)
-                VALUES ('comm{i}', 'thread{i}', 't{i}@example.com', 'Thread {i}', '{now.isoformat()}', 'c{i}', '{(now - timedelta(hours=i + 1)).isoformat()}', 'linked')
-            """)  # noqa: S608
+            conn.execute(
+                "INSERT INTO clients (id, name, tier) VALUES (?, ?, 'B')",
+                (f"c{i}", f"Client {i}"),
+            )
+            conn.execute(
+                "INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, 'linked')",
+                (
+                    f"comm{i}",
+                    f"thread{i}",
+                    f"t{i}@example.com",
+                    f"Thread {i}",
+                    now.isoformat(),
+                    f"c{i}",
+                    (now - timedelta(hours=i + 1)).isoformat(),
+                ),
+            )
 
         conn.commit()
         conn.close()
@@ -603,10 +806,11 @@ class TestVIPClassification:
         now = datetime.now()
 
         conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'VIP Client', 'A')")
-        conn.execute(f"""
-            INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, link_status)
-            VALUES ('comm1', 'thread1', 'vip@example.com', 'Test', '{now.isoformat()}', 'c1', 'linked')
-        """)  # noqa: S608
+        conn.execute(
+            "INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, link_status)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?)",
+            ("comm1", "thread1", "vip@example.com", "Test", now.isoformat(), "c1", "linked"),
+        )
         conn.commit()
         conn.close()
 
@@ -627,10 +831,11 @@ class TestVIPClassification:
         now = datetime.now()
 
         conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'C')")
-        conn.execute(f"""
-            INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, link_status, is_starred)
-            VALUES ('comm1', 'thread1', 'test@example.com', 'Test', '{now.isoformat()}', 'c1', 'linked', 1)
-        """)  # noqa: S608
+        conn.execute(
+            "INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, link_status, is_starred)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            ("comm1", "thread1", "test@example.com", "Test", now.isoformat(), "c1", "linked", 1),
+        )
         conn.commit()
         conn.close()
 
@@ -650,10 +855,20 @@ class TestBaseScoreComputation:
         now = datetime.now()
 
         conn.execute("INSERT INTO clients (id, name, tier) VALUES ('c1', 'Client', 'B')")
-        conn.execute(f"""
-            INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)
-            VALUES ('comm1', 'thread1', 'test@example.com', 'Overdue', '{now.isoformat()}', 'c1', '{(now - timedelta(hours=24)).isoformat()}', 'linked')
-        """)  # noqa: S608
+        conn.execute(
+            "INSERT INTO communications (id, thread_id, from_email, subject, received_at, client_id, response_deadline, link_status)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                "comm1",
+                "thread1",
+                "test@example.com",
+                "Overdue",
+                now.isoformat(),
+                "c1",
+                (now - timedelta(hours=24)).isoformat(),
+                "linked",
+            ),
+        )
         conn.commit()
         conn.close()
 

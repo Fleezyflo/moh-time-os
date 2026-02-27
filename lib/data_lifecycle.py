@@ -20,6 +20,7 @@ import sqlite3
 from datetime import date, datetime, timedelta
 from typing import TypedDict
 
+from . import safe_sql
 from .backup import create_backup
 from .store import get_connection
 
@@ -168,7 +169,8 @@ class DataLifecycleManager:
     def _get_row_count(self, table: str) -> int:
         """Get current row count for a table."""
         with get_connection() as conn:
-            cursor = conn.execute(f"SELECT COUNT(*) FROM {table}")  # noqa: S608
+            sql = safe_sql.select_count_bare(table)
+            cursor = conn.execute(sql)
             return cursor.fetchone()[0]
 
     def _get_oldest_row_date(self, table: str) -> date | None:
@@ -178,12 +180,10 @@ class DataLifecycleManager:
             return None
 
         with get_connection() as conn:
-            cursor = conn.execute(
-                f"""
-                SELECT MIN({timestamp_col}) FROM {table}
-                WHERE {timestamp_col} IS NOT NULL
-            """  # noqa: S608
+            sql = safe_sql.select(
+                table, columns=f"MIN({timestamp_col})", where=f"{timestamp_col} IS NOT NULL"
             )
+            cursor = conn.execute(sql)
             oldest = cursor.fetchone()[0]
 
         if not oldest:
@@ -268,14 +268,8 @@ class DataLifecycleManager:
 
         with get_connection() as conn:
             # Get rows to archive
-            cursor = conn.execute(
-                f"""
-                SELECT COUNT(*) FROM {table}
-                WHERE {timestamp_col} < ?
-            """(  # noqa: S608
-                    cutoff,
-                ),
-            )
+            sql = safe_sql.select_count_bare(table, where=f"{timestamp_col} < ?")
+            cursor = conn.execute(sql, (cutoff,))
             count = cursor.fetchone()[0]
 
         if count == 0:
@@ -305,25 +299,12 @@ class DataLifecycleManager:
 
         with get_connection() as conn:
             # Move rows to archive table
-            conn.execute(
-                f"""
-                INSERT INTO {archive_table}
-                SELECT * FROM {table}
-                WHERE {timestamp_col} < ?
-            """(  # noqa: S608
-                    cutoff,
-                ),
-            )
+            sql = safe_sql.insert_from_select(archive_table, table, where=f"{timestamp_col} < ?")
+            conn.execute(sql, (cutoff,))
 
             # Delete from original table
-            cursor = conn.execute(
-                f"""
-                DELETE FROM {table}
-                WHERE {timestamp_col} < ?
-            """(  # noqa: S608
-                    cutoff,
-                ),
-            )
+            sql = safe_sql.delete(table, where=f"{timestamp_col} < ?")
+            cursor = conn.execute(sql, (cutoff,))
             archived = cursor.rowcount
 
             conn.commit()
@@ -385,18 +366,12 @@ class DataLifecycleManager:
 
             with get_connection() as conn:
                 # Check how many rows would be deleted
-                cursor = conn.execute(
-                    f"""
-                    SELECT COUNT(*) FROM {table}
-                    WHERE {timestamp_col} < ?
-                """(  # noqa: S608
-                        cutoff,
-                    ),
-                )
+                sql = safe_sql.select_count_bare(table, where=f"{timestamp_col} < ?")
+                cursor = conn.execute(sql, (cutoff,))
                 delete_count = cursor.fetchone()[0]
 
             if delete_count == 0:
-                logger.debug(f"No rows to delete from {table} (before {cutoff})")  # noqa: S608
+                logger.debug("No rows to delete from %s (before %s)", table, cutoff)
                 continue
 
             if delete_count > row_count * 0.8:
@@ -421,13 +396,8 @@ class DataLifecycleManager:
 
             # Perform deletion
             with get_connection() as conn:
-                cursor = conn.execute(
-                    f"""
-                    DELETE FROM {table}
-                    WHERE {timestamp_col} < ?
-                """,  # noqa: S608
-                    (cutoff,),
-                )
+                sql = safe_sql.delete(table, where=f"{timestamp_col} < ?")
+                cursor = conn.execute(sql, (cutoff,))
                 deleted = cursor.rowcount
                 conn.commit()
 
@@ -548,12 +518,10 @@ class DataLifecycleManager:
             return None
 
         with get_connection() as conn:
-            cursor = conn.execute(
-                f"""
-                SELECT MAX({timestamp_col}) FROM {table}
-                WHERE {timestamp_col} IS NOT NULL
-            """  # noqa: S608
+            sql = safe_sql.select(
+                table, columns=f"MAX({timestamp_col})", where=f"{timestamp_col} IS NOT NULL"
             )
+            cursor = conn.execute(sql)
             newest = cursor.fetchone()[0]
 
         if not newest:
@@ -571,14 +539,8 @@ class DataLifecycleManager:
         """Count rows that would be deleted by cutoff date."""
         cutoff_str = cutoff.isoformat()
         with get_connection() as conn:
-            cursor = conn.execute(
-                f"""
-                SELECT COUNT(*) FROM {table}
-                WHERE {timestamp_col} < ?
-            """(  # noqa: S608
-                    cutoff_str,
-                ),
-            )
+            sql = safe_sql.select_count_bare(table, where=f"{timestamp_col} < ?")
+            cursor = conn.execute(sql, (cutoff_str,))
             return cursor.fetchone()[0]
 
 

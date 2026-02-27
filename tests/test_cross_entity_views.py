@@ -9,6 +9,8 @@ import sqlite3
 
 import pytest
 
+from lib import safe_sql
+
 
 @pytest.fixture
 def db_conn(fixture_db_path):
@@ -44,7 +46,7 @@ class TestViewsExist:
     @pytest.mark.parametrize("view_name", EXPECTED_VIEWS)
     def test_view_is_queryable(self, db_conn, view_name):
         """Each view can be queried without errors."""
-        cursor = db_conn.execute(f"SELECT COUNT(*) as cnt FROM {view_name}")  # noqa: S608
+        cursor = db_conn.execute(safe_sql.select(view_name, columns="COUNT(*) as cnt"))
         result = cursor.fetchone()
         assert result["cnt"] >= 0, f"View {view_name} returned invalid count"
 

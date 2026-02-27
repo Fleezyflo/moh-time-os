@@ -1,10 +1,8 @@
 """
 MOH TIME OS API Server - REST API for dashboard and integrations.
 """
-# ruff: noqa: B904, S608, S104
-# B904: Legacy exception handling patterns throughout
-# S608: Dynamic SQL with validated/escaped inputs
-# S104: Development server binding (guarded by __name__ check)
+# ruff: noqa: B904
+# B904: Legacy exception handling patterns throughout (3 instances of raise in except blocks without from)
 
 import json
 import logging
@@ -20,7 +18,7 @@ from pydantic import BaseModel
 
 from api.response_models import DetailResponse, MutationResponse
 from lib import db as db_module
-from lib import paths
+from lib import paths, safe_sql
 from lib.analyzers import AnalyzerOrchestrator
 from lib.autonomous_loop import AutonomousLoop
 from lib.calibration import CalibrationEngine
@@ -540,7 +538,7 @@ async def get_clients_health(limit: int = 20):
             }
         )
 
-    results.sort(key=lambda x: float(x.get("health_score", 0)))  # type: ignore[arg-type]
+    results.sort(key=lambda x: float(str(x.get("health_score") or 0)))
 
     return {"clients": results, "total": len(results)}
 
@@ -635,15 +633,14 @@ async def get_tasks(
 
     params.append(str(limit))
 
-    tasks = store.query(
-        f"""
-        SELECT * FROM tasks
-        WHERE {" AND ".join(conditions)}
-        ORDER BY priority DESC, due_date ASC
-        LIMIT ?
-    """,  # noqa: S608 - conditions are validated, params are parameterized
-        params,
+    where_clause = safe_sql.where_and(conditions)
+    sql = safe_sql.select(
+        "tasks",
+        where=where_clause,
+        order_by="priority DESC, due_date ASC",
+        suffix="LIMIT ?",
     )
+    tasks = store.query(sql, params)
 
     return {"tasks": [dict(t) for t in tasks], "total": len(tasks)}
 
@@ -1688,15 +1685,18 @@ async def cleanup_legacy_signals(confirm: bool = False):
 
     try:
         # Count legacy signals
-        cursor.execute(f"""
+        cursor.execute(
+            """
             SELECT COUNT(s.signal_id)
             FROM signals s
             JOIN tasks t ON s.entity_ref_type = 'task' AND s.entity_ref_id = t.id
             WHERE s.status = 'active'
               AND s.signal_type IN ('deadline_overdue', 'deadline_approaching')
               AND t.due_date IS NOT NULL
-              AND julianday('now') - julianday(t.due_date) > {LEGACY_OVERDUE_THRESHOLD_DAYS}
-        """)  # noqa: S608 - LEGACY_OVERDUE_THRESHOLD_DAYS is a constant
+              AND julianday('now') - julianday(t.due_date) > ?
+        """,
+            (LEGACY_OVERDUE_THRESHOLD_DAYS,),
+        )
         legacy_count = cursor.fetchone()[0]
 
         if not confirm:
@@ -1708,7 +1708,8 @@ async def cleanup_legacy_signals(confirm: bool = False):
             }
 
         # Mark legacy signals as expired
-        cursor.execute(f"""
+        cursor.execute(
+            """
             UPDATE signals
             SET status = 'expired', expires_at = datetime('now')
             WHERE signal_id IN (
@@ -1718,9 +1719,11 @@ async def cleanup_legacy_signals(confirm: bool = False):
                 WHERE s.status = 'active'
                   AND s.signal_type IN ('deadline_overdue', 'deadline_approaching')
                   AND t.due_date IS NOT NULL
-                  AND julianday('now') - julianday(t.due_date) > {LEGACY_OVERDUE_THRESHOLD_DAYS}
+                  AND julianday('now') - julianday(t.due_date) > ?
             )
-        """)  # noqa: S608 - LEGACY_OVERDUE_THRESHOLD_DAYS is a constant
+        """,
+            (LEGACY_OVERDUE_THRESHOLD_DAYS,),
+        )
         expired_count = cursor.rowcount
 
         conn.commit()
@@ -1819,10 +1822,15 @@ async def get_team(type_filter: str | None = None):
         conditions.append("p.type = ?")
         params.append(type_filter)
 
+    where_clause = safe_sql.where_and(conditions)
     people = store.query(
-        f"SELECT p.*, c.name as client_name FROM people p "
-        f"LEFT JOIN clients c ON p.client_id = c.id "
-        f"WHERE {' AND '.join(conditions)} ORDER BY p.type DESC, p.name",
+        safe_sql.select_with_join(
+            "SELECT p.*, c.name as client_name FROM people p "
+            "LEFT JOIN clients c ON p.client_id = c.id "
+            "WHERE ",
+            where_clause,
+            order_by="p.type DESC, p.name",
+        ),
         params,
     )
 
@@ -2479,9 +2487,14 @@ async def get_priorities_filtered(
         conditions.append("title LIKE ?")
         params.append(f"%{q}%")
 
-    where = " AND ".join(conditions)
+    where = safe_sql.where_and(conditions)
     tasks = store.query(
-        f"SELECT * FROM tasks WHERE {where} ORDER BY priority DESC, due_date ASC LIMIT ?",
+        safe_sql.select(
+            "tasks",
+            where=where,
+            order_by="priority DESC, due_date ASC",
+            suffix="LIMIT ?",
+        ),
         params + [limit],
     )
 
@@ -2617,9 +2630,14 @@ async def bulk_action(body: BulkAction):
     updated = 0
     for update in updates:
         try:
-            update_id: str = update["id"]  # type: ignore[assignment]
-            update_data_dict: dict[str, str | None] = update["data"]  # type: ignore[assignment]
-            store.update("tasks", update_id, update_data_dict)
+            update_id = update["id"]
+            if not isinstance(update_id, str):
+                raise ValueError(f"Expected str for update id, got {type(update_id).__name__}")
+            raw_data = update["data"]
+            if not isinstance(raw_data, dict):
+                raise ValueError(f"Expected dict for update data, got {type(raw_data).__name__}")
+            checked_data: dict[str, str | None] = raw_data
+            store.update("tasks", update_id, checked_data)
             updated += 1
         except (sqlite3.Error, ValueError) as e:
             logger.info(f"Failed to update {update['id']}: {e}")
@@ -2846,13 +2864,11 @@ async def get_emails(actionable_only: bool = False, unread_only: bool = False, l
     if unread_only:
         conditions.append("(processed = 0 OR processed IS NULL)")
 
+    where_clause = safe_sql.where_and(conditions)
     emails = store.query(
-        f"""
-        SELECT * FROM communications
-        WHERE {" AND ".join(conditions)}
-        ORDER BY received_at DESC
-        LIMIT ?
-    """,
+        safe_sql.select(
+            "communications", where=where_clause, order_by="received_at DESC", suffix="LIMIT ?"
+        ),
         [limit],
     )
 
@@ -2880,12 +2896,9 @@ async def get_insights(category: str | None = None):
         conditions.append("category = ?")
         params.append(category)
 
+    where_clause = safe_sql.where_and(conditions)
     insights = store.query(
-        f"""
-        SELECT * FROM insights
-        WHERE {" AND ".join(conditions)}
-        ORDER BY created_at DESC
-    """,
+        safe_sql.select("insights", where=where_clause, order_by="created_at DESC"),
         params or [],
     )
 
@@ -2912,13 +2925,11 @@ async def get_notifications(include_dismissed: bool = False, limit: int = 50):
     if not include_dismissed:
         conditions.append("(dismissed = 0 OR dismissed IS NULL)")
 
+    where_clause = safe_sql.where_and(conditions)
     notifications = store.query(
-        f"""
-        SELECT * FROM notifications
-        WHERE {" AND ".join(conditions)}
-        ORDER BY created_at DESC
-        LIMIT ?
-    """,
+        safe_sql.select(
+            "notifications", where=where_clause, order_by="created_at DESC", suffix="LIMIT ?"
+        ),
         [limit],
     )
 
@@ -3342,21 +3353,29 @@ async def get_grouped_priorities(group_by: str = "project", limit: int = 10):
     if group_by not in ("project", "assignee", "source"):
         group_by = "project"
 
-    groups = store.query(
-        f"""
-        SELECT
-            {group_by} as group_name,
-            COUNT(*) as total,
-            SUM(CASE WHEN due_date < date('now') THEN 1 ELSE 0 END) as overdue,
-            MAX(priority) as max_priority
-        FROM tasks
-        WHERE status = 'pending' AND {group_by} IS NOT NULL AND {group_by} != ''
-        GROUP BY {group_by}
-        ORDER BY overdue DESC, total DESC
-        LIMIT ?
-    """,
-        [limit],
+    # Validate the group_by column identifier to prevent SQL injection
+    col = safe_sql._validate(group_by)
+    sql = " ".join(
+        [
+            "SELECT",
+            col,
+            "as group_name,",
+            "COUNT(*) as total,",
+            "SUM(CASE WHEN due_date < date('now') THEN 1 ELSE 0 END) as overdue,",
+            "MAX(priority) as max_priority",
+            "FROM tasks",
+            "WHERE status = 'pending' AND",
+            col,
+            "IS NOT NULL AND",
+            col,
+            "!= ''",
+            "GROUP BY",
+            col,
+            "ORDER BY overdue DESC, total DESC",
+            "LIMIT ?",
+        ]
     )
+    groups = store.query(sql, [limit])
 
     return {
         "groups": [
@@ -3478,16 +3497,14 @@ async def get_clients(
 
     params.append(str(limit))
 
+    where_clause = safe_sql.where_and(conditions)
     clients = store.query(
-        f"""
-        SELECT * FROM clients
-        WHERE {" AND ".join(conditions)}
-        ORDER BY
-            CASE tier WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 ELSE 4 END,
-            financial_ar_total DESC NULLS LAST,
-            name
-        LIMIT ?
-    """,
+        safe_sql.select(
+            "clients",
+            where=where_clause,
+            order_by="CASE tier WHEN 'A' THEN 1 WHEN 'B' THEN 2 WHEN 'C' THEN 3 ELSE 4 END, financial_ar_total DESC NULLS LAST, name",
+            suffix="LIMIT ?",
+        ),
         params,
     )
 
@@ -3722,13 +3739,11 @@ async def get_projects(
 
     params.append(str(limit))
 
+    where_clause = safe_sql.where_and(conditions)
     projects = store.query(
-        f"""
-        SELECT * FROM projects
-        WHERE {" AND ".join(conditions)}
-        ORDER BY updated_at DESC
-        LIMIT ?
-    """,
+        safe_sql.select(
+            "projects", where=where_clause, order_by="updated_at DESC", suffix="LIMIT ?"
+        ),
         params,
     )
 
@@ -3924,9 +3939,6 @@ async def bulk_link_tasks(request: Request):
                 )
                 continue
 
-            from lib.store import Store  # type: ignore[attr-defined]
-
-            store = Store()
             store.update("tasks", task_id, updates)
             results.append({"task_id": task_id, "success": True, "linked": str(updates)})
 

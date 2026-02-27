@@ -12,6 +12,8 @@ import uuid
 from datetime import datetime, timedelta
 from typing import Any
 
+from lib import safe_sql
+
 from .proposal_service import get_proposal_service
 from .signal_service import get_signal_service
 
@@ -250,14 +252,17 @@ class IssueService:
 
             # Mark signals as consumed (batch update - single transaction)
             if signal_ids:
-                placeholders = ",".join("?" * len(signal_ids))
-                cursor.execute(
-                    f"""
-                    UPDATE signals SET status = 'consumed', consumed_by_proposal_id = ?
-                    WHERE signal_id IN ({placeholders}) AND status = 'active'
-                """,  # noqa: S608
-                    [proposal_id] + signal_ids,
+                placeholders = safe_sql.in_placeholders(len(signal_ids))
+                sql = (
+                    safe_sql.update_where_in(
+                        "signals",
+                        "status = 'consumed', consumed_by_proposal_id = ?",
+                        "signal_id",
+                        placeholders,
+                    )
+                    + " AND status = 'active'"
                 )
+                cursor.execute(sql, [proposal_id] + signal_ids)
 
             # Attach evidence excerpts
             for excerpt_id in proposal.get("proof_excerpt_ids", []):

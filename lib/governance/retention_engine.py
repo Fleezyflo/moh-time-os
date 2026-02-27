@@ -28,6 +28,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from lib import safe_sql
 from lib.data_lifecycle import PROTECTED_TABLES, get_lifecycle_manager
 from lib.db import validate_identifier
 
@@ -232,10 +233,9 @@ class RetentionEngine:
 
     def _find_timestamp_column(self, table: str) -> str | None:
         """Auto-detect timestamp column in table."""
-        safe_table = validate_identifier(table)
         conn = self._get_connection()
         try:
-            cursor = conn.execute(f"PRAGMA table_info({safe_table})")  # noqa: S608
+            cursor = conn.execute(safe_sql.pragma_table_info(table))
             columns = [row[1] for row in cursor.fetchall()]
 
             # Try common timestamp column names
@@ -251,10 +251,9 @@ class RetentionEngine:
 
     def _get_row_count(self, table: str) -> int:
         """Get current row count for a table."""
-        safe_table = validate_identifier(table)
         conn = self._get_connection()
         try:
-            cursor = conn.execute(f"SELECT COUNT(*) FROM {safe_table}")  # noqa: S608
+            cursor = conn.execute(safe_sql.select_count_bare(table))
             return cursor.fetchone()[0]
         except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error counting rows in {table}: {e}")
@@ -343,7 +342,7 @@ class RetentionEngine:
             return None
 
         # Validate identifiers before SQL construction
-        safe_table = validate_identifier(table)
+        validate_identifier(table)
         safe_ts = validate_identifier(ts_column)
 
         # Compute cutoff
@@ -353,13 +352,13 @@ class RetentionEngine:
         conn = self._get_connection()
         try:
             cursor = conn.execute(
-                f"SELECT COUNT(*) FROM {safe_table} WHERE {safe_ts} < ?",  # noqa: S608
+                safe_sql.select_count_bare(table, where=f"{safe_ts} < ?"),
                 (cutoff_date,),
             )
             rows_to_delete = cursor.fetchone()[0]
 
             if rows_to_delete == 0:
-                logger.info(f"No rows to delete from {table}")  # noqa: S608 — log message, not SQL
+                logger.info("No rows to delete from %s", table)
                 return None
 
             # Check min rows threshold
@@ -377,26 +376,23 @@ class RetentionEngine:
             # Execute or dry-run
             if not dry_run:
                 # Archive rows before deletion
-                safe_archive = validate_identifier(f"{table}_archive")
+                archive_table = f"{table}_archive"
                 try:
                     # Create archive table if it doesn't exist (same schema)
-                    conn.execute(
-                        f"CREATE TABLE IF NOT EXISTS {safe_archive} AS "  # noqa: S608
-                        f"SELECT * FROM {safe_table} WHERE 0"
-                    )
+                    conn.execute(safe_sql.create_archive_table(archive_table, table))
                     # Copy rows to archive
                     conn.execute(
-                        f"INSERT INTO {safe_archive} SELECT * FROM {safe_table} WHERE {safe_ts} < ?",  # noqa: S608
+                        safe_sql.insert_from_select(archive_table, table, where=f"{safe_ts} < ?"),
                         (cutoff_date,),
                     )
-                    logger.info(f"Archived {rows_to_delete} rows from {table} to {safe_archive}")
+                    logger.info(f"Archived {rows_to_delete} rows from {table} to {archive_table}")
                 except (sqlite3.Error, ValueError, OSError) as archive_err:
                     logger.error(f"Archive failed for {table}: {archive_err}")
                     raise  # Don't delete if archive failed
 
                 # Delete original rows after successful archive
                 conn.execute(
-                    f"DELETE FROM {safe_table} WHERE {safe_ts} < ?",  # noqa: S608
+                    safe_sql.delete(table, where=f"{safe_ts} < ?"),
                     (cutoff_date,),
                 )
                 conn.commit()
@@ -463,7 +459,7 @@ class RetentionEngine:
             return {}
 
         # Validate identifiers before SQL construction
-        safe_table = validate_identifier(table)
+        validate_identifier(table)
         safe_ts = validate_identifier(ts_column)
 
         conn = self._get_connection()
@@ -475,7 +471,7 @@ class RetentionEngine:
             # < 1 day
             cutoff_1d = (now - timedelta(days=1)).isoformat()
             cursor = conn.execute(
-                f"SELECT COUNT(*) FROM {safe_table} WHERE {safe_ts} >= ?",  # noqa: S608
+                safe_sql.select_count_bare(table, where=f"{safe_ts} >= ?"),
                 (cutoff_1d,),
             )
             distribution["< 1 day"] = cursor.fetchone()[0]
@@ -483,7 +479,7 @@ class RetentionEngine:
             # 1-7 days
             cutoff_7d = (now - timedelta(days=7)).isoformat()
             cursor = conn.execute(
-                f"SELECT COUNT(*) FROM {safe_table} WHERE {safe_ts} >= ? AND {safe_ts} < ?",  # noqa: S608
+                safe_sql.select_count_bare(table, where=f"{safe_ts} >= ? AND {safe_ts} < ?"),
                 (cutoff_7d, cutoff_1d),
             )
             distribution["1-7 days"] = cursor.fetchone()[0]
@@ -491,7 +487,7 @@ class RetentionEngine:
             # 1-4 weeks (7-28 days)
             cutoff_28d = (now - timedelta(days=28)).isoformat()
             cursor = conn.execute(
-                f"SELECT COUNT(*) FROM {safe_table} WHERE {safe_ts} >= ? AND {safe_ts} < ?",  # noqa: S608
+                safe_sql.select_count_bare(table, where=f"{safe_ts} >= ? AND {safe_ts} < ?"),
                 (cutoff_28d, cutoff_7d),
             )
             distribution["1-4 weeks"] = cursor.fetchone()[0]
@@ -499,7 +495,7 @@ class RetentionEngine:
             # 1-3 months (28-90 days)
             cutoff_90d = (now - timedelta(days=90)).isoformat()
             cursor = conn.execute(
-                f"SELECT COUNT(*) FROM {safe_table} WHERE {safe_ts} >= ? AND {safe_ts} < ?",  # noqa: S608
+                safe_sql.select_count_bare(table, where=f"{safe_ts} >= ? AND {safe_ts} < ?"),
                 (cutoff_90d, cutoff_28d),
             )
             distribution["1-3 months"] = cursor.fetchone()[0]
@@ -507,14 +503,14 @@ class RetentionEngine:
             # 3-12 months (90-365 days)
             cutoff_365d = (now - timedelta(days=365)).isoformat()
             cursor = conn.execute(
-                f"SELECT COUNT(*) FROM {safe_table} WHERE {safe_ts} >= ? AND {safe_ts} < ?",  # noqa: S608
+                safe_sql.select_count_bare(table, where=f"{safe_ts} >= ? AND {safe_ts} < ?"),
                 (cutoff_365d, cutoff_90d),
             )
             distribution["3-12 months"] = cursor.fetchone()[0]
 
             # > 1 year
             cursor = conn.execute(
-                f"SELECT COUNT(*) FROM {safe_table} WHERE {safe_ts} < ?",  # noqa: S608
+                safe_sql.select_count_bare(table, where=f"{safe_ts} < ?"),
                 (cutoff_365d,),
             )
             distribution["> 1 year"] = cursor.fetchone()[0]
@@ -554,11 +550,11 @@ class RetentionEngine:
                     continue
 
                 # Validate identifiers before SQL construction
-                safe_table = validate_identifier(table)
+                validate_identifier(table)
                 safe_ts = validate_identifier(ts_column)
 
                 # Count total rows
-                cursor = conn.execute(f"SELECT COUNT(*) FROM {safe_table}")  # noqa: S608
+                cursor = conn.execute(safe_sql.select_count_bare(table))
                 total = cursor.fetchone()[0]
                 if total == 0:
                     continue
@@ -566,7 +562,7 @@ class RetentionEngine:
                 # Count rows older than 1 year
                 cutoff = (datetime.utcnow() - timedelta(days=365)).isoformat()
                 cursor = conn.execute(
-                    f"SELECT COUNT(*) FROM {safe_table} WHERE {safe_ts} < ?",  # noqa: S608
+                    safe_sql.select_count_bare(table, where=f"{safe_ts} < ?"),
                     (cutoff,),
                 )
                 old_rows = cursor.fetchone()[0]

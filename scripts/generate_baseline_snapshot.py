@@ -14,6 +14,8 @@ from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 
+from lib import safe_sql
+
 logger = logging.getLogger(__name__)
 
 # Paths
@@ -46,7 +48,7 @@ def get_table_inventory(db_path: Path) -> dict:
 
         # Get row count
         try:
-            count_cursor = conn.execute(f'SELECT COUNT(*) FROM "{table_name}"')  # noqa: S608
+            count_cursor = conn.execute(safe_sql.select_count_bare(table_name))
             row_count = count_cursor.fetchone()[0]
         except Exception:
             row_count = 0

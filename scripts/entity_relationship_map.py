@@ -8,6 +8,8 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 
+from lib import safe_sql
+
 REPO_ROOT = Path(__file__).parent.parent
 DATA_DIR = REPO_ROOT / "data"
 DB_PATH = DATA_DIR / "moh_time_os.db"
@@ -47,7 +49,7 @@ def get_table_info(conn: sqlite3.Connection, table: str) -> dict:
 
     # Get row count
     try:
-        cursor = conn.execute(f'SELECT COUNT(*) FROM "{table}"')  # noqa: S608
+        cursor = conn.execute(safe_sql.select_count_bare(table))
         row_count = cursor.fetchone()[0]
     except Exception:
         row_count = 0

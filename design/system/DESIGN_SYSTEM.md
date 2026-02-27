@@ -569,4 +569,3 @@ All colors optimized for dark background (#000000).
 | Version | Date | Changes |
 |---|---|---|
 | 1.0 | 2026-02-21 | Initial release: colors, typography, spacing, components, grid, animations |
-

@@ -13,6 +13,7 @@ import logging
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 
+from lib import safe_sql
 from lib.state_store import get_store
 
 logger = logging.getLogger(__name__)
@@ -269,17 +270,14 @@ class HealthCalculator:
         # Compute task completion for these projects
         project_ids = [p["id"] for p in projects]
         if project_ids:
-            placeholders = ",".join("?" * len(project_ids))
-            task_stats = self.store.query(
-                f"""
-                SELECT
-                    COUNT(*) as total,
-                    SUM(CASE WHEN status IN ('done', 'completed') THEN 1 ELSE 0 END) as done
-                FROM tasks
-                WHERE project_id IN ({placeholders})
-            """,  # noqa: S608
-                project_ids,
+            placeholders = safe_sql.in_placeholders(len(project_ids))
+            sql = safe_sql.select_with_in(
+                "COUNT(*) as total, SUM(CASE WHEN status IN ('done', 'completed') THEN 1 ELSE 0 END) as done",
+                "tasks",
+                "project_id",
+                placeholders,
             )
+            task_stats = self.store.query(sql, project_ids)
 
             if task_stats and task_stats[0]["total"]:
                 total = task_stats[0]["total"]

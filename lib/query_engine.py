@@ -11,7 +11,7 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
-from lib import paths
+from lib import paths, safe_sql
 
 logger = logging.getLogger(__name__)
 
@@ -665,13 +665,13 @@ class QueryEngine:
             conditions.append("client_id = ?")
             params.append(client_id)
 
-        where = "WHERE " + " AND ".join(conditions) if conditions else ""
+        where_clause = safe_sql.where_and(conditions)
 
-        sql = f"""
-            SELECT * FROM v_task_with_client
-            {where}
-            ORDER BY created_at DESC
-        """  # noqa: S608
+        sql = safe_sql.select_with_join(
+            "SELECT * FROM v_task_with_client\nWHERE ",
+            where_clause if where_clause else "1=1",
+            order_by="created_at DESC",
+        )
         return self._execute(sql, tuple(params))
 
     def invoices_in_period(
@@ -698,13 +698,13 @@ class QueryEngine:
             conditions.append("client_id = ?")
             params.append(client_id)
 
-        where = "WHERE " + " AND ".join(conditions) if conditions else ""
+        where_clause = safe_sql.where_and(conditions)
 
-        sql = f"""
-            SELECT * FROM v_invoice_client_project
-            {where}
-            ORDER BY issue_date DESC
-        """  # noqa: S608
+        sql = safe_sql.select_with_join(
+            "SELECT * FROM v_invoice_client_project\nWHERE ",
+            where_clause if where_clause else "1=1",
+            order_by="issue_date DESC",
+        )
         return self._execute(sql, tuple(params))
 
     def communications_in_period(
@@ -726,13 +726,13 @@ class QueryEngine:
             conditions.append("client_id = ?")
             params.append(client_id)
 
-        where = "WHERE " + " AND ".join(conditions) if conditions else ""
+        where_clause = safe_sql.where_and(conditions)
 
-        sql = f"""
-            SELECT * FROM v_communication_client_link
-            {where}
-            ORDER BY occurred_at DESC
-        """  # noqa: S608
+        sql = safe_sql.select_with_join(
+            "SELECT * FROM v_communication_client_link\nWHERE ",
+            where_clause if where_clause else "1=1",
+            order_by="occurred_at DESC",
+        )
         return self._execute(sql, tuple(params))
 
     def client_metrics_in_period(self, client_id: str, since: str, until: str) -> dict:

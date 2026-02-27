@@ -29,6 +29,7 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
+from lib import safe_sql
 from lib.data_lifecycle import get_lifecycle_manager
 from lib.db import validate_identifier
 from lib.governance.anonymizer import Anonymizer
@@ -220,9 +221,8 @@ class SubjectAccessManager:
         Looks for email, name, and client_id patterns.
         """
         try:
-            safe_table = validate_identifier(table)
             conn = self._get_connection()
-            cursor = conn.execute(f"PRAGMA table_info({safe_table})")  # noqa: S608
+            cursor = conn.execute(safe_sql.pragma_table_info(table))
             columns = cursor.fetchall()
             conn.close()
 
@@ -254,7 +254,7 @@ class SubjectAccessManager:
             if not identifier_cols:
                 return []
 
-            safe_table = validate_identifier(table)
+            validate_identifier(table)
             conn = self._get_connection()
 
             # Build WHERE clause for matching any identifier column
@@ -281,7 +281,7 @@ class SubjectAccessManager:
                 return []
 
             where_clause = " OR ".join(where_conditions)
-            sql = f"SELECT * FROM {safe_table} WHERE {where_clause}"  # noqa: S608
+            sql = safe_sql.select(table, where=where_clause)
 
             cursor = conn.execute(sql, params)
             rows = cursor.fetchall()
@@ -469,7 +469,7 @@ class SubjectAccessManager:
                     continue
 
                 # Build DELETE query with proper parameter binding
-                safe_table = validate_identifier(table)
+                validate_identifier(table)
                 where_conditions = []
                 params = []
 
@@ -491,7 +491,7 @@ class SubjectAccessManager:
                     # Execute delete
                     conn = self._get_connection()
                     conn.execute(
-                        f"DELETE FROM {safe_table} WHERE {where_clause}",  # noqa: S608
+                        safe_sql.delete(table, where=where_clause),
                         params,
                     )
                     deleted = conn.total_changes
@@ -516,10 +516,10 @@ class SubjectAccessManager:
                     # Count rows that would be deleted
                     conn = self._get_connection()
                     cursor = conn.execute(
-                        f"SELECT COUNT(*) as cnt FROM {safe_table} WHERE {where_clause}",  # noqa: S608
+                        safe_sql.select_count(table, where=where_clause),
                         params,
                     )
-                    count = cursor.fetchone()["cnt"]
+                    count = cursor.fetchone()["c"]
                     conn.close()
 
                     if count > 0:
@@ -588,7 +588,7 @@ class SubjectAccessManager:
 
                     if not dry_run:
                         # Build UPDATE query for this record
-                        safe_table = validate_identifier(table)
+                        validate_identifier(table)
                         updates = []
                         params = []
 
@@ -610,10 +610,13 @@ class SubjectAccessManager:
                             if pk_col and pk_col in record:
                                 safe_pk = validate_identifier(pk_col)
                                 params.append(record[pk_col])
-                                update_clause = ", ".join(updates)
                                 conn = self._get_connection()
                                 conn.execute(
-                                    f'UPDATE {safe_table} SET {update_clause} WHERE "{safe_pk}" = ?',  # noqa: S608
+                                    safe_sql.update(
+                                        table,
+                                        [c.split(" ")[0].strip('"') for c in updates],
+                                        where=f'"{safe_pk}" = ?',
+                                    ),
                                     params,
                                 )
                                 conn.commit()

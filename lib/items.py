@@ -5,6 +5,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import date
 
+from . import safe_sql
 from .db import validate_identifier
 from .entities import get_client, get_person, get_project
 from .store import get_connection, now_iso
@@ -442,11 +443,11 @@ def update_item(item_id: str, changed_by: str = "A", **changes) -> bool:
 
     for k in updates:
         validate_identifier(k)
-    set_clause = ", ".join(f"{k} = ?" for k in updates)
     values = list(updates.values()) + [item_id]
 
     with get_connection() as conn:
-        cursor = conn.execute(f"UPDATE items SET {set_clause} WHERE id = ?", values)  # noqa: S608
+        sql = safe_sql.update("items", list(updates.keys()))
+        cursor = conn.execute(sql, values)
 
         if cursor.rowcount == 0:
             return False
@@ -540,22 +541,17 @@ def list_items(
         conditions.append("owner = ?")
         params.append(owner)
 
-    where = " AND ".join(conditions) if conditions else "1=1"
+    where = " AND ".join(conditions) if conditions else None
     params.append(min(limit, 500))
 
     with get_connection() as conn:
-        rows = conn.execute(
-            f"""
-            SELECT * FROM items
-            WHERE {where}
-            ORDER BY
-                CASE WHEN due IS NULL THEN 1 ELSE 0 END,
-                due ASC,
-                created_at DESC
-            LIMIT ?
-        """,  # noqa: S608
-            params,
-        ).fetchall()
+        sql = safe_sql.select(
+            "items",
+            where=where,
+            order_by="CASE WHEN due IS NULL THEN 1 ELSE 0 END, due ASC, created_at DESC",
+            suffix="LIMIT ?",
+        )
+        rows = conn.execute(sql, params).fetchall()
 
         return [_row_to_item(row) for row in rows]
 

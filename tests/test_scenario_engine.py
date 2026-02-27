@@ -17,6 +17,7 @@ Uses mocked query_engine and cost_engine to avoid live DB dependency.
 Target: 25+ tests
 """
 
+import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -79,7 +80,7 @@ class TestScenarioEngineInit:
 
     def test_init_with_explicit_db_path(self, mock_query_engine, mock_cost_engine):
         """Engine accepts optional db_path parameter."""
-        db_path = Path("/tmp/test.db")
+        db_path = Path(tempfile.gettempdir()) / "test.db"
         with patch(
             "lib.intelligence.scenario_engine.get_engine", return_value=mock_query_engine
         ) as mock_get:
