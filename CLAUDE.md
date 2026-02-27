@@ -88,6 +88,13 @@ The sandbox (Linux x86) and Molham's Mac (Darwin ARM) share the same repo folder
 - Watch CI with `gh pr checks <N> --watch` before walking away.
 - If you amend a commit that's already pushed, you need `git push --force-with-lease`.
 
+### System Map Regeneration (Session 7)
+
+- When adding UI routes to `router.tsx`, regenerate `docs/system-map.json` before committing: `uv run python scripts/generate_system_map.py`
+- The system map generator scans `router.tsx` for `path: '...'` definitions and `time-os-ui/src/**/*.ts` for `fetch('/api/...')` calls.
+- Include `docs/system-map.json` in the `git add` for the commit. Drift Detection CI will fail without it.
+- This only applies to UI route changes and new `fetch()` calls with literal `/api/` URLs. Changes to `fetchJson()` wrapper calls do NOT trigger system map drift.
+
 ## Code Rules
 
 - No `except Exception: pass` or `except: pass` — log errors and return typed error results

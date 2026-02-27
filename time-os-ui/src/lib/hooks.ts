@@ -118,6 +118,31 @@ export function useEvidence(entityType: string, entityId: string) {
   return useFetch(() => api.fetchEvidence(entityType, entityId), [entityType, entityId]);
 }
 
+// Inbox items with filters
+export function useInbox(filters: api.InboxFilters = {}) {
+  return useFetch(
+    () => api.fetchInbox(filters),
+    [
+      filters.state,
+      filters.type,
+      filters.severity,
+      filters.client_id,
+      filters.unread_only,
+      filters.sort,
+    ]
+  );
+}
+
+// Inbox counts (cacheable, global scope)
+export function useInboxCounts() {
+  return useFetch(() => api.fetchInboxCounts(), []);
+}
+
+// Recently actioned inbox items
+export function useInboxRecent(days = 7, type?: string) {
+  return useFetch(() => api.fetchInboxRecent(days, type as api.InboxFilters['type']), [days, type]);
+}
+
 // Portfolio overview (tier breakdown, health, totals, overdue AR)
 export function usePortfolioOverview() {
   return useFetch(() => api.fetchPortfolioOverview(), []);
