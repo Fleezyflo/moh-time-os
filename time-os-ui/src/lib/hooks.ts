@@ -98,6 +98,11 @@ export function useAllCouplings() {
   return useFetch(() => api.fetchAllCouplings(), []);
 }
 
+// System health
+export function useHealth() {
+  return useFetch(() => api.checkHealth(), []);
+}
+
 // Clients
 export function useClients() {
   return useFetch(() => api.fetchClients(), []);

@@ -2,11 +2,11 @@
 
 ## Current State
 
-- **Current phase:** Phase 3 IN PROGRESS (Page Redesign -- Core). Sub-phases 3.1-3.2 merged, 3.3+3.4 code ready pending commit.
+- **Current phase:** Phase 3 COMPLETE (Page Redesign -- Core). Sub-phases 3.1-3.5 all done.
 - **Current track:** T2 (Existing Page Redesign)
 - **Blocked by:** Nothing -- main is clean.
 - **D1/D2:** Resolved. Blue `#3b82f6`, slate-400 at 5.1:1.
-- **Next session:** Complete Phase 3 -- 3.3+3.4 commit/merge, then 3.5 (Operations page).
+- **Next session:** Phase 4 (Route Consolidation) -- add redirects, remove legacy routes, update NAV_ITEMS.
 
 ## Session History
 
@@ -342,4 +342,22 @@
   - Modified: `lib/api.ts`, `lib/hooks.ts`, `pages/ClientDetailSpec.tsx`, `pages/TeamDetail.tsx`, `SESSION_LOG.md`, `HANDOFF.md`
   - New: `components/layout/TabContainer.tsx`, `components/layout/TrajectorySparkline.tsx`
 - **No new routes** -- no system-map regen needed.
-- **PRs:** Pending commit and PR creation.
+- **PRs:** PR #37 (merged). First push failed UI Quality -- React hooks called after early returns in both ClientDetailSpec.tsx and TeamDetail.tsx. Fixed by moving `useClientTrajectory`/`usePersonTrajectory` before early returns. Amended commit, force-pushed, all 26 CI checks green.
+- **Lessons:**
+  8. React hooks must be called before any early returns -- ESLint `react-hooks/rules-of-hooks` catches this. When adding a hook to an existing component, always check where the early returns are and place the hook above them.
+
+### Session 8 continued (Phase 3.5: Operations Page) -- 2026-02-27
+
+- **Type:** A (Build)
+- **Phase:** Phase 3 (T2), sub-phase 3.5
+- **Work done:**
+  - **Operations page** (`pages/Operations.tsx`): New page consolidating Fix Data + Watchers + Couplings into tabbed ops view. Uses TabContainer with 3 tabs (Data Quality, Watchers, Couplings) and badge counts. SummaryGrid with 4 MetricCards (Fix Items, Active Watchers, Couplings, System Health). Reuses existing FixDataCard component. Watcher snooze/dismiss actions. Coupling grouping by type with strength bars.
+  - **useHealth hook** in `lib/hooks.ts`: Wraps `api.checkHealth()` for system health status.
+  - **Route** `/ops` added to router.tsx with lazy loading, `opsRoute` in route tree, `Ops` in NAV_ITEMS.
+  - **Pages index** updated with Operations export.
+  - **System map regenerated**: 20 UI routes (was 19), `/ops` confirmed present.
+- **Files changed:** 4 modified, 1 new.
+  - Modified: `lib/hooks.ts`, `router.tsx`, `pages/index.ts`, `docs/system-map.json`
+  - New: `pages/Operations.tsx`
+- **New route added** -- system-map regenerated.
+- **PRs:** Pending commit.
