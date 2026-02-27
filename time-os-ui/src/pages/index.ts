@@ -6,3 +6,4 @@ export { default as ClientDetailSpec } from './ClientDetailSpec';
 export { Team } from './Team';
 export { TeamDetail } from './TeamDetail';
 export { FixData } from './FixData';
+export { Portfolio } from './Portfolio';

@@ -117,3 +117,18 @@ export function useTasks(assignee?: string, status?: string, limit = 20) {
 export function useEvidence(entityType: string, entityId: string) {
   return useFetch(() => api.fetchEvidence(entityType, entityId), [entityType, entityId]);
 }
+
+// Portfolio overview (tier breakdown, health, totals, overdue AR)
+export function usePortfolioOverview() {
+  return useFetch(() => api.fetchPortfolioOverview(), []);
+}
+
+// At-risk clients by health score threshold
+export function usePortfolioRisks(threshold = 50) {
+  return useFetch(() => api.fetchPortfolioRisks(threshold), [threshold]);
+}
+
+// Client health overview (counts by status)
+export function useClientsHealth() {
+  return useFetch(() => api.fetchClientsHealth(), []);
+}

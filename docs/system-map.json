@@ -1145,7 +1145,7 @@
     "api_routes_count": 195,
     "collectors_count": 9,
     "db_tables_count": 31,
-    "ui_routes_count": 18
+    "ui_routes_count": 19
   },
   "ui_api_calls": [],
   "ui_routes": [
@@ -1207,6 +1207,10 @@
     },
     {
       "path": "/issues",
+      "source": "router.tsx"
+    },
+    {
+      "path": "/portfolio",
       "source": "router.tsx"
     },
     {

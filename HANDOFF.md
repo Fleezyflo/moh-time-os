@@ -1,57 +1,46 @@
 # Session Handoff
 
-**Last updated:** 2026-02-27, end of Session 6
-**Branch:** `main` (Phase 2 PR pending merge)
+**Last updated:** 2026-02-27, Session 7 (Phase 3.1 complete)
+**Branch:** `feat/phase-2-layout-adoption` (Phase 2 PR pending merge, Phase 3.1 code on top)
 
 ## What Just Happened
 
-Session 6 completed Phase 1 (Slate Migration) and Phase 2 (Layout Adoption).
+Session 7 completed Phase 3.1 (Portfolio Page) and added commit/push/merge rules to all documentation.
 
-### Phase 1 — Slate Migration (PR #33, merged)
-- 466 replacements across 51 files — all hardcoded `slate-*` Tailwind classes → `var(--token)` equivalents
-- Extended mapping: added `slate-100` → `var(--white)`, `slate-750` → `var(--grey)`
-- Fixed 1 test (`priority.test.ts` expected "slate" string, updated to `var(--grey)`)
-- Fixed governance check (added deletion rationale for 417 symmetric deletions)
+### Phase 3.1 -- Portfolio Page (code ready, needs commit)
+- Created `Portfolio.tsx` page with PageLayout, SummaryGrid, 4 MetricCards (Health Score, Critical Items, Active Signals, Structural Patterns)
+- Wired 5 hooks: `usePortfolioScore()`, `useCriticalItems()`, `usePortfolioIntelligence()` (all intelligence), `usePortfolioOverview()`, `usePortfolioRisks()` (new lib hooks)
+- Created 4 new components in `components/portfolio/`: CriticalItemList, ClientDistributionChart, RiskList, ARAgingSummary
+- Added 3 new fetch functions + 3 new hooks in `lib/api.ts` and `lib/hooks.ts`
+- Wired `/portfolio` route in router.tsx, added to NAV_ITEMS
+- Response shapes verified against actual server.py endpoints
 
-### Phase 2 — Layout Adoption (PR pending)
-- Wrapped 9 pages with `PageLayout` + `SummaryGrid` + `MetricCard`
-- Pages: Inbox, Issues, ClientIndex, Team, FixData, Signals, Patterns, ClientDetail, TeamDetail
-- Replaced hand-built summary banners in Issues (5-card grid) and Team (stats row)
-- Fixed 6 invalid `variant` → `severity` props on MetricCard
-- Fixed 2 tsc errors: removed unused `TIER_COLORS` in ClientDetailSpec, added Blocked MetricCard in Issues
+### Documentation updates
+- Added comprehensive commit/push/merge rules to CLAUDE.md, HANDOFF.md, BUILD_STRATEGY.md
 
 ## What's Next
 
-**Phase 3: Page Redesign — Core** — Type A build session.
+### Immediate: merge Phase 2, then commit Phase 3.1
 
-Read BUILD_PLAN.md "Phase 3: Page Redesign — Core" section (line 1013) for the full spec. This is a large phase: 2 new pages, 3 enhanced pages, 9 new components, 16 new hooks.
+Phase 2 PR needs to merge first. Then:
 
-### Sub-phases
+1. Create new branch from main for Phase 3.1
+2. Cherry-pick or re-apply Phase 3.1 changes
+3. Run tsc + prettier on new files
+4. Commit, push, create PR
 
-#### 3.1 Portfolio Page (new)
-- New `Portfolio.tsx` page with PageLayout, SummaryGrid, and 5 new components
-- Hooks: `usePortfolioScore()`, `usePortfolioIntelligence()`, `useCriticalItems()`, `useClients()` (exist) + 3 new hooks
-- Components: `CriticalItemList`, `TrajectorySparkline`, `ClientDistributionChart`, `RiskList`, `ARAgingSummary`
+### After Phase 3.1 merges: Phase 3.2 (Inbox Enhancement)
+- New `InboxCategoryTabs` component (tabs for risk/opportunity/anomaly/maintenance)
+- Wire `useInbox()`, `useInboxCounts()` hooks
+- Enhanced InboxItemCard with unread indicator, richer metadata
+- See BUILD_PLAN.md line 1044
 
-#### 3.2 Inbox Enhancement
-- New `InboxCategoryTabs` component, enhanced item cards
-- Wire additional inbox endpoints
+### Remaining Phase 3 sub-phases
+- **3.3** Client Detail Enhancement -- tabs, financials, signals, team
+- **3.4** Team Detail Enhancement -- workload distribution
+- **3.5** Operations Page (new) -- data quality, watchers, couplings tabs
 
-#### 3.3 Issues Enhancement
-- Enhanced hierarchy view, issue timeline
-
-#### 3.4 Intelligence Command Center Enhancement
-- Wire additional intelligence endpoints
-
-#### 3.5 Client Detail Enhancement
-- Wire engagement, financial, signal detail tabs
-
-### Execution approach
-- Phase 3 is large — likely needs multiple sessions (3A, 3B, etc.)
-- Start with 3.1 (Portfolio page) — it's the most self-contained new page
-- Each sub-phase should be its own PR
-
-## Key Rules (learned hard way in Sessions 1-6)
+## Key Rules (learned hard way in Sessions 1-7)
 
 1. **No bypasses.** Never add `nosec`, `noqa`, or `type: ignore`. Fix the root cause.
 2. **Stage everything.** Before committing, `git add` all modified files to prevent ruff-format stash conflicts.
@@ -67,7 +56,14 @@ Read BUILD_PLAN.md "Phase 3: Page Redesign — Core" section (line 1013) for the
 12. **Don't claim readiness without reading all files.** Read HANDOFF.md, CLAUDE.md, BUILD_STRATEGY.md, BUILD_PLAN.md, SESSION_LOG.md, AND the source files for the assigned work before starting.
 13. **Script-based migration for bulk replacements.** For 400+ changes, write a script with dry-run mode, verify output, then apply. (Session 6: slate migration.)
 14. **Run tsc before giving commit commands.** Can't run from sandbox (no node_modules) but must verify types compile on Mac before claiming done. (Session 6: 2 tsc errors caught post-commit.)
-15. **Update ALL docs after each change.** SESSION_LOG.md + HANDOFF.md + CLAUDE.md (if new rules). Don't defer. Read "Documentation Rules" in CLAUDE.md — it has a trigger table showing exactly when each file must be updated. No exceptions, no batching, no deferring.
+15. **Update ALL docs after each change.** SESSION_LOG.md + HANDOFF.md + CLAUDE.md (if new rules). Don't defer. Read "Documentation Rules" in CLAUDE.md -- it has a trigger table showing exactly when each file must be updated. No exceptions, no batching, no deferring.
+16. **Commit subject max 72 chars.** Session 6 failed at 87. Format: `type: short description` (lowercase after prefix).
+17. **Use `--` not em dash in commits.** Avoids encoding issues in commit messages.
+18. **Pre-commit failure means commit didn't happen.** Don't use `--amend` after a hook failure -- fix and commit fresh.
+19. **Check branch before creating.** `git branch --show-current` first. If branch is in a worktree, `git branch -D` fails.
+20. **Only prettier specific files.** Never `prettier --write src/` -- only the files you changed.
+21. **Auto-merge PRs.** Always `gh pr merge --merge --auto` after creating. Watch with `gh pr checks <N> --watch`.
+22. **Force-push after amend.** If you amend a pushed commit, use `git push --force-with-lease`.
 
 ## Documents to Read (in order)
 
