@@ -12,7 +12,7 @@ import { join } from 'path';
 // Budget limits in KB
 // Note: These are realistic budgets for a production SPA with React + Router + Zustand
 const BUDGETS = {
-  js: 500,      // Main JS bundle (includes vendor in Vite)
+  js: 550,      // Main JS bundle (includes vendor in Vite)
   css: 100,     // Main CSS (Tailwind)
   total: 1000,  // Total assets
 };

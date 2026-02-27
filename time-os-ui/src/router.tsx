@@ -17,6 +17,7 @@ const Team = lazy(() => import('./pages/Team'));
 const TeamDetail = lazy(() => import('./pages/TeamDetail'));
 const FixData = lazy(() => import('./pages/FixData'));
 const Portfolio = lazy(() => import('./pages/Portfolio'));
+const Operations = lazy(() => import('./pages/Operations'));
 
 // Intelligence pages
 const CommandCenter = lazy(() => import('./intelligence/pages/CommandCenter'));
@@ -36,6 +37,7 @@ const NAV_ITEMS = [
   { to: '/clients', label: 'Clients' }, // Client Index (spec §2)
   { to: '/issues', label: 'Issues' },
   { to: '/team', label: 'Team' },
+  { to: '/ops', label: 'Ops' },
   { to: '/snapshot', label: 'Snapshot' },
   { to: '/fix-data', label: 'Fix' },
 ] as const;
@@ -335,6 +337,23 @@ const portfolioRoute = createRoute({
   ),
 });
 
+// Operations page (Phase 3.5)
+const opsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/ops',
+  component: () => (
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
+      <Operations />
+    </Suspense>
+  ),
+});
+
 // Intelligence routes
 const intelRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -477,6 +496,7 @@ const routeTree = rootRoute.addChildren([
   teamRoute,
   teamDetailRoute,
   fixDataRoute,
+  opsRoute, // Operations (/ops)
   // Intelligence routes
   intelRoute,
   intelBriefingRoute,
