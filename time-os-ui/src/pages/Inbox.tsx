@@ -14,7 +14,7 @@ const SEVERITY_COLORS: Record<Severity, string> = {
   high: 'bg-orange-500 text-[var(--white)]',
   medium: 'bg-[var(--warning)] text-black',
   low: 'bg-[var(--info)] text-[var(--white)]',
-  info: 'bg-slate-500 text-[var(--white)]',
+  info: 'bg-[var(--grey-muted)] text-[var(--white)]',
 };
 
 const SEVERITY_RING: Record<Severity, string> = {
@@ -22,7 +22,7 @@ const SEVERITY_RING: Record<Severity, string> = {
   high: 'ring-orange-500/50',
   medium: 'ring-yellow-500/50',
   low: 'ring-blue-500/50',
-  info: 'ring-slate-500/50',
+  info: 'ring-[var(--grey-muted)]/50',
 };
 
 // Item type icons
@@ -485,7 +485,7 @@ function InboxCard({ item, onSelect, onAction, formatAge }: InboxCardProps) {
       onClick={onSelect}
       className={`
         p-4 rounded-lg cursor-pointer transition-all
-        bg-[var(--grey-dim)] hover:bg-slate-750
+        bg-[var(--grey-dim)] hover:bg-[var(--grey)]
         ${isUnread ? 'border-l-4 border-[var(--info)]' : 'border-l-4 border-transparent'}
         ring-1 ${SEVERITY_RING[severity]}
       `}
@@ -756,7 +756,7 @@ const ACTION_LABELS: Record<string, { label: string; style: string }> = {
   tag: { label: 'Tag & Watch', style: 'bg-purple-600 hover:bg-purple-500' },
   assign: { label: 'Assign', style: 'bg-blue-600 hover:bg-[var(--info)]' },
   snooze: { label: 'Snooze', style: 'bg-[var(--warning)] hover:bg-[var(--warning)]' },
-  dismiss: { label: 'Dismiss', style: 'bg-[var(--grey-light)] hover:bg-slate-500' },
+  dismiss: { label: 'Dismiss', style: 'bg-[var(--grey-light)] hover:bg-[var(--grey-muted)]' },
   link: { label: 'Link to Engagement', style: 'bg-[var(--success)] hover:bg-[var(--success)]' },
   create: { label: 'Create Engagement', style: 'bg-[var(--success)] hover:bg-[var(--success)]' },
   select: { label: 'Select Match', style: 'bg-blue-600 hover:bg-[var(--info)]' },
@@ -766,7 +766,7 @@ const ACTION_LABELS: Record<string, { label: string; style: string }> = {
 function ActionButton({ action, onAction }: ActionButtonProps) {
   const config = ACTION_LABELS[action] || {
     label: action,
-    style: 'bg-[var(--grey-light)] hover:bg-slate-500',
+    style: 'bg-[var(--grey-light)] hover:bg-[var(--grey-muted)]',
   };
   const [showPicker, setShowPicker] = useState(false);
 
@@ -791,7 +791,7 @@ function ActionButton({ action, onAction }: ActionButtonProps) {
         />
         <button
           onClick={() => setShowPicker(false)}
-          className="mt-2 px-3 py-1 text-sm rounded bg-[var(--grey-light)] hover:bg-slate-500 text-[var(--white)]"
+          className="mt-2 px-3 py-1 text-sm rounded bg-[var(--grey-light)] hover:bg-[var(--grey-muted)] text-[var(--white)]"
         >
           Cancel
         </button>

@@ -152,31 +152,31 @@ export const SEVERITY_COLORS = {
   high: { bg: 'bg-orange-500', text: 'text-white', ring: 'ring-orange-500/50' },
   medium: { bg: 'bg-yellow-500', text: 'text-black', ring: 'ring-yellow-500/50' },
   low: { bg: 'bg-blue-500', text: 'text-white', ring: 'ring-blue-500/50' },
-  info: { bg: 'bg-slate-500', text: 'text-white', ring: 'ring-slate-500/50' },
+  info: { bg: 'bg-[var(--grey-muted)]', text: 'text-white', ring: 'ring-[var(--grey-muted)]/50' },
 } as const;
 
 export const TIER_COLORS = {
   platinum: { bg: 'bg-purple-500', text: 'text-white' },
   gold: { bg: 'bg-yellow-500', text: 'text-black' },
-  silver: { bg: 'bg-slate-400', text: 'text-black' },
+  silver: { bg: 'bg-[var(--grey-light)]', text: 'text-black' },
   bronze: { bg: 'bg-orange-700', text: 'text-white' },
-  none: { bg: 'bg-slate-600', text: 'text-slate-300' },
+  none: { bg: 'bg-[var(--grey-mid)]', text: 'text-[var(--grey-subtle)]' },
 } as const;
 
 export const CLIENT_STATUS_COLORS = {
   active: { bg: 'bg-green-600', text: 'text-white' },
   recently_active: { bg: 'bg-yellow-600', text: 'text-black' },
-  cold: { bg: 'bg-slate-600', text: 'text-slate-300' },
+  cold: { bg: 'bg-[var(--grey-mid)]', text: 'text-[var(--grey-subtle)]' },
 } as const;
 
 export const ENGAGEMENT_STATE_COLORS = {
-  planned: { bg: 'bg-slate-600', text: 'text-white' },
+  planned: { bg: 'bg-[var(--grey-mid)]', text: 'text-white' },
   active: { bg: 'bg-green-600', text: 'text-white' },
   blocked: { bg: 'bg-red-600', text: 'text-white' },
   paused: { bg: 'bg-yellow-600', text: 'text-black' },
   delivering: { bg: 'bg-blue-600', text: 'text-white' },
   delivered: { bg: 'bg-purple-600', text: 'text-white' },
-  completed: { bg: 'bg-slate-500', text: 'text-white' },
+  completed: { bg: 'bg-[var(--grey-muted)]', text: 'text-white' },
 } as const;
 
 export const SENTIMENT_COLORS = {

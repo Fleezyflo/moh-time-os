@@ -160,10 +160,10 @@ export function IssueDrawer({
         role="dialog"
         aria-modal="true"
         aria-labelledby="issue-drawer-title"
-        className="absolute right-0 top-0 h-full w-full max-w-lg bg-slate-900 border-l border-slate-700 shadow-xl overflow-y-auto"
+        className="absolute right-0 top-0 h-full w-full max-w-lg bg-[var(--black)] border-l border-[var(--grey)] shadow-xl overflow-y-auto"
       >
         {/* Header */}
-        <div className={`p-4 border-b border-slate-700 ${stateStyle.bg}`}>
+        <div className={`p-4 border-b border-[var(--grey)] ${stateStyle.bg}`}>
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
               <span className={`text-lg ${stateStyle.color}`}>{stateStyle.icon}</span>
@@ -172,12 +172,12 @@ export function IssueDrawer({
             <button
               onClick={onClose}
               aria-label="Close issue drawer"
-              className="text-slate-400 hover:text-slate-200 focus:outline-none focus:ring-2 focus:ring-slate-400 rounded"
+              className="text-[var(--grey-light)] hover:text-[var(--white)] focus:outline-none focus:ring-2 focus:ring-[var(--grey-light)] rounded"
             >
               ✕
             </button>
           </div>
-          <h2 id="issue-drawer-title" className="text-lg font-semibold text-slate-100">
+          <h2 id="issue-drawer-title" className="text-lg font-semibold text-[var(--white)]">
             {getTitle(issue)}
           </h2>
         </div>
@@ -186,25 +186,31 @@ export function IssueDrawer({
         <div className="p-4 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <div className="text-xs text-slate-400 uppercase tracking-wide">Priority</div>
+              <div className="text-xs text-[var(--grey-light)] uppercase tracking-wide">
+                Priority
+              </div>
               <div className={`font-medium ${priorityInfo.color}`}>{priorityInfo.label}</div>
             </div>
             <div>
-              <div className="text-xs text-slate-400 uppercase tracking-wide">Type</div>
-              <div className="text-slate-200">{getType(issue) || 'N/A'}</div>
+              <div className="text-xs text-[var(--grey-light)] uppercase tracking-wide">Type</div>
+              <div className="text-[var(--white)]">{getType(issue) || 'N/A'}</div>
             </div>
             {getCreatedAt(issue) && (
               <div>
-                <div className="text-xs text-slate-400 uppercase tracking-wide">Created</div>
-                <div className="text-slate-200">
+                <div className="text-xs text-[var(--grey-light)] uppercase tracking-wide">
+                  Created
+                </div>
+                <div className="text-[var(--white)]">
                   {new Date(getCreatedAt(issue)).toLocaleString()}
                 </div>
               </div>
             )}
             {getLastActivity(issue) && (
               <div>
-                <div className="text-xs text-slate-400 uppercase tracking-wide">Last Activity</div>
-                <div className="text-slate-200">
+                <div className="text-xs text-[var(--grey-light)] uppercase tracking-wide">
+                  Last Activity
+                </div>
+                <div className="text-[var(--white)]">
                   {new Date(getLastActivity(issue)).toLocaleString()}
                 </div>
               </div>
@@ -212,15 +218,17 @@ export function IssueDrawer({
           </div>
 
           {issue.client_id && (
-            <div className="border-t border-slate-700 pt-4">
-              <div className="text-xs text-slate-400 uppercase tracking-wide mb-2">Client</div>
-              <div className="text-sm text-slate-300">{issue.client_id}</div>
+            <div className="border-t border-[var(--grey)] pt-4">
+              <div className="text-xs text-[var(--grey-light)] uppercase tracking-wide mb-2">
+                Client
+              </div>
+              <div className="text-sm text-[var(--grey-subtle)]">{issue.client_id}</div>
             </div>
           )}
         </div>
 
         {/* Actions */}
-        <div className="p-4 border-t border-slate-700 space-y-3">
+        <div className="p-4 border-t border-[var(--grey)] space-y-3">
           {error && (
             <div className="text-sm text-red-400 bg-red-900/20 px-3 py-2 rounded">{error}</div>
           )}
@@ -231,14 +239,14 @@ export function IssueDrawer({
                 value={noteText}
                 onChange={(e) => setNoteText(e.target.value)}
                 placeholder="Add a note..."
-                className="w-full px-3 py-2 bg-slate-800 border border-slate-600 rounded text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                className="w-full px-3 py-2 bg-[var(--grey-dim)] border border-[var(--grey-mid)] rounded text-sm text-[var(--white)] placeholder-[var(--grey-muted)] focus:outline-none focus:border-blue-500"
                 rows={3}
               />
               <div className="flex gap-2">
                 <button
                   onClick={handleAddNote}
                   disabled={isAddingNote || !noteText.trim()}
-                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm rounded"
+                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:bg-[var(--grey)] disabled:cursor-not-allowed text-white text-sm rounded"
                 >
                   {isAddingNote ? 'Saving...' : 'Save Note'}
                 </button>
@@ -247,7 +255,7 @@ export function IssueDrawer({
                     setShowNoteInput(false);
                     setNoteText('');
                   }}
-                  className="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm rounded"
+                  className="px-3 py-1.5 bg-[var(--grey)] hover:bg-[var(--grey-mid)] text-[var(--white)] text-sm rounded"
                 >
                   Cancel
                 </button>
@@ -266,7 +274,7 @@ export function IssueDrawer({
                     ? 'Issue already resolved'
                     : 'Resolve this issue'
               }
-              className="px-4 py-2 bg-green-600 hover:bg-green-500 disabled:bg-slate-700 disabled:cursor-not-allowed text-white text-sm font-medium rounded focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 focus:ring-offset-slate-900"
+              className="px-4 py-2 bg-green-600 hover:bg-green-500 disabled:bg-[var(--grey)] disabled:cursor-not-allowed text-white text-sm font-medium rounded focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-offset-2 focus:ring-offset-[var(--black)]"
             >
               {isResolving ? 'Resolving...' : issue.state === 'resolved' ? 'Resolved' : 'Resolve'}
             </button>
@@ -274,7 +282,7 @@ export function IssueDrawer({
               onClick={() => setShowNoteInput(true)}
               aria-label="Add a note to this issue"
               disabled={showNoteInput}
-              className="px-4 py-2 bg-slate-700 hover:bg-slate-600 disabled:bg-slate-600 text-slate-200 text-sm rounded"
+              className="px-4 py-2 bg-[var(--grey)] hover:bg-[var(--grey-mid)] disabled:bg-[var(--grey-mid)] text-[var(--white)] text-sm rounded"
             >
               Add Note
             </button>

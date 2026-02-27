@@ -37,17 +37,17 @@ export default function Proposals() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Proposals</h1>
-        <div className="text-sm text-slate-500">{proposalList.length} proposals</div>
+        <div className="text-sm text-[var(--grey-muted)]">{proposalList.length} proposals</div>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-4 bg-slate-800 rounded-lg p-4">
+      <div className="flex flex-wrap gap-4 bg-[var(--grey-dim)] rounded-lg p-4">
         <div>
-          <label className="text-sm text-slate-400 block mb-1">Urgency</label>
+          <label className="text-sm text-[var(--grey-light)] block mb-1">Urgency</label>
           <select
             value={urgency}
             onChange={(e) => setUrgency(e.target.value)}
-            className="bg-slate-700 border border-slate-600 rounded px-3 py-1.5 text-sm"
+            className="bg-[var(--grey)] border border-[var(--grey-mid)] rounded px-3 py-1.5 text-sm"
           >
             <option value="">All</option>
             <option value="immediate">Immediate</option>
@@ -56,11 +56,11 @@ export default function Proposals() {
           </select>
         </div>
         <div>
-          <label className="text-sm text-slate-400 block mb-1">Limit</label>
+          <label className="text-sm text-[var(--grey-light)] block mb-1">Limit</label>
           <select
             value={limit}
             onChange={(e) => setLimit(Number(e.target.value))}
-            className="bg-slate-700 border border-slate-600 rounded px-3 py-1.5 text-sm"
+            className="bg-[var(--grey)] border border-[var(--grey-mid)] rounded px-3 py-1.5 text-sm"
           >
             <option value={10}>10</option>
             <option value={20}>20</option>
@@ -70,7 +70,10 @@ export default function Proposals() {
         </div>
         {urgency && (
           <div className="flex items-end">
-            <button onClick={resetFilters} className="text-xs text-slate-400 hover:text-white">
+            <button
+              onClick={resetFilters}
+              className="text-xs text-[var(--grey-light)] hover:text-white"
+            >
               Reset
             </button>
           </div>

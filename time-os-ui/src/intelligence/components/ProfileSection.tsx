@@ -30,14 +30,14 @@ interface ProfileSectionProps {
 function MetricSkeleton() {
   return (
     <div className="animate-pulse">
-      <div className="h-3 w-16 bg-slate-700/50 rounded mb-1" />
-      <div className="h-6 w-24 bg-slate-700/50 rounded" />
+      <div className="h-3 w-16 bg-[var(--grey)]/50 rounded mb-1" />
+      <div className="h-6 w-24 bg-[var(--grey)]/50 rounded" />
     </div>
   );
 }
 
 function ChartSkeleton() {
-  return <div className="animate-pulse h-40 bg-slate-700/50 rounded" />;
+  return <div className="animate-pulse h-40 bg-[var(--grey)]/50 rounded" />;
 }
 
 export function ProfileSection({
@@ -94,7 +94,7 @@ export function ProfileSection({
           {collapsible && (
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="text-slate-400 hover:text-white transition-colors"
+              className="text-[var(--grey-light)] hover:text-white transition-colors"
               aria-label={collapsed ? 'Expand section' : 'Collapse section'}
             >
               {collapsed ? '▶' : '▼'}
@@ -108,7 +108,7 @@ export function ProfileSection({
 
       {/* Description */}
       {description && !collapsed && (
-        <p className="text-xs text-slate-500 mb-4 leading-relaxed">{description}</p>
+        <p className="text-xs text-[var(--grey-muted)] mb-4 leading-relaxed">{description}</p>
       )}
 
       {/* Content */}

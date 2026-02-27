@@ -8,7 +8,9 @@ interface ConfidenceBadgeProps {
 export function ConfidenceBadge({ type, value }: ConfidenceBadgeProps) {
   if (value === null || value === undefined) {
     return (
-      <span className="px-2 py-0.5 rounded text-xs bg-slate-700 text-slate-400">{type}: —</span>
+      <span className="px-2 py-0.5 rounded text-xs bg-[var(--grey)] text-[var(--grey-light)]">
+        {type}: —
+      </span>
     );
   }
 

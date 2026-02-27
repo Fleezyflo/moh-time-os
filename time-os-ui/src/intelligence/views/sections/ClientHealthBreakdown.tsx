@@ -54,14 +54,14 @@ export function ClientHealthBreakdown({ client }: ClientHealthBreakdownProps) {
 
         {/* Active signals */}
         <div>
-          <h4 className="text-sm font-semibold text-slate-400 mb-3">Active Signals</h4>
+          <h4 className="text-sm font-semibold text-[var(--grey-light)] mb-3">Active Signals</h4>
           {signalCount > 0 ? (
             <div className="space-y-2">
               {client.active_signals?.slice(0, 5).map((signal, i) => (
                 <SignalCard key={signal.signal_id || i} signal={signal} />
               ))}
               {signalCount > 5 && (
-                <div className="text-xs text-slate-500 text-center py-2">
+                <div className="text-xs text-[var(--grey-muted)] text-center py-2">
                   +{signalCount - 5} more signals
                 </div>
               )}

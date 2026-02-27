@@ -50,7 +50,7 @@ export function EntityLink({ entity, showType = true }: EntityLinkProps) {
     >
       <span>{icon}</span>
       <span className="group-hover:underline">{entity.name}</span>
-      {showType && <span className="text-xs text-slate-500">({entity.type})</span>}
+      {showType && <span className="text-xs text-[var(--grey-muted)]">({entity.type})</span>}
     </Link>
   );
 }
@@ -60,7 +60,7 @@ export function EntityBadge({ entity }: { entity: Entity }) {
   const icon = ENTITY_ICONS[entity.type] || '📌';
 
   return (
-    <span className="inline-flex items-center gap-1 text-xs bg-slate-700 px-2 py-0.5 rounded">
+    <span className="inline-flex items-center gap-1 text-xs bg-[var(--grey)] px-2 py-0.5 rounded">
       <span>{icon}</span>
       <span>{entity.name}</span>
     </span>
@@ -78,7 +78,7 @@ export function EntityList({ entities, maxItems = 5 }: { entities: Entity[]; max
         <EntityBadge key={`${entity.type}-${entity.id}-${i}`} entity={entity} />
       ))}
       {hasMore && (
-        <span className="text-xs text-slate-500 self-center">
+        <span className="text-xs text-[var(--grey-muted)] self-center">
           +{entities.length - maxItems} more
         </span>
       )}

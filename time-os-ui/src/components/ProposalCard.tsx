@@ -56,7 +56,7 @@ export function ProposalCard({
   const tierColors: Record<string, string> = {
     A: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
     B: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-    C: 'bg-slate-500/20 text-slate-400 border-slate-500/30',
+    C: 'bg-[var(--grey-muted)]/20 text-[var(--grey-light)] border-[var(--grey-muted)]/30',
   };
 
   // Score color based on severity
@@ -64,7 +64,7 @@ export function ProposalCard({
     if (score >= 100) return 'text-red-400';
     if (score >= 50) return 'text-orange-400';
     if (score >= 25) return 'text-amber-400';
-    return 'text-slate-400';
+    return 'text-[var(--grey-light)]';
   };
 
   // Signal category labels and colors (no emojis)
@@ -84,10 +84,14 @@ export function ProposalCard({
     },
     process: {
       label: 'PROCESS',
-      color: 'text-slate-400',
-      bg: 'bg-slate-500/20 border-slate-500/30',
+      color: 'text-[var(--grey-light)]',
+      bg: 'bg-[var(--grey-muted)]/20 border-[var(--grey-muted)]/30',
     },
-    other: { label: 'OTHER', color: 'text-slate-400', bg: 'bg-slate-500/20 border-slate-500/30' },
+    other: {
+      label: 'OTHER',
+      color: 'text-[var(--grey-light)]',
+      bg: 'bg-[var(--grey-muted)]/20 border-[var(--grey-muted)]/30',
+    },
   };
 
   // Get display name - prefer scope_name, fallback to headline
@@ -110,7 +114,7 @@ export function ProposalCard({
 
   return (
     <div
-      className="bg-slate-800 rounded-lg border border-slate-700 hover:border-slate-600 transition-colors cursor-pointer overflow-hidden"
+      className="bg-[var(--grey-dim)] rounded-lg border border-[var(--grey)] hover:border-[var(--grey-mid)] transition-colors cursor-pointer overflow-hidden"
       onClick={onOpen}
     >
       {/* Header */}
@@ -119,7 +123,9 @@ export function ProposalCard({
           <div className="flex-1 min-w-0">
             {/* Title row with tier badge */}
             <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-slate-100 leading-tight truncate">{displayName}</h3>
+              <h3 className="font-semibold text-[var(--white)] leading-tight truncate">
+                {displayName}
+              </h3>
               {proposal.client_tier && (
                 <span
                   className={`px-1.5 py-0.5 text-xs font-medium rounded border ${tierColors[proposal.client_tier] || tierColors['C']}`}
@@ -136,7 +142,7 @@ export function ProposalCard({
 
             {/* Client subtitle if different from scope */}
             {showClientSubtitle && (
-              <p className="text-sm text-slate-500 mt-0.5 truncate">{clientName}</p>
+              <p className="text-sm text-[var(--grey-muted)] mt-0.5 truncate">{clientName}</p>
             )}
 
             {/* Score and trend */}
@@ -150,7 +156,7 @@ export function ProposalCard({
                     ? 'bg-red-500/20 text-red-400'
                     : proposal.trend === 'improving'
                       ? 'bg-green-500/20 text-green-400'
-                      : 'text-slate-500'
+                      : 'text-[var(--grey-muted)]'
                 }`}
               >
                 {proposal.trend === 'worsening'
@@ -159,7 +165,7 @@ export function ProposalCard({
                     ? 'BETTER'
                     : '—'}
               </span>
-              <span className="text-sm text-slate-500">
+              <span className="text-sm text-[var(--grey-muted)]">
                 {signalCount} signal{signalCount !== 1 ? 's' : ''}
               </span>
             </div>
@@ -172,7 +178,7 @@ export function ProposalCard({
                 ? 'bg-indigo-900/50 text-indigo-300'
                 : proposal.scope_level === 'brand'
                   ? 'bg-violet-900/50 text-violet-300'
-                  : 'bg-slate-700 text-slate-300'
+                  : 'bg-[var(--grey)] text-[var(--grey-subtle)]'
             }`}
           >
             {proposal.scope_level || proposal.impact?.entity_type || 'project'}
@@ -196,14 +202,14 @@ export function ProposalCard({
 
         {/* Worst signal text */}
         {(proposal.worst_signal || proposal.impact?.worst_signal) && (
-          <p className="mt-3 text-sm text-slate-400 line-clamp-2">
+          <p className="mt-3 text-sm text-[var(--grey-light)] line-clamp-2">
             {proposal.worst_signal || proposal.impact?.worst_signal}
           </p>
         )}
 
         {/* "And X more" link */}
         {remainingCount > 0 && (
-          <p className="mt-2 text-xs text-slate-500">
+          <p className="mt-2 text-xs text-[var(--grey-muted)]">
             and {remainingCount} more issue{remainingCount !== 1 ? 's' : ''}...
           </p>
         )}
@@ -212,7 +218,7 @@ export function ProposalCard({
       {/* Score breakdown bar (visual) */}
       {proposal.score_breakdown && (
         <div className="px-4 pb-3">
-          <div className="flex h-1.5 rounded-full overflow-hidden bg-slate-700/50">
+          <div className="flex h-1.5 rounded-full overflow-hidden bg-[var(--grey)]/50">
             <div
               className="bg-red-500/70"
               style={{ width: `${(proposal.score_breakdown.urgency / 60) * 40}%` }}
@@ -233,12 +239,12 @@ export function ProposalCard({
       )}
 
       {/* Actions */}
-      <div className="px-4 py-3 border-t border-slate-700/50 flex items-center gap-2">
+      <div className="px-4 py-3 border-t border-[var(--grey)]/50 flex items-center gap-2">
         <button
           onClick={handleTag}
           disabled={isBusy}
           className={`px-3 py-1.5 text-white text-sm font-medium rounded transition-colors ${
-            isBusy ? 'bg-slate-600 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500'
+            isBusy ? 'bg-[var(--grey-mid)] cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-500'
           }`}
         >
           {isTagging ? (
@@ -253,8 +259,10 @@ export function ProposalCard({
         <button
           onClick={handleSnooze}
           disabled={isBusy}
-          className={`px-3 py-1.5 text-slate-300 text-sm rounded transition-colors ${
-            isBusy ? 'bg-slate-700/50 cursor-not-allowed' : 'bg-slate-700 hover:bg-slate-600'
+          className={`px-3 py-1.5 text-[var(--grey-subtle)] text-sm rounded transition-colors ${
+            isBusy
+              ? 'bg-[var(--grey)]/50 cursor-not-allowed'
+              : 'bg-[var(--grey)] hover:bg-[var(--grey-mid)]'
           }`}
         >
           {isSnoozing ? '...' : 'Snooze'}
@@ -265,7 +273,7 @@ export function ProposalCard({
             onDismiss?.();
           }}
           disabled={isBusy}
-          className="px-3 py-1.5 text-slate-500 text-sm rounded hover:text-slate-300 transition-colors ml-auto"
+          className="px-3 py-1.5 text-[var(--grey-muted)] text-sm rounded hover:text-[var(--grey-subtle)] transition-colors ml-auto"
         >
           Dismiss
         </button>

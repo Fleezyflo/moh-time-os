@@ -60,7 +60,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 ? 'bg-green-900/90 border border-green-700'
                 : toast.type === 'error'
                   ? 'bg-red-900/90 border border-red-700'
-                  : 'bg-slate-800/90 border border-slate-700'
+                  : 'bg-[var(--grey-dim)]/90 border border-[var(--grey)]'
             }`}
           >
             <span className="text-lg">
@@ -72,14 +72,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   ? 'text-green-200'
                   : toast.type === 'error'
                     ? 'text-red-200'
-                    : 'text-slate-200'
+                    : 'text-[var(--white)]'
               }`}
             >
               {toast.message}
             </span>
             <button
               onClick={() => removeToast(toast.id)}
-              className="text-slate-400 hover:text-slate-200"
+              className="text-[var(--grey-light)] hover:text-[var(--white)]"
             >
               ×
             </button>

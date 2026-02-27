@@ -44,37 +44,39 @@ export default function Briefing() {
       {/* Header */}
       <div>
         <h1 className="text-2xl font-semibold">Daily Briefing</h1>
-        <p className="text-slate-400 mt-1">
+        <p className="text-[var(--grey-light)] mt-1">
           Generated at {new Date(briefing.generated_at).toLocaleString()}
         </p>
       </div>
 
       {/* Summary */}
-      <div className="bg-slate-800 rounded-lg p-6">
+      <div className="bg-[var(--grey-dim)] rounded-lg p-6">
         <div className="text-lg">
           <span className="text-white font-medium">{summary.total_proposals}</span>
-          <span className="text-slate-400"> proposals today: </span>
+          <span className="text-[var(--grey-light)]"> proposals today: </span>
           {summary.immediate_count > 0 && (
             <span className="text-red-400">{summary.immediate_count} critical</span>
           )}
           {summary.immediate_count > 0 && summary.this_week_count > 0 && (
-            <span className="text-slate-400">, </span>
+            <span className="text-[var(--grey-light)]">, </span>
           )}
           {summary.this_week_count > 0 && (
             <span className="text-amber-400">{summary.this_week_count} attention</span>
           )}
           {(summary.immediate_count > 0 || summary.this_week_count > 0) &&
-            summary.monitor_count > 0 && <span className="text-slate-400">, </span>}
+            summary.monitor_count > 0 && <span className="text-[var(--grey-light)]">, </span>}
           {summary.monitor_count > 0 && (
-            <span className="text-slate-500">{summary.monitor_count} watching</span>
+            <span className="text-[var(--grey-muted)]">{summary.monitor_count} watching</span>
           )}
         </div>
       </div>
 
       {/* Top Priority */}
       {top_proposal && (
-        <div className="bg-slate-800 border-l-4 border-red-500 rounded-lg p-6">
-          <div className="text-sm text-slate-500 uppercase tracking-wide mb-2">Top Priority</div>
+        <div className="bg-[var(--grey-dim)] border-l-4 border-red-500 rounded-lg p-6">
+          <div className="text-sm text-[var(--grey-muted)] uppercase tracking-wide mb-2">
+            Top Priority
+          </div>
           <div className="text-lg text-white">{top_proposal}</div>
         </div>
       )}
@@ -89,7 +91,7 @@ export default function Briefing() {
             {critical_items.map((item, i) => (
               <div key={i} className="bg-red-500/10 border border-red-500/30 rounded-lg p-4">
                 <div className="font-medium">{item.headline}</div>
-                <div className="text-sm text-slate-400 mt-2">{item.implied_action}</div>
+                <div className="text-sm text-[var(--grey-light)] mt-2">{item.implied_action}</div>
               </div>
             ))}
           </div>
@@ -106,7 +108,7 @@ export default function Briefing() {
             {attention_items.map((item, i) => (
               <div key={i} className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-4">
                 <div className="font-medium">{item.headline}</div>
-                <div className="text-sm text-slate-400 mt-2">{item.implied_action}</div>
+                <div className="text-sm text-[var(--grey-light)] mt-2">{item.implied_action}</div>
               </div>
             ))}
           </div>
@@ -116,14 +118,17 @@ export default function Briefing() {
       {/* Watching */}
       {watching && watching.length > 0 && (
         <details className="group">
-          <summary className="text-lg font-medium text-slate-400 mb-3 cursor-pointer">
+          <summary className="text-lg font-medium text-[var(--grey-light)] mb-3 cursor-pointer">
             👁 Watching ({watching.length})
           </summary>
           <div className="space-y-3 mt-3">
             {watching.map((item, i) => (
-              <div key={i} className="bg-slate-800 border border-slate-700 rounded-lg p-4">
+              <div
+                key={i}
+                className="bg-[var(--grey-dim)] border border-[var(--grey)] rounded-lg p-4"
+              >
                 <div className="font-medium">{item.headline}</div>
-                <div className="text-sm text-slate-400 mt-2">{item.implied_action}</div>
+                <div className="text-sm text-[var(--grey-light)] mt-2">{item.implied_action}</div>
               </div>
             ))}
           </div>
@@ -132,8 +137,8 @@ export default function Briefing() {
 
       {/* Portfolio Health */}
       {portfolio_health && (
-        <div className="bg-slate-800 rounded-lg p-6">
-          <div className="text-sm text-slate-500 uppercase tracking-wide mb-2">
+        <div className="bg-[var(--grey-dim)] rounded-lg p-6">
+          <div className="text-sm text-[var(--grey-muted)] uppercase tracking-wide mb-2">
             Portfolio Health
           </div>
           <div className="flex items-center gap-4">
@@ -148,7 +153,7 @@ export default function Briefing() {
             >
               {portfolio_health.overall_score}
             </div>
-            <div className="text-slate-400">
+            <div className="text-[var(--grey-light)]">
               <div>{portfolio_health.active_structural_patterns} structural patterns</div>
               <div className="text-sm">Trend: {portfolio_health.trend}</div>
             </div>

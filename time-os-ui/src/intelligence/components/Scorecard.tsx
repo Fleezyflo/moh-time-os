@@ -17,17 +17,19 @@ function ScoreBar({ score, label, weight }: { score: number; label: string; weig
   return (
     <div className="space-y-1">
       <div className="flex items-center justify-between text-sm">
-        <span className="text-slate-300">{label}</span>
+        <span className="text-[var(--grey-subtle)]">{label}</span>
         <span className={textColor}>{Math.round(score)}</span>
       </div>
-      <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+      <div className="h-2 bg-[var(--grey)] rounded-full overflow-hidden">
         <div
           className={`h-full ${color} rounded-full transition-all duration-300`}
           style={{ width: `${Math.min(100, Math.max(0, score))}%` }}
         />
       </div>
       {weight !== undefined && (
-        <div className="text-xs text-slate-500 text-right">{Math.round(weight * 100)}% weight</div>
+        <div className="text-xs text-[var(--grey-muted)] text-right">
+          {Math.round(weight * 100)}% weight
+        </div>
       )}
     </div>
   );
@@ -59,7 +61,7 @@ export function Scorecard({ scorecard, compact = false }: ScorecardProps) {
             .slice(0, 4)
             .map(([key, dim]) => (
               <div key={key} className="text-sm">
-                <span className="text-slate-400">{dim.name}: </span>
+                <span className="text-[var(--grey-light)]">{dim.name}: </span>
                 <span
                   className={
                     dim.score >= 60
@@ -79,11 +81,11 @@ export function Scorecard({ scorecard, compact = false }: ScorecardProps) {
   }
 
   return (
-    <div className="bg-slate-800 rounded-lg p-6">
+    <div className="bg-[var(--grey-dim)] rounded-lg p-6">
       {/* Header with composite score */}
       <div className="flex items-center justify-between mb-6">
         <div>
-          <div className="text-sm text-slate-400">{scorecard.entity_type} Score</div>
+          <div className="text-sm text-[var(--grey-light)]">{scorecard.entity_type} Score</div>
           {scorecard.entity_name && (
             <div className="text-lg font-medium">{scorecard.entity_name}</div>
           )}
@@ -100,7 +102,7 @@ export function Scorecard({ scorecard, compact = false }: ScorecardProps) {
 
       {/* Computed timestamp */}
       {scorecard.computed_at && (
-        <div className="text-xs text-slate-500 mt-4 pt-4 border-t border-slate-700">
+        <div className="text-xs text-[var(--grey-muted)] mt-4 pt-4 border-t border-[var(--grey)]">
           Computed: {new Date(scorecard.computed_at).toLocaleString()}
         </div>
       )}

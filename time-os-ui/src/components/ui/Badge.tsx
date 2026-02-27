@@ -25,7 +25,7 @@ const statusStyles: Record<BadgeStatus, string> = {
 const tierStyles: Record<BadgeTier, string> = {
   platinum: 'bg-purple-500 text-[var(--white)]',
   gold: 'bg-yellow-500 text-[var(--black)]',
-  silver: 'bg-slate-400 text-[var(--black)]',
+  silver: 'bg-[var(--grey-light)] text-[var(--black)]',
   bronze: 'bg-orange-700 text-[var(--white)]',
   none: 'bg-[var(--grey-dim)] text-[var(--grey-light)]',
 };

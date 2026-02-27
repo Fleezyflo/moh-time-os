@@ -68,19 +68,19 @@ interface ProfileShellProps<T> {
 function LoadingSkeleton() {
   return (
     <div className="max-w-5xl">
-      <div className="p-5 bg-slate-800 border border-slate-700 rounded-lg mb-6">
+      <div className="p-5 bg-[var(--grey-dim)] border border-[var(--grey)] rounded-lg mb-6">
         <div className="animate-pulse">
           <div className="flex gap-3 mb-3">
-            <div className="h-5 w-16 bg-slate-700/50 rounded-full" />
-            <div className="h-6 w-48 bg-slate-700/50 rounded" />
+            <div className="h-5 w-16 bg-[var(--grey)]/50 rounded-full" />
+            <div className="h-6 w-48 bg-[var(--grey)]/50 rounded" />
           </div>
           <div className="flex gap-3 mb-4">
-            <div className="h-10 w-16 bg-slate-700/50 rounded" />
-            <div className="h-5 w-20 bg-slate-700/50 rounded" />
+            <div className="h-10 w-16 bg-[var(--grey)]/50 rounded" />
+            <div className="h-5 w-20 bg-[var(--grey)]/50 rounded" />
           </div>
           <div className="flex gap-4">
             {Array.from({ length: 4 }, (_, i) => (
-              <div key={i} className="h-4 w-20 bg-slate-700/50 rounded" />
+              <div key={i} className="h-4 w-20 bg-[var(--grey)]/50 rounded" />
             ))}
           </div>
         </div>
@@ -88,7 +88,7 @@ function LoadingSkeleton() {
       <div className="space-y-6">
         {Array.from({ length: 2 }, (_, i) => (
           <div key={i}>
-            <div className="h-5 w-32 bg-slate-700/50 rounded mb-3 animate-pulse" />
+            <div className="h-5 w-32 bg-[var(--grey)]/50 rounded mb-3 animate-pulse" />
             <SkeletonCard />
           </div>
         ))}
@@ -139,7 +139,7 @@ export function ProfileShell<T>({
     <div className="p-6">
       <div className="max-w-5xl">
         {loading && (
-          <div className="fixed top-4 right-4 px-3 py-1.5 bg-slate-800 border border-slate-700 rounded-lg text-xs text-slate-400 flex items-center gap-2 z-50">
+          <div className="fixed top-4 right-4 px-3 py-1.5 bg-[var(--grey-dim)] border border-[var(--grey)] rounded-lg text-xs text-[var(--grey-light)] flex items-center gap-2 z-50">
             <span className="animate-spin">↻</span>
             Refreshing...
           </div>
@@ -155,7 +155,7 @@ export function ProfileShell<T>({
               {headerActions}
               <button
                 onClick={onRefresh}
-                className="px-3 py-1.5 text-sm text-slate-400 hover:text-white bg-slate-700/50 hover:bg-slate-700 border border-slate-600 rounded transition-colors"
+                className="px-3 py-1.5 text-sm text-[var(--grey-light)] hover:text-white bg-[var(--grey)]/50 hover:bg-[var(--grey)] border border-[var(--grey-mid)] rounded transition-colors"
                 title="Refresh data"
               >
                 ↻ Refresh

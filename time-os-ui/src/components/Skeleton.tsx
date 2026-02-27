@@ -6,7 +6,7 @@ interface SkeletonProps {
 
 // Base skeleton with animation
 function SkeletonBase({ className = '' }: SkeletonProps) {
-  return <div className={`animate-pulse bg-slate-700/50 rounded ${className}`} />;
+  return <div className={`animate-pulse bg-[var(--grey)]/50 rounded ${className}`} />;
 }
 
 // Single row skeleton (for issues, watchers, etc.)
@@ -26,7 +26,7 @@ export function SkeletonRow({ className = '' }: SkeletonProps) {
 // Card skeleton (for proposals, clients, team members)
 export function SkeletonCard({ className = '' }: SkeletonProps) {
   return (
-    <div className={`bg-slate-800 rounded-lg border border-slate-700 p-4 ${className}`}>
+    <div className={`bg-[var(--grey-dim)] rounded-lg border border-[var(--grey)] p-4 ${className}`}>
       <div className="flex items-start justify-between mb-3">
         <SkeletonBase className="h-5 w-2/3" />
         <SkeletonBase className="h-5 w-12 rounded" />
@@ -46,7 +46,9 @@ export function SkeletonCard({ className = '' }: SkeletonProps) {
 // Panel skeleton (for sidebar sections)
 export function SkeletonPanel({ rows = 3, className = '' }: SkeletonProps & { rows?: number }) {
   return (
-    <div className={`bg-slate-800/50 rounded-lg border border-slate-700 p-4 ${className}`}>
+    <div
+      className={`bg-[var(--grey-dim)]/50 rounded-lg border border-[var(--grey)] p-4 ${className}`}
+    >
       <SkeletonBase className="h-4 w-24 mb-3" />
       <div className="space-y-3">
         {Array.from({ length: rows }).map((_, i) => (

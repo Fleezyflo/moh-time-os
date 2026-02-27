@@ -143,7 +143,7 @@ const SEVERITY_COLORS: Record<Severity, string> = {
   high: 'bg-orange-500 text-[var(--white)]',
   medium: 'bg-[var(--warning)] text-black',
   low: 'bg-[var(--info)] text-[var(--white)]',
-  info: 'bg-slate-500 text-[var(--white)]',
+  info: 'bg-[var(--grey-muted)] text-[var(--white)]',
 };
 
 // Issue type icons

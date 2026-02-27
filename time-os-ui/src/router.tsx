@@ -43,7 +43,7 @@ function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
   return (
     <Link
       to={to}
-      className="px-3 py-2 text-sm rounded-md hover:bg-slate-700 transition-colors whitespace-nowrap [&.active]:bg-slate-700 [&.active]:text-white min-h-[44px] flex items-center"
+      className="px-3 py-2 text-sm rounded-md hover:bg-[var(--grey)] transition-colors whitespace-nowrap [&.active]:bg-[var(--grey)] [&.active]:text-white min-h-[44px] flex items-center"
     >
       {children}
     </Link>
@@ -56,7 +56,7 @@ function RootLayout() {
 
   return (
     <ProtectedRoute>
-      <div className="min-h-screen bg-slate-900 text-slate-200">
+      <div className="min-h-screen bg-[var(--black)] text-[var(--white)]">
         {/* Skip to content link for accessibility */}
         <a
           href="#main-content"
@@ -69,7 +69,7 @@ function RootLayout() {
         <nav
           role="navigation"
           aria-label="Main navigation"
-          className="sticky top-0 z-50 bg-slate-800/95 backdrop-blur border-b border-slate-700"
+          className="sticky top-0 z-50 bg-[var(--grey-dim)]/95 backdrop-blur border-b border-[var(--grey)]"
         >
           <div className="max-w-7xl mx-auto px-4 sm:px-6">
             <div className="flex items-center justify-between h-14 sm:h-16">
@@ -89,7 +89,7 @@ function RootLayout() {
               {/* Mobile Menu Toggle */}
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden p-2 hover:bg-slate-700 rounded transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                className="md:hidden p-2 hover:bg-[var(--grey)] rounded transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
                 aria-label="Toggle navigation menu"
                 aria-expanded={mobileMenuOpen}
                 aria-controls="mobile-nav"
@@ -113,7 +113,7 @@ function RootLayout() {
                     key={item.to}
                     to={item.to}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block px-3 py-2 text-base rounded-md hover:bg-slate-700 transition-colors [&.active]:bg-slate-700 [&.active]:text-white"
+                    className="block px-3 py-2 text-base rounded-md hover:bg-[var(--grey)] transition-colors [&.active]:bg-[var(--grey)] [&.active]:text-white"
                   >
                     {item.label}
                   </Link>

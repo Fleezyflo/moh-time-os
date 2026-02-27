@@ -29,7 +29,7 @@ export function priorityBadgeClass(priority: number): string {
   if (priority >= PRIORITY_THRESHOLDS.critical) return 'bg-red-900/30 text-red-400';
   if (priority >= PRIORITY_THRESHOLDS.high) return 'bg-orange-900/30 text-orange-400';
   if (priority >= PRIORITY_THRESHOLDS.medium) return 'bg-yellow-900/30 text-yellow-400';
-  return 'bg-slate-700 text-slate-400';
+  return 'bg-[var(--grey)] text-[var(--grey-light)]';
 }
 
 // Compare priorities for sorting (descending: higher priority first)
