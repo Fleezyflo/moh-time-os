@@ -4,8 +4,6 @@ Safety Migrations
 Creates all tables, triggers, and constraints required for the safety system.
 Idempotent - safe to run multiple times.
 """
-# nosec B608 - All SQL in this file uses table names from hardcoded SAFETY_MANAGED_TABLES list
-# Dynamic DDL construction is intentional for trigger generation patterns
 
 import logging
 import sqlite3
@@ -306,7 +304,6 @@ def _get_context_triggers(table: str) -> list[tuple[str, str]]:
     """
     safe_table = table.replace("-", "_")
 
-    # nosec B608 - table names are from hardcoded SAFETY_MANAGED_TABLES list
     sql_insert = "".join(
         [
             "CREATE TRIGGER trg_",

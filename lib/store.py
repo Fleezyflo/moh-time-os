@@ -5,7 +5,7 @@ import sqlite3
 from contextlib import contextmanager
 from datetime import datetime
 
-from lib import paths
+from lib import paths, safe_sql
 
 log = logging.getLogger("moh_time_os")
 
@@ -208,7 +208,8 @@ def table_counts() -> dict:
         counts = {}
         for table in tables:
             try:
-                count = conn.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]  # noqa: S608
+                sql = safe_sql.select_count_bare(table)
+                count = conn.execute(sql).fetchone()[0]
                 counts[table] = count
             except sqlite3.OperationalError:
                 counts[table] = 0

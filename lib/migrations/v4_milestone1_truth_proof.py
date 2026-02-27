@@ -19,6 +19,8 @@ import os
 import sqlite3
 from datetime import datetime
 
+from lib import safe_sql
+
 logger = logging.getLogger(__name__)
 
 
@@ -337,7 +339,8 @@ def verify_migration():
         for table in expected_tables:
             if table in existing:
                 # Count rows
-                cursor.execute(f"SELECT COUNT(*) FROM {table}")  # noqa: S608
+                sql = safe_sql.select_count_bare(table)
+                cursor.execute(sql)
                 count = cursor.fetchone()[0]
                 logger.info(f"  ✓ {table}: {count} rows")
             else:

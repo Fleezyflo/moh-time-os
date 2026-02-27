@@ -21,7 +21,7 @@ from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
 
-from lib import paths, schema, schema_engine
+from lib import paths, safe_sql, schema, schema_engine
 
 logger = logging.getLogger(__name__)
 
@@ -103,7 +103,7 @@ def get_table_columns(conn: sqlite3.Connection, table: str) -> set[str]:
     """Get existing column names for a table."""
     validate_identifier(table)
     try:
-        cursor = conn.execute(f"PRAGMA table_info({table})")  # nosec B608 — validated above
+        cursor = conn.execute(safe_sql.pragma_table_info(table))
         return {row[1] for row in cursor.fetchall()}
     except sqlite3.OperationalError:
         return set()
@@ -125,7 +125,7 @@ def set_schema_version(conn: sqlite3.Connection, version: int):
     """Set schema version via PRAGMA user_version."""
     if not isinstance(version, int) or version < 0:
         raise ValueError(f"Invalid schema version: {version!r}")
-    conn.execute(f"PRAGMA user_version = {version}")  # nosec B608 — int-validated above
+    conn.execute(safe_sql.pragma_user_version_set(version))
 
 
 # ============================================================

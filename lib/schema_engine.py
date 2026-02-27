@@ -15,7 +15,7 @@ import logging
 import re
 import sqlite3
 
-from lib import schema
+from lib import safe_sql, schema
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +80,7 @@ def _get_existing_tables(conn: sqlite3.Connection) -> dict[str, str]:
 def _get_existing_columns(conn: sqlite3.Connection, table: str) -> set[str]:
     """Return set of column names for a table/view."""
     try:
-        cursor = conn.execute(f"PRAGMA table_info([{table}])")  # nosec B608
+        cursor = conn.execute(safe_sql.pragma_table_info(table))
         return {row[1] for row in cursor.fetchall()}
     except sqlite3.OperationalError:
         return set()
@@ -177,9 +177,7 @@ def converge(conn: sqlite3.Connection) -> dict:
 
                 safe_ddl = make_alter_safe(col_ddl)
                 try:
-                    conn.execute(
-                        f"ALTER TABLE [{table_name}] ADD COLUMN [{col_name}] {safe_ddl}"  # nosec B608
-                    )
+                    conn.execute(safe_sql.alter_add_column(table_name, col_name, safe_ddl))
                     col_ref = f"{table_name}.{col_name}"
                     results["columns_added"].append(col_ref)
                     logger.info("schema_engine: added column %s", col_ref)
@@ -208,7 +206,7 @@ def converge(conn: sqlite3.Connection) -> dict:
         where_clause = f" WHERE {idx_where}" if idx_where else ""
         sql = f"CREATE INDEX IF NOT EXISTS [{idx_name}] ON [{idx_table}]({idx_cols}){where_clause}"
         try:
-            conn.execute(sql)  # nosec B608
+            conn.execute(sql)
             results["indexes_created"].append(idx_name)
         except sqlite3.OperationalError as e:
             err = f"CREATE INDEX {idx_name}: {e}"
@@ -232,7 +230,11 @@ def converge(conn: sqlite3.Connection) -> dict:
             if source_expr not in cols:
                 continue
 
-        sql = f"UPDATE [{table}] SET [{target_col}] = [{source_expr}] WHERE {where_cond}"  # noqa: S608  # nosec B608
+        # Validate identifiers before building SQL
+        safe_sql._validate(table)
+        safe_sql._validate(target_col)
+        safe_sql._validate(source_expr)
+        sql = safe_sql.update_set_where_simple(table, target_col, source_expr, where_cond)
         try:
             cursor = conn.execute(sql)
             if cursor.rowcount > 0:
@@ -250,7 +252,7 @@ def converge(conn: sqlite3.Connection) -> dict:
 
     # ── Phase 4: Schema version ──────────────────────────────
 
-    conn.execute(f"PRAGMA user_version = {schema.SCHEMA_VERSION}")  # nosec B608
+    conn.execute(safe_sql.pragma_user_version_set(schema.SCHEMA_VERSION))
 
     results["schema_version"] = schema.SCHEMA_VERSION
     return results
@@ -283,10 +285,10 @@ def create_fresh(conn: sqlite3.Connection) -> dict:
     # Drop views first, then tables
     for name, obj_type in existing:
         if obj_type == "view":
-            conn.execute(f"DROP VIEW IF EXISTS [{name}]")  # nosec B608
+            conn.execute(safe_sql.drop_view(name))
     for name, obj_type in existing:
         if obj_type == "table":
-            conn.execute(f"DROP TABLE IF EXISTS [{name}]")  # nosec B608
+            conn.execute(safe_sql.drop_table(name))
 
     # Create all tables
     for table_name, table_def in schema.TABLES.items():
@@ -307,7 +309,7 @@ def create_fresh(conn: sqlite3.Connection) -> dict:
         where_clause = f" WHERE {idx_where}" if idx_where else ""
         sql = f"CREATE INDEX IF NOT EXISTS [{idx_name}] ON [{idx_table}]({idx_cols}){where_clause}"
         try:
-            conn.execute(sql)  # nosec B608
+            conn.execute(sql)
             results["indexes_created"].append(idx_name)
         except sqlite3.OperationalError as e:
             err = f"CREATE INDEX {idx_name}: {e}"
@@ -315,7 +317,7 @@ def create_fresh(conn: sqlite3.Connection) -> dict:
             logger.warning("schema_engine: create_fresh index %s", err)
 
     # Set schema version
-    conn.execute(f"PRAGMA user_version = {schema.SCHEMA_VERSION}")  # nosec B608
+    conn.execute(safe_sql.pragma_user_version_set(schema.SCHEMA_VERSION))
 
     results["schema_version"] = schema.SCHEMA_VERSION
     return results

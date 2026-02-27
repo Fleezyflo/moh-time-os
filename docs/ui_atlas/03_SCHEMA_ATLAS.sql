@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS "clients" (
     health_score REAL,                              -- 0-100 computed health
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    
+
     -- LEGACY/EXTENSION COLUMNS
     type TEXT,                                      -- 'agency_client', 'partner', etc.
     financial_annual_value REAL,                    -- Annual contract value
@@ -72,7 +72,7 @@ CREATE TABLE IF NOT EXISTS "projects" (
     status TEXT DEFAULT 'active',                   -- 'active', 'completed', 'on_hold'
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    
+
     -- LEGACY/EXTENSION COLUMNS
     source TEXT,                                    -- 'asana', 'manual'
     source_id TEXT,                                 -- External system ID
@@ -118,7 +118,7 @@ CREATE TABLE IF NOT EXISTS "projects" (
     team TEXT,                                      -- JSON array of team members
     asana_project_id TEXT,                          -- Asana GID
     proposed_at TEXT,                               -- Proposal timestamp
-    
+
     -- FOREIGN KEYS
     FOREIGN KEY (brand_id) REFERENCES brands(id),
     FOREIGN KEY (client_id) REFERENCES clients(id)
@@ -143,9 +143,9 @@ CREATE TABLE IF NOT EXISTS "tasks" (
     project_id TEXT,                                -- FK to projects
     brand_id TEXT,                                  -- FK to brands (derived)
     client_id TEXT,                                 -- FK to clients (derived)
-    project_link_status TEXT DEFAULT 'unlinked' 
+    project_link_status TEXT DEFAULT 'unlinked'
         CHECK (project_link_status IN ('linked', 'partial', 'unlinked')),
-    client_link_status TEXT DEFAULT 'unlinked' 
+    client_link_status TEXT DEFAULT 'unlinked'
         CHECK (client_link_status IN ('linked', 'unlinked', 'n/a')),
     assignee_id TEXT,                               -- FK to team_members
     assignee_raw TEXT,                              -- Raw assignee string
@@ -154,7 +154,7 @@ CREATE TABLE IF NOT EXISTS "tasks" (
     duration_min INTEGER DEFAULT 60,                -- Estimated duration (minutes)
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    
+
     -- LEGACY/EXTENSION COLUMNS
     project TEXT,                                   -- Legacy: project name/id string
     priority INTEGER DEFAULT 50,                    -- 0-100 priority score
@@ -182,7 +182,7 @@ CREATE TABLE IF NOT EXISTS "tasks" (
     last_activity_at TEXT,                          -- Last update
     stale_days INTEGER DEFAULT 0,                   -- Days since last activity
     scheduled_block_id TEXT,                        -- FK to time_blocks
-    
+
     -- FOREIGN KEYS
     FOREIGN KEY (project_id) REFERENCES projects(id),
     FOREIGN KEY (brand_id) REFERENCES brands(id),
@@ -218,12 +218,12 @@ CREATE TABLE IF NOT EXISTS "communications" (
     content_hash TEXT,                              -- SHA256 for dedup
     received_at TEXT,                               -- Email timestamp
     client_id TEXT,                                 -- FK to clients (derived)
-    link_status TEXT DEFAULT 'unlinked' 
+    link_status TEXT DEFAULT 'unlinked'
         CHECK (link_status IN ('linked', 'unlinked')),
     processed INTEGER DEFAULT 0,                    -- 1 if processed for commitments
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    
+
     -- LEGACY/EXTENSION COLUMNS
     priority INTEGER DEFAULT 50,                    -- 0-100 priority
     requires_response INTEGER DEFAULT 0,            -- 1 if response needed
@@ -246,7 +246,7 @@ CREATE TABLE IF NOT EXISTS "communications" (
     linked_task_id TEXT,                            -- FK to tasks if task created
     age_hours REAL,                                 -- Hours since received
     body_text_source TEXT DEFAULT 'unknown',        -- How body was obtained
-    
+
     -- FOREIGN KEY
     FOREIGN KEY (client_id) REFERENCES clients(id)
 );
@@ -275,14 +275,14 @@ CREATE TABLE IF NOT EXISTS "invoices" (
     currency TEXT NOT NULL,                         -- 'AED', 'USD', etc.
     issue_date TEXT NOT NULL,                       -- Issue date
     due_date TEXT,                                  -- Due date
-    status TEXT NOT NULL 
+    status TEXT NOT NULL
         CHECK (status IN ('draft', 'sent', 'paid', 'overdue', 'void')),
     paid_date TEXT,                                 -- When paid (if paid)
-    aging_bucket TEXT 
+    aging_bucket TEXT
         CHECK (aging_bucket IN ('current', '1-30', '31-60', '61-90', '90+', NULL)),
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    
+
     -- FOREIGN KEYS
     FOREIGN KEY (client_id) REFERENCES clients(id),
     FOREIGN KEY (brand_id) REFERENCES brands(id),
@@ -290,7 +290,7 @@ CREATE TABLE IF NOT EXISTS "invoices" (
 );
 CREATE INDEX IF NOT EXISTS idx_invoices_client ON invoices(client_id);
 CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
-CREATE INDEX IF NOT EXISTS idx_invoices_ar ON invoices(status, paid_date) 
+CREATE INDEX IF NOT EXISTS idx_invoices_ar ON invoices(status, paid_date)
     WHERE status IN ('sent', 'overdue') AND paid_date IS NULL;
 
 -- -----------------------------------------------------------------------------
@@ -304,7 +304,7 @@ CREATE TABLE IF NOT EXISTS "commitments" (
     source_type TEXT NOT NULL DEFAULT 'communication',  -- 'communication', 'meeting'
     source_id TEXT NOT NULL,                        -- FK to source (communications.id)
     text TEXT NOT NULL,                             -- Commitment text
-    type TEXT NOT NULL 
+    type TEXT NOT NULL
         CHECK (type IN ('promise', 'request')),     -- We promised vs they requested
     confidence REAL,                                -- Extraction confidence 0-1
     deadline TEXT,                                  -- Commitment deadline
@@ -312,13 +312,13 @@ CREATE TABLE IF NOT EXISTS "commitments" (
     target TEXT,                                    -- Who it's to
     client_id TEXT,                                 -- FK to clients
     task_id TEXT,                                   -- FK to tasks if task created
-    status TEXT DEFAULT 'open' 
+    status TEXT DEFAULT 'open'
         CHECK (status IN ('open', 'fulfilled', 'broken', 'cancelled')),
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     extraction_model TEXT,                          -- Model used for extraction
     extraction_prompt_version TEXT,                 -- Prompt version
     extraction_timestamp TEXT,                      -- When extracted
-    
+
     -- FOREIGN KEYS
     FOREIGN KEY (source_id) REFERENCES communications(id),
     FOREIGN KEY (client_id) REFERENCES clients(id),
@@ -432,7 +432,7 @@ CREATE TABLE IF NOT EXISTS time_debt (
     FOREIGN KEY (lane) REFERENCES capacity_lanes(id)
 );
 CREATE INDEX IF NOT EXISTS idx_time_debt_lane ON time_debt(lane);
-CREATE INDEX IF NOT EXISTS idx_time_debt_unresolved ON time_debt(resolved_at) 
+CREATE INDEX IF NOT EXISTS idx_time_debt_unresolved ON time_debt(resolved_at)
     WHERE resolved_at IS NULL;
 
 -- ==============================================================================
@@ -562,7 +562,7 @@ CREATE TABLE IF NOT EXISTS meet_attendance (
 CREATE TABLE IF NOT EXISTS client_identities (
     id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
     client_id TEXT NOT NULL,
-    identity_type TEXT NOT NULL 
+    identity_type TEXT NOT NULL
         CHECK (identity_type IN ('email', 'domain')),
     identity_value TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -650,8 +650,8 @@ CREATE TABLE IF NOT EXISTS resolution_queue (
     resolution_action TEXT,                         -- What was done
     UNIQUE(entity_type, entity_id, issue_type)
 );
-CREATE INDEX IF NOT EXISTS idx_resolution_queue_pending 
-    ON resolution_queue(priority, created_at) 
+CREATE INDEX IF NOT EXISTS idx_resolution_queue_pending
+    ON resolution_queue(priority, created_at)
     WHERE resolved_at IS NULL;
 
 -- -----------------------------------------------------------------------------
@@ -736,7 +736,7 @@ CREATE TABLE IF NOT EXISTS decisions (
     outcome TEXT,
     created_at TEXT NOT NULL
 );
-CREATE INDEX IF NOT EXISTS idx_decisions_pending ON decisions(approved) 
+CREATE INDEX IF NOT EXISTS idx_decisions_pending ON decisions(approved)
     WHERE approved IS NULL;
 
 -- -----------------------------------------------------------------------------
@@ -883,7 +883,7 @@ CREATE TABLE IF NOT EXISTS item_history (
 -- UI Meaning: Normalized task view for generic queries
 -- -----------------------------------------------------------------------------
 CREATE VIEW IF NOT EXISTS items AS
-SELECT 
+SELECT
     id,
     title AS what,
     status,

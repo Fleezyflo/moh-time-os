@@ -2,11 +2,11 @@
 
 ## Current State
 
-- **Current phase:** Phase 3 COMPLETE (Page Redesign -- Core). Sub-phases 3.1-3.5 all done.
-- **Current track:** T2 (Existing Page Redesign)
-- **Blocked by:** Nothing -- main is clean.
+- **Current phase:** Phase -1 bypass remediation COMPLETE (code ready, needs commit).
+- **Current track:** T2 (Existing Page Redesign) -- foundation complete
+- **Blocked by:** Bypass remediation PR needs commit, format, and merge.
 - **D1/D2:** Resolved. Blue `#3b82f6`, slate-400 at 5.1:1.
-- **Next session:** Phase 4 (Route Consolidation) -- add redirects, remove legacy routes, update NAV_ITEMS.
+- **Next session:** Commit bypass remediation, then Phase 6 (Task Management).
 
 ## Session History
 
@@ -361,3 +361,104 @@
   - New: `pages/Operations.tsx`
 - **New route added** -- system-map regenerated.
 - **PRs:** Pending commit.
+
+### Session 9 (Phase 4: Navigation & Route Cleanup) -- 2026-02-27
+
+- **Type:** A (Build)
+- **Phase:** Phase 4 (T2 -- Existing Page Redesign, Route Consolidation)
+- **Work done:**
+  - **Step 4.1** -- `/portfolio` and `/ops` routes already existed from Phase 3. No change needed.
+  - **Step 4.2** -- Added 4 redirect routes using `Navigate` component from TanStack Router:
+    - `/snapshot` → `/portfolio`
+    - `/intel` → `/portfolio`
+    - `/intel/briefing` → `/portfolio`
+    - `/intel/proposals` → `/`
+  - **Step 4.3** -- Removed 2 routes: `/clients/cold`, `/clients/$clientId/recently-active`. Left comments noting data is accessible via ClientIndex filters and ClientDetail tabs.
+  - **Step 4.4** -- Updated NAV_ITEMS: `['/', '/portfolio', '/clients', '/issues', '/team', '/intel/signals', '/ops']` with labels Inbox, Portfolio, Clients, Issues, Team, Intel, Ops. Removed `/snapshot`, `/fix-data`, and `/intel` (replaced with `/intel/signals`).
+  - **Step 4.5** -- Removed 6 lazy imports: `Snapshot`, `Briefing`, `Proposals`, `ColdClients`, `RecentlyActiveDrilldown`, `CommandCenter`.
+  - **Step 4.6** -- Kept: `/intel/signals`, `/intel/patterns`, `/intel/client/$clientId`, `/intel/person/$personId`, `/intel/project/$projectId`.
+  - **pages/index.ts** -- Removed `Snapshot` and `ScopeSearch` exports (no external consumers).
+  - **System map** -- Regenerated: 18 UI routes (was 20, removed cold + recently-active).
+  - **Note:** `/fix-data` route kept but removed from nav. Still accessible via direct URL.
+  - **Note:** Page files (Snapshot.tsx, ColdClients.tsx, RecentlyActiveDrilldown.tsx, CommandCenter.tsx, Briefing.tsx, Proposals.tsx) NOT deleted -- only unrouted. Can be cleaned up in a future session.
+- **Files changed:** 3 modified.
+  - Modified: `router.tsx`, `pages/index.ts`, `docs/system-map.json`
+- **PRs:** #38 MERGED (CI 26/26 green).
+- **Discovered work:** None.
+- **Lessons:** None new -- existing patterns held.
+
+### Session 10 (Phase 5: Accessibility & Polish) -- 2026-02-27
+
+- **Type:** A (Build)
+- **Phase:** Phase 5 (T2 -- Existing Page Redesign, Accessibility & Polish)
+- **Work done:**
+  - **Step 5.1 -- Keyboard navigation on clickable cards:**
+    - Added `role="button"`, `tabIndex={0}`, `onKeyDown` (Enter/Space), and `focus:ring-2 focus:ring-[var(--accent)]` focus styling to:
+      - `IssueCard.tsx` (IssueCard + IssueRow -- 2 divs)
+      - `components/ProposalCard.tsx` (outer div -- 1 div)
+      - `intelligence/components/ProposalCard.tsx` (compact + normal -- 2 divs)
+      - `intelligence/components/SignalCard.tsx` (compact + normal -- 2 divs)
+      - `intelligence/components/PatternCard.tsx` (compact + normal -- 2 divs)
+    - Total: 9 interactive elements made keyboard-navigable
+  - **Step 5.2 -- Focus trap in RoomDrawer:**
+    - Added focus trap effect matching IssueDrawer pattern (tab/shift-tab wrapping, auto-focus first focusable element)
+    - Added `aria-labelledby="room-drawer-title"` on dialog
+    - Added `id="room-drawer-title"` on drawer title h2
+    - Added `aria-label` on close button and 3 action buttons (Tag & Monitor, Snooze, Dismiss)
+  - **Step 5.3 -- ARIA labels audit:**
+    - Audited all button/link elements across components/
+    - Added `aria-label="Close evidence viewer"` to EvidenceViewer.tsx (icon-only close button)
+    - IssueDrawer already well-labeled (6 aria attributes). All other buttons have visible text content.
+  - **Step 5.4 -- Centralized chart colors:**
+    - Created `intelligence/components/chartColors.ts` with 4 constant groups:
+      - `SPARKLINE_COLORS`: neutral, positive, negative, threshold, stroke
+      - `CHART_COLORS`: 6-color categorical array for distribution charts
+      - `CHANNEL_COLORS`: email, chat, meetings
+      - `STATUS_COLORS`: completed, open, overdue
+    - Updated Sparkline.tsx: 8 rgb() → SPARKLINE_COLORS references
+    - Updated DistributionChart.tsx: removed DEFAULT_COLORS array, imports CHART_COLORS
+    - Updated CommunicationChart.tsx: 3 rgb() → CHANNEL_COLORS references
+    - Updated ProjectOperationalState.tsx: 3 rgb() → STATUS_COLORS references
+    - Total: 20 hardcoded rgb() values eliminated from .tsx files. Zero remain.
+  - **Step 5.5 -- Standardized loading/error/empty states:**
+    - TeamDetail.tsx: replaced inline "Loading..." text with `<SkeletonCardList count={3} />`
+    - Issues.tsx: replaced inline error div with `<ErrorState error={error} onRetry={refetchIssues} hasData={false} />`
+    - Inbox.tsx: replaced inline "Loading..." with `<SkeletonCardList count={5} />`, styled error to match ErrorState pattern
+    - ClientIndex.tsx: styled inline error to match ErrorState visual pattern
+- **Files changed:** 15 modified, 1 new.
+  - New: `intelligence/components/chartColors.ts`
+  - Modified: `components/IssueCard.tsx`, `components/ProposalCard.tsx`, `components/RoomDrawer.tsx`, `components/EvidenceViewer.tsx`, `intelligence/components/ProposalCard.tsx`, `intelligence/components/SignalCard.tsx`, `intelligence/components/PatternCard.tsx`, `intelligence/components/Sparkline.tsx`, `intelligence/components/DistributionChart.tsx`, `intelligence/components/CommunicationChart.tsx`, `intelligence/views/sections/ProjectOperationalState.tsx`, `pages/TeamDetail.tsx`, `pages/Issues.tsx`, `pages/Inbox.tsx`, `pages/ClientIndex.tsx`
+- **Verification completed:**
+  - `grep -rn "rgb(" src/ --include="*.tsx"` → 0 hits (all rgb values now in chartColors.ts)
+  - `grep -rn "Loading..." src/pages/` → 0 hits
+  - All clickable cards have `role="button"` + `tabIndex` + `onKeyDown`
+  - Both drawers (IssueDrawer, RoomDrawer) have focus traps
+- **PRs:** Pending commit.
+- **Discovered work:** None.
+- **Lessons:** None new -- existing patterns held.
+
+### Session 11 (Phase -1 Bypass Remediation) -- 2026-02-27
+
+- **Type:** A (Build) + D (Investigation)
+- **Phase:** Phase -1 audit finding -- eliminate all nosec/noqa/type:ignore bypass comments
+- **Work done:**
+  - **Investigation:** Full audit found 184 bypass comments across 50 files (not 23 as initial scan suggested)
+  - **Key discovery:** Bandit globally skips B608 in pyproject.toml, making all `nosec B608` comments dead code
+  - **Architecture decision:** Created centralized `lib/safe_sql.py` with single file-level `# ruff: noqa: S608` suppression, replacing 141+ inline suppressions across 30+ files
+  - **lib/safe_sql.py (NEW):** 16 SQL builder functions with `_validate()` identifier checker
+  - **lib/ refactoring (26 files):** Converted f-string SQL to safe_sql calls across state_store, db, schema_engine, safety, governance, intelligence, entities, aggregator, data_lifecycle, items, store, v4 services, client_truth, agency_snapshot, db_opt, migrations, query_engine
+  - **api/ fixes (2 files):** server.py file-level noqa reduced from `B904,S608,S104` to `B904`; 3 f-string SQL converted to safe_sql; type:ignore fixes. paginated_router.py inline noqa replaced with safe_sql
+  - **scripts/ fixes (2 files):** noqa replaced with safe_sql.select_count_bare()
+  - **tests/ fixes (4 files):** f-string SQL converted to parameterized queries or safe_sql calls
+- **Files changed:** 34 modified, 1 new (`lib/safe_sql.py`)
+- **Verification completed:**
+  - py_compile on all 34 files: all pass
+  - Zero noqa S608 / nosec B608 in maintained scope
+  - Zero type:ignore in api/
+  - Zero f-string SQL in api/server.py
+- **PRs:** Pending commit.
+- **Lessons:**
+  - Bandit B608 globally skipped means all nosec B608 were dead code
+  - Centralized SQL builder with single file-level suppression beats 141 inline suppressions
+  - When removing file-level noqa, must check ALL lines for newly-exposed violations
+  - Test files need f-string SQL converted when S608 noqa removed

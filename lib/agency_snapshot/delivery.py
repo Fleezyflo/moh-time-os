@@ -12,6 +12,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from .. import safe_sql
 from .scoring import Confidence, Domain, ScoredItem, clamp01
 
 logger = logging.getLogger(__name__)
@@ -397,22 +398,23 @@ class DeliveryEngine:
         cutoff = (self.now - timedelta(days=30)).strftime("%Y-%m-%d")
         where_clauses.append(f"(p.target_end_date IS NULL OR p.target_end_date >= '{cutoff}')")
 
-        where_sql = " AND ".join(where_clauses) if where_clauses else "1=1"
+        where_clause = safe_sql.where_and(where_clauses) if where_clauses else "1=1"
 
-        projects = self._query_all(
-            f"""
-            SELECT
+        sql = safe_sql.select_with_join(
+            """SELECT
                 p.id, p.name, p.target_end_date, NULL as lane, NULL as owner,
                 p.is_internal, p.engagement_type as project_type,
                 p.client_id,
                 c.name as client_name
             FROM projects p
             LEFT JOIN clients c ON p.client_id = c.id
-            WHERE {where_sql}
-            ORDER BY p.target_end_date ASC NULLS LAST
-            LIMIT ?
-        """,  # noqa: S608
-            tuple(params) + (limit * 2,),
+            WHERE """,
+            where_clause,
+            order_by="p.target_end_date ASC NULLS LAST",
+            suffix="LIMIT ?",
+        )
+        projects = self._query_all(
+            sql, tuple(params) + (limit * 2,)
         )  # Fetch more, will filter/rank later
 
         portfolio = []

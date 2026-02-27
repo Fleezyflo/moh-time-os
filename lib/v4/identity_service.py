@@ -12,6 +12,8 @@ import sqlite3
 import uuid
 from typing import Any
 
+from lib import safe_sql
+
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "moh_time_os.db")
 
 
@@ -486,14 +488,15 @@ class IdentityService:
         try:
             # Verify all profiles exist
             all_ids = from_profile_ids + [to_profile_id]
-            placeholders = ",".join(["?"] * len(all_ids))
-            cursor.execute(
-                f"""
-                SELECT profile_id FROM identity_profiles
-                WHERE profile_id IN ({placeholders}) AND status = 'active'
-            """,  # noqa: S608
-                all_ids,
+            placeholders = safe_sql.in_placeholders(len(all_ids))
+            sql = safe_sql.select_with_in_and_condition(
+                "profile_id",
+                "identity_profiles",
+                "profile_id",
+                placeholders,
+                and_condition="AND status = 'active'",
             )
+            cursor.execute(sql, all_ids)
 
             found = {row[0] for row in cursor.fetchall()}
             missing = set(all_ids) - found

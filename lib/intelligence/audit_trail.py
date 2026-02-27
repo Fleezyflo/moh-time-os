@@ -16,6 +16,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from lib import safe_sql
+
 logger = logging.getLogger(__name__)
 
 
@@ -176,10 +178,13 @@ class AuditTrail:
             where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
             params.append(limit)
 
-            rows = conn.execute(
-                f"SELECT * FROM intelligence_audit {where} ORDER BY created_at DESC LIMIT ?",  # noqa: S608
-                params,
-            ).fetchall()
+            sql = safe_sql.select(
+                "intelligence_audit",
+                where=where if where else None,
+                order_by="created_at DESC",
+                suffix="LIMIT ?",
+            )
+            rows = conn.execute(sql, params).fetchall()
 
             return [self._row_to_entry(r) for r in rows]
         finally:
