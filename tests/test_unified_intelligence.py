@@ -15,6 +15,7 @@ Tests cover:
 Target: 25+ tests
 """
 
+import tempfile
 from datetime import datetime
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -181,7 +182,7 @@ def test_intelligence_layer_instantiation():
 
 def test_intelligence_layer_with_db_path():
     """Test IntelligenceLayer instantiation with custom db_path."""
-    db_path = Path("/tmp/test.db")
+    db_path = Path(tempfile.gettempdir()) / "test.db"
     layer = IntelligenceLayer(db_path=db_path)
     assert layer.db_path == db_path
 

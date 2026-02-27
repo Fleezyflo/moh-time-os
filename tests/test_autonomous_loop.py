@@ -9,6 +9,7 @@ Covers:
 """
 
 import logging
+import tempfile
 from unittest.mock import Mock, patch
 
 import pytest
@@ -29,7 +30,7 @@ def loop():
         patch("lib.autonomous_loop.NotificationEngine"),
         patch.object(AutonomousLoop, "_load_notification_config", return_value={}),
     ):
-        loop = AutonomousLoop(config_path="/tmp/test_config")
+        loop = AutonomousLoop(config_path=f"{tempfile.gettempdir()}/test_config")
 
         # Set up basic mocks
         loop.store = Mock()
