@@ -34,8 +34,16 @@ export function SignalCard({ signal, compact = false, onClick }: SignalCardProps
   if (compact) {
     return (
       <div
-        className={`rounded-lg p-3 border ${bgColor} cursor-pointer hover:border-[var(--grey-mid)] transition-colors`}
+        role="button"
+        tabIndex={0}
+        className={`rounded-lg p-3 border ${bgColor} cursor-pointer hover:border-[var(--grey-mid)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]`}
         onClick={handleClick}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleClick();
+          }
+        }}
       >
         <div className="flex items-center gap-2 mb-1">
           <SeverityBadge severity={signal.severity} />
@@ -48,7 +56,18 @@ export function SignalCard({ signal, compact = false, onClick }: SignalCardProps
 
   return (
     <div className={`rounded-lg border ${bgColor}`}>
-      <div className="p-4 cursor-pointer" onClick={handleClick}>
+      <div
+        role="button"
+        tabIndex={0}
+        className="p-4 cursor-pointer focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+        onClick={handleClick}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            handleClick();
+          }
+        }}
+      >
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">

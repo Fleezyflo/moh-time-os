@@ -99,8 +99,10 @@ export function ClientIndex() {
 
   if (error) {
     return (
-      <div className="p-8 text-center text-[var(--danger)]">
-        <p>{error}</p>
+      <div className="bg-red-900/20 border border-red-700/50 rounded-lg p-8 text-center">
+        <div className="text-red-400 text-2xl mb-2">⚠️</div>
+        <div className="text-red-300 text-lg font-medium mb-2">Failed to load clients</div>
+        <p className="text-[var(--grey-light)] text-sm">{error}</p>
       </div>
     );
   }

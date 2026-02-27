@@ -22,8 +22,16 @@ export function IssueCard({ issue, onOpen }: IssueCardProps) {
 
   return (
     <div
-      className={`${stateStyle.bg} border border-[var(--grey)] rounded-lg p-4 cursor-pointer hover:border-[var(--grey-mid)] transition-colors`}
+      role="button"
+      tabIndex={0}
+      className={`${stateStyle.bg} border border-[var(--grey)] rounded-lg p-4 cursor-pointer hover:border-[var(--grey-mid)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]`}
       onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onOpen?.();
+        }
+      }}
     >
       <div className="flex items-start gap-3">
         <span className={`text-lg ${stateStyle.color}`}>{stateStyle.icon}</span>
@@ -52,8 +60,16 @@ export function IssueRow({ issue, onOpen }: IssueCardProps) {
 
   return (
     <div
-      className="flex items-center gap-3 px-3 py-2 rounded hover:bg-[var(--grey-dim)] cursor-pointer transition-colors"
+      role="button"
+      tabIndex={0}
+      className="flex items-center gap-3 px-3 py-2 rounded hover:bg-[var(--grey-dim)] cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
       onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onOpen?.();
+        }
+      }}
     >
       <span className={`${stateStyle.color}`}>{stateStyle.icon}</span>
       <span className="flex-1 text-sm text-[var(--white)] truncate">{getTitle(issue)}</span>

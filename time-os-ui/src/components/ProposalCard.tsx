@@ -114,8 +114,16 @@ export function ProposalCard({
 
   return (
     <div
-      className="bg-[var(--grey-dim)] rounded-lg border border-[var(--grey)] hover:border-[var(--grey-mid)] transition-colors cursor-pointer overflow-hidden"
+      role="button"
+      tabIndex={0}
+      className="bg-[var(--grey-dim)] rounded-lg border border-[var(--grey)] hover:border-[var(--grey-mid)] transition-colors cursor-pointer overflow-hidden focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
       onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onOpen?.();
+        }
+      }}
     >
       {/* Header */}
       <div className="p-4">

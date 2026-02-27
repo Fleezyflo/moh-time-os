@@ -5,6 +5,7 @@
 import { ProfileSection } from '../../components/ProfileSection';
 import { DistributionChart } from '../../components/DistributionChart';
 import { SeverityBadge } from '../../components/Badges';
+import { STATUS_COLORS } from '../../components/chartColors';
 import type { ProjectOperationalState as ProjectState } from '../../api';
 
 interface ProjectOperationalStateProps {
@@ -38,9 +39,9 @@ export function ProjectOperationalState({ project }: ProjectOperationalStateProp
 
   // Task distribution segments
   const taskSegments = [
-    { label: 'Completed', value: completedTasks, color: 'rgb(34 197 94)' },
-    { label: 'Open', value: openTasks - overdueTasks, color: 'rgb(59 130 246)' },
-    { label: 'Overdue', value: overdueTasks, color: 'rgb(239 68 68)' },
+    { label: 'Completed', value: completedTasks, color: STATUS_COLORS.completed },
+    { label: 'Open', value: openTasks - overdueTasks, color: STATUS_COLORS.open },
+    { label: 'Overdue', value: overdueTasks, color: STATUS_COLORS.overdue },
   ].filter((s) => s.value > 0);
 
   return (

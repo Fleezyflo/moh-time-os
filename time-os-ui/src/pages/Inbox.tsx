@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { InboxItem, InboxCounts, Severity, InboxItemType } from '../types/spec';
 import { TeamMemberPicker } from '../components/pickers';
+import { SkeletonCardList } from '../components';
 import { PageLayout } from '../components/layout/PageLayout';
 import { SummaryGrid } from '../components/layout/SummaryGrid';
 import { MetricCard } from '../components/layout/MetricCard';
@@ -443,12 +444,12 @@ export function Inbox() {
       {/* Content */}
       <div className="min-h-[400px]">
         {loading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-pulse text-[var(--grey-light)]">Loading...</div>
-          </div>
+          <SkeletonCardList count={5} />
         ) : error ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="text-[var(--danger)]">{error}</div>
+          <div className="bg-red-900/20 border border-red-700/50 rounded-lg p-8 text-center">
+            <div className="text-red-400 text-2xl mb-2">⚠️</div>
+            <div className="text-red-300 text-lg font-medium mb-2">Failed to load inbox</div>
+            <p className="text-[var(--grey-light)] text-sm">{error}</p>
           </div>
         ) : displayItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-[var(--grey-light)]">

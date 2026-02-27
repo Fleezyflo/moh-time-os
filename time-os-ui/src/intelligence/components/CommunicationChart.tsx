@@ -3,6 +3,7 @@
  */
 
 import { DistributionChart } from './DistributionChart';
+import { CHANNEL_COLORS } from './chartColors';
 
 interface Participant {
   person_id?: number | string;
@@ -25,9 +26,9 @@ interface CommunicationChartProps {
 export function CommunicationChart({ data = {} }: CommunicationChartProps) {
   const byChannel = data.by_channel || {};
   const channelSegments = [
-    { label: 'Email', value: byChannel.email || 0, color: 'rgb(59 130 246)' },
-    { label: 'Chat', value: byChannel.chat || 0, color: 'rgb(16 185 129)' },
-    { label: 'Meetings', value: byChannel.meeting || 0, color: 'rgb(168 85 247)' },
+    { label: 'Email', value: byChannel.email || 0, color: CHANNEL_COLORS.email },
+    { label: 'Chat', value: byChannel.chat || 0, color: CHANNEL_COLORS.chat },
+    { label: 'Meetings', value: byChannel.meeting || 0, color: CHANNEL_COLORS.meetings },
   ].filter((s) => s.value > 0);
 
   const totalSent = data.total_sent || 0;

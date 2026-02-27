@@ -1,7 +1,7 @@
 // Issues Inbox page with hierarchy view
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
-import { IssueDrawer, SkeletonCardList } from '../components';
+import { IssueDrawer, SkeletonCardList, ErrorState } from '../components';
 import type { IssueState } from '../lib/api';
 import { priorityLabel, priorityBadgeClass, matchesPriorityFilter } from '../lib/priority';
 import type { Issue } from '../types/api';
@@ -264,12 +264,7 @@ export function Issues() {
   ).length;
 
   if (loading) return <SkeletonCardList count={5} />;
-  if (error)
-    return (
-      <div className="text-[var(--danger)] p-8 text-center">
-        Error loading issues: {error.message}
-      </div>
-    );
+  if (error) return <ErrorState error={error} onRetry={refetchIssues} hasData={false} />;
 
   // Render a single issue row
   const renderIssueRow = (issue: Issue, indent: number = 0) => {

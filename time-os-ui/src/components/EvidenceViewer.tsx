@@ -28,7 +28,11 @@ export function EvidenceViewer({ evidence, loading, error, onClose }: EvidenceVi
           Evidence ({evidence.length} excerpt{evidence.length !== 1 ? 's' : ''})
         </h3>
         {onClose && (
-          <button onClick={onClose} className="text-[var(--grey-light)] hover:text-[var(--white)]">
+          <button
+            onClick={onClose}
+            aria-label="Close evidence viewer"
+            className="text-[var(--grey-light)] hover:text-[var(--white)]"
+          >
             ✕
           </button>
         )}
