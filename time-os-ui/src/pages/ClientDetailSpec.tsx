@@ -3,6 +3,9 @@
 
 import { useState, useEffect } from 'react';
 import { Link, useParams } from '@tanstack/react-router';
+import { PageLayout } from '../components/layout/PageLayout';
+import { SummaryGrid } from '../components/layout/SummaryGrid';
+import { MetricCard } from '../components/layout/MetricCard';
 import type { Tier, Severity } from '../types/spec';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v2';
@@ -127,15 +130,6 @@ const TABS: { id: TabId; label: string }[] = [
   { id: 'signals', label: 'Signals' },
   { id: 'team', label: 'Team' },
 ];
-
-// Tier colors
-const TIER_COLORS: Record<Tier, string> = {
-  platinum: 'bg-purple-500 text-[var(--white)]',
-  gold: 'bg-[var(--warning)] text-black',
-  silver: 'bg-[var(--grey-light)] text-[var(--black)]',
-  bronze: 'bg-orange-700 text-[var(--white)]',
-  none: 'bg-[var(--grey-light)] text-[var(--grey-light)]',
-};
 
 // Severity colors
 const SEVERITY_COLORS: Record<Severity, string> = {
@@ -289,43 +283,56 @@ export function ClientDetailSpec() {
 
   const healthScore = client.health_score ?? 0;
 
-  return (
-    <div className="space-y-4">
-      {/* Header */}
-      <div className="bg-[var(--grey-dim)] rounded-lg p-4">
-        <Link
-          to="/clients"
-          className="text-sm text-[var(--grey-light)] hover:text-[var(--white)] mb-2 inline-block"
-        >
-          ← Back to Index
-        </Link>
+  const actions = (
+    <Link to="/clients" className="text-sm text-[var(--grey-light)] hover:text-[var(--white)]">
+      ← Back to Index
+    </Link>
+  );
 
-        <div className="flex items-center justify-between mb-3">
-          <h1 className="text-2xl font-bold text-[var(--white)]">{client.name}</h1>
-          <span className={`px-3 py-1 rounded text-sm font-medium ${TIER_COLORS[client.tier]}`}>
-            {client.tier}
+  return (
+    <PageLayout
+      title={client.name}
+      subtitle={client.tier ? `Tier: ${client.tier}` : undefined}
+      actions={actions}
+    >
+      <SummaryGrid>
+        <MetricCard
+          label="Health Score"
+          value={healthScore.toString()}
+          severity={healthScore >= 70 ? 'success' : healthScore >= 40 ? 'warning' : 'danger'}
+        />
+        <MetricCard label="AR Outstanding" value={formatCurrency(client.ar_outstanding || 0)} />
+        <MetricCard
+          label="Active Engagements"
+          value={(client.active_engagements || 0).toString()}
+        />
+        <MetricCard
+          label="Open Issues"
+          value={(client.top_issues?.length ?? 0).toString()}
+          severity={(client.top_issues?.length ?? 0) > 0 ? 'danger' : undefined}
+        />
+      </SummaryGrid>
+
+      {/* Health bar */}
+      <div className="bg-[var(--grey-dim)] rounded-lg p-4 mb-4">
+        <div className="flex items-center justify-between text-sm mb-2">
+          <span className="text-[var(--grey-light)]">Health Progress</span>
+          <span className={`font-medium ${getHealthColor(healthScore)}`}>
+            {healthScore}
+            <span className="text-[var(--grey)]"> ({client.health_label || 'provisional'})</span>
           </span>
         </div>
-
-        {/* Health bar */}
-        <div className="mb-4">
-          <div className="flex items-center justify-between text-sm mb-1">
-            <span className="text-[var(--grey-light)]">Health</span>
-            <span className={`font-medium ${getHealthColor(healthScore)}`}>
-              {healthScore}{' '}
-              <span className="text-[var(--grey)]">({client.health_label || 'provisional'})</span>
-            </span>
-          </div>
-          <div className="h-2 bg-[var(--grey)] rounded-full overflow-hidden">
-            <div
-              className={`h-full ${getHealthBg(healthScore)}`}
-              style={{ width: `${Math.min(100, healthScore)}%` }}
-            />
-          </div>
+        <div className="h-2 bg-[var(--grey)] rounded-full overflow-hidden">
+          <div
+            className={`h-full ${getHealthBg(healthScore)}`}
+            style={{ width: `${Math.min(100, healthScore)}%` }}
+          />
         </div>
+      </div>
 
-        {/* Tabs */}
-        <div className="flex gap-1 border-t border-[var(--grey)] pt-3 -mb-4 -mx-4 px-4">
+      {/* Tabs */}
+      <div className="bg-[var(--grey-dim)] rounded-lg p-4">
+        <div className="flex gap-1 border-b border-[var(--grey)] -mb-4 -mx-4 px-4">
           {TABS.map((tab) => (
             <button
               key={tab.id}
@@ -340,28 +347,28 @@ export function ClientDetailSpec() {
             </button>
           ))}
         </div>
-      </div>
 
-      {/* Tab Content */}
-      <div className="bg-[var(--grey-dim)] rounded-lg p-4">
-        {activeTab === 'overview' && (
-          <OverviewTab client={client} onIssueAction={executeIssueAction} />
-        )}
-        {activeTab === 'engagements' && <EngagementsTab brands={client.brands || []} />}
-        {activeTab === 'financials' && <FinancialsTab client={client} />}
-        {activeTab === 'signals' && (
-          <SignalsTab
-            signals={client.signals || []}
-            summary={{
-              good: client.signals_good || 0,
-              neutral: client.signals_neutral || 0,
-              bad: client.signals_bad || 0,
-            }}
-          />
-        )}
-        {activeTab === 'team' && <TeamTab members={client.team_members || []} />}
+        {/* Tab Content */}
+        <div className="pt-4">
+          {activeTab === 'overview' && (
+            <OverviewTab client={client} onIssueAction={executeIssueAction} />
+          )}
+          {activeTab === 'engagements' && <EngagementsTab brands={client.brands || []} />}
+          {activeTab === 'financials' && <FinancialsTab client={client} />}
+          {activeTab === 'signals' && (
+            <SignalsTab
+              signals={client.signals || []}
+              summary={{
+                good: client.signals_good || 0,
+                neutral: client.signals_neutral || 0,
+                bad: client.signals_bad || 0,
+              }}
+            />
+          )}
+          {activeTab === 'team' && <TeamTab members={client.team_members || []} />}
+        </div>
       </div>
-    </div>
+    </PageLayout>
   );
 }
 

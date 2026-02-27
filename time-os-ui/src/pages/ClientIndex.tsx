@@ -4,6 +4,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from '@tanstack/react-router';
 import type { ClientCard, ClientIndexResponse, Tier, ClientStatus } from '../types/spec';
+import { PageLayout } from '../components/layout/PageLayout';
+import { SummaryGrid } from '../components/layout/SummaryGrid';
+import { MetricCard } from '../components/layout/MetricCard';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v2';
 
@@ -104,49 +107,56 @@ export function ClientIndex() {
 
   if (!data) return null;
 
-  return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-[var(--white)]">Clients</h1>
-        <div className="flex gap-2">
-          {/* Tier filter */}
-          <select
-            value={tierFilter}
-            onChange={(e) => setTierFilter(e.target.value)}
-            className="bg-[var(--grey-dim)] border border-[var(--grey)] rounded px-3 py-1.5 text-sm text-[var(--white)]"
-          >
-            <option value="all">All Tiers</option>
-            <option value="platinum">Platinum</option>
-            <option value="gold">Gold</option>
-            <option value="silver">Silver</option>
-            <option value="bronze">Bronze</option>
-            <option value="none">None</option>
-          </select>
+  const totalClients = data.counts.active + data.counts.recently_active + data.counts.cold;
 
-          {/* Toggle filters */}
-          <button
-            onClick={() => setHasIssuesFilter(!hasIssuesFilter)}
-            className={`px-3 py-1.5 rounded text-sm transition-colors ${
-              hasIssuesFilter
-                ? 'bg-[var(--danger)] text-[var(--white)]'
-                : 'bg-[var(--grey-dim)] border border-[var(--grey)] text-[var(--white)]'
-            }`}
-          >
-            Has Issues
-          </button>
-          <button
-            onClick={() => setHasOverdueFilter(!hasOverdueFilter)}
-            className={`px-3 py-1.5 rounded text-sm transition-colors ${
-              hasOverdueFilter
-                ? 'bg-[var(--warning)] text-[var(--black)]'
-                : 'bg-[var(--grey-dim)] border border-[var(--grey)] text-[var(--white)]'
-            }`}
-          >
-            AR Overdue
-          </button>
-        </div>
-      </div>
+  const filters = (
+    <div className="flex gap-2">
+      {/* Tier filter */}
+      <select
+        value={tierFilter}
+        onChange={(e) => setTierFilter(e.target.value)}
+        className="bg-[var(--grey-dim)] border border-[var(--grey)] rounded px-3 py-1.5 text-sm text-[var(--white)]"
+      >
+        <option value="all">All Tiers</option>
+        <option value="platinum">Platinum</option>
+        <option value="gold">Gold</option>
+        <option value="silver">Silver</option>
+        <option value="bronze">Bronze</option>
+        <option value="none">None</option>
+      </select>
+
+      {/* Toggle filters */}
+      <button
+        onClick={() => setHasIssuesFilter(!hasIssuesFilter)}
+        className={`px-3 py-1.5 rounded text-sm transition-colors ${
+          hasIssuesFilter
+            ? 'bg-[var(--danger)] text-[var(--white)]'
+            : 'bg-[var(--grey-dim)] border border-[var(--grey)] text-[var(--white)]'
+        }`}
+      >
+        Has Issues
+      </button>
+      <button
+        onClick={() => setHasOverdueFilter(!hasOverdueFilter)}
+        className={`px-3 py-1.5 rounded text-sm transition-colors ${
+          hasOverdueFilter
+            ? 'bg-[var(--warning)] text-[var(--black)]'
+            : 'bg-[var(--grey-dim)] border border-[var(--grey)] text-[var(--white)]'
+        }`}
+      >
+        AR Overdue
+      </button>
+    </div>
+  );
+
+  return (
+    <PageLayout title="Clients" actions={filters}>
+      <SummaryGrid>
+        <MetricCard label="Total Clients" value={totalClients.toString()} />
+        <MetricCard label="Active" value={data.counts.active.toString()} />
+        <MetricCard label="Recently Active" value={data.counts.recently_active.toString()} />
+        <MetricCard label="Cold" value={data.counts.cold.toString()} />
+      </SummaryGrid>
 
       {/* Swimlane: Active */}
       <Swimlane
@@ -177,7 +187,7 @@ export function ClientIndex() {
         clients={data.cold}
         status="cold"
       />
-    </div>
+    </PageLayout>
   );
 }
 

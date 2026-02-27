@@ -265,8 +265,9 @@ Every session begins by reading this section and executing the checklist.
    a. Are prerequisite phases marked complete? (SESSION_LOG.md + BUILD_PLAN.md)
    b. Are blocking PRs merged? (check git log --oneline -20)
    c. Are there uncommitted changes? (git status)
-7. State what this session will do (session type + specific deliverables)
-8. Only then begin work — DO NOT claim readiness without completing steps 0-6
+7. Read CLAUDE.md "Documentation Rules" section — understand what triggers doc updates
+8. State what this session will do (session type + specific deliverables)
+9. Only then begin work — DO NOT claim readiness without completing steps 0-7
 ```
 
 #### Exit checklist (MANDATORY — do this before session ends)
@@ -285,10 +286,12 @@ Every session begins by reading this section and executing the checklist.
    b. Rewrite "What's Next" for the next session's task (batch plan, file list, verification steps)
    c. Update "Key Rules" if new lessons were learned
    d. Update "Documents to Read" to point at the correct BUILD_PLAN.md section
-6. If a phase completed, mark it ✅ COMPLETE in BUILD_PLAN.md
-7. If anything else in BUILD_PLAN.md needs updating, update it
-8. Give Molham the commit/push commands
-9. VERIFY: re-read HANDOFF.md top to bottom — would a fresh session know exactly what to do?
+6. Update CLAUDE.md if any new rules or patterns were discovered
+7. If a phase completed, mark it ✅ COMPLETE in BUILD_PLAN.md
+8. If anything else in BUILD_PLAN.md needs updating, update it
+9. Give Molham the commit/push commands
+10. VERIFY: all three doc files (SESSION_LOG.md, HANDOFF.md, CLAUDE.md) are in git add
+11. VERIFY: re-read HANDOFF.md top to bottom — would a fresh session know exactly what to do?
 ```
 
 ### SESSION_LOG.md format

@@ -105,15 +105,64 @@ Before giving Molham a push command, verify the full 7-gate pre-push will pass:
 6. UI typecheck (npx tsc — Mac only)
 7. guardrails integrity
 
+**UI typecheck caveat:** Sandbox cannot run `npx tsc --noEmit` (no node_modules). Always include the tsc command in the commit block for Molham to run on his Mac BEFORE committing. If tsc fails, fix the errors before the commit goes out. Session 6 learned this: 2 tsc errors (unused `TIER_COLORS`, unused `blockedCount`) were caught after commit, requiring a fix + force-push.
+
+**Sub-agent verification:** When using Task agents to edit multiple files, always verify their output before claiming done. Agents may use prop names that don't exist on a component (Session 6: agents used `variant` prop instead of `severity` on MetricCard). Grep for the component's interface and check all props match.
+
 ## Session Discipline
 
 1. **Start every session by reading HANDOFF.md.** It has the exact next task, file paths, and verification steps. Then read the documents it references (BUILD_STRATEGY.md, SESSION_LOG.md, BUILD_PLAN.md, CLAUDE.md).
 2. Read the entry checklist in BUILD_STRATEGY.md §3 before any work
 3. Read the exit checklist in BUILD_STRATEGY.md §3 before ending
-4. Update SESSION_LOG.md after EACH commit, not at session end
-5. Update HANDOFF.md at the end of each session with the next session's exact task
-6. Never defer documentation — if you changed something, log it immediately
-7. If you discover a new rule or pattern, add it to CLAUDE.md in the same session
+
+## Documentation Rules
+
+**These are not optional. Every change triggers a documentation update. No exceptions.**
+
+There are three documentation files. ALL THREE must be updated after every meaningful change (commit, fix, error, discovery, lesson). Do not wait until the end. Do not batch updates. Do not defer to "after the commit." Do it NOW, inline with the work.
+
+### What triggers a doc update
+
+| Trigger | SESSION_LOG.md | HANDOFF.md | CLAUDE.md |
+|---------|---------------|------------|-----------|
+| Code change committed | ✅ Log what changed | — | — |
+| Code change fixed (tsc error, lint error, test fix) | ✅ Log the fix and root cause | — | — |
+| Phase or sub-phase completed | ✅ Full entry with verification | ✅ Rewrite for next phase | — |
+| New rule or pattern discovered | ✅ In lessons learned | ✅ In key rules list | ✅ Add to relevant section |
+| Error caught by CI or Mac verification | ✅ Log error + fix | — | ✅ If it reveals a new rule |
+| Session ending | ✅ Final state update | ✅ Full rewrite for next session | ✅ Any pending rules |
+
+### What goes in each file
+
+**SESSION_LOG.md** — Append-only log of what happened.
+- After EACH commit: what changed, files touched, lines added/removed
+- After EACH fix: what broke, what caused it, how it was fixed
+- After EACH phase: full entry with work done, files changed, verification results, lessons learned
+- Current state header: phase, track, blocked-by, next session
+
+**HANDOFF.md** — What the next session needs to know.
+- Rewrite completely when phase changes (not append — rewrite)
+- "What Just Happened" — summary of completed work and PRs
+- "What's Next" — exact next task with file paths, steps, verification criteria
+- "Key Rules" — cumulative list, add new rules as they're discovered
+- "Documents to Read" — always current
+
+**CLAUDE.md** — Permanent engineering rules.
+- New code rules go in "Code Rules" section
+- New verification rules go in "Verification Requirements" section
+- New session discipline rules go in "Documentation Rules" section (this section)
+- New sandbox constraints go in "Sandbox Rules" section
+- Include the session number where the rule was learned
+
+### Enforcement
+
+Before generating commit commands for Molham, verify:
+1. SESSION_LOG.md has an entry for this work (not a placeholder — actual details)
+2. HANDOFF.md reflects the current state (if phase changed, it's been rewritten)
+3. CLAUDE.md has any new rules from this session
+4. All three files are included in the `git add` command
+
+If you catch yourself about to give commit commands without having updated docs, STOP and update them first. Molham should never have to remind you. Session 6 required multiple reminders — that's the reason this section exists.
 
 ## Skills
 

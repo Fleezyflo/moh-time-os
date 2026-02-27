@@ -8,6 +8,9 @@ import { useSignals } from '../hooks';
 import { useSignalFilters } from '../lib';
 import { ErrorState, NoSignals, NoResults } from '../../components';
 import { SkeletonSignalsPage, SignalCard } from '../components';
+import { PageLayout } from '../../components/layout/PageLayout';
+import { SummaryGrid } from '../../components/layout/SummaryGrid';
+import { MetricCard } from '../../components/layout/MetricCard';
 
 export default function Signals() {
   const { severity, entityType, setSeverity, setEntityType, resetFilters } = useSignalFilters();
@@ -40,61 +43,64 @@ export default function Signals() {
   const severities = ['all', ...new Set(signals.map((s) => s.severity))];
   const entityTypes = ['all', ...new Set(signals.map((s) => s.entity_type))];
 
+  const filterControls = (
+    <div className="flex flex-wrap gap-4 bg-[var(--grey-dim)] rounded-lg p-4">
+      <div>
+        <label className="text-sm text-[var(--grey-light)] block mb-1">Severity</label>
+        <select
+          value={severity}
+          onChange={(e) => setSeverity(e.target.value)}
+          className="bg-[var(--grey)] border border-[var(--grey-mid)] rounded px-3 py-1.5 text-sm"
+        >
+          {severities.map((s) => (
+            <option key={s} value={s}>
+              {s === 'all' ? 'All' : s}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label className="text-sm text-[var(--grey-light)] block mb-1">Entity Type</label>
+        <select
+          value={entityType}
+          onChange={(e) => setEntityType(e.target.value)}
+          className="bg-[var(--grey)] border border-[var(--grey-mid)] rounded px-3 py-1.5 text-sm"
+        >
+          {entityTypes.map((t) => (
+            <option key={t} value={t}>
+              {t === 'all' ? 'All' : t}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="flex items-end gap-2">
+        <span className="text-sm text-[var(--grey-muted)]">
+          Showing {filtered.length} of {signals.length}
+        </span>
+        {(severity !== 'all' || entityType !== 'all') && (
+          <button
+            onClick={resetFilters}
+            className="text-xs text-[var(--grey-light)] hover:text-white"
+          >
+            Reset
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
   return (
-    <div className="space-y-6">
+    <PageLayout title="Active Signals" actions={filterControls}>
       {/* Error banner when we have stale data */}
       {error && data && <ErrorState error={error} onRetry={refetch} hasData />}
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Active Signals</h1>
-        <div className="text-sm text-[var(--grey-muted)]">{data?.total_signals ?? 0} total</div>
-      </div>
-
-      {/* Filters */}
-      <div className="flex flex-wrap gap-4 bg-[var(--grey-dim)] rounded-lg p-4">
-        <div>
-          <label className="text-sm text-[var(--grey-light)] block mb-1">Severity</label>
-          <select
-            value={severity}
-            onChange={(e) => setSeverity(e.target.value)}
-            className="bg-[var(--grey)] border border-[var(--grey-mid)] rounded px-3 py-1.5 text-sm"
-          >
-            {severities.map((s) => (
-              <option key={s} value={s}>
-                {s === 'all' ? 'All' : s}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="text-sm text-[var(--grey-light)] block mb-1">Entity Type</label>
-          <select
-            value={entityType}
-            onChange={(e) => setEntityType(e.target.value)}
-            className="bg-[var(--grey)] border border-[var(--grey-mid)] rounded px-3 py-1.5 text-sm"
-          >
-            {entityTypes.map((t) => (
-              <option key={t} value={t}>
-                {t === 'all' ? 'All' : t}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="flex items-end gap-2">
-          <span className="text-sm text-[var(--grey-muted)]">
-            Showing {filtered.length} of {signals.length}
-          </span>
-          {(severity !== 'all' || entityType !== 'all') && (
-            <button
-              onClick={resetFilters}
-              className="text-xs text-[var(--grey-light)] hover:text-white"
-            >
-              Reset
-            </button>
-          )}
-        </div>
-      </div>
+      {/* Summary Grid */}
+      <SummaryGrid>
+        <MetricCard label="Total Signals" value={data?.total_signals ?? signals.length} />
+        {(severity !== 'all' || entityType !== 'all') && (
+          <MetricCard label="Filtered" value={filtered.length} />
+        )}
+      </SummaryGrid>
 
       {/* Signal List */}
       <div className="space-y-4">
@@ -108,6 +114,6 @@ export default function Signals() {
           filtered.map((signal, i) => <SignalCard key={signal.signal_id || i} signal={signal} />)
         )}
       </div>
-    </div>
+    </PageLayout>
   );
 }

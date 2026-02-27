@@ -4,6 +4,9 @@ import { Link } from '@tanstack/react-router';
 import { SkeletonCardGrid } from '../components';
 import { useTeam } from '../lib/hooks';
 import type { TeamMember } from '../types/api';
+import { PageLayout } from '../components/layout/PageLayout';
+import { SummaryGrid } from '../components/layout/SummaryGrid';
+import { MetricCard } from '../components/layout/MetricCard';
 
 const loadLevels = {
   overloaded: {
@@ -88,29 +91,9 @@ export function Team() {
   }).length;
 
   return (
-    <div>
-      {/* Summary Banner */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-[var(--grey)]">
-          <div className="text-2xl font-bold text-[var(--white)]">{internalCount}</div>
-          <div className="text-sm text-[var(--grey-light)]">Internal Team</div>
-        </div>
-        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-[var(--grey)]">
-          <div className="text-2xl font-bold text-[var(--info)]">{totalOpenTasks}</div>
-          <div className="text-sm text-[var(--grey-light)]">Open Tasks</div>
-        </div>
-        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-[var(--danger)]/50">
-          <div className="text-2xl font-bold text-[var(--danger)]">{totalOverdue}</div>
-          <div className="text-sm text-[var(--grey-light)]">Overdue Tasks</div>
-        </div>
-        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-[var(--warning)]/50">
-          <div className="text-2xl font-bold text-[var(--warning)]">{overloadedCount}</div>
-          <div className="text-sm text-[var(--grey-light)]">High/Overloaded</div>
-        </div>
-      </div>
-
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-semibold text-[var(--white)]">Team</h1>
+    <PageLayout
+      title="Team"
+      actions={
         <div className="flex flex-wrap items-center gap-2">
           <input
             type="text"
@@ -138,7 +121,23 @@ export function Team() {
             <option value="name">Sort: A-Z</option>
           </select>
         </div>
-      </div>
+      }
+    >
+      {/* Summary Grid */}
+      <SummaryGrid>
+        <MetricCard label="Team Size" value={internalCount} />
+        <MetricCard label="Open Tasks" value={totalOpenTasks} severity="info" />
+        <MetricCard
+          label="Overdue"
+          value={totalOverdue}
+          severity={totalOverdue > 0 ? 'danger' : undefined}
+        />
+        <MetricCard
+          label="Overloaded"
+          value={overloadedCount}
+          severity={overloadedCount > 0 ? 'warning' : undefined}
+        />
+      </SummaryGrid>
 
       {sorted.length === 0 ? (
         <div className="bg-[var(--grey-dim)]/50 rounded-lg border border-[var(--grey)] p-8 text-center">
@@ -216,7 +215,7 @@ export function Team() {
           })}
         </div>
       )}
-    </div>
+    </PageLayout>
   );
 }
 
