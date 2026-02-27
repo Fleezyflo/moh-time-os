@@ -2,14 +2,13 @@
 // Primary page for processing proposals
 
 import { useState, useEffect, useCallback } from 'react';
-import type { InboxItem, InboxCounts, InboxResponse, Severity, InboxItemType } from '../types/spec';
+import type { InboxItem, InboxCounts, Severity, InboxItemType } from '../types/spec';
 import { TeamMemberPicker } from '../components/pickers';
 import { PageLayout } from '../components/layout/PageLayout';
 import { SummaryGrid } from '../components/layout/SummaryGrid';
 import { MetricCard } from '../components/layout/MetricCard';
-
-// API base for spec endpoints
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v2';
+import { InboxCategoryTabs } from '../components/inbox';
+import * as api from '../lib/api';
 
 // Severity colors
 const SEVERITY_COLORS: Record<Severity, string> = {
@@ -78,6 +77,9 @@ export function Inbox() {
   const [error, setError] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<InboxItem | null>(null);
 
+  // Category filter (InboxCategoryTabs)
+  const [activeCategory, setActiveCategory] = useState<InboxItemType | 'all'>('all');
+
   // Filters (§1.2)
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [severityFilter, setSeverityFilter] = useState<string>('all');
@@ -92,39 +94,30 @@ export function Inbox() {
   // Fetch counts (separate, cacheable)
   const fetchCounts = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/inbox/counts`);
-      if (!res.ok) throw new Error('Failed to fetch counts');
-      const data = await res.json();
+      const data = await api.fetchInboxCounts();
       setCounts(data);
     } catch (e) {
       console.error('Failed to fetch counts:', e);
     }
   }, []);
 
-  // Fetch items based on active tab
+  // Fetch items based on active tab and category filter
   const fetchItems = useCallback(async () => {
     setLoading(true);
     setError(null);
 
     try {
-      let url: string;
+      const typeParam = activeCategory !== 'all' ? activeCategory : undefined;
 
       if (activeTab === 'recently_actioned') {
-        url = `${API_BASE}/inbox/recent?days=7`;
+        const data = await api.fetchInboxRecent(7, typeParam);
+        setItems(data.items || []);
+        if (data.counts) setCounts(data.counts);
       } else {
         const state = activeTab === 'needs_attention' ? 'proposed' : 'snoozed';
-        url = `${API_BASE}/inbox?state=${state}`;
-      }
-
-      const res = await fetch(url);
-      if (!res.ok) throw new Error('Failed to fetch inbox');
-
-      const data: InboxResponse = await res.json();
-      setItems(data.items || []);
-
-      // Update counts from response if present
-      if (data.counts) {
-        setCounts(data.counts);
+        const data = await api.fetchInbox({ state, type: typeParam });
+        setItems(data.items || []);
+        if (data.counts) setCounts(data.counts);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Unknown error');
@@ -132,7 +125,7 @@ export function Inbox() {
     } finally {
       setLoading(false);
     }
-  }, [activeTab]);
+  }, [activeTab, activeCategory]);
 
   // Initial load
   useEffect(() => {
@@ -144,8 +137,8 @@ export function Inbox() {
   const filteredAndSortedItems = useCallback(() => {
     let result = [...items];
 
-    // Apply type filter
-    if (typeFilter !== 'all') {
+    // Apply type filter (only if category is 'all', since category already filters server-side)
+    if (activeCategory === 'all' && typeFilter !== 'all') {
       result = result.filter((item) => item.type === typeFilter);
     }
 
@@ -193,7 +186,7 @@ export function Inbox() {
     });
 
     return result;
-  }, [items, typeFilter, severityFilter, clientFilter, sortBy]);
+  }, [items, activeCategory, typeFilter, severityFilter, clientFilter, sortBy]);
 
   // Execute action on inbox item
   const executeAction = async (
@@ -202,16 +195,7 @@ export function Inbox() {
     payload: Record<string, unknown> = {}
   ) => {
     try {
-      const res = await fetch(`${API_BASE}/inbox/${itemId}/action?actor=user`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, ...payload }),
-      });
-
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message || 'Action failed');
-      }
+      await api.executeInboxAction(itemId, action, payload, 'user');
 
       // Refresh data
       fetchCounts();
@@ -271,6 +255,19 @@ export function Inbox() {
             value={counts.by_type ? Object.values(counts.by_type).filter((c) => c > 0).length : 0}
           />
         </SummaryGrid>
+      )}
+
+      {/* Category filter tabs */}
+      {activeTab !== 'recently_actioned' && (
+        <InboxCategoryTabs
+          counts={counts}
+          activeCategory={activeCategory}
+          onCategoryChange={(cat) => {
+            setActiveCategory(cat);
+            // Reset type filter when category changes (category is the primary type filter)
+            setTypeFilter('all');
+          }}
+        />
       )}
 
       {/* Severity and Type breakdown (§1.9) */}

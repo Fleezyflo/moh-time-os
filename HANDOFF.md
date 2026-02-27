@@ -1,44 +1,42 @@
 # Session Handoff
 
-**Last updated:** 2026-02-27, Session 7 (Phase 3.1 complete)
-**Branch:** `feat/phase-2-layout-adoption` (Phase 2 PR pending merge, Phase 3.1 code on top)
+**Last updated:** 2026-02-27, Session 7 continued (Phase 3.2 complete, pending commit)
+**Branch:** `main` (Phase 3.1 merged as PR #35)
 
 ## What Just Happened
 
-Session 7 completed Phase 3.1 (Portfolio Page) and added commit/push/merge rules to all documentation.
+Session 7 continued: Phase 3.1 (Portfolio Page) merged as PR #35. Phase 3.2 (Inbox Enhancement) code complete, pending commit.
 
-### Phase 3.1 -- Portfolio Page (code ready, needs commit)
-- Created `Portfolio.tsx` page with PageLayout, SummaryGrid, 4 MetricCards (Health Score, Critical Items, Active Signals, Structural Patterns)
-- Wired 5 hooks: `usePortfolioScore()`, `useCriticalItems()`, `usePortfolioIntelligence()` (all intelligence), `usePortfolioOverview()`, `usePortfolioRisks()` (new lib hooks)
-- Created 4 new components in `components/portfolio/`: CriticalItemList, ClientDistributionChart, RiskList, ARAgingSummary
-- Added 3 new fetch functions + 3 new hooks in `lib/api.ts` and `lib/hooks.ts`
-- Wired `/portfolio` route in router.tsx, added to NAV_ITEMS
-- Response shapes verified against actual server.py endpoints
+### Phase 3.1 -- Portfolio Page (MERGED, PR #35)
+- All 26 CI checks green after regenerating `docs/system-map.json`
+- New rule: always regenerate system-map when adding UI routes to `router.tsx`
 
-### Documentation updates
-- Added comprehensive commit/push/merge rules to CLAUDE.md, HANDOFF.md, BUILD_STRATEGY.md
+### Phase 3.2 -- Inbox Enhancement (code ready, needs commit)
+- New fetch functions in `lib/api.ts`: `fetchInbox()`, `fetchInboxCounts()`, `fetchInboxRecent()`, `executeInboxAction()` with typed `InboxFilters` interface
+- New hooks in `lib/hooks.ts`: `useInbox()`, `useInboxCounts()`, `useInboxRecent()`
+- New `components/inbox/InboxCategoryTabs.tsx` -- pill-style category tabs for filtering by `InboxItemType`, with counts from API
+- Refactored `pages/Inbox.tsx` to use `api.*` functions instead of raw `fetch()`, added category filter with server-side type filtering
 
 ## What's Next
 
-### Immediate: merge Phase 2, then commit Phase 3.1
+### Immediate: commit and merge Phase 3.2
 
-Phase 2 PR needs to merge first. Then:
+1. Create branch `feat/phase-3-inbox-hooks` from main
+2. Run prettier on new files: `cd time-os-ui && pnpm exec prettier --write src/components/inbox/InboxCategoryTabs.tsx src/components/inbox/index.ts && cd ..`
+3. Run tsc: `cd time-os-ui && npx tsc --noEmit && cd ..`
+4. Commit, push, create PR, auto-merge
+5. No system-map regen needed (no new routes)
 
-1. Create new branch from main for Phase 3.1
-2. Cherry-pick or re-apply Phase 3.1 changes
-3. Run tsc + prettier on new files
-4. Commit, push, create PR
+### After Phase 3.2 merges: Phase 3.3+3.4 (Client + Team Enhancement)
+- Create reusable `TabContainer` component (extracted from inline tab patterns)
+- Create `TrajectorySparkline` component (reusable sparkline for health scores)
+- Refactor `ClientDetailSpec.tsx` to use named hook instead of inline fetch
+- Wire `useTeamWorkload()` hook to `/api/team/workload` endpoint
+- See BUILD_PLAN.md line 1061
 
-### After Phase 3.1 merges: Phase 3.2 (Inbox Enhancement)
-- New `InboxCategoryTabs` component (tabs for risk/opportunity/anomaly/maintenance)
-- Wire `useInbox()`, `useInboxCounts()` hooks
-- Enhanced InboxItemCard with unread indicator, richer metadata
-- See BUILD_PLAN.md line 1044
-
-### Remaining Phase 3 sub-phases
-- **3.3** Client Detail Enhancement -- tabs, financials, signals, team
-- **3.4** Team Detail Enhancement -- workload distribution
-- **3.5** Operations Page (new) -- data quality, watchers, couplings tabs
+### After 3.3+3.4: Phase 3.5 (Operations Page)
+- New `Operations.tsx` page at `/ops` with tabs for data quality, watchers, couplings
+- **Must regenerate system-map** (new route)
 
 ## Key Rules (learned hard way in Sessions 1-7)
 
@@ -64,6 +62,7 @@ Phase 2 PR needs to merge first. Then:
 20. **Only prettier specific files.** Never `prettier --write src/` -- only the files you changed.
 21. **Auto-merge PRs.** Always `gh pr merge --merge --auto` after creating. Watch with `gh pr checks <N> --watch`.
 22. **Force-push after amend.** If you amend a pushed commit, use `git push --force-with-lease`.
+23. **Regenerate system-map after adding UI routes.** `uv run python scripts/generate_system_map.py` then include `docs/system-map.json` in the commit. (Session 7: PR #35 CI failed until system-map was regenerated.)
 
 ## Documents to Read (in order)
 

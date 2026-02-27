@@ -225,6 +225,58 @@ export async function fetchAllCouplings(): Promise<ApiListResponse<Coupling>> {
   return fetchJson(`${API_BASE}/couplings`);
 }
 
+// ==== Inbox Endpoints (spec_router /api/v2/inbox*) ====
+
+import type { InboxResponse, InboxCounts, InboxItemType, Severity } from '../types/spec';
+
+/** Inbox filter options for GET /api/v2/inbox */
+export interface InboxFilters {
+  state?: 'proposed' | 'snoozed';
+  type?: InboxItemType;
+  severity?: Severity;
+  client_id?: string;
+  unread_only?: boolean;
+  sort?: 'severity' | 'age' | 'age_desc' | 'client';
+}
+
+/** Fetch inbox items with optional filters */
+export async function fetchInbox(filters: InboxFilters = {}): Promise<InboxResponse> {
+  const params = new URLSearchParams();
+  if (filters.state) params.set('state', filters.state);
+  if (filters.type) params.set('type', filters.type);
+  if (filters.severity) params.set('severity', filters.severity);
+  if (filters.client_id) params.set('client_id', filters.client_id);
+  if (filters.unread_only) params.set('unread_only', 'true');
+  if (filters.sort) params.set('sort', filters.sort);
+  const qs = params.toString();
+  return fetchJson(`${API_BASE}/inbox${qs ? `?${qs}` : ''}`);
+}
+
+/** Fetch inbox counts (cacheable, always global scope) */
+export async function fetchInboxCounts(): Promise<InboxCounts> {
+  return fetchJson(`${API_BASE}/inbox/counts`);
+}
+
+/** Fetch recently actioned inbox items */
+export async function fetchInboxRecent(days = 7, type?: InboxItemType): Promise<InboxResponse> {
+  const params = new URLSearchParams({ days: String(days) });
+  if (type) params.set('type', type);
+  return fetchJson(`${API_BASE}/inbox/recent?${params.toString()}`);
+}
+
+/** Execute action on inbox item */
+export async function executeInboxAction(
+  itemId: string,
+  action: string,
+  payload: Record<string, unknown> = {},
+  actor = getActor()
+): Promise<{ success: boolean; error?: string }> {
+  return postJson(`${API_BASE}/inbox/${itemId}/action?actor=${encodeURIComponent(actor)}`, {
+    action,
+    ...payload,
+  });
+}
+
 // ==== Portfolio / Client Health Endpoints (server.py) ====
 
 /** Portfolio overview: tier breakdown, health stats, at-risk clients, totals, overdue AR */

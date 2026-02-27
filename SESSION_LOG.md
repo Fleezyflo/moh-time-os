@@ -2,11 +2,11 @@
 
 ## Current State
 
-- **Current phase:** Phase 3 IN PROGRESS (Page Redesign -- Core). Sub-phase 3.1 (Portfolio) done.
+- **Current phase:** Phase 3 IN PROGRESS (Page Redesign -- Core). Sub-phases 3.1 (Portfolio) merged, 3.2 (Inbox Enhancement) in progress.
 - **Current track:** T2 (Existing Page Redesign)
-- **Blocked by:** Phase 2 PR needs merge before Phase 3 PR can be created.
+- **Blocked by:** Nothing -- main is clean.
 - **D1/D2:** Resolved. Blue `#3b82f6`, slate-400 at 5.1:1.
-- **Next session:** Continue Phase 3 -- sub-phase 3.2 (Inbox Enhancement) or merge Phase 2 PR first.
+- **Next session:** Complete Phase 3 -- sub-phases 3.3-3.5 after 3.2 merges.
 
 ## Session History
 
@@ -302,3 +302,21 @@
   1. server.py `/api/clients/health` returns `{ clients: [...], total }` not a flat overview object. Always verify response shapes by reading the endpoint implementation, not guessing from the endpoint name.
   2. server.py `/api/clients/at-risk` returns `{ threshold, clients: [...], total }` with client fields `client_id`, `name`, `health_score`, `trend`, `factors` -- not `client_name` or `tier`. The field naming differs from the `/api/clients/portfolio` endpoint.
   3. Phase 2 branch is still the active branch. Phase 3 work is built on top of Phase 2. Need to either: (a) merge Phase 2 PR first, create new branch from main, or (b) create Phase 3 branch from Phase 2 branch.
+  4. When adding UI routes to `router.tsx`, always regenerate `docs/system-map.json` before committing. The system map generator scans router.tsx for `path: '...'` definitions. PR #35 CI failed until system-map was regenerated.
+
+### Session 7 continued (Phase 3.1 merge + Phase 3.2 Inbox Enhancement) -- 2026-02-27
+
+- **Type:** A (Build)
+- **Phase:** Phase 3 (T2), sub-phase 3.1 merged, sub-phase 3.2 in progress
+- **Work done:**
+  - **Phase 3.1 PR #35 merged** -- All 26 CI checks green after regenerating `docs/system-map.json`.
+  - **Phase 3.2 Inbox Enhancement:**
+    - New fetch functions in `lib/api.ts`: `fetchInbox()` (with typed `InboxFilters`), `fetchInboxCounts()`, `fetchInboxRecent()`, `executeInboxAction()`. These wrap `/api/v2/inbox*` endpoints with full type safety.
+    - New hooks in `lib/hooks.ts`: `useInbox()`, `useInboxCounts()`, `useInboxRecent()`.
+    - New component `components/inbox/InboxCategoryTabs.tsx` -- pill-style category filter tabs showing counts per `InboxItemType` (All/Issues/Flagged Signals/Orphans/Ambiguous). Hides zero-count categories. Wires to API `type` query param for server-side filtering.
+    - Refactored `pages/Inbox.tsx`: replaced raw `fetch()` calls with `api.fetchInbox()`, `api.fetchInboxCounts()`, `api.fetchInboxRecent()`, `api.executeInboxAction()`. Removed `API_BASE` constant. Added `activeCategory` state driving both InboxCategoryTabs and server-side type filtering. Category tabs appear above state tabs for needs_attention and snoozed views.
+- **Files changed:** 4 modified, 2 new.
+  - Modified: `lib/api.ts`, `lib/hooks.ts`, `pages/Inbox.tsx`, `SESSION_LOG.md`
+  - New: `components/inbox/InboxCategoryTabs.tsx`, `components/inbox/index.ts`
+- **No new routes** -- no system-map regen needed.
+- **PRs:** Pending commit and PR creation.
