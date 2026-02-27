@@ -4,6 +4,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { InboxItem, InboxCounts, InboxResponse, Severity, InboxItemType } from '../types/spec';
 import { TeamMemberPicker } from '../components/pickers';
+import { PageLayout } from '../components/layout/PageLayout';
+import { SummaryGrid } from '../components/layout/SummaryGrid';
+import { MetricCard } from '../components/layout/MetricCard';
 
 // API base for spec endpoints
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v2';
@@ -235,24 +238,40 @@ export function Inbox() {
   const displayItems = filteredAndSortedItems();
 
   return (
-    <div className="space-y-4">
-      {/* Header with counts */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Control Room</h1>
-        {counts && (
-          <div className="flex gap-4 text-sm">
-            <span className="text-[var(--grey-light)]">
-              Unprocessed:{' '}
-              <span className="text-[var(--white)] font-medium">{counts.unprocessed}</span>
-            </span>
-            {counts.snoozed_returning_soon > 0 && (
-              <span className="text-[var(--warning)]">
-                ⏰ {counts.snoozed_returning_soon} returning soon
-              </span>
-            )}
-          </div>
-        )}
-      </div>
+    <PageLayout
+      title="Control Room"
+      actions={
+        counts && counts.snoozed_returning_soon > 0 ? (
+          <span className="text-sm text-[var(--warning)]">
+            ⏰ {counts.snoozed_returning_soon} returning soon
+          </span>
+        ) : undefined
+      }
+    >
+      {/* Summary metrics */}
+      {counts && (
+        <SummaryGrid>
+          <MetricCard
+            label="Unprocessed"
+            value={counts.unprocessed}
+            severity={counts.unprocessed > 0 ? 'warning' : undefined}
+          />
+          <MetricCard
+            label="Critical"
+            value={counts.by_severity?.critical ?? 0}
+            severity={(counts.by_severity?.critical ?? 0) > 0 ? 'danger' : undefined}
+          />
+          <MetricCard
+            label="High"
+            value={counts.by_severity?.high ?? 0}
+            severity={(counts.by_severity?.high ?? 0) > 0 ? 'warning' : undefined}
+          />
+          <MetricCard
+            label="Categories"
+            value={counts.by_type ? Object.values(counts.by_type).filter((c) => c > 0).length : 0}
+          />
+        </SummaryGrid>
+      )}
 
       {/* Severity and Type breakdown (§1.9) */}
       {counts && activeTab === 'needs_attention' && (
@@ -463,7 +482,7 @@ export function Inbox() {
           formatAge={formatAge}
         />
       )}
-    </div>
+    </PageLayout>
   );
 }
 

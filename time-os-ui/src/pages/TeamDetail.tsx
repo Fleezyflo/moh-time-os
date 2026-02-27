@@ -2,6 +2,9 @@
 import { useState } from 'react';
 import { Link, useParams } from '@tanstack/react-router';
 import { RoomDrawer, IssueDrawer } from '../components';
+import { PageLayout } from '../components/layout/PageLayout';
+import { SummaryGrid } from '../components/layout/SummaryGrid';
+import { MetricCard } from '../components/layout/MetricCard';
 import { priorityLabel, priorityBadgeClass } from '../lib/priority';
 import { formatRelative } from '../lib/datetime';
 import type { Proposal, Issue } from '../types/api';
@@ -78,6 +81,12 @@ export function TeamDetail() {
   const load = getLoadLevel(member.open_tasks || 0, member.overdue_tasks || 0);
   const hasOverdue = (member.overdue_tasks || 0) > 0;
 
+  const actions = (
+    <Link to="/team" className="text-[var(--grey-light)] hover:text-[var(--white)]">
+      ← Team
+    </Link>
+  );
+
   const handleTag = async (proposal: Proposal) => {
     const result = await api.tagProposal(proposal.proposal_id ?? '');
     if (result.success) {
@@ -127,55 +136,33 @@ export function TeamDetail() {
   };
 
   return (
-    <div>
-      {/* Header */}
-      <div className="mb-6">
-        <Link
-          to="/team"
-          className="text-[var(--grey-light)] hover:text-[var(--white)] mb-2 inline-block"
-        >
-          ← Team
-        </Link>
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold">{member.name}</h1>
-            <p className="text-[var(--grey)]">
-              {member.role || member.department || 'Team Member'}
-              {member.company && (
-                <span className="ml-2 text-[var(--grey-light)]">• {member.company}</span>
-              )}
-            </p>
-            {member.email && <p className="text-sm text-[var(--grey)] mt-1">{member.email}</p>}
-          </div>
-          <span className={`px-3 py-1 rounded text-sm ${load.bg} ${load.text}`}>{load.label}</span>
-        </div>
-      </div>
+    <PageLayout title={member.name} actions={actions}>
+      <SummaryGrid>
+        <MetricCard label="Open Tasks" value={(member.open_tasks || 0).toString()} />
+        <MetricCard
+          label="Overdue"
+          value={(member.overdue_tasks || 0).toString()}
+          severity={hasOverdue ? 'danger' : undefined}
+        />
+        <MetricCard label="Due Today" value={(member.due_today || 0).toString()} />
+        <MetricCard
+          label="Done This Week"
+          value={(member.completed_this_week || 0).toString()}
+          severity="success"
+        />
+      </SummaryGrid>
 
-      {/* Workload Stats Banner */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-[var(--grey)]">
-          <div className="text-2xl font-bold text-[var(--info)]">{member.open_tasks || 0}</div>
-          <div className="text-sm text-[var(--grey-light)]">Open Tasks</div>
-        </div>
-        <div
-          className={`bg-[var(--grey-dim)] rounded-lg p-4 border ${hasOverdue ? 'border-[var(--danger)]/50' : 'border-[var(--grey)]'}`}
-        >
-          <div
-            className={`text-2xl font-bold ${hasOverdue ? 'text-[var(--danger)]' : 'text-[var(--grey-light)]'}`}
-          >
-            {member.overdue_tasks || 0}
-          </div>
-          <div className="text-sm text-[var(--grey-light)]">Overdue</div>
-        </div>
-        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-amber-900/50">
-          <div className="text-2xl font-bold text-amber-400">{member.due_today || 0}</div>
-          <div className="text-sm text-[var(--grey-light)]">Due Today</div>
-        </div>
-        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-green-900/50">
-          <div className="text-2xl font-bold text-[var(--success)]">
-            {member.completed_this_week || 0}
-          </div>
-          <div className="text-sm text-[var(--grey-light)]">Done This Week</div>
+      {/* Member Details */}
+      <div className="bg-[var(--grey-dim)] rounded-lg p-4 mb-6">
+        <p className="text-[var(--grey)] mb-2">
+          {member.role || member.department || 'Team Member'}
+          {member.company && (
+            <span className="ml-2 text-[var(--grey-light)]">• {member.company}</span>
+          )}
+        </p>
+        {member.email && <p className="text-sm text-[var(--grey)]">{member.email}</p>}
+        <div className="mt-3">
+          <span className={`px-3 py-1 rounded text-sm ${load.bg} ${load.text}`}>{load.label}</span>
         </div>
       </div>
 
@@ -208,7 +195,7 @@ export function TeamDetail() {
       )}
 
       {/* Task List */}
-      <section className="mb-6 bg-[var(--grey-dim)]/50 rounded-lg border border-[var(--grey)] p-4">
+      <section className="mb-6 bg-[var(--grey-dim)] rounded-lg p-4">
         <h2 className="text-lg font-medium mb-4">Open Tasks ({memberTasks.length})</h2>
         {memberTasks.length === 0 ? (
           <p className="text-[var(--grey)]">No open tasks</p>
@@ -254,7 +241,7 @@ export function TeamDetail() {
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Scoped Issues */}
-        <section className="bg-[var(--grey-dim)]/50 rounded-lg border border-[var(--grey)] p-4">
+        <section className="bg-[var(--grey-dim)] rounded-lg p-4">
           <h2 className="text-lg font-medium mb-4">Assigned Issues ({memberIssues.length})</h2>
           {memberIssues.length === 0 ? (
             <p className="text-[var(--grey)]">No assigned issues</p>
@@ -298,7 +285,7 @@ export function TeamDetail() {
         </section>
 
         {/* Scoped Proposals */}
-        <section className="bg-[var(--grey-dim)]/50 rounded-lg border border-[var(--grey)] p-4">
+        <section className="bg-[var(--grey-dim)] rounded-lg p-4">
           <h2 className="text-lg font-medium mb-4">
             Relevant Proposals ({memberProposals.length})
           </h2>
@@ -353,7 +340,7 @@ export function TeamDetail() {
           selectedIssue ? (newState) => handleChangeIssueState(selectedIssue, newState) : undefined
         }
       />
-    </div>
+    </PageLayout>
   );
 }
 

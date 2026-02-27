@@ -1,6 +1,9 @@
 // Fix Data page
 import { useState } from 'react';
 import { FixDataCard, SkeletonCardList, ErrorState, useToast } from '../components';
+import { PageLayout } from '../components/layout/PageLayout';
+import { SummaryGrid } from '../components/layout/SummaryGrid';
+import { MetricCard } from '../components/layout/MetricCard';
 import { useFixData } from '../lib/hooks';
 import { resolveFixDataItem } from '../lib/api';
 
@@ -137,48 +140,42 @@ export function FixData() {
   };
 
   return (
-    <div>
-      {/* Summary Banner */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        <div
-          className={`bg-[var(--grey-dim)] rounded-lg p-4 border ${totalIssues > 0 ? 'border-amber-900/50' : 'border-[var(--grey)]'}`}
-        >
-          <div
-            className={`text-2xl font-bold ${totalIssues > 0 ? 'text-amber-400' : 'text-[var(--success)]'}`}
-          >
-            {totalIssues}
-          </div>
-          <div className="text-sm text-[var(--grey-light)]">Total Issues</div>
-        </div>
-        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-[var(--grey)]">
-          <div className="text-2xl font-bold text-purple-400">{identityCount}</div>
-          <div className="text-sm text-[var(--grey-light)]">Identity Conflicts</div>
-        </div>
-        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-[var(--grey)]">
-          <div className="text-2xl font-bold text-[var(--info)]">{linkCount}</div>
-          <div className="text-sm text-[var(--grey-light)]">Ambiguous Links</div>
-        </div>
-      </div>
-
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold">Fix Data</h1>
-          <p className="text-sm text-[var(--grey)] mt-1">
-            {totalIssues === 0
-              ? '✓ No issues — data quality is good!'
-              : `${totalIssues} items need attention`}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="Search..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="px-3 py-1.5 bg-[var(--grey-dim)] border border-[var(--grey)] rounded text-sm w-48"
-          />
-        </div>
-      </div>
+    <PageLayout
+      title="Fix Data"
+      subtitle={
+        totalIssues === 0
+          ? '✓ No issues — data quality is good!'
+          : `${totalIssues} items need attention`
+      }
+      actions={
+        <input
+          type="text"
+          placeholder="Search..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="px-3 py-1.5 bg-[var(--grey-dim)] border border-[var(--grey)] rounded text-sm w-48"
+        />
+      }
+    >
+      {/* Summary Grid */}
+      <SummaryGrid>
+        <MetricCard
+          label="Total Issues"
+          value={totalIssues}
+          severity={totalIssues > 0 ? 'warning' : 'success'}
+        />
+        <MetricCard
+          label="Identity Conflicts"
+          value={identityCount}
+          severity={identityCount > 0 ? 'warning' : 'success'}
+        />
+        <MetricCard
+          label="Ambiguous Links"
+          value={linkCount}
+          severity={linkCount > 0 ? 'warning' : 'success'}
+        />
+        <MetricCard label="Selected" value={selectedIds.size} />
+      </SummaryGrid>
 
       {/* Bulk Actions Bar */}
       {filtered.length > 0 && (
@@ -284,7 +281,7 @@ export function FixData() {
           </div>
         </div>
       )}
-    </div>
+    </PageLayout>
   );
 }
 

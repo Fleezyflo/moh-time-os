@@ -2,11 +2,11 @@
 
 ## Current State
 
-- **Current phase:** Phase 1 COMPLETE (Slate Migration). Phase 2 next.
-- **Current track:** T1 (Design System & Foundation)
-- **Blocked by:** Nothing. Phase 2 is unblocked.
+- **Current phase:** Phase 2 COMPLETE (Layout Adoption). Phase 3 next.
+- **Current track:** T2 (Existing Page Redesign)
+- **Blocked by:** Nothing. Phase 3 is unblocked.
 - **D1/D2:** Resolved. Blue `#3b82f6`, slate-400 at 5.1:1.
-- **Next session:** Type A build — Phase 2 (Layout Adoption). Wrap 9 pages with `PageLayout` + `SummaryGrid` + `MetricCard`. See BUILD_PLAN.md §Phase 2.
+- **Next session:** Type A build — Phase 3 (Page Redesign — Core). See BUILD_PLAN.md §Phase 3.
 
 ## Session History
 
@@ -237,3 +237,39 @@
   2. The BUILD_PLAN mapping was missing `slate-100` and `slate-750`. Extended mapping in-session.
   3. The BUILD_PLAN counts (396 across 51 files) were close but not exact — actual was 466 replacements across 51 files after accounting for variant prefixes and additional property types not counted in original grep.
   4. Inline RGB values in SVG/canvas components (Sparkline, DistributionChart) are a separate concern from Tailwind class migration — these will need their own token-ification pass when the design system supports runtime theme switching.
+
+### Session 6 continued (Phase 2 — Layout Adoption) — 2026-02-27
+
+- **Type:** A (Build)
+- **Phase:** Phase 2 (T1 — Design System & Foundation)
+- **Work done:**
+  - Wrapped all 9 target pages with `PageLayout` + `SummaryGrid` + `MetricCard`:
+    1. **Inbox** — 4 metrics (Unprocessed, Critical, High, Categories), snoozed-returning-soon in actions
+    2. **Issues** — 4 metrics (Total, Critical, High, Open), replaced hand-built 5-card banner, filters in actions
+    3. **ClientIndex** — 4 metrics (Total, Active, Recently Active, Cold), tier/issue/overdue filters in actions
+    4. **Team** — 4 metrics (Team Size, Open Tasks, Overdue, Overloaded), search/sort/filter in actions
+    5. **FixData** — 4 metrics (Total Issues, Identity Conflicts, Ambiguous Links, Selected), search in actions
+    6. **Signals** — 2 metrics (Total Signals, Filtered when active), severity/entity filters in actions
+    7. **Patterns** — 4 metrics (Total Detected, Structural, Operational, Informational)
+    8. **ClientDetail** — 4 metrics (Health Score, AR Outstanding, Active Engagements, Open Issues), dynamic title from client.name
+    9. **TeamDetail** — 4 metrics (Open Tasks, Overdue, Due Today, Done This Week), dynamic title from member.name
+  - Fixed 6 invalid `variant` props → `severity` props on MetricCard (agents used wrong prop name)
+  - Removed hand-built summary banners from Issues and Team (replaced by standardized SummaryGrid)
+- **Files changed:** 9 modified. +356/-322 lines (before tsc fixes).
+- **tsc verification (Molham ran on Mac):**
+  - **2 errors found:**
+    1. `ClientDetailSpec.tsx:135` — `TIER_COLORS` declared but never read. Old header badge used it; PageLayout subtitle replaced it. Removed the unused constant (8 lines).
+    2. `Issues.tsx:262` — `blockedCount` declared but never read. Old hand-built banner displayed it; new SummaryGrid only had 4 cards. Added 5th MetricCard for Blocked count.
+  - Both fixes applied, awaiting re-run of `npx tsc --noEmit`.
+- **Verification needed (Mac):**
+  - `cd time-os-ui && npx tsc --noEmit && cd ..` — re-run after fixes
+  - `cd time-os-ui && pnpm exec prettier --write <9 files> && cd ..`
+  - Visual check: every page should have consistent header + metrics grid
+- **PRs:** Pending — commit commands provided to Molham
+- **Discovered work:** None
+- **Lessons learned:**
+  1. Sub-agents (Task tool) may use prop names that don't exist on a component. Always grep the component interface and verify all props after agent edits. Session 6: agents used `variant` instead of `severity` on MetricCard — 6 occurrences across 3 files.
+  2. Removing hand-built UI elements (like the Issues 5-card banner) can leave unused variables that tsc catches. Always account for both the removed code AND the variables/constants that only the removed code referenced.
+  3. Always run tsc before giving commit commands, not after. Session 6: 2 tsc errors caught post-commit required fix + force-push. Added to CLAUDE.md verification requirements.
+  4. Update ALL documentation (SESSION_LOG.md, HANDOFF.md, CLAUDE.md) after each change — not just at session end. This includes intermediate fixes like tsc error corrections.
+  5. Added comprehensive "Documentation Rules" section to CLAUDE.md with trigger table, per-file responsibilities, and enforcement checklist. Updated BUILD_STRATEGY.md entry/exit checklists to reference it. This ensures future sessions self-enforce documentation discipline without Molham needing to intervene.

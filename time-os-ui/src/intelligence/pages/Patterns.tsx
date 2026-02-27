@@ -7,6 +7,9 @@
 import { usePatterns } from '../hooks';
 import { ErrorState, NoPatternsDetected } from '../../components';
 import { SkeletonPatternsPage, PatternCard } from '../components';
+import { PageLayout } from '../../components/layout/PageLayout';
+import { SummaryGrid } from '../../components/layout/SummaryGrid';
+import { MetricCard } from '../../components/layout/MetricCard';
 
 export default function Patterns() {
   const { data, loading, error, refetch } = usePatterns();
@@ -32,15 +35,17 @@ export default function Patterns() {
   const informational = patterns.filter((p) => p.severity === 'informational');
 
   return (
-    <div className="space-y-6">
+    <PageLayout title="Detected Patterns">
       {/* Error banner when we have stale data */}
       {error && data && <ErrorState error={error} onRetry={refetch} hasData />}
 
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Detected Patterns</h1>
-        <div className="text-sm text-[var(--grey-muted)]">{data?.total_detected ?? 0} detected</div>
-      </div>
+      {/* Summary Metrics */}
+      <SummaryGrid>
+        <MetricCard label="Total Detected" value={data?.total_detected ?? patterns.length} />
+        <MetricCard label="Structural" value={structural.length} />
+        <MetricCard label="Operational" value={operational.length} />
+        <MetricCard label="Informational" value={informational.length} />
+      </SummaryGrid>
 
       {patterns.length === 0 ? (
         <NoPatternsDetected />
@@ -89,6 +94,6 @@ export default function Patterns() {
           )}
         </>
       )}
-    </div>
+    </PageLayout>
   );
 }

@@ -8,6 +8,9 @@ import type { Issue } from '../types/api';
 import { useIssues } from '../lib/hooks';
 import { useDebounce } from '../lib/useDebounce';
 import * as api from '../lib/api';
+import { PageLayout } from '../components/layout/PageLayout';
+import { SummaryGrid } from '../components/layout/SummaryGrid';
+import { MetricCard } from '../components/layout/MetricCard';
 
 const stateIcons: Record<string, { icon: string; color: string }> = {
   // v29 states
@@ -369,33 +372,9 @@ export function Issues() {
   };
 
   return (
-    <div>
-      {/* Summary Banner */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
-        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-[var(--grey)]">
-          <div className="text-2xl font-bold text-[var(--white)]">{allIssues.length}</div>
-          <div className="text-sm text-[var(--grey-light)]">Total Issues</div>
-        </div>
-        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-[var(--danger)]/50">
-          <div className="text-2xl font-bold text-[var(--danger)]">{criticalCount}</div>
-          <div className="text-sm text-[var(--grey-light)]">Critical (80+)</div>
-        </div>
-        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-[var(--warning)]/50">
-          <div className="text-2xl font-bold text-[var(--warning)]">{highCount}</div>
-          <div className="text-sm text-[var(--grey-light)]">High (60-79)</div>
-        </div>
-        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-blue-900/50">
-          <div className="text-2xl font-bold text-[var(--info)]">{openCount}</div>
-          <div className="text-sm text-[var(--grey-light)]">Open</div>
-        </div>
-        <div className="bg-[var(--grey-dim)] rounded-lg p-4 border border-purple-900/50">
-          <div className="text-2xl font-bold text-purple-400">{blockedCount}</div>
-          <div className="text-sm text-[var(--grey-light)]">Blocked</div>
-        </div>
-      </div>
-
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <h1 className="text-2xl font-semibold">Issues Inbox</h1>
+    <PageLayout
+      title="Issues Inbox"
+      actions={
         <div className="flex flex-wrap items-center gap-2">
           {/* View toggle */}
           <div className="flex rounded overflow-hidden border border-[var(--grey)]">
@@ -449,7 +428,27 @@ export function Issues() {
             ))}
           </div>
         </div>
-      </div>
+      }
+    >
+      <SummaryGrid>
+        <MetricCard label="Total" value={allIssues.length} />
+        <MetricCard
+          label="Critical"
+          value={criticalCount}
+          severity={criticalCount > 0 ? 'danger' : undefined}
+        />
+        <MetricCard
+          label="High"
+          value={highCount}
+          severity={highCount > 0 ? 'warning' : undefined}
+        />
+        <MetricCard label="Open" value={openCount} severity="info" />
+        <MetricCard
+          label="Blocked"
+          value={blockedCount}
+          severity={blockedCount > 0 ? 'warning' : undefined}
+        />
+      </SummaryGrid>
 
       {search || stateFilter !== 'all' || priorityFilter !== 'all' ? (
         <p className="text-sm text-[var(--grey)] mb-4">
@@ -519,7 +518,7 @@ export function Issues() {
           selectedIssue ? (newState) => handleChangeIssueState(selectedIssue, newState) : undefined
         }
       />
-    </div>
+    </PageLayout>
   );
 }
 
