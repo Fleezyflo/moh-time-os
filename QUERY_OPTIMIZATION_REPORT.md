@@ -387,4 +387,3 @@ To integrate optimizations into existing endpoints:
 4. **Update ClientEndpoints:** Use batch loading for has_issues/has_overdue_ar checks
 5. **Refactor `/proposals` endpoint:** Add computed fields in SQL, not Python
 6. **Add query monitoring:** Use QueryStats in production to track performance
-

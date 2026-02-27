@@ -221,4 +221,3 @@ def _build_recurrence_history(self, rule, lookback_cycles: int = 5) -> dict:
 
 ## Estimated Effort
 ~200 lines — confidence calculation logic, temporal decay math, recurrence aggregation
-

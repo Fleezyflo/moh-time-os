@@ -24,10 +24,6 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-from lib import paths
-from lib.safety import WriteContext, generate_request_id, get_git_sha
-from lib.safety.migrations import disable_maintenance_mode, enable_maintenance_mode
-
 # Configure logging for stderr (metadata/debug output)
 logging.basicConfig(
     level=logging.INFO,
@@ -44,6 +40,10 @@ def write_stdout(text: str) -> None:
 
 
 def main():
+    from lib import paths
+    from lib.safety import WriteContext, generate_request_id, get_git_sha
+    from lib.safety.migrations import disable_maintenance_mode, enable_maintenance_mode
+
     parser = argparse.ArgumentParser(
         description="Execute SQL with proper attribution",
         formatter_class=argparse.RawDescriptionHelpFormatter,

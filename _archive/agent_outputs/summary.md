@@ -88,4 +88,3 @@ tests/scenarios/test_client_health_scenario.py::TestProposalScenario::test_propo
 tests/scenarios/test_client_health_scenario.py::TestIssueLifecycleScenario::test_issue_tagged_from_proposal PASSED [ 80%]
 tests/scenarios/test_client_health_scenario.py::TestIssueLifecycleScenario::t
 ```
-

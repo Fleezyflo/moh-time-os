@@ -70,4 +70,3 @@ Hard requirements:
 - Non-docs only.
 - Call out any place where ordering is non-deterministic and how we avoid gaps anyway.
 - If you recommend a change, name the exact file/function and show a minimal unified diff.
-

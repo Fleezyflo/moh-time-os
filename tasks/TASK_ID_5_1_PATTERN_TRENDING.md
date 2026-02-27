@@ -188,4 +188,3 @@ LIMIT 6;
 
 ## Estimated Effort
 ~150 lines — trend classification logic, cycle history aggregation, performance-optimized queries
-

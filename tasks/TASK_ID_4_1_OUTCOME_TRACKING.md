@@ -237,4 +237,3 @@ self.outcome_tracker.record_outcome(
 
 ## Estimated Effort
 ~150 lines — outcome recording logic, resolution_type classification, aggregation queries
-

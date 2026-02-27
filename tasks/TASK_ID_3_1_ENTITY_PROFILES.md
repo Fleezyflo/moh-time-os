@@ -436,4 +436,3 @@ class NarrativeBuilder:
 
 ## Estimated Effort
 ~300 lines — dataclass definitions, build orchestration, narrative templates and logic
-
