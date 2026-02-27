@@ -72,7 +72,7 @@ function formatDate(iso: string | null): string {
 }
 
 export function RecentlyActiveDrilldown() {
-  const { clientId } = useParams({ from: '/clients/$clientId/recently-active' });
+  const { clientId } = useParams({ strict: false }) as { clientId: string };
   const [client, setClient] = useState<RecentlyActiveClient | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

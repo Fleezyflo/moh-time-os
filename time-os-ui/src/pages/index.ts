@@ -7,3 +7,4 @@ export { Team } from './Team';
 export { TeamDetail } from './TeamDetail';
 export { FixData } from './FixData';
 export { Portfolio } from './Portfolio';
+export { Operations } from './Operations';
