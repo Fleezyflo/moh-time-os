@@ -225,6 +225,54 @@ export async function fetchAllCouplings(): Promise<ApiListResponse<Coupling>> {
   return fetchJson(`${API_BASE}/couplings`);
 }
 
+// ==== Portfolio / Client Health Endpoints (server.py) ====
+
+/** Portfolio overview: tier breakdown, health stats, at-risk clients, totals, overdue AR */
+export interface PortfolioOverview {
+  by_tier: Array<{ tier: string; count: number; total_ar: number; at_risk: number }>;
+  by_health: Array<{ health: string; count: number }>;
+  at_risk: Array<Record<string, unknown>>;
+  totals: { total_clients: number; total_ar: number; total_annual_value: number };
+  overdue_ar: { count: number; total: number };
+}
+
+export async function fetchPortfolioOverview(): Promise<PortfolioOverview> {
+  return fetchJson('/api/clients/portfolio');
+}
+
+/** At-risk client from /api/clients/at-risk */
+export interface AtRiskClient {
+  client_id: string;
+  name: string;
+  health_score: number;
+  trend?: string;
+  factors?: Record<string, unknown>;
+}
+
+export async function fetchPortfolioRisks(
+  threshold = 50
+): Promise<{ threshold: number; clients: AtRiskClient[]; total: number }> {
+  return fetchJson(`/api/clients/at-risk?threshold=${threshold}`);
+}
+
+/** Client health item from /api/clients/health */
+export interface ClientHealthItem {
+  client_id: string;
+  name: string;
+  health_score: number;
+  tier?: string;
+  trend?: string;
+  at_risk?: boolean;
+  factors?: Record<string, unknown>;
+}
+
+export async function fetchClientsHealth(): Promise<{
+  clients: ClientHealthItem[];
+  total: number;
+}> {
+  return fetchJson('/api/clients/health');
+}
+
 // ==== Mutation Endpoints ====
 
 async function postJson<T>(url: string, body: Record<string, unknown>): Promise<T> {

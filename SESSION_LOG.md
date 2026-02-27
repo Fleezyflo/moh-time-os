@@ -2,11 +2,11 @@
 
 ## Current State
 
-- **Current phase:** Phase 2 COMPLETE (Layout Adoption). Phase 3 next.
+- **Current phase:** Phase 3 IN PROGRESS (Page Redesign -- Core). Sub-phase 3.1 (Portfolio) done.
 - **Current track:** T2 (Existing Page Redesign)
-- **Blocked by:** Nothing. Phase 3 is unblocked.
+- **Blocked by:** Phase 2 PR needs merge before Phase 3 PR can be created.
 - **D1/D2:** Resolved. Blue `#3b82f6`, slate-400 at 5.1:1.
-- **Next session:** Type A build — Phase 3 (Page Redesign — Core). See BUILD_PLAN.md §Phase 3.
+- **Next session:** Continue Phase 3 -- sub-phase 3.2 (Inbox Enhancement) or merge Phase 2 PR first.
 
 ## Session History
 
@@ -273,3 +273,32 @@
   3. Always run tsc before giving commit commands, not after. Session 6: 2 tsc errors caught post-commit required fix + force-push. Added to CLAUDE.md verification requirements.
   4. Update ALL documentation (SESSION_LOG.md, HANDOFF.md, CLAUDE.md) after each change — not just at session end. This includes intermediate fixes like tsc error corrections.
   5. Added comprehensive "Documentation Rules" section to CLAUDE.md with trigger table, per-file responsibilities, and enforcement checklist. Updated BUILD_STRATEGY.md entry/exit checklists to reference it. This ensures future sessions self-enforce documentation discipline without Molham needing to intervene.
+
+### Session 7 (Phase 3.1 -- Portfolio Page) -- 2026-02-27
+
+- **Type:** A (Build)
+- **Phase:** Phase 3 (T2 -- Existing Page Redesign), sub-phase 3.1
+- **Work done:**
+  - **Documentation rules added:** Comprehensive commit/push/merge rules added to CLAUDE.md (new subsections under Git Rules), HANDOFF.md (rules 16-22), and BUILD_STRATEGY.md (Rule 12). Covers: subject line max 72 chars, lowercase after prefix, em dash avoidance, pre-commit failure handling, branch checking, prettier scope, auto-merge workflow, force-push-after-amend.
+  - **New fetch functions** in `lib/api.ts`: `fetchPortfolioOverview()`, `fetchPortfolioRisks()`, `fetchClientsHealth()` with typed interfaces (`PortfolioOverview`, `AtRiskClient`, `ClientHealthItem`). Response shapes verified against actual server.py endpoints at lines 3543, 548, 520.
+  - **New hooks** in `lib/hooks.ts`: `usePortfolioOverview()`, `usePortfolioRisks()`, `useClientsHealth()`.
+  - **New component directory** `components/portfolio/` with barrel export:
+    - `CriticalItemList.tsx` -- renders critical items as priority-scored cards with evidence counts
+    - `ClientDistributionChart.tsx` -- tier (A/B/C) and health breakdown with progress bars and AR data
+    - `RiskList.tsx` -- at-risk clients with health scores and trend indicators
+    - `ARAgingSummary.tsx` -- total AR, overdue AR, annual value with overdue proportion bar
+  - **Portfolio.tsx page** -- wires 5 hooks (usePortfolioScore, useCriticalItems, usePortfolioIntelligence, usePortfolioOverview, usePortfolioRisks), renders SummaryGrid with 4 metrics, 6 sections (Top Risks, Portfolio Health via Scorecard, Client Distribution, At-Risk Clients, Financial Overview, Top Proposals). Loading/error/empty states for all sections.
+  - **Router wired** -- `/portfolio` route added, Portfolio added to NAV_ITEMS (second position after Inbox).
+  - **Pages index updated** -- `Portfolio` export added.
+- **Files changed:** 7 modified, 6 new. ~190 lines added.
+  - Modified: `lib/api.ts`, `lib/hooks.ts`, `pages/index.ts`, `router.tsx`, `CLAUDE.md`, `HANDOFF.md`, `BUILD_STRATEGY.md`
+  - New: `components/portfolio/CriticalItemList.tsx`, `ClientDistributionChart.tsx`, `RiskList.tsx`, `ARAgingSummary.tsx`, `index.ts`, `pages/Portfolio.tsx`
+- **Verification needed (Mac):**
+  - `cd time-os-ui && npx tsc --noEmit && cd ..`
+  - `cd time-os-ui && pnpm exec prettier --write src/pages/Portfolio.tsx src/components/portfolio/CriticalItemList.tsx src/components/portfolio/ClientDistributionChart.tsx src/components/portfolio/RiskList.tsx src/components/portfolio/ARAgingSummary.tsx src/components/portfolio/index.ts && cd ..`
+- **PRs:** Pending -- Phase 2 PR must merge first, then Phase 3.1 branch + PR.
+- **Discovered work:** None
+- **Lessons learned:**
+  1. server.py `/api/clients/health` returns `{ clients: [...], total }` not a flat overview object. Always verify response shapes by reading the endpoint implementation, not guessing from the endpoint name.
+  2. server.py `/api/clients/at-risk` returns `{ threshold, clients: [...], total }` with client fields `client_id`, `name`, `health_score`, `trend`, `factors` -- not `client_name` or `tier`. The field naming differs from the `/api/clients/portfolio` endpoint.
+  3. Phase 2 branch is still the active branch. Phase 3 work is built on top of Phase 2. Need to either: (a) merge Phase 2 PR first, create new branch from main, or (b) create Phase 3 branch from Phase 2 branch.

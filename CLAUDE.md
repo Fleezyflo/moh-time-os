@@ -51,11 +51,42 @@ The sandbox (Linux x86) and Molham's Mac (Darwin ARM) share the same repo folder
 ## Git Rules
 
 - Always work on branches, never commit to main
-- **Main is protected.** Cannot push directly to main — ALL changes (including doc-only) require a feature branch + PR + CI pass + merge. Never give `git push origin main`. Always: `git checkout -b <branch>`, push, create PR, `gh pr merge <N> --merge --auto`.
-- Let pre-commit hooks run normally — never use --no-verify on commits. The pre-push hook checks for a marker file that pre-commit creates. Skipping pre-commit breaks push.
-- Never commit from the sandbox — give Molham the commit command
+- **Main is protected.** Cannot push directly to main -- ALL changes (including doc-only) require a feature branch + PR + CI pass + merge. Never give `git push origin main`. Always: `git checkout -b <branch>`, push, create PR, `gh pr merge <N> --merge --auto`.
+- Let pre-commit hooks run normally -- never use --no-verify on commits. The pre-push hook checks for a marker file that pre-commit creates. Skipping pre-commit breaks push.
+- Never commit from the sandbox -- give Molham the commit command
 - Include "Deletion rationale:" in commit body when removing 20+ lines
 - Include "large-change" in commit body for PRs with significant scope
+
+### Commit Message Format (Session 7)
+
+- **Subject line max 72 characters.** Session 6 failed at 87 chars.
+- **First letter after prefix must be lowercase:** `feat: wrap 9 pages` not `feat: Wrap 9 pages`.
+- **Format:** `type: short description` where type is `feat`, `fix`, `refactor`, `docs`, `chore`.
+- **Use `--` (double hyphen) not `---` (em dash) in commit messages** to avoid encoding issues.
+- **Body rules:** PRs with 20+ line deletions need `Deletion rationale:` paragraph. PRs with significant scope need `large-change` keyword.
+
+### Pre-commit Hooks (Session 7)
+
+- Never use `--no-verify` -- the pre-push hook depends on a marker file that pre-commit creates.
+- Always stage ALL modified files before committing (prevents ruff-format stash conflicts).
+- If pre-commit fails, the commit didn't happen -- do NOT use `--amend` next, just fix and commit fresh.
+
+### Branch Management (Session 7)
+
+- Always check `git branch --show-current` before trying to create a branch -- you might already be on it.
+- If branch exists in a worktree, `git branch -D` will fail -- check with `git worktree list` first.
+
+### Before Push -- Mac Only (Session 7)
+
+- `cd time-os-ui && npx tsc --noEmit && cd ..` (sandbox can't run this)
+- `cd time-os-ui && pnpm exec prettier --write <changed files> && cd ..` (sandbox can't run this)
+- Only format the specific files you changed, never `prettier --write src/`
+
+### PR Workflow (Session 7)
+
+- Always set `gh pr merge --merge --auto` after creating PR.
+- Watch CI with `gh pr checks <N> --watch` before walking away.
+- If you amend a commit that's already pushed, you need `git push --force-with-lease`.
 
 ## Code Rules
 

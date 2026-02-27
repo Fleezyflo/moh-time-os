@@ -16,6 +16,7 @@ const ColdClients = lazy(() => import('./pages/ColdClients'));
 const Team = lazy(() => import('./pages/Team'));
 const TeamDetail = lazy(() => import('./pages/TeamDetail'));
 const FixData = lazy(() => import('./pages/FixData'));
+const Portfolio = lazy(() => import('./pages/Portfolio'));
 
 // Intelligence pages
 const CommandCenter = lazy(() => import('./intelligence/pages/CommandCenter'));
@@ -30,6 +31,7 @@ const ProjectIntel = lazy(() => import('./intelligence/pages/ProjectIntel'));
 // Navigation items — Inbox is primary per spec §1
 const NAV_ITEMS = [
   { to: '/', label: 'Inbox' }, // Control Room Inbox (spec §1)
+  { to: '/portfolio', label: 'Portfolio' }, // Portfolio overview (Phase 3.1)
   { to: '/intel', label: 'Intel' }, // Intelligence Command Center
   { to: '/clients', label: 'Clients' }, // Client Index (spec §2)
   { to: '/issues', label: 'Issues' },
@@ -316,6 +318,23 @@ const fixDataRoute = createRoute({
   ),
 });
 
+// Portfolio page (Phase 3.1)
+const portfolioRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/portfolio',
+  component: () => (
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
+      <Portfolio />
+    </Suspense>
+  ),
+});
+
 // Intelligence routes
 const intelRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -448,6 +467,7 @@ const intelProjectRoute = createRoute({
 // Route tree
 const routeTree = rootRoute.addChildren([
   indexRoute, // Inbox (/)
+  portfolioRoute, // Portfolio (/portfolio)
   snapshotRoute, // Snapshot (/snapshot)
   issuesRoute,
   clientsRoute,

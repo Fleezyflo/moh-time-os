@@ -423,7 +423,21 @@ Before giving Molham a push command:
 1. Update SESSION_LOG.md after EACH commit, not at session end
 2. If you discover a new coding rule, add it to CLAUDE.md immediately
 3. If you complete a phase, mark it in BUILD_PLAN.md immediately
-4. Never defer documentation to "later" — it doesn't happen
+4. Never defer documentation to "later" -- it doesn't happen
+
+### Rule 12: Commit message format (Session 7)
+
+Commit messages must follow these rules exactly:
+
+- **Subject line max 72 characters.** Longer subjects fail CI governance checks.
+- **Lowercase after prefix:** `feat: wrap 9 pages` not `feat: Wrap 9 pages`.
+- **Format:** `type: short description` where type is `feat`, `fix`, `refactor`, `docs`, `chore`.
+- **Use `--` not em dash** in commit messages to avoid encoding issues.
+- **Pre-commit failure = commit didn't happen.** Never `--amend` after a hook failure -- fix and commit fresh.
+- **Check branch first.** `git branch --show-current` before creating. If branch is in a worktree, `git branch -D` fails -- check `git worktree list`.
+- **Only prettier specific files.** Never `prettier --write src/` -- only the files changed.
+- **Auto-merge PRs.** Always `gh pr merge --merge --auto` after creating. Watch with `gh pr checks <N> --watch`.
+- **Force-push after amend.** If amending a pushed commit, use `git push --force-with-lease`.
 
 ---
 
