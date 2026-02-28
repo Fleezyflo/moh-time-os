@@ -1,45 +1,44 @@
 /* eslint-disable react-refresh/only-export-components -- Router config exports router instance */
 // Router configuration - route definitions only
 // Page components are in src/pages/
-import { createRouter, createRoute, createRootRoute, Outlet, Link } from '@tanstack/react-router';
+import {
+  createRouter,
+  createRoute,
+  createRootRoute,
+  Outlet,
+  Link,
+  Navigate,
+} from '@tanstack/react-router';
 import { lazy, Suspense, useState } from 'react';
 import { ErrorBoundary, ProtectedRoute, PageSuspense } from './components';
 
 // Lazy load page components for code splitting
 const Inbox = lazy(() => import('./pages/Inbox'));
-const Snapshot = lazy(() => import('./pages/Snapshot'));
 const Issues = lazy(() => import('./pages/Issues'));
 const ClientIndex = lazy(() => import('./pages/ClientIndex'));
 const ClientDetailSpec = lazy(() => import('./pages/ClientDetailSpec'));
-const RecentlyActiveDrilldown = lazy(() => import('./pages/RecentlyActiveDrilldown'));
-const ColdClients = lazy(() => import('./pages/ColdClients'));
 const Team = lazy(() => import('./pages/Team'));
 const TeamDetail = lazy(() => import('./pages/TeamDetail'));
 const FixData = lazy(() => import('./pages/FixData'));
 const Portfolio = lazy(() => import('./pages/Portfolio'));
 const Operations = lazy(() => import('./pages/Operations'));
 
-// Intelligence pages
-const CommandCenter = lazy(() => import('./intelligence/pages/CommandCenter'));
-const Briefing = lazy(() => import('./intelligence/pages/Briefing'));
+// Intelligence pages (kept: signals, patterns, client/person/project intel)
 const Signals = lazy(() => import('./intelligence/pages/Signals'));
 const Patterns = lazy(() => import('./intelligence/pages/Patterns'));
-const Proposals = lazy(() => import('./intelligence/pages/Proposals'));
 const ClientIntel = lazy(() => import('./intelligence/pages/ClientIntel'));
 const PersonIntel = lazy(() => import('./intelligence/pages/PersonIntel'));
 const ProjectIntel = lazy(() => import('./intelligence/pages/ProjectIntel'));
 
-// Navigation items — Inbox is primary per spec §1
+// Navigation items — Phase 4 consolidated nav
 const NAV_ITEMS = [
-  { to: '/', label: 'Inbox' }, // Control Room Inbox (spec §1)
-  { to: '/portfolio', label: 'Portfolio' }, // Portfolio overview (Phase 3.1)
-  { to: '/intel', label: 'Intel' }, // Intelligence Command Center
-  { to: '/clients', label: 'Clients' }, // Client Index (spec §2)
+  { to: '/', label: 'Inbox' },
+  { to: '/portfolio', label: 'Portfolio' },
+  { to: '/clients', label: 'Clients' },
   { to: '/issues', label: 'Issues' },
   { to: '/team', label: 'Team' },
+  { to: '/intel/signals', label: 'Intel' },
   { to: '/ops', label: 'Ops' },
-  { to: '/snapshot', label: 'Snapshot' },
-  { to: '/fix-data', label: 'Fix' },
 ] as const;
 
 // NavLink component
@@ -169,25 +168,11 @@ const indexRoute = createRoute({
   ),
 });
 
-// Snapshot moved to /snapshot
-const snapshotRoute = createRoute({
+// Redirect: /snapshot → /portfolio (Phase 4)
+const snapshotRedirectRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/snapshot',
-  validateSearch: (search: Record<string, unknown>) => ({
-    scope: typeof search.scope === 'string' ? search.scope : undefined,
-    days: typeof search.days === 'number' ? search.days : 7,
-  }),
-  component: () => (
-    <Suspense
-      fallback={
-        <PageSuspense>
-          <div />
-        </PageSuspense>
-      }
-    >
-      <Snapshot />
-    </Suspense>
-  ),
+  component: () => <Navigate to="/portfolio" />,
 });
 
 const issuesRoute = createRoute({
@@ -238,39 +223,9 @@ const clientDetailRoute = createRoute({
   ),
 });
 
-// Recently Active drilldown (§4)
-const recentlyActiveDrilldownRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/clients/$clientId/recently-active',
-  component: () => (
-    <Suspense
-      fallback={
-        <PageSuspense>
-          <div />
-        </PageSuspense>
-      }
-    >
-      <RecentlyActiveDrilldown />
-    </Suspense>
-  ),
-});
-
-// Cold Clients page (§5)
-const coldClientsRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/clients/cold',
-  component: () => (
-    <Suspense
-      fallback={
-        <PageSuspense>
-          <div />
-        </PageSuspense>
-      }
-    >
-      <ColdClients />
-    </Suspense>
-  ),
-});
+// Routes removed in Phase 4: /clients/cold, /clients/:id/recently-active
+// Cold client data is accessible via ClientIndex filters.
+// Recently-active data is accessible via ClientDetail tabs.
 
 const teamRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -354,37 +309,17 @@ const opsRoute = createRoute({
   ),
 });
 
-// Intelligence routes
-const intelRoute = createRoute({
+// Intelligence routes — redirects for removed pages (Phase 4)
+const intelRedirectRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/intel',
-  component: () => (
-    <Suspense
-      fallback={
-        <PageSuspense>
-          <div />
-        </PageSuspense>
-      }
-    >
-      <CommandCenter />
-    </Suspense>
-  ),
+  component: () => <Navigate to="/portfolio" />,
 });
 
-const intelBriefingRoute = createRoute({
+const intelBriefingRedirectRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/intel/briefing',
-  component: () => (
-    <Suspense
-      fallback={
-        <PageSuspense>
-          <div />
-        </PageSuspense>
-      }
-    >
-      <Briefing />
-    </Suspense>
-  ),
+  component: () => <Navigate to="/portfolio" />,
 });
 
 const intelSignalsRoute = createRoute({
@@ -419,20 +354,10 @@ const intelPatternsRoute = createRoute({
   ),
 });
 
-const intelProposalsRoute = createRoute({
+const intelProposalsRedirectRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/intel/proposals',
-  component: () => (
-    <Suspense
-      fallback={
-        <PageSuspense>
-          <div />
-        </PageSuspense>
-      }
-    >
-      <Proposals />
-    </Suspense>
-  ),
+  component: () => <Navigate to="/" />,
 });
 
 const intelClientRoute = createRoute({
@@ -483,29 +408,28 @@ const intelProjectRoute = createRoute({
   ),
 });
 
-// Route tree
+// Route tree — Phase 4 consolidated
 const routeTree = rootRoute.addChildren([
   indexRoute, // Inbox (/)
   portfolioRoute, // Portfolio (/portfolio)
-  snapshotRoute, // Snapshot (/snapshot)
   issuesRoute,
   clientsRoute,
-  coldClientsRoute, // Must be before clientDetailRoute (more specific)
-  recentlyActiveDrilldownRoute,
   clientDetailRoute,
   teamRoute,
   teamDetailRoute,
-  fixDataRoute,
+  fixDataRoute, // Still accessible via direct URL, removed from nav
   opsRoute, // Operations (/ops)
-  // Intelligence routes
-  intelRoute,
-  intelBriefingRoute,
+  // Intelligence routes (kept)
   intelSignalsRoute,
   intelPatternsRoute,
-  intelProposalsRoute,
   intelClientRoute,
   intelPersonRoute,
   intelProjectRoute,
+  // Redirects (Phase 4 — old URLs → new destinations)
+  snapshotRedirectRoute, // /snapshot → /portfolio
+  intelRedirectRoute, // /intel → /portfolio
+  intelBriefingRedirectRoute, // /intel/briefing → /portfolio
+  intelProposalsRedirectRoute, // /intel/proposals → /
 ]);
 
 // Router instance

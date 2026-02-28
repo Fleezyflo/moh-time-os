@@ -84,11 +84,23 @@ The sandbox (Linux x86) and Molham's Mac (Darwin ARM) share the same repo folder
 - `cd time-os-ui && pnpm exec prettier --write <changed files> && cd ..` (sandbox can't run this)
 - Only format the specific files you changed, never `prettier --write src/`
 
-### PR Workflow (Session 7)
+### PR Workflow (Session 7, updated Session 12)
 
 - Always set `gh pr merge --merge --auto` after creating PR.
 - Watch CI with `gh pr checks <N> --watch` before walking away.
 - If you amend a commit that's already pushed, you need `git push --force-with-lease`.
+- If auto-merge stalls, check `gh pr view N --json mergeStateStatus,mergeable` -- CONFLICTING means rebase needed.
+- `gh pr checks --watch` can show stale results. Verify with `gh run list -b <branch> --limit 1` to see actual latest run status.
+
+### CI Pre-commit Scope (Session 12)
+
+- CI runs `uv run pre-commit run -a` (ALL files), not just changed files. Pre-existing lint/format/end-of-file issues anywhere in the repo will block your PR.
+- Before creating a PR, run `uv run pre-commit run -a` locally to catch repo-wide issues.
+- Governance Checks require an ADR (`docs/adr/NNNN-*.md`) when modifying `lib/safety/`, `lib/migrations/`, or `api/server.py`.
+
+### Directory Awareness (Session 12)
+
+- Always verify you're in `~/clawd/moh_time_os` before running commit/push commands. Session 12 wasted significant time because commands ran from `~/enforcement` by mistake.
 
 ### System Map Regeneration (Session 7)
 
