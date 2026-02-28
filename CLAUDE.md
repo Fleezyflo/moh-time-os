@@ -171,18 +171,19 @@ Before giving Molham a push command, verify the full 7-gate pre-push will pass:
 
 **These are not optional. Every change triggers a documentation update. No exceptions.**
 
-There are three documentation files. ALL THREE must be updated after every meaningful change (commit, fix, error, discovery, lesson). Do not wait until the end. Do not batch updates. Do not defer to "after the commit." Do it NOW, inline with the work.
+There are four documentation files. ALL FOUR must be kept consistent after every meaningful change (commit, fix, error, discovery, lesson, phase completion). Do not wait until the end. Do not batch updates. Do not defer to "after the commit." Do it NOW, inline with the work.
 
 ### What triggers a doc update
 
-| Trigger | SESSION_LOG.md | HANDOFF.md | CLAUDE.md |
-|---------|---------------|------------|-----------|
-| Code change committed | ✅ Log what changed | — | — |
-| Code change fixed (tsc error, lint error, test fix) | ✅ Log the fix and root cause | — | — |
-| Phase or sub-phase completed | ✅ Full entry with verification | ✅ Rewrite for next phase | — |
-| New rule or pattern discovered | ✅ In lessons learned | ✅ In key rules list | ✅ Add to relevant section |
-| Error caught by CI or Mac verification | ✅ Log error + fix | — | ✅ If it reveals a new rule |
-| Session ending | ✅ Final state update | ✅ Full rewrite for next session | ✅ Any pending rules |
+| Trigger | SESSION_LOG.md | HANDOFF.md | CLAUDE.md | BUILD_PLAN.md |
+|---------|---------------|------------|-----------|---------------|
+| Code change committed | ✅ Log what changed | — | — | — |
+| Code change fixed (tsc error, lint error, test fix) | ✅ Log the fix and root cause | — | — | — |
+| Phase or sub-phase completed | ✅ Full entry with verification | ✅ Rewrite for next phase | — | ✅ Add ✅ COMPLETE marker with session number |
+| New rule or pattern discovered | ✅ In lessons learned | ✅ In key rules list | ✅ Add to relevant section | — |
+| Error caught by CI or Mac verification | ✅ Log error + fix | — | ✅ If it reveals a new rule | — |
+| PR merged | ✅ Log merge time and PR number | ✅ Update "What Just Happened" | — | — |
+| Session ending | ✅ Final state update | ✅ Full rewrite for next session | ✅ Any pending rules | ✅ Verify all completed phases are marked |
 
 ### What goes in each file
 
@@ -206,15 +207,26 @@ There are three documentation files. ALL THREE must be updated after every meani
 - New sandbox constraints go in "Sandbox Rules" section
 - Include the session number where the rule was learned
 
+### Cross-file consistency check (Session 12)
+
+After updating ANY documentation file, verify consistency across all four:
+1. If a phase was completed: BUILD_PLAN.md has ✅ COMPLETE marker, SESSION_LOG.md has the entry, HANDOFF.md reflects the new state
+2. If a PR merged: SESSION_LOG.md has merge record, HANDOFF.md "What Just Happened" includes it, any stale references to "pending" or "unstaged" are removed
+3. If HANDOFF.md says "unstaged changes" or "pending PR" — verify that's still true. If the PR merged or changes were committed, update immediately.
+
+Session 12 failed this: Phases 1, 2, 3 were completed in Sessions 6-8 but BUILD_PLAN.md was never updated with completion markers. PR #41 merged but HANDOFF.md still referenced "unstaged changes." Both errors survived multiple "verification" passes because the check was per-file, not cross-file.
+
 ### Enforcement
 
 Before generating commit commands for Molham, verify:
 1. SESSION_LOG.md has an entry for this work (not a placeholder — actual details)
 2. HANDOFF.md reflects the current state (if phase changed, it's been rewritten)
 3. CLAUDE.md has any new rules from this session
-4. All three files are included in the `git add` command
+4. BUILD_PLAN.md has ✅ COMPLETE markers on every completed phase with session number
+5. All four files are consistent with each other (cross-file check above)
+6. All updated files are included in the `git add` command
 
-If you catch yourself about to give commit commands without having updated docs, STOP and update them first. Molham should never have to remind you. Session 6 required multiple reminders — that's the reason this section exists.
+If you catch yourself about to give commit commands without having updated docs, STOP and update them first. Molham should never have to remind you. Session 6 required multiple reminders. Session 12 left 3 phases unmarked and stale PR references. That is unacceptable.
 
 ## Skills
 
