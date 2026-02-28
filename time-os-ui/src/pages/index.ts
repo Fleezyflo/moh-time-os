@@ -1,5 +1,4 @@
 // Page components
-export { Snapshot, type ScopeSearch } from './Snapshot';
 export { Issues } from './Issues';
 export { default as ClientIndex } from './ClientIndex';
 export { default as ClientDetailSpec } from './ClientDetailSpec';

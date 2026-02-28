@@ -1145,7 +1145,7 @@
     "api_routes_count": 195,
     "collectors_count": 9,
     "db_tables_count": 31,
-    "ui_routes_count": 20
+    "ui_routes_count": 18
   },
   "ui_api_calls": [],
   "ui_routes": [
@@ -1159,14 +1159,6 @@
     },
     {
       "path": "/clients/$clientId",
-      "source": "router.tsx"
-    },
-    {
-      "path": "/clients/$clientId/recently-active",
-      "source": "router.tsx"
-    },
-    {
-      "path": "/clients/cold",
       "source": "router.tsx"
     },
     {

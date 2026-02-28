@@ -2,11 +2,11 @@
 
 ## Current State
 
-- **Current phase:** Phase -1 bypass remediation COMPLETE (code ready, needs commit).
-- **Current track:** T2 (Existing Page Redesign) -- foundation complete
-- **Blocked by:** Bypass remediation PR needs commit, format, and merge.
+- **Current phase:** Phase 5 COMPLETE. Bypass remediation COMPLETE. Both merged.
+- **Current track:** T2 (Existing Page Redesign) -- Phases 0-5 complete
+- **Blocked by:** Nothing. Ready for Phase 6 (Task Management).
 - **D1/D2:** Resolved. Blue `#3b82f6`, slate-400 at 5.1:1.
-- **Next session:** Commit bypass remediation, then Phase 6 (Task Management).
+- **Next session:** Phase 6 (Task Management).
 
 ## Session History
 
@@ -462,3 +462,32 @@
   - Centralized SQL builder with single file-level suppression beats 141 inline suppressions
   - When removing file-level noqa, must check ALL lines for newly-exposed violations
   - Test files need f-string SQL converted when S608 noqa removed
+
+### Session 12 (PR Landing: Phase 5 + Bypass Remediation) -- 2026-02-28
+
+- **Type:** A (Build) + C (CI Fix)
+- **Phase:** Landing Phase 5 (PR #40) and bypass remediation (PR #39)
+- **Work done:**
+  - **Phase 5 PR #40:** Committed and pushed 16 UI files (keyboard nav, focus traps, ARIA labels, chart colors, loading/error states). All 7 pre-push gates passed. Created PR, set auto-merge.
+  - **Bypass remediation PR #39:** Branch already existed from Session 11. Fixed CI failures:
+    - B108: Replaced hardcoded `/tmp` paths with `tempfile.gettempdir()` in 5 test files
+    - B314: Replaced `xml.etree.ElementTree` with `defusedxml.ElementTree` in test_sync_schedule.py
+    - E741: Renamed ambiguous variable `l` to `link_data` in cli_v4.py
+    - F841: Removed unused `store` assignment in setup.py
+    - E402: Moved lib imports into `main()` in tools/db_exec.py
+    - End-of-file: Fixed 11 markdown files missing trailing newlines
+    - Ruff format: Applied formatting to cli.py (pre-existing drift)
+    - ADR: Created ADR-0007 (centralized safe SQL bypass elimination)
+    - Merge conflict: Rebased on main to resolve CONFLICTING state
+  - **PR #39 merged** at 21:46 UTC after 6 commits on the branch
+  - **PR #40 rebased** on updated main, all CI green, **merged** at 22:43 UTC
+- **Files changed:**
+  - PR #40: 16 files (time-os-ui components/pages), 1 new (chartColors.ts)
+  - PR #39: 34 lib/api/script files + 6 test files + 3 lint fixes + 11 md files + 1 format fix + 1 ADR
+- **PRs:** #39 merged, #40 merged
+- **Lessons:**
+  - CI runs `pre-commit run -a` (all files) -- pre-existing lint/format issues block PRs even if you didn't change those files
+  - Governance Checks require ADR when modifying lib/safety/, lib/migrations/, or api/server.py
+  - `gh pr checks --watch` can show stale results from previous CI runs
+  - Always check `gh pr view --json mergeStateStatus,mergeable` when auto-merge doesn't fire -- merge conflicts block it silently
+  - Branch based on old commit needs rebase before merge even if PR was created
