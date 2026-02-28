@@ -61,7 +61,7 @@ export function TeamDetail() {
     id
   );
   const { data: apiIssues, refetch: refetchIssues } = useIssues(20, 7, undefined, id);
-  const { data: apiTasks } = useTasks(id, undefined, 20);
+  const { data: apiTasks } = useTasks(id, undefined, undefined, 20);
 
   // Trajectory sparkline data — must be before early returns (React hooks rule)
   const { data: trajectoryData } = usePersonTrajectory(id);

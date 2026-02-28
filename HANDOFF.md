@@ -1,52 +1,131 @@
 # Session Handoff
 
-**Last updated:** 2026-02-28, Session 12 (all PRs merged, main clean)
-**Branch:** `main` (Phases -1 through 5 complete, bypass remediation complete, working tree clean)
+**Last updated:** 2026-02-28, Session 13 (Phase 6 code complete, pending commit)
+**Branch:** `main` (Phase 6 code ready to commit on new branch)
 
 ## What Just Happened
 
-Session 12: Landed both Phase 5 (PR #40) and bypass remediation (PR #39). Fixed multiple CI blockers along the way.
+Session 13: Built Phase 6 (Task Management) -- all 9 steps complete (6.1-6.9).
 
-### PR #39 — Bypass Remediation (MERGED)
-- Centralized `lib/safe_sql.py` replacing 141+ inline noqa/nosec comments across 34 files
-- Fixed B108 (hardcoded /tmp) in 5 test files with `tempfile.gettempdir()`
-- Fixed B314 (XML parse) in test_sync_schedule.py with `defusedxml.ElementTree`
-- Fixed pre-existing lint issues: E741 (cli_v4.py), F841 (setup.py), E402 (tools/db_exec.py)
-- Fixed 11 markdown files missing trailing newlines
-- Fixed ruff format drift in cli.py
-- Created ADR-0007 (required by Governance Checks for lib/safety/ and api/server.py changes)
-- Rebased to resolve merge conflicts before auto-merge could fire
+### Phase 6 Summary
+- **6.1:** Fixed `useTasks()` response shape bug -- remapped `{tasks: [...]}` to `{items: [...]}` in `fetchTasks()`
+- **6.2:** Added 13 new fetch functions + `putJson` helper to `lib/api.ts` covering task CRUD, delegation, escalation, recall, notes, priorities/advanced, priorities/grouped, bulk actions, bundle detail
+- **6.3:** Added 5 new hooks to `lib/hooks.ts` (useTaskDetail, useDelegations, usePrioritiesAdvanced, usePrioritiesGrouped, useBundleDetail)
+- **6.4:** Created TaskList page with search, metrics grid, tabbed views (All/Active/Blocked/Delegated/Completed)
+- **6.5:** Created TaskDetail page with view/edit modes, metadata grid, notes, delegation sidebar
+- **6.6:** Created 5 components: TaskCard, TaskActions, ApprovalDialog, DelegationPanel, TaskNotesList
+- **6.7:** ApprovalDialog handles governance blocks on delegate/escalate/update
+- **6.8-6.9:** Added `/tasks` and `/tasks/$taskId` routes, "Tasks" nav item, system-map regenerated (20 routes)
 
-### PR #40 — Phase 5 Accessibility (MERGED)
-- Keyboard navigation on 9 clickable card divs (role=button, tabIndex, onKeyDown)
-- Focus trap in RoomDrawer matching IssueDrawer pattern
-- ARIA labels on EvidenceViewer close button
-- Centralized chart colors in chartColors.ts (20 rgb() values eliminated)
-- Standardized loading/error states with SkeletonCardList and ErrorState
-- Rebased on main after PR #39 merged to pick up lint/format fixes
-
-### PR #41 — Session 12 Cleanup (MERGED)
-- Phase 4 route cleanup in router.tsx (removed Snapshot, ColdClients, RecentlyActiveDrilldown)
-- Removed Snapshot export from pages/index.ts
-- Updated system-map.json (20→18 routes)
-- Marked Phase 4+5 complete in BUILD_PLAN.md
-- Updated SESSION_LOG.md, HANDOFF.md, CLAUDE.md
+### Expanded Task type
+The `Task` interface now includes delegation fields (delegated_by, delegated_at, delegated_note, delegation_status), escalation fields (escalated_to, escalation_level, escalation_reason), and metadata (description, urgency, source, tags, notes, completed_at). Priority changed from string enum to `number` (0-100 score). Status changed from string enum to `string`.
 
 ## What's Next
 
-### Phase 6: Task Management
-Per BUILD_PLAN step 6.1-6.9:
-- Fix `useTasks()` response shape bug (`.tasks` vs `.items`)
-- New fetch functions and hooks for tasks, priorities, delegations, dependencies
-- Task List page with filter/group/delegation views
-- Task Detail page with edit, notes, blockers, delegation/escalation/recall
-- New components: TaskForm, TaskActions, BlockerList, DependencyGraph, DelegationSplit
-- Governance approval dialog
-- Routes: `/tasks`, `/tasks/:taskId`
+### Immediate: Commit and PR Phase 6
 
-**Starting state:** Main is clean. No unstaged changes. All Phases -1 through 5 merged. Ready to branch and build.
+All code is written but not committed. Molham needs to:
 
-## Key Rules (learned hard way in Sessions 1-12)
+1. **Verify types compile:**
+   ```bash
+   cd ~/clawd/moh_time_os/time-os-ui && npx tsc --noEmit && cd ..
+   ```
+
+2. **Format new files:**
+   ```bash
+   cd time-os-ui && pnpm exec prettier --write \
+     src/components/tasks/TaskCard.tsx \
+     src/components/tasks/TaskActions.tsx \
+     src/components/tasks/ApprovalDialog.tsx \
+     src/components/tasks/DelegationPanel.tsx \
+     src/components/tasks/TaskNotesList.tsx \
+     src/components/tasks/index.ts \
+     src/pages/TaskList.tsx \
+     src/pages/TaskDetail.tsx \
+     src/pages/index.ts \
+     src/router.tsx \
+     src/lib/api.ts \
+     src/lib/hooks.ts \
+     src/types/api.ts && cd ..
+   ```
+
+3. **Run pre-commit:**
+   ```bash
+   uv run pre-commit run -a
+   ```
+
+4. **Commit and push:**
+   ```bash
+   cd ~/clawd/moh_time_os
+   git checkout -b feat/phase-6-task-management
+   git add \
+     time-os-ui/src/types/api.ts \
+     time-os-ui/src/lib/api.ts \
+     time-os-ui/src/lib/hooks.ts \
+     time-os-ui/src/router.tsx \
+     time-os-ui/src/pages/index.ts \
+     time-os-ui/src/pages/TaskList.tsx \
+     time-os-ui/src/pages/TaskDetail.tsx \
+     time-os-ui/src/components/tasks/TaskCard.tsx \
+     time-os-ui/src/components/tasks/TaskActions.tsx \
+     time-os-ui/src/components/tasks/ApprovalDialog.tsx \
+     time-os-ui/src/components/tasks/DelegationPanel.tsx \
+     time-os-ui/src/components/tasks/TaskNotesList.tsx \
+     time-os-ui/src/components/tasks/index.ts \
+     docs/system-map.json \
+     SESSION_LOG.md \
+     HANDOFF.md \
+     BUILD_PLAN.md
+   git commit -m "$(cat <<'EOF'
+   feat: phase 6 -- task management pages and components
+
+   Task List page with search, metrics, tabbed views (All/Active/Blocked/
+   Delegated/Completed). Task Detail page with view/edit modes, delegation
+   sidebar, notes, and governance approval handling.
+
+   - Fix useTasks() response shape bug (.tasks vs .items remapping)
+   - 13 new fetch functions (task CRUD, delegate, escalate, recall, notes,
+     priorities/advanced/grouped, bulk actions, bundle detail)
+   - 5 new hooks (useTaskDetail, useDelegations, usePrioritiesAdvanced,
+     usePrioritiesGrouped, useBundleDetail)
+   - 5 new components (TaskCard, TaskActions, ApprovalDialog,
+     DelegationPanel, TaskNotesList)
+   - Routes: /tasks, /tasks/:taskId with nav item
+   - System map: 18 -> 20 UI routes
+
+   large-change
+   EOF
+   )"
+   git push -u origin feat/phase-6-task-management
+   gh pr create --title "feat: phase 6 -- task management" --body "## Phase 6: Task Management
+
+   ### Changes
+   - Fix useTasks() response shape bug (.tasks vs .items)
+   - 13 new API fetch functions for task CRUD, delegation, escalation, priorities
+   - 5 new React hooks
+   - TaskList page with search, metrics grid, 5 tabbed views
+   - TaskDetail page with view/edit modes, governance approval
+   - 5 new components: TaskCard, TaskActions, ApprovalDialog, DelegationPanel, TaskNotesList
+   - Routes: /tasks, /tasks/:taskId
+   - Nav: Tasks added between Portfolio and Clients
+   - System map: 18 → 20 UI routes
+
+   ### Verification
+   - [x] All imports verified (no missing references)
+   - [x] All prop types verified (match interfaces)
+   - [x] Response shapes verified against server.py endpoints
+   - [x] System map regenerated with both task routes
+   - [ ] tsc --noEmit
+   - [ ] prettier
+   - [ ] CI green"
+   gh pr merge --merge --auto
+   gh pr checks --watch
+   ```
+
+### After Phase 6 merges: Phase 7 (Priorities Workspace)
+Per BUILD_PLAN step 7.1-7.5: Priorities page with advanced filters, grouping, bulk actions, saved filters.
+
+## Key Rules (learned hard way in Sessions 1-13)
 
 1. **No bypasses.** Never add `nosec`, `noqa`, or `type: ignore`. Fix the root cause.
 2. **Stage everything.** Before committing, `git add` all modified files to prevent ruff-format stash conflicts.
@@ -78,15 +157,15 @@ Per BUILD_PLAN step 6.1-6.9:
 28. **Governance Checks require ADR.** Changes to lib/safety/, lib/migrations/, or api/server.py trigger the ADR requirement check. Add a `docs/adr/NNNN-*.md` file to the PR.
 29. **Check mergeable state when auto-merge stalls.** `gh pr view N --json mergeStateStatus,mergeable` -- CONFLICTING means rebase needed.
 30. **Always run commands from the correct directory.** Session 12 wasted time because commit commands ran from ~/enforcement instead of ~/clawd/moh_time_os.
-31. **Cross-file consistency on every doc update.** After updating any doc, verify all four files (SESSION_LOG, HANDOFF, CLAUDE, BUILD_PLAN) are consistent. Session 12 left Phases 1-3 unmarked in BUILD_PLAN.md and stale "unstaged changes" in HANDOFF.md because checks were per-file, not cross-file.
-32. **BUILD_PLAN.md is a documentation file.** Mark phases ✅ COMPLETE with session number the moment the phase PR merges. Don't defer. Sessions 6-8 completed Phases 1-3 but never marked them.
+31. **Cross-file consistency on every doc update.** After updating any doc, verify all four files (SESSION_LOG, HANDOFF, CLAUDE, BUILD_PLAN) are consistent.
+32. **BUILD_PLAN.md is a documentation file.** Mark phases complete with session number the moment the phase PR merges.
 
 ## Documents to Read (in order)
 
 1. **This file (HANDOFF.md)** -- you're reading it, now follow the order below
 2. `CLAUDE.md` -- coding standards, sandbox rules, verification requirements
 3. `BUILD_STRATEGY.md` §3 -- entry/exit checklists, session contract
-4. `BUILD_PLAN.md` "Phase 6: Task Management" (line ~1160) -- the full spec
+4. `BUILD_PLAN.md` "Phase 7: Priorities Workspace" (line ~1187) -- the next spec
 5. `SESSION_LOG.md` -- what's done, current state, lessons learned
 
 ## Quick Reference
@@ -98,6 +177,7 @@ Per BUILD_PLAN step 6.1-6.9:
 - **Design tokens:** `design/system/tokens.css`
 - **Chart colors:** `time-os-ui/src/intelligence/components/chartColors.ts`
 - **Layout components:** `time-os-ui/src/components/layout/` (PageLayout, SummaryGrid, MetricCard, TabContainer)
+- **Task components:** `time-os-ui/src/components/tasks/` (TaskCard, TaskActions, ApprovalDialog, DelegationPanel, TaskNotesList)
 - **Accent color (D1):** `#3b82f6` (blue)
 - **Tertiary text (D2):** `slate-400` / `#94a3b8` (now `var(--grey-light)`)
 - **Do NOT run:** `uv sync`, `pnpm install`, `ruff format`, `npx`, or dev servers from the sandbox

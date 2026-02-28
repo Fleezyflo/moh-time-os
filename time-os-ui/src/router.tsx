@@ -22,6 +22,8 @@ const TeamDetail = lazy(() => import('./pages/TeamDetail'));
 const FixData = lazy(() => import('./pages/FixData'));
 const Portfolio = lazy(() => import('./pages/Portfolio'));
 const Operations = lazy(() => import('./pages/Operations'));
+const TaskList = lazy(() => import('./pages/TaskList'));
+const TaskDetail = lazy(() => import('./pages/TaskDetail'));
 
 // Intelligence pages (kept: signals, patterns, client/person/project intel)
 const Signals = lazy(() => import('./intelligence/pages/Signals'));
@@ -30,10 +32,11 @@ const ClientIntel = lazy(() => import('./intelligence/pages/ClientIntel'));
 const PersonIntel = lazy(() => import('./intelligence/pages/PersonIntel'));
 const ProjectIntel = lazy(() => import('./intelligence/pages/ProjectIntel'));
 
-// Navigation items — Phase 4 consolidated nav
+// Navigation items — Phase 6 updated nav
 const NAV_ITEMS = [
   { to: '/', label: 'Inbox' },
   { to: '/portfolio', label: 'Portfolio' },
+  { to: '/tasks', label: 'Tasks' },
   { to: '/clients', label: 'Clients' },
   { to: '/issues', label: 'Issues' },
   { to: '/team', label: 'Team' },
@@ -309,6 +312,39 @@ const opsRoute = createRoute({
   ),
 });
 
+// Task Management routes (Phase 6)
+const tasksRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/tasks',
+  component: () => (
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
+      <TaskList />
+    </Suspense>
+  ),
+});
+
+const taskDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/tasks/$taskId',
+  component: () => (
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
+      <TaskDetail />
+    </Suspense>
+  ),
+});
+
 // Intelligence routes — redirects for removed pages (Phase 4)
 const intelRedirectRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -419,6 +455,8 @@ const routeTree = rootRoute.addChildren([
   teamDetailRoute,
   fixDataRoute, // Still accessible via direct URL, removed from nav
   opsRoute, // Operations (/ops)
+  tasksRoute, // Tasks (/tasks) — Phase 6
+  taskDetailRoute, // Task detail (/tasks/:taskId) — Phase 6
   // Intelligence routes (kept)
   intelSignalsRoute,
   intelPatternsRoute,
