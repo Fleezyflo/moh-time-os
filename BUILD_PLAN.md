@@ -947,7 +947,7 @@ Replace with imports from the shared components created in 0.5-0.8.
 
 ---
 
-### Phase 1: Slate Migration
+### Phase 1: Slate Migration ✅ COMPLETE (Session 6)
 **Size:** 396 replacements across 51 files.
 **Dependencies:** Phase 0 (tokens must have new values first).
 
@@ -987,7 +987,7 @@ Verified counts (firsthand grep):
 
 ---
 
-### Phase 2: Layout Adoption
+### Phase 2: Layout Adoption ✅ COMPLETE (Session 6)
 **Size:** ~15 page files modified. ~30 lines added per file (PageLayout wrapper + SummaryGrid).
 **Dependencies:** Phase 0 (PageLayout must exist).
 
@@ -1010,7 +1010,7 @@ Verified counts (firsthand grep):
 
 ---
 
-### Phase 3: Page Redesign — Core
+### Phase 3: Page Redesign — Core ✅ COMPLETE (Sessions 7-8)
 **Size:** 2 new pages, 3 enhanced pages, 9 new components, 16 new hooks.
 **Dependencies:** Phase 0 + Phase 2.
 

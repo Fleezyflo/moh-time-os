@@ -2,8 +2,8 @@
 
 ## Current State
 
-- **Current phase:** Phase 5 COMPLETE. Bypass remediation COMPLETE. Both merged.
-- **Current track:** T2 (Existing Page Redesign) -- Phases 0-5 complete
+- **Current phase:** Phases -1 through 5 COMPLETE. Bypass remediation COMPLETE. All PRs merged (#28, #30, #35, #36, #37, #38, #39, #40, #41). Main clean.
+- **Current track:** T2 (Existing Page Redesign) -- Phases 0-5 complete, ready for Phase 6
 - **Blocked by:** Nothing. Ready for Phase 6 (Task Management).
 - **D1/D2:** Resolved. Blue `#3b82f6`, slate-400 at 5.1:1.
 - **Next session:** Phase 6 (Task Management).
@@ -484,10 +484,13 @@
 - **Files changed:**
   - PR #40: 16 files (time-os-ui components/pages), 1 new (chartColors.ts)
   - PR #39: 34 lib/api/script files + 6 test files + 3 lint fixes + 11 md files + 1 format fix + 1 ADR
-- **PRs:** #39 merged, #40 merged
+- **PR #41 (chore/session-12-cleanup):** Committed Phase 4 route cleanup (router.tsx, index.ts), system-map.json update, BUILD_PLAN.md completion markers, and all Session 12 documentation updates. CI 7/7 green. Merged at 12:05 UTC.
+- **PRs:** #39 merged, #40 merged, #41 merged
 - **Lessons:**
   - CI runs `pre-commit run -a` (all files) -- pre-existing lint/format issues block PRs even if you didn't change those files
   - Governance Checks require ADR when modifying lib/safety/, lib/migrations/, or api/server.py
   - `gh pr checks --watch` can show stale results from previous CI runs
   - Always check `gh pr view --json mergeStateStatus,mergeable` when auto-merge doesn't fire -- merge conflicts block it silently
   - Branch based on old commit needs rebase before merge even if PR was created
+  - BUILD_PLAN.md completion markers must be added when a phase PR merges -- not deferred. Sessions 6-8 completed Phases 1-3 but never marked them in BUILD_PLAN.md. Three sessions of drift.
+  - Documentation verification must be cross-file, not per-file. Checking each doc in isolation missed that BUILD_PLAN.md was inconsistent with SESSION_LOG.md and that HANDOFF.md referenced a state that no longer existed.

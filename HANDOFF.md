@@ -1,7 +1,7 @@
 # Session Handoff
 
-**Last updated:** 2026-02-28, Session 12 (Phase 5 + bypass remediation both merged)
-**Branch:** `main` (Phases 0-5 complete, bypass remediation complete)
+**Last updated:** 2026-02-28, Session 12 (all PRs merged, main clean)
+**Branch:** `main` (Phases -1 through 5 complete, bypass remediation complete, working tree clean)
 
 ## What Just Happened
 
@@ -25,12 +25,12 @@ Session 12: Landed both Phase 5 (PR #40) and bypass remediation (PR #39). Fixed 
 - Standardized loading/error states with SkeletonCardList and ErrorState
 - Rebased on main after PR #39 merged to pick up lint/format fixes
 
-### Unstaged Changes on Main
-These files are modified but not committed (from earlier sessions):
-- `BUILD_PLAN.md` — Phase completion markers
-- `docs/system-map.json` — regenerated system map
-- `time-os-ui/src/pages/index.ts` — page exports
-- `time-os-ui/src/router.tsx` — route definitions
+### PR #41 — Session 12 Cleanup (MERGED)
+- Phase 4 route cleanup in router.tsx (removed Snapshot, ColdClients, RecentlyActiveDrilldown)
+- Removed Snapshot export from pages/index.ts
+- Updated system-map.json (20→18 routes)
+- Marked Phase 4+5 complete in BUILD_PLAN.md
+- Updated SESSION_LOG.md, HANDOFF.md, CLAUDE.md
 
 ## What's Next
 
@@ -44,7 +44,7 @@ Per BUILD_PLAN step 6.1-6.9:
 - Governance approval dialog
 - Routes: `/tasks`, `/tasks/:taskId`
 
-**Note:** The unstaged changes (router.tsx, index.ts, system-map.json) may be Phase 6 prep or earlier work. Check `git diff` on those files before starting Phase 6 to understand what's there.
+**Starting state:** Main is clean. No unstaged changes. All Phases -1 through 5 merged. Ready to branch and build.
 
 ## Key Rules (learned hard way in Sessions 1-12)
 
@@ -78,6 +78,8 @@ Per BUILD_PLAN step 6.1-6.9:
 28. **Governance Checks require ADR.** Changes to lib/safety/, lib/migrations/, or api/server.py trigger the ADR requirement check. Add a `docs/adr/NNNN-*.md` file to the PR.
 29. **Check mergeable state when auto-merge stalls.** `gh pr view N --json mergeStateStatus,mergeable` -- CONFLICTING means rebase needed.
 30. **Always run commands from the correct directory.** Session 12 wasted time because commit commands ran from ~/enforcement instead of ~/clawd/moh_time_os.
+31. **Cross-file consistency on every doc update.** After updating any doc, verify all four files (SESSION_LOG, HANDOFF, CLAUDE, BUILD_PLAN) are consistent. Session 12 left Phases 1-3 unmarked in BUILD_PLAN.md and stale "unstaged changes" in HANDOFF.md because checks were per-file, not cross-file.
+32. **BUILD_PLAN.md is a documentation file.** Mark phases ✅ COMPLETE with session number the moment the phase PR merges. Don't defer. Sessions 6-8 completed Phases 1-3 but never marked them.
 
 ## Documents to Read (in order)
 
