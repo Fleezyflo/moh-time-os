@@ -164,8 +164,9 @@ Before giving Molham a push command, verify the full 7-gate pre-push will pass:
 ## Session Discipline
 
 1. **Start every session by reading HANDOFF.md.** It has the exact next task, file paths, and verification steps. Then read the documents it references (BUILD_STRATEGY.md, SESSION_LOG.md, BUILD_PLAN.md, CLAUDE.md).
-2. Read the entry checklist in BUILD_STRATEGY.md §3 before any work
-3. Read the exit checklist in BUILD_STRATEGY.md §3 before ending
+2. **After reading, verify cross-file consistency before any work (Session 12).** Compare SESSION_LOG.md completed phases against BUILD_PLAN.md ✅ markers. Compare HANDOFF.md claims ("unstaged", "pending", "merged") against actual state. If anything is inconsistent, fix it before starting the session's work. Reading is not checking. Do both.
+3. Read the entry checklist in BUILD_STRATEGY.md §3 before any work
+4. Read the exit checklist in BUILD_STRATEGY.md §3 before ending
 
 ## Documentation Rules
 

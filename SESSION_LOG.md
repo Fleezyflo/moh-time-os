@@ -2,11 +2,11 @@
 
 ## Current State
 
-- **Current phase:** Phases -1 through 5 COMPLETE. Bypass remediation COMPLETE. All PRs merged (#28, #30, #35, #36, #37, #38, #39, #40, #41). Main clean.
-- **Current track:** T2 (Existing Page Redesign) -- Phases 0-5 complete, ready for Phase 6
-- **Blocked by:** Nothing. Ready for Phase 6 (Task Management).
+- **Current phase:** Phase 6 (Task Management) IN PROGRESS. Phases -1 through 5 COMPLETE.
+- **Current track:** T3 (Task Management)
+- **Blocked by:** Nothing. Code complete, pending commit + PR.
 - **D1/D2:** Resolved. Blue `#3b82f6`, slate-400 at 5.1:1.
-- **Next session:** Phase 6 (Task Management).
+- **Next session:** Commit Phase 6 work, create PR, verify CI, then Phase 7.
 
 ## Session History
 
@@ -494,3 +494,59 @@
   - Branch based on old commit needs rebase before merge even if PR was created
   - BUILD_PLAN.md completion markers must be added when a phase PR merges -- not deferred. Sessions 6-8 completed Phases 1-3 but never marked them in BUILD_PLAN.md. Three sessions of drift.
   - Documentation verification must be cross-file, not per-file. Checking each doc in isolation missed that BUILD_PLAN.md was inconsistent with SESSION_LOG.md and that HANDOFF.md referenced a state that no longer existed.
+
+### Session 13 (Phase 6: Task Management) -- 2026-02-28
+
+- **Type:** A (Build)
+- **Phase:** Phase 6 (T3 -- Task Management)
+- **Work done:**
+  - **Step 6.1 -- Fixed `useTasks()` response shape bug:**
+    - Backend `/api/tasks` returns `{tasks: [...], total}` but `ApiListResponse<Task>` expects `{items: [...], total}`
+    - Added key remapping in `fetchTasks()`: destructures `raw.tasks` into `{ items: raw.tasks, total: raw.total }`
+    - Added `project` filter parameter to `fetchTasks()`
+    - Expanded `Task` interface in `types/api.ts`: added delegation fields (delegated_by, delegated_at, delegated_note, delegation_status), escalation fields (escalated_to, escalation_level, escalation_reason, escalation_history), and additional metadata (description, urgency, source, tags, notes, completed_at, recalled_at). Changed `priority` from string enum to `number` (0-100 score) and `status` from string enum to `string` (server allows more states).
+  - **Step 6.2 -- New fetch functions in `lib/api.ts` (~200 lines):**
+    - `putJson()` helper for PUT requests (task update uses PUT)
+    - `fetchTaskDetail(taskId)` -- GET /api/tasks/{taskId}
+    - `createTask(payload)` -- POST /api/tasks with TaskCreatePayload
+    - `updateTask(taskId, payload)` -- PUT /api/tasks/{taskId} with TaskUpdatePayload, returns TaskUpdateResponse
+    - `addTaskNote(taskId, note)` -- POST /api/tasks/{taskId}/notes
+    - `delegateTask(taskId, payload)` -- POST /api/tasks/{taskId}/delegate with DelegatePayload, returns DelegateResponse
+    - `escalateTask(taskId, payload)` -- POST /api/tasks/{taskId}/escalate with EscalatePayload, returns EscalateResponse
+    - `recallTask(taskId)` -- POST /api/tasks/{taskId}/recall
+    - `fetchDelegations()` -- GET /api/delegations, returns DelegationsResponse
+    - `fetchPrioritiesAdvanced(filters)` -- GET /api/priorities/advanced with PriorityAdvancedFilters
+    - `fetchPrioritiesGrouped(groupBy, limit)` -- GET /api/priorities/grouped
+    - `bulkPriorityAction(payload)` -- POST /api/priorities/bulk with BulkActionPayload
+    - `fetchBundleDetail(bundleId)` -- GET /api/bundles/{bundleId}
+    - All response types fully typed with governance approval support (`requires_approval`, `decision_id`)
+  - **Step 6.3 -- New hooks in `lib/hooks.ts`:**
+    - `useTaskDetail(taskId)`, `useDelegations()`, `usePrioritiesAdvanced(filters)`, `usePrioritiesGrouped(groupBy, limit)`, `useBundleDetail(bundleId)`
+    - Updated `useTasks()` to accept `project` parameter
+  - **Steps 6.4-6.7 -- New components and pages:**
+    - `components/tasks/TaskCard.tsx` -- Compact task display with status dot, priority score + label, urgency badge, assignee, project, due date with overdue coloring, delegation/escalation badges. Keyboard accessible (role=button, tabIndex, onKeyDown).
+    - `components/tasks/TaskActions.tsx` -- Action buttons (Delegate, Escalate, Recall, Add Note) with inline forms. Handles governance approval responses. Invalidates cache on success.
+    - `components/tasks/ApprovalDialog.tsx` -- Modal dialog shown when governance blocks an action. Shows reason and decision ID.
+    - `components/tasks/DelegationPanel.tsx` -- Sidebar panel showing delegation and escalation details with timestamps, status, and notes.
+    - `components/tasks/TaskNotesList.tsx` -- Renders task notes from JSON string with timestamp/author display.
+    - `components/tasks/index.ts` -- Barrel export for all 5 components.
+    - `pages/TaskList.tsx` -- Task list page with SummaryGrid (Total/Active/Blocked/Overdue metrics), TabContainer (All/Active/Blocked/Delegated/Completed), search filter, delegation info banner. Navigates to task detail on click.
+    - `pages/TaskDetail.tsx` -- Full task detail with view/edit modes. View mode: status/priority bar, description, metadata grid, notes list, action buttons, delegation sidebar. Edit mode: form with title, description, status dropdown, priority 0-100 input, assignee, project, due date, tags. Handles governance approval on update.
+  - **Steps 6.8-6.9 -- Routes and nav:**
+    - Added `/tasks` and `/tasks/$taskId` routes to `router.tsx` with lazy loading
+    - Added "Tasks" to NAV_ITEMS (between Portfolio and Clients)
+    - System map regenerated: 20 UI routes (was 18)
+- **Files changed:** 5 modified, 9 new.
+  - Modified: `types/api.ts`, `lib/api.ts`, `lib/hooks.ts`, `router.tsx`, `pages/index.ts`, `docs/system-map.json`
+  - New: `components/tasks/TaskCard.tsx`, `components/tasks/TaskActions.tsx`, `components/tasks/ApprovalDialog.tsx`, `components/tasks/DelegationPanel.tsx`, `components/tasks/TaskNotesList.tsx`, `components/tasks/index.ts`, `pages/TaskList.tsx`, `pages/TaskDetail.tsx`
+- **Verification completed:**
+  - System map: 20 routes, `/tasks` and `/tasks/$taskId` confirmed present
+  - All imports verified: no missing references
+  - All prop types verified: match component interfaces
+  - Response shapes verified against server.py endpoint implementations
+- **Verification needed (Mac):**
+  - `cd time-os-ui && npx tsc --noEmit && cd ..`
+  - Prettier on all new .tsx/.ts files
+  - `uv run pre-commit run -a` (full repo)
+- **PRs:** Pending commit.
+- **Lessons:** None new -- existing patterns held.
