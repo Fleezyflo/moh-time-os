@@ -113,9 +113,12 @@ export function useTeam() {
   return useFetch(() => api.fetchTeam(), []);
 }
 
-// Tasks for a specific assignee
-export function useTasks(assignee?: string, status?: string, limit = 20) {
-  return useFetch(() => api.fetchTasks(assignee, status, limit), [assignee, status, limit]);
+// Tasks with optional filters
+export function useTasks(assignee?: string, status?: string, project?: string, limit = 50) {
+  return useFetch(
+    () => api.fetchTasks(assignee, status, project, limit),
+    [assignee, status, project, limit]
+  );
 }
 
 // Evidence for an entity
@@ -186,4 +189,47 @@ export function usePortfolioRisks(threshold = 50) {
 // Client health overview (counts by status)
 export function useClientsHealth() {
   return useFetch(() => api.fetchClientsHealth(), []);
+}
+
+// ==== Task Management Hooks (Phase 6) ====
+
+// Single task detail
+export function useTaskDetail(taskId: string) {
+  return useFetch(() => api.fetchTaskDetail(taskId), [taskId]);
+}
+
+// Delegations (by me / to me)
+export function useDelegations() {
+  return useFetch(() => api.fetchDelegations(), []);
+}
+
+// Priorities with advanced filtering
+export function usePrioritiesAdvanced(filters: api.PriorityAdvancedFilters = {}) {
+  return useFetch(
+    () => api.fetchPrioritiesAdvanced(filters),
+    [
+      filters.q,
+      filters.due,
+      filters.assignee,
+      filters.project,
+      filters.status,
+      filters.min_score,
+      filters.max_score,
+      filters.tags,
+      filters.sort,
+      filters.order,
+      filters.limit,
+      filters.offset,
+    ]
+  );
+}
+
+// Grouped priorities (by project, assignee, etc.)
+export function usePrioritiesGrouped(groupBy = 'project', limit = 50) {
+  return useFetch(() => api.fetchPrioritiesGrouped(groupBy, limit), [groupBy, limit]);
+}
+
+// Bundle detail
+export function useBundleDetail(bundleId: string) {
+  return useFetch(() => api.fetchBundleDetail(bundleId), [bundleId]);
 }

@@ -202,16 +202,19 @@ export async function fetchProposalDetailLegacy(proposalId: string): Promise<unk
   return fetchJson(`/api/control-room/proposals/${proposalId}`);
 }
 
-// Tasks API (uses /api/tasks)
+// Tasks API (uses /api/tasks -- server returns {tasks:[...], total})
 export async function fetchTasks(
   assignee?: string,
   status?: string,
-  limit = 20
+  project?: string,
+  limit = 50
 ): Promise<ApiListResponse<Task>> {
-  let url = `/api/tasks?limit=${limit}`;
-  if (assignee) url += `&assignee=${encodeURIComponent(assignee)}`;
-  if (status) url += `&status=${encodeURIComponent(status)}`;
-  return fetchJson(url);
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (assignee) params.set('assignee', assignee);
+  if (status) params.set('status', status);
+  if (project) params.set('project', project);
+  const raw = await fetchJson<{ tasks: Task[]; total: number }>(`/api/tasks?${params.toString()}`);
+  return { items: raw.tasks, total: raw.total };
 }
 
 export async function fetchEvidence(
@@ -515,4 +518,274 @@ async function patchJson<T>(url: string, body: Record<string, unknown>): Promise
     throw new Error(err.detail || `API error: ${res.status}`);
   }
   return res.json();
+}
+
+async function putJson<T>(url: string, body: Record<string, unknown>): Promise<T> {
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || `API error: ${res.status}`);
+  }
+  return res.json();
+}
+
+// ==== Task Management Endpoints (server.py /api/tasks*) ====
+
+/** Fetch single task detail from GET /api/tasks/{taskId} */
+export async function fetchTaskDetail(taskId: string): Promise<Task> {
+  return fetchJson(`/api/tasks/${taskId}`);
+}
+
+/** Create a new task via POST /api/tasks */
+export interface TaskCreatePayload {
+  title: string;
+  description?: string;
+  project?: string;
+  assignee?: string;
+  due_date?: string;
+  priority?: number;
+  tags?: string;
+  source?: string;
+  status?: string;
+}
+
+export async function createTask(
+  payload: TaskCreatePayload
+): Promise<{ success: boolean; task?: Task; bundle_id?: string; error?: string }> {
+  const result = await postJson<{
+    success: boolean;
+    task?: Task;
+    bundle_id?: string;
+    error?: string;
+  }>('/api/tasks', payload as unknown as Record<string, unknown>);
+  if (result.success) invalidateCache('tasks');
+  return result;
+}
+
+/** Update a task via PUT /api/tasks/{taskId} */
+export interface TaskUpdatePayload {
+  title?: string;
+  description?: string;
+  project?: string;
+  assignee?: string;
+  due_date?: string;
+  priority?: number;
+  status?: string;
+  tags?: string;
+}
+
+export interface TaskUpdateResponse {
+  success: boolean;
+  id: string;
+  bundle_id?: string;
+  changes?: Array<{ field: string; old: unknown; new: unknown }>;
+  updated_fields?: string[];
+  signals_resolved?: number;
+  requires_approval?: boolean;
+  reason?: string;
+  decision_id?: string;
+  error?: string;
+}
+
+export async function updateTask(
+  taskId: string,
+  payload: TaskUpdatePayload
+): Promise<TaskUpdateResponse> {
+  const result = await putJson<TaskUpdateResponse>(
+    `/api/tasks/${taskId}`,
+    payload as unknown as Record<string, unknown>
+  );
+  if (result.success) invalidateCache('tasks');
+  return result;
+}
+
+/** Add a note to a task via POST /api/tasks/{taskId}/notes */
+export async function addTaskNote(
+  taskId: string,
+  note: string
+): Promise<{ success: boolean; error?: string }> {
+  return postJson(`/api/tasks/${taskId}/notes`, { note });
+}
+
+/** Delegate a task via POST /api/tasks/{taskId}/delegate */
+export interface DelegatePayload {
+  to: string;
+  note?: string;
+  due_date?: string;
+}
+
+export interface DelegateResponse {
+  success: boolean;
+  id?: string;
+  delegated_to?: string;
+  bundle_id?: string;
+  assignee_workload?: number;
+  warning?: string;
+  requires_approval?: boolean;
+  reason?: string;
+  decision_id?: string;
+  error?: string;
+}
+
+export async function delegateTask(
+  taskId: string,
+  payload: DelegatePayload
+): Promise<DelegateResponse> {
+  const result = await postJson<DelegateResponse>(
+    `/api/tasks/${taskId}/delegate`,
+    payload as unknown as Record<string, unknown>
+  );
+  if (result.success) invalidateCache('tasks');
+  return result;
+}
+
+/** Escalate a task via POST /api/tasks/{taskId}/escalate */
+export interface EscalatePayload {
+  to: string;
+  reason?: string;
+}
+
+export interface EscalateResponse {
+  success: boolean;
+  id?: string;
+  escalated_to?: string;
+  bundle_id?: string;
+  escalation_level?: number;
+  old_priority?: number;
+  new_priority?: number;
+  new_urgency?: string;
+  requires_approval?: boolean;
+  reason?: string;
+  decision_id?: string;
+  error?: string;
+}
+
+export async function escalateTask(
+  taskId: string,
+  payload: EscalatePayload
+): Promise<EscalateResponse> {
+  const result = await postJson<EscalateResponse>(
+    `/api/tasks/${taskId}/escalate`,
+    payload as unknown as Record<string, unknown>
+  );
+  if (result.success) invalidateCache('tasks');
+  return result;
+}
+
+/** Recall a delegation via POST /api/tasks/{taskId}/recall */
+export async function recallTask(
+  taskId: string
+): Promise<{ success: boolean; id?: string; bundle_id?: string; error?: string }> {
+  const result = await postJson<{
+    success: boolean;
+    id?: string;
+    bundle_id?: string;
+    error?: string;
+  }>(`/api/tasks/${taskId}/recall`, {});
+  if (result.success) invalidateCache('tasks');
+  return result;
+}
+
+/** Fetch delegations from GET /api/delegations */
+export interface DelegationsResponse {
+  delegated_by_me: Task[];
+  delegated_to_me: Task[];
+  total: number;
+}
+
+export async function fetchDelegations(): Promise<DelegationsResponse> {
+  return fetchJson('/api/delegations');
+}
+
+/** Fetch priorities (advanced) from GET /api/priorities/advanced */
+export interface PriorityAdvancedFilters {
+  q?: string;
+  due?: string;
+  assignee?: string;
+  project?: string;
+  status?: string;
+  min_score?: number;
+  max_score?: number;
+  tags?: string;
+  sort?: 'score' | 'due' | 'title' | 'assignee';
+  order?: 'asc' | 'desc';
+  limit?: number;
+  offset?: number;
+}
+
+export interface PriorityItem {
+  id: string;
+  title: string;
+  score: number;
+  due: string | null;
+  assignee: string | null;
+  source: string | null;
+  project: string | null;
+  reasons: string[];
+}
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  offset: number;
+  limit: number;
+  has_more: boolean;
+}
+
+export async function fetchPrioritiesAdvanced(
+  filters: PriorityAdvancedFilters = {}
+): Promise<PaginatedResponse<PriorityItem>> {
+  const params = new URLSearchParams();
+  if (filters.q) params.set('q', filters.q);
+  if (filters.due) params.set('due', filters.due);
+  if (filters.assignee) params.set('assignee', filters.assignee);
+  if (filters.project) params.set('project', filters.project);
+  if (filters.status) params.set('status', filters.status);
+  if (filters.min_score != null) params.set('min_score', String(filters.min_score));
+  if (filters.max_score != null) params.set('max_score', String(filters.max_score));
+  if (filters.tags) params.set('tags', filters.tags);
+  if (filters.sort) params.set('sort', filters.sort);
+  if (filters.order) params.set('order', filters.order);
+  if (filters.limit != null) params.set('limit', String(filters.limit));
+  if (filters.offset != null) params.set('offset', String(filters.offset));
+  const qs = params.toString();
+  return fetchJson(`/api/priorities/advanced${qs ? `?${qs}` : ''}`);
+}
+
+/** Fetch grouped priorities from GET /api/priorities/grouped */
+export async function fetchPrioritiesGrouped(
+  groupBy = 'project',
+  limit = 50
+): Promise<Record<string, unknown>> {
+  return fetchJson(`/api/priorities/grouped?group_by=${groupBy}&limit=${limit}`);
+}
+
+/** Bulk action on priorities via POST /api/priorities/bulk */
+export interface BulkActionPayload {
+  action: string;
+  ids: string[];
+  assignee?: string;
+  snooze_days?: number;
+  priority?: number;
+  project?: string;
+}
+
+export async function bulkPriorityAction(
+  payload: BulkActionPayload
+): Promise<{ success: boolean; affected?: number; error?: string }> {
+  const result = await postJson<{ success: boolean; affected?: number; error?: string }>(
+    '/api/priorities/bulk',
+    payload as unknown as Record<string, unknown>
+  );
+  if (result.success) invalidateCache('priorities');
+  return result;
+}
+
+/** Fetch bundle detail from GET /api/bundles/{bundleId} */
+export async function fetchBundleDetail(bundleId: string): Promise<Record<string, unknown>> {
+  return fetchJson(`/api/bundles/${bundleId}`);
 }

@@ -160,14 +160,36 @@ export interface TeamMember {
 export interface Task {
   id: string;
   title: string;
-  status: 'open' | 'in_progress' | 'blocked' | 'done' | 'cancelled';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
+  description?: string | null;
+  status: string;
+  priority: number;
+  urgency?: string | null;
   assignee: string | null;
+  assignee_id?: string | null;
+  project?: string | null;
   project_id: string | null;
   client_id: string | null;
   due_date: string | null;
+  source?: string | null;
+  tags?: string | null;
+  notes?: string | null;
+  // Delegation fields
+  delegated_by?: string | null;
+  delegated_at?: string | null;
+  delegated_note?: string | null;
+  delegation_status?: string | null;
+  // Escalation fields
+  escalated_to?: string | null;
+  escalated_to_id?: string | null;
+  escalated_at?: string | null;
+  escalation_reason?: string | null;
+  escalation_level?: number | null;
+  escalation_history?: string | null;
+  // Timestamps
   created_at: string;
   updated_at: string;
+  completed_at?: string | null;
+  recalled_at?: string | null;
 }
 
 export interface CouplingWhy {
