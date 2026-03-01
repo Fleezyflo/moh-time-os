@@ -11,8 +11,9 @@ import { join } from 'path';
 
 // Budget limits in KB
 // Note: These are realistic budgets for a production SPA with React + Router + Zustand
+// Updated Phase 12: 550→650 to accommodate Phases 9-12 (6 new lazy-loaded page chunks, ~35KB)
 const BUDGETS = {
-  js: 550,      // Main JS bundle (includes vendor in Vite)
+  js: 650,      // Main JS bundle (includes vendor in Vite)
   css: 100,     // Main CSS (Tailwind)
   total: 1000,  // Total assets
 };
