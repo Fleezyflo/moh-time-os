@@ -2,13 +2,89 @@
 
 ## Current State
 
-- **Current phase:** Phase 9 IN PROGRESS (Commitments). Phases -1 through 8 COMPLETE.
-- **Current track:** T6 (Commitments)
-- **Blocked by:** Nothing.
+- **Current phase:** Phase 11 BUILT (Governance & Admin). Phases -1 through 8 COMPLETE. Phases 9, 10, 11 pending commits.
+- **Current track:** T7 (Governance & Admin)
+- **Blocked by:** Phase 9 commit must go first, then Phase 10, then Phase 11.
 - **D1/D2:** Resolved. Blue `#3b82f6`, slate-400 at 5.1:1.
-- **Next session:** Phase 9 commit, then Phase 10 (Notifications, Digest & Email).
+- **Next session:** Commit Phase 9, then Phase 10, then Phase 11.
 
 ## Session History
+
+### Session 18 (Phase 11: Governance & Admin) -- 2026-03-02
+
+- **Type:** B (Build)
+- **Work done:**
+  - **11.1:** Added ~20 fetch/mutation functions to `lib/api.ts`: `fetchGovernance()`, `fetchGovernanceHistory()`, `fetchCalibration()`, `fetchBundles()`, `fetchRollbackable()`, `fetchBundleSummary()`, `fetchApprovals()`, `fetchDataQuality()`, `fetchCleanupPreview()`, `fetchSearch()`, `fetchPendingActions()`, `fetchActionHistory()`. Mutations: `setGovernanceMode()`, `setGovernanceThreshold()`, `activateEmergencyBrake()`, `releaseEmergencyBrake()`, `runCalibration()`, `rollbackBundle()`, `rollbackLastBundle()`, `processApproval()`, `modifyApproval()`, `processDecision()`, `executeCleanup()`, `recalculatePriorities()`, `approveAction()`, `rejectAction()`, `executeAction()`. New helper: `deleteJson<T>()`. ~16 new types.
+  - **11.2:** Added 11 hooks to `lib/hooks.ts`: `useGovernance()`, `useGovernanceHistory()`, `useCalibration()`, `useBundles()`, `useRollbackable()`, `useBundleSummary()`, `useApprovals()`, `useDataQuality()`, `useCleanupPreview()`, `usePendingActions()`, `useActionHistory()`.
+  - **11.3:** Created `pages/Governance.tsx` (~155 lines) with 4 tabs (Domains, History, Bundles, Calibration), SummaryGrid with 4 MetricCards, EmergencyBrakeToggle, GovernanceDomainCards, BundleTimeline, calibration runner.
+  - **11.4:** Created `pages/Approvals.tsx` (~85 lines) with risk-level summary cards, ApprovalQueue, pending actions list.
+  - **11.5:** Created `pages/DataQuality.tsx` (~65 lines) with DataQualityHealthScore, recalculate priorities button, 3 CleanupPreviewConfirm components (ancient/stale/legacy-signals).
+  - **11.6:** Created 6 components in `components/governance/`:
+    - `GovernanceDomainCards.tsx` -- mode selector (observe/advise/guard/enforce), editable confidence threshold
+    - `EmergencyBrakeToggle.tsx` -- toggle with reason input, release button
+    - `BundleTimeline.tsx` -- bundle list with status dots, rollback buttons
+    - `ApprovalQueue.tsx` -- approve/reject actions, risk coloring, payload preview
+    - `DataQualityHealthScore.tsx` -- health gauge, issue breakdown, metrics, suggestions
+    - `CleanupPreviewConfirm.tsx` -- preview-then-confirm flow with sample items
+  - **11.7:** Created `SearchOverlay.tsx` -- global Cmd/Ctrl+K search, debounced 300ms, arrow key navigation, type icons, routes to entity pages.
+  - **11.9:** Added 3 routes (`/admin/governance`, `/admin/approvals`, `/admin/data-quality`), `Admin` nav item, SearchOverlay in RootLayout.
+  - **11.8:** NOT IMPLEMENTED -- export buttons on list pages deferred (low priority, can be added later).
+- **Bugs found and fixed:**
+  - `modifyApproval()` used `patchJson` but server endpoint is `@app.post` -- changed to `postJson`
+  - TabContainer render function children pattern (not regular children)
+  - MetricCard severity `'critical'` doesn't exist -- changed to `'danger'`
+  - SearchOverlay TYPE_ROUTES issue function signature -- `() =>` to `(_id) =>`
+- **Files changed:**
+  - `time-os-ui/src/lib/api.ts` -- added ~480 lines (types + fetch/mutation + deleteJson helper)
+  - `time-os-ui/src/lib/hooks.ts` -- added ~55 lines (11 hooks)
+  - `time-os-ui/src/pages/Governance.tsx` -- new file (~155 lines)
+  - `time-os-ui/src/pages/Approvals.tsx` -- new file (~85 lines)
+  - `time-os-ui/src/pages/DataQuality.tsx` -- new file (~65 lines)
+  - `time-os-ui/src/components/governance/GovernanceDomainCards.tsx` -- new file (~130 lines)
+  - `time-os-ui/src/components/governance/EmergencyBrakeToggle.tsx` -- new file (~105 lines)
+  - `time-os-ui/src/components/governance/BundleTimeline.tsx` -- new file (~85 lines)
+  - `time-os-ui/src/components/governance/ApprovalQueue.tsx` -- new file (~93 lines)
+  - `time-os-ui/src/components/governance/DataQualityHealthScore.tsx` -- new file (~105 lines)
+  - `time-os-ui/src/components/governance/CleanupPreviewConfirm.tsx` -- new file (~90 lines)
+  - `time-os-ui/src/components/governance/SearchOverlay.tsx` -- new file (~195 lines)
+  - `time-os-ui/src/router.tsx` -- lazy imports, 3 routes, nav item, SearchOverlay
+- **Backend endpoints wired (~30):**
+  - governance_router: GET config, GET history, POST mode, POST threshold, POST calibrate, GET/POST/DELETE emergency-brake
+  - server.py: GET/POST approvals, GET/POST decisions, GET data-quality, POST cleanup, POST recalculate-priorities, GET search, GET bundles, GET rollbackable, GET bundle-summary, POST rollback
+  - action_router: GET pending, GET history, POST approve, POST reject, POST execute
+- **Verification:** Pending (Mac: tsc, prettier, system-map regeneration)
+
+### Session 17 (Phase 10: Notifications, Digest & Email) -- 2026-03-02
+
+- **Type:** B (Build)
+- **Work done:**
+  - **10.1:** Added 8 fetch/mutation functions to `lib/api.ts`: `fetchNotifications()`, `fetchNotificationStats()`, `dismissNotification()`, `dismissAllNotifications()`, `fetchWeeklyDigest()`, `fetchEmails()`, `markEmailActionable()`, `dismissEmail()`. New types: `Notification`, `NotificationsResponse`, `NotificationStatsResponse`, `WeeklyDigestResponse`, `EmailItem`, `EmailsResponse`.
+  - **10.2:** Added 4 hooks to `lib/hooks.ts`: `useNotifications()`, `useNotificationStats()`, `useWeeklyDigest()`, `useEmails()`.
+  - **10.3:** Created `pages/Notifications.tsx` -- notifications list with stats bar (total/unread/dismissed), show-dismissed toggle, dismiss-all button.
+  - **10.4:** Created `pages/Digest.tsx` -- two tabs (Weekly Digest, Email Triage), email filter dropdown.
+  - **10.5:** Created 4 components in `components/notifications/`:
+    - `NotificationList.tsx` -- type icons, relative timestamps, dismiss buttons
+    - `NotificationBadge.tsx` -- unread count badge in nav (red, 99+ cap)
+    - `WeeklyDigestView.tsx` -- period header, stats grid, completed/slipped item lists
+    - `EmailTriageList.tsx` -- email cards with status dot, actionable/dismiss actions
+  - **10.6:** Added `NotificationBadge` to nav bar (non-lazy, desktop + mobile).
+  - **10.7:** Added `/notifications` and `/digest` routes, nav items between Commitments and Clients.
+- **Files changed:**
+  - `time-os-ui/src/lib/api.ts` -- added ~150 lines
+  - `time-os-ui/src/lib/hooks.ts` -- added ~25 lines
+  - `time-os-ui/src/pages/Notifications.tsx` -- new file (~90 lines)
+  - `time-os-ui/src/pages/Digest.tsx` -- new file (~110 lines)
+  - `time-os-ui/src/components/notifications/NotificationList.tsx` -- new file (~80 lines)
+  - `time-os-ui/src/components/notifications/NotificationBadge.tsx` -- new file (~20 lines)
+  - `time-os-ui/src/components/notifications/WeeklyDigestView.tsx` -- new file (~95 lines)
+  - `time-os-ui/src/components/notifications/EmailTriageList.tsx` -- new file (~85 lines)
+  - `time-os-ui/src/router.tsx` -- lazy imports, routes, nav items, NotificationBadge
+- **Backend endpoints wired (8):**
+  - `GET /api/notifications`, `GET /api/notifications/stats`
+  - `POST /api/notifications/{notif_id}/dismiss`, `POST /api/notifications/dismiss-all`
+  - `GET /api/digest/weekly`
+  - `GET /api/emails`, `POST /api/emails/{email_id}/mark-actionable`, `POST /api/emails/{email_id}/dismiss`
+- **Verification:** Pending (Mac: tsc, prettier, system-map regeneration)
 
 ### Session 16 (Phase 9: Commitments) -- 2026-03-02
 

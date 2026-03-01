@@ -317,3 +317,118 @@ export function useCommitmentsDue(date?: string) {
 export function useCommitmentsSummary() {
   return useFetch(() => api.fetchCommitmentsSummary(), []);
 }
+
+// ==== Notifications, Digest & Email Hooks (Phase 10) ====
+
+// Notifications list (optionally include dismissed)
+export function useNotifications(includeDismissed = false, limit = 50) {
+  return useFetch(() => api.fetchNotifications(includeDismissed, limit), [includeDismissed, limit]);
+}
+
+// Notification stats (total + unread count)
+export function useNotificationStats() {
+  return useFetch(() => api.fetchNotificationStats(), []);
+}
+
+// Weekly digest summary
+export function useWeeklyDigest() {
+  return useFetch(() => api.fetchWeeklyDigest(), []);
+}
+
+// Emails with optional filters
+export function useEmails(actionableOnly = false, unreadOnly = false, limit = 30) {
+  return useFetch(
+    () => api.fetchEmails(actionableOnly, unreadOnly, limit),
+    [actionableOnly, unreadOnly, limit]
+  );
+}
+
+// ==== Governance & Admin Hooks (Phase 11) ====
+
+// Governance status (config, domains, brake)
+export function useGovernance() {
+  return useFetch(() => api.fetchGovernance(), []);
+}
+
+// Governance action history
+export function useGovernanceHistory(limit = 50) {
+  return useFetch(() => api.fetchGovernanceHistory(limit), [limit]);
+}
+
+// Last calibration result
+export function useCalibration() {
+  return useFetch(() => api.fetchCalibration(), []);
+}
+
+// Bundles with optional filters
+export function useBundles(status?: string, domain?: string, limit = 50) {
+  return useFetch(() => api.fetchBundles(status, domain, limit), [status, domain, limit]);
+}
+
+// Rollbackable bundles
+export function useRollbackable() {
+  return useFetch(() => api.fetchRollbackable(), []);
+}
+
+// Bundle summary (counts by status/domain)
+export function useBundleSummary() {
+  return useFetch(() => api.fetchBundleSummary(), []);
+}
+
+// Pending approvals
+export function useApprovals() {
+  return useFetch(() => api.fetchApprovals(), []);
+}
+
+// Data quality health score and issues
+export function useDataQuality() {
+  return useFetch(() => api.fetchDataQuality(), []);
+}
+
+// Cleanup preview for a specific type
+export function useCleanupPreview(cleanupType: string) {
+  return useFetch(() => api.fetchCleanupPreview(cleanupType), [cleanupType]);
+}
+
+// Pending action proposals
+export function usePendingActions(actionType?: string, limit = 50) {
+  return useFetch(() => api.fetchPendingActions(actionType, limit), [actionType, limit]);
+}
+
+// Action history
+export function useActionHistory(entityId?: string, actionType?: string, limit = 50) {
+  return useFetch(
+    () => api.fetchActionHistory(entityId, actionType, limit),
+    [entityId, actionType, limit]
+  );
+}
+
+// ==== Project Enrollment Hooks (Phase 12) ====
+
+// Project candidates (candidate + proposed status)
+export function useProjectCandidates() {
+  return useFetch(() => api.fetchProjectCandidates(), []);
+}
+
+// Enrolled projects with client info and task counts
+export function useProjectsEnrolled() {
+  return useFetch(() => api.fetchProjectsEnrolled(), []);
+}
+
+// Detected projects from tasks not yet in projects table
+export function useDetectedProjects() {
+  return useFetch(() => api.fetchDetectedProjects(), []);
+}
+
+// Project detail
+export function useProjectDetail(projectId: string | undefined) {
+  return useFetch(
+    () => (projectId ? api.fetchProjectDetail(projectId) : Promise.resolve(null)),
+    [projectId]
+  );
+}
+
+// Client-project linking statistics
+export function useLinkingStats() {
+  return useFetch(() => api.fetchLinkingStats(), []);
+}

@@ -1157,3 +1157,823 @@ export async function markCommitmentDone(
   }
   return result;
 }
+
+// ==== Notifications (Phase 10) ====
+
+/** Notification from /api/notifications */
+export interface Notification {
+  id: string;
+  type: string;
+  message: string;
+  task_id: string | null;
+  target_id: string | null;
+  dismissed: number;
+  dismissed_at: string | null;
+  created_at: string;
+}
+
+/** Notifications list response */
+export interface NotificationsResponse {
+  notifications: Notification[];
+  total: number;
+}
+
+/** Notification stats response from /api/notifications/stats */
+export interface NotificationStatsResponse {
+  total: number;
+  unread: number;
+}
+
+/** Fetch notifications, optionally including dismissed */
+export async function fetchNotifications(
+  includeDismissed = false,
+  limit = 50
+): Promise<NotificationsResponse> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (includeDismissed) params.set('include_dismissed', 'true');
+  return fetchJson<NotificationsResponse>(`/api/notifications?${params.toString()}`);
+}
+
+/** Fetch notification stats (total + unread) */
+export async function fetchNotificationStats(): Promise<NotificationStatsResponse> {
+  return fetchJson<NotificationStatsResponse>('/api/notifications/stats');
+}
+
+/** Dismiss a single notification */
+export async function dismissNotification(
+  notifId: string
+): Promise<{ success: boolean; id: string }> {
+  const result = await postJson<{ success: boolean; id: string }>(
+    `/api/notifications/${notifId}/dismiss`,
+    {}
+  );
+  if (result.success) {
+    invalidateCache('notifications');
+  }
+  return result;
+}
+
+/** Dismiss all notifications */
+export async function dismissAllNotifications(): Promise<{
+  success: boolean;
+  dismissed_count: number;
+}> {
+  const result = await postJson<{ success: boolean; dismissed_count: number }>(
+    '/api/notifications/dismiss-all',
+    {}
+  );
+  if (result.success) {
+    invalidateCache('notifications');
+  }
+  return result;
+}
+
+// ==== Weekly Digest (Phase 10) ====
+
+/** Weekly digest response from /api/digest/weekly */
+export interface WeeklyDigestResponse {
+  period: { start: string; end: string };
+  completed: {
+    count: number;
+    items: Array<{ id: string; title: string; completed_at: string }>;
+  };
+  slipped: {
+    count: number;
+    items: Array<{ id: string; title: string; due: string; assignee: string | null }>;
+  };
+  archived: number;
+}
+
+/** Fetch weekly digest */
+export async function fetchWeeklyDigest(): Promise<WeeklyDigestResponse> {
+  return fetchJson<WeeklyDigestResponse>('/api/digest/weekly');
+}
+
+// ==== Emails / Email Triage (Phase 10) ====
+
+/** Email from /api/emails (communications table) */
+export interface EmailItem {
+  id: string;
+  subject: string | null;
+  sender: string | null;
+  recipient: string | null;
+  body: string | null;
+  received_at: string | null;
+  actionable: number;
+  processed: number;
+  type: string;
+  [key: string]: unknown;
+}
+
+/** Emails list response */
+export interface EmailsResponse {
+  emails: EmailItem[];
+  total: number;
+}
+
+/** Fetch emails with optional filters */
+export async function fetchEmails(
+  actionableOnly = false,
+  unreadOnly = false,
+  limit = 30
+): Promise<EmailsResponse> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (actionableOnly) params.set('actionable_only', 'true');
+  if (unreadOnly) params.set('unread_only', 'true');
+  return fetchJson<EmailsResponse>(`/api/emails?${params.toString()}`);
+}
+
+/** Mark an email as actionable */
+export async function markEmailActionable(
+  emailId: string
+): Promise<{ success: boolean; id: string }> {
+  const result = await postJson<{ success: boolean; id: string }>(
+    `/api/emails/${emailId}/mark-actionable`,
+    {}
+  );
+  if (result.success) {
+    invalidateCache('emails');
+  }
+  return result;
+}
+
+/** Dismiss an email (mark as processed) */
+export async function dismissEmail(emailId: string): Promise<{ success: boolean; id: string }> {
+  const result = await postJson<{ success: boolean; id: string }>(
+    `/api/emails/${emailId}/dismiss`,
+    {}
+  );
+  if (result.success) {
+    invalidateCache('emails');
+  }
+  return result;
+}
+
+// ==== Governance & Admin (Phase 11) ====
+
+/** Helper: DELETE JSON requests */
+async function deleteJson<T>(url: string): Promise<T> {
+  const res = await fetch(url, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: res.statusText }));
+    throw new Error(err.detail || `API error: ${res.status}`);
+  }
+  return res.json();
+}
+
+// ---- Governance Config (/api/governance) ----
+
+/** Domain configuration from /api/governance */
+export interface GovernanceDomain {
+  domain: string;
+  mode: string;
+  confidence_threshold: number;
+  [key: string]: unknown;
+}
+
+/** Governance status response from GET /api/governance */
+export interface GovernanceResponse {
+  domains: GovernanceDomain[];
+  emergency_brake: boolean;
+  summary: Record<string, unknown>;
+}
+
+/** Fetch governance status (config, domains, brake) */
+export async function fetchGovernance(): Promise<GovernanceResponse> {
+  return fetchJson<GovernanceResponse>('/api/governance');
+}
+
+/** Set governance mode for a domain */
+export async function setGovernanceMode(
+  domain: string,
+  mode: string
+): Promise<{ domain: string; mode: string; status: string }> {
+  const result = await putJson<{ domain: string; mode: string; status: string }>(
+    `/api/governance/${domain}`,
+    { mode }
+  );
+  invalidateCache('governance');
+  return result;
+}
+
+/** Set confidence threshold for a domain */
+export async function setGovernanceThreshold(
+  domain: string,
+  threshold: number
+): Promise<{ domain: string; threshold: number; status: string }> {
+  const result = await putJson<{ domain: string; threshold: number; status: string }>(
+    `/api/governance/${domain}/threshold`,
+    { threshold }
+  );
+  invalidateCache('governance');
+  return result;
+}
+
+/** Governance history entry */
+export interface GovernanceHistoryEntry {
+  id: string;
+  action: string;
+  domain: string;
+  timestamp: string;
+  actor: string;
+  details: Record<string, unknown>;
+}
+
+/** Governance history response from GET /api/governance/history */
+export interface GovernanceHistoryResponse {
+  history: GovernanceHistoryEntry[];
+  total: number;
+}
+
+/** Fetch governance action history */
+export async function fetchGovernanceHistory(limit = 50): Promise<GovernanceHistoryResponse> {
+  return fetchJson<GovernanceHistoryResponse>(`/api/governance/history?limit=${limit}`);
+}
+
+/** Activate emergency brake */
+export async function activateEmergencyBrake(
+  reason: string
+): Promise<{ success: boolean; active: boolean; reason: string }> {
+  const result = await postJson<{ success: boolean; active: boolean; reason: string }>(
+    `/api/governance/emergency-brake?reason=${encodeURIComponent(reason)}`,
+    {}
+  );
+  invalidateCache('governance');
+  return result;
+}
+
+/** Release emergency brake */
+export async function releaseEmergencyBrake(): Promise<{
+  success: boolean;
+  active: boolean;
+}> {
+  const result = await deleteJson<{ success: boolean; active: boolean }>(
+    '/api/governance/emergency-brake'
+  );
+  invalidateCache('governance');
+  return result;
+}
+
+// ---- Calibration (/api/calibration) ----
+
+/** Calibration result */
+export interface CalibrationResponse {
+  [key: string]: unknown;
+}
+
+/** Fetch last calibration result */
+export async function fetchCalibration(): Promise<CalibrationResponse> {
+  return fetchJson<CalibrationResponse>('/api/calibration');
+}
+
+/** Run calibration */
+export async function runCalibration(): Promise<CalibrationResponse> {
+  return postJson<CalibrationResponse>('/api/calibration/run', {});
+}
+
+// ---- Bundles (/api/bundles) ----
+
+/** Bundle from /api/bundles */
+export interface Bundle {
+  bundle_id: string;
+  domain: string;
+  status: string;
+  description: string;
+  created_at: string;
+  applied_at: string | null;
+  rolled_back_at: string | null;
+  [key: string]: unknown;
+}
+
+/** Bundles list response */
+export interface BundlesResponse {
+  bundles: Bundle[];
+  total: number;
+}
+
+/** Bundle summary response from /api/bundles/summary */
+export interface BundleSummaryResponse {
+  by_status: Record<string, number>;
+  by_domain: Record<string, number>;
+  total_bundles: number;
+  recent_applied: Bundle[];
+  rollbackable_count: number;
+}
+
+/** Fetch bundles with optional filters */
+export async function fetchBundles(
+  status?: string,
+  domain?: string,
+  limit = 50
+): Promise<BundlesResponse> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (status) params.set('status', status);
+  if (domain) params.set('domain', domain);
+  return fetchJson<BundlesResponse>(`/api/bundles?${params.toString()}`);
+}
+
+/** Fetch rollbackable bundles */
+export async function fetchRollbackable(): Promise<BundlesResponse> {
+  return fetchJson<BundlesResponse>('/api/bundles/rollbackable');
+}
+
+/** Fetch bundle summary */
+export async function fetchBundleSummary(): Promise<BundleSummaryResponse> {
+  return fetchJson<BundleSummaryResponse>('/api/bundles/summary');
+}
+
+/** Rollback a specific bundle */
+export async function rollbackBundle(
+  bundleId: string
+): Promise<{ success: boolean; bundle: Bundle }> {
+  const result = await postJson<{ success: boolean; bundle: Bundle }>(
+    `/api/bundles/${bundleId}/rollback`,
+    {}
+  );
+  if (result.success) {
+    invalidateCache('bundles');
+    invalidateCache('governance');
+  }
+  return result;
+}
+
+/** Rollback the last applied bundle */
+export async function rollbackLastBundle(
+  domain?: string
+): Promise<{ success: boolean; bundle_id: string; description: string; rolled_back_at: string }> {
+  const params = domain ? `?domain=${domain}` : '';
+  const result = await postJson<{
+    success: boolean;
+    bundle_id: string;
+    description: string;
+    rolled_back_at: string;
+  }>(`/api/bundles/rollback-last${params}`, {});
+  if (result.success) {
+    invalidateCache('bundles');
+    invalidateCache('governance');
+  }
+  return result;
+}
+
+// ---- Approvals (/api/approvals) ----
+
+/** Approval from /api/approvals */
+export interface Approval {
+  decision_id: string;
+  action_type: string;
+  description: string;
+  target_entity: string;
+  target_id: string;
+  payload: Record<string, unknown>;
+  risk_level: string;
+  source: string;
+  created_at: string;
+  [key: string]: unknown;
+}
+
+/** Approvals list response */
+export interface ApprovalsResponse {
+  approvals: Approval[];
+  total: number;
+}
+
+/** Fetch pending approvals */
+export async function fetchApprovals(): Promise<ApprovalsResponse> {
+  return fetchJson<ApprovalsResponse>('/api/approvals');
+}
+
+/** Process an approval (approve or reject) */
+export async function processApproval(
+  decisionId: string,
+  action: 'approve' | 'reject'
+): Promise<{ status: string; decision_id: string }> {
+  const result = await postJson<{ status: string; decision_id: string }>(
+    `/api/approvals/${decisionId}`,
+    { action }
+  );
+  invalidateCache('approvals');
+  return result;
+}
+
+/** Modify and approve a decision */
+export async function modifyApproval(
+  decisionId: string,
+  modifications: Record<string, unknown>
+): Promise<{ success: boolean; id: string; modified: boolean }> {
+  const result = await postJson<{ success: boolean; id: string; modified: boolean }>(
+    `/api/approvals/${decisionId}/modify`,
+    { modifications }
+  );
+  invalidateCache('approvals');
+  return result;
+}
+
+// ---- Decisions (/api/decisions) ----
+
+/** Process a decision with side effects */
+export async function processDecision(
+  decisionId: string,
+  action: 'approve' | 'reject'
+): Promise<{ status: string; decision_id: string }> {
+  const result = await postJson<{ status: string; decision_id: string }>(
+    `/api/decisions/${decisionId}`,
+    { action }
+  );
+  invalidateCache('approvals');
+  invalidateCache('governance');
+  return result;
+}
+
+// ---- Data Quality (/api/data-quality) ----
+
+/** Data quality issue */
+export interface DataQualityIssue {
+  id?: string;
+  title?: string;
+  count: number;
+  items: Array<Record<string, unknown>>;
+}
+
+/** Data quality response from GET /api/data-quality */
+export interface DataQualityResponse {
+  health_score: number;
+  total_active_tasks: number;
+  issues: {
+    stale_tasks: DataQualityIssue;
+    ancient_tasks: DataQualityIssue;
+    inactive_tasks: DataQualityIssue;
+  };
+  metrics: {
+    priority_distribution: Record<string, number>;
+    due_distribution: Record<string, number>;
+    priority_inflation_ratio: number;
+    stale_ratio: number;
+  };
+  suggestions: Array<{
+    type: string;
+    severity: string;
+    message: string;
+    action: string;
+  }>;
+}
+
+/** Fetch data quality health score, issues, and suggestions */
+export async function fetchDataQuality(): Promise<DataQualityResponse> {
+  return fetchJson<DataQualityResponse>('/api/data-quality');
+}
+
+/** Cleanup preview response from GET /api/data-quality/preview/{type} */
+export interface CleanupPreviewResponse {
+  type: string;
+  count: number;
+  sample: Array<Record<string, unknown>>;
+  confirm_endpoint: string;
+}
+
+/** Fetch cleanup preview for a type */
+export async function fetchCleanupPreview(cleanupType: string): Promise<CleanupPreviewResponse> {
+  return fetchJson<CleanupPreviewResponse>(`/api/data-quality/preview/${cleanupType}`);
+}
+
+/** Execute a cleanup action (with confirm=true) */
+export async function executeCleanup(
+  cleanupType: 'ancient' | 'stale' | 'legacy-signals'
+): Promise<{ success: boolean; archived_count: number; bundle_id: string }> {
+  const result = await postJson<{
+    success: boolean;
+    archived_count: number;
+    bundle_id: string;
+  }>(`/api/data-quality/cleanup/${cleanupType}?confirm=true`, {});
+  if (result.success) {
+    invalidateCache('data-quality');
+    invalidateCache('bundles');
+  }
+  return result;
+}
+
+/** Recalculate all priorities */
+export async function recalculatePriorities(): Promise<{
+  success: boolean;
+  recalculated: number;
+}> {
+  const result = await postJson<{ success: boolean; recalculated: number }>(
+    '/api/data-quality/recalculate-priorities',
+    {}
+  );
+  if (result.success) {
+    invalidateCache('priorities');
+    invalidateCache('data-quality');
+  }
+  return result;
+}
+
+// ---- Search (/api/v2/search) ----
+
+/** Search result from /api/v2/search */
+export interface SearchResult {
+  id: string;
+  type: 'task' | 'project' | 'client' | 'issue' | 'person';
+  title: string;
+  subtitle?: string;
+  score: number;
+}
+
+/** Search response */
+export interface SearchResponse {
+  results: SearchResult[];
+  total: number;
+  query: string;
+}
+
+/** Full-text search across entities */
+export async function fetchSearch(
+  q: string,
+  types?: string[],
+  limit = 20
+): Promise<SearchResponse> {
+  const params = new URLSearchParams({ q, limit: String(limit) });
+  if (types?.length) params.set('types', types.join(','));
+  return fetchJson<SearchResponse>(`${API_BASE}/search?${params.toString()}`);
+}
+
+// ---- Actions (/api/actions) ----
+
+/** Action proposal from /api/actions/pending */
+export interface ActionProposal {
+  action_id: string;
+  action_type: string;
+  target_entity: string;
+  target_id: string;
+  payload: Record<string, unknown>;
+  risk_level: string;
+  source: string;
+  confidence_score: number;
+  status: string;
+  created_at: string;
+}
+
+/** Actions list response */
+export interface ActionsListResponse {
+  count: number;
+  actions: ActionProposal[];
+}
+
+/** Fetch pending actions */
+export async function fetchPendingActions(
+  actionType?: string,
+  limit = 50
+): Promise<ActionsListResponse> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (actionType) params.set('action_type', actionType);
+  return fetchJson<ActionsListResponse>(`/api/actions/pending?${params.toString()}`);
+}
+
+/** Fetch action history */
+export async function fetchActionHistory(
+  entityId?: string,
+  actionType?: string,
+  limit = 50
+): Promise<ActionsListResponse> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (entityId) params.set('entity_id', entityId);
+  if (actionType) params.set('action_type', actionType);
+  return fetchJson<ActionsListResponse>(`/api/actions/history?${params.toString()}`);
+}
+
+/** Approve an action */
+export async function approveAction(
+  actionId: string,
+  approvedBy: string
+): Promise<{ action_id: string; status: string }> {
+  const result = await postJson<{ action_id: string; status: string }>(
+    `/api/actions/${actionId}/approve`,
+    { approved_by: approvedBy }
+  );
+  invalidateCache('actions');
+  invalidateCache('approvals');
+  return result;
+}
+
+/** Reject an action */
+export async function rejectAction(
+  actionId: string,
+  rejectedBy: string,
+  reason: string
+): Promise<{ action_id: string; status: string }> {
+  const result = await postJson<{ action_id: string; status: string }>(
+    `/api/actions/${actionId}/reject`,
+    { rejected_by: rejectedBy, reason }
+  );
+  invalidateCache('actions');
+  invalidateCache('approvals');
+  return result;
+}
+
+/** Execute an approved action */
+export async function executeAction(
+  actionId: string,
+  dryRun = false
+): Promise<{
+  action_id: string;
+  success: boolean;
+  error: string | null;
+  execution_time_ms: number | null;
+  result_data: unknown;
+}> {
+  const result = await postJson<{
+    action_id: string;
+    success: boolean;
+    error: string | null;
+    execution_time_ms: number | null;
+    result_data: unknown;
+  }>(`/api/actions/${actionId}/execute`, { dry_run: dryRun });
+  if (result.success) {
+    invalidateCache('actions');
+  }
+  return result;
+}
+
+// ==== Project Enrollment (Phase 12) ====
+
+/** Candidate project from /api/projects/candidates */
+export interface ProjectCandidate {
+  id: string;
+  name: string;
+  client_id: string | null;
+  client_name: string | null;
+  enrollment_status: 'candidate' | 'proposed';
+  involvement_type: string | null;
+  proposed_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectCandidatesResponse {
+  items: ProjectCandidate[];
+  total: number;
+  proposed: number;
+  candidate: number;
+}
+
+/** Enrolled project from /api/projects/enrolled */
+export interface EnrolledProject {
+  id: string;
+  name: string;
+  client_id: string | null;
+  client_name: string | null;
+  client_tier: string | null;
+  involvement_type: string;
+  enrollment_status: 'enrolled';
+  enrolled_at: string | null;
+  open_tasks: number;
+  overdue_tasks: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface EnrolledProjectsResponse {
+  retainers: EnrolledProject[];
+  projects: EnrolledProject[];
+  total: number;
+}
+
+/** Detected project from /api/projects/detect */
+export interface DetectedProject {
+  name: string;
+  task_count: number;
+}
+
+export interface DetectedProjectsResponse {
+  detected: DetectedProject[];
+  total: number;
+}
+
+/** Project detail from /api/projects/{id} */
+export interface ProjectDetailResponse {
+  project: Record<string, unknown>;
+  client: Record<string, unknown> | null;
+  tasks: Record<string, unknown>[];
+  overdue_count: number;
+}
+
+/** Linking stats from /api/clients/linking-stats */
+export interface LinkingStatsResponse {
+  total_projects: number;
+  linked_projects: number;
+  unlinked_projects: number;
+  link_rate: number;
+  total_clients: number;
+  clients_with_projects: number;
+}
+
+/** Enrollment action payload */
+export interface EnrollmentPayload {
+  action: 'enroll' | 'reject' | 'snooze' | 'mark_internal';
+  reason?: string;
+  client_id?: string;
+  involvement_type?: string;
+  snooze_days?: number;
+}
+
+/** Bulk link payload */
+export interface BulkLinkPayload {
+  links: Array<{
+    task_id: string;
+    project_id?: string;
+    client_id?: string;
+  }>;
+}
+
+export interface BulkLinkResponse {
+  total: number;
+  succeeded: number;
+  results: Array<{
+    task_id: string;
+    success: boolean;
+    linked?: string;
+    error?: string;
+  }>;
+}
+
+/** Propose project payload */
+export interface ProposeProjectPayload {
+  name: string;
+  client_id?: string;
+  type?: string;
+}
+
+/** Fetch project candidates (candidate + proposed) */
+export async function fetchProjectCandidates(): Promise<ProjectCandidatesResponse> {
+  return fetchJson<ProjectCandidatesResponse>('/api/projects/candidates');
+}
+
+/** Fetch enrolled projects with client info and task counts */
+export async function fetchProjectsEnrolled(): Promise<EnrolledProjectsResponse> {
+  return fetchJson<EnrolledProjectsResponse>('/api/projects/enrolled');
+}
+
+/** Detect new projects from tasks not yet in projects table */
+export async function fetchDetectedProjects(force = false): Promise<DetectedProjectsResponse> {
+  const params = force ? '?force=true' : '';
+  return fetchJson<DetectedProjectsResponse>(`/api/projects/detect${params}`);
+}
+
+/** Fetch project detail */
+export async function fetchProjectDetail(projectId: string): Promise<ProjectDetailResponse> {
+  return fetchJson<ProjectDetailResponse>(`/api/projects/${projectId}`);
+}
+
+/** Fetch linking stats */
+export async function fetchLinkingStats(): Promise<LinkingStatsResponse> {
+  return fetchJson<LinkingStatsResponse>('/api/clients/linking-stats');
+}
+
+/** Process enrollment action (enroll/reject/snooze/mark_internal) */
+export async function processEnrollment(
+  projectId: string,
+  payload: EnrollmentPayload
+): Promise<{ success: boolean; status: string; id: string }> {
+  const result = await postJson<{ success: boolean; status: string; id: string }>(
+    `/api/projects/${projectId}/enrollment`,
+    { ...payload }
+  );
+  invalidateCache('projects');
+  invalidateCache('candidates');
+  invalidateCache('enrolled');
+  return result;
+}
+
+/** Bulk link tasks to projects/clients */
+export async function bulkLinkTasks(payload: BulkLinkPayload): Promise<BulkLinkResponse> {
+  const result = await postJson<BulkLinkResponse>('/api/tasks/link', { ...payload });
+  invalidateCache('tasks');
+  invalidateCache('projects');
+  return result;
+}
+
+/** Sync Xero data */
+export async function syncXero(): Promise<Record<string, unknown>> {
+  const result = await postJson<Record<string, unknown>>('/api/sync/xero', {});
+  invalidateCache('projects');
+  invalidateCache('clients');
+  return result;
+}
+
+/** Propose a new project */
+export async function proposeProject(
+  payload: ProposeProjectPayload
+): Promise<{ success: boolean; project: Record<string, unknown> }> {
+  const params = new URLSearchParams({ name: payload.name });
+  if (payload.client_id) params.set('client_id', payload.client_id);
+  if (payload.type) params.set('type', payload.type);
+  const result = await postJson<{ success: boolean; project: Record<string, unknown> }>(
+    `/api/projects/propose?${params.toString()}`,
+    {}
+  );
+  invalidateCache('projects');
+  invalidateCache('candidates');
+  return result;
+}
