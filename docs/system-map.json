@@ -1145,12 +1145,24 @@
     "api_routes_count": 195,
     "collectors_count": 9,
     "db_tables_count": 31,
-    "ui_routes_count": 24
+    "ui_routes_count": 30
   },
   "ui_api_calls": [],
   "ui_routes": [
     {
       "path": "/",
+      "source": "router.tsx"
+    },
+    {
+      "path": "/admin/approvals",
+      "source": "router.tsx"
+    },
+    {
+      "path": "/admin/data-quality",
+      "source": "router.tsx"
+    },
+    {
+      "path": "/admin/governance",
       "source": "router.tsx"
     },
     {
@@ -1167,6 +1179,10 @@
     },
     {
       "path": "/commitments",
+      "source": "router.tsx"
+    },
+    {
+      "path": "/digest",
       "source": "router.tsx"
     },
     {
@@ -1210,6 +1226,10 @@
       "source": "router.tsx"
     },
     {
+      "path": "/notifications",
+      "source": "router.tsx"
+    },
+    {
       "path": "/ops",
       "source": "router.tsx"
     },
@@ -1219,6 +1239,10 @@
     },
     {
       "path": "/priorities",
+      "source": "router.tsx"
+    },
+    {
+      "path": "/projects/enrollment",
       "source": "router.tsx"
     },
     {

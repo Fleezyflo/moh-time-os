@@ -11,6 +11,8 @@ import {
 } from '@tanstack/react-router';
 import { lazy, Suspense, useState } from 'react';
 import { ErrorBoundary, ProtectedRoute, PageSuspense } from './components';
+import { NotificationBadge } from './components/notifications/NotificationBadge';
+import { SearchOverlay } from './components/governance/SearchOverlay';
 
 // Lazy load page components for code splitting
 const Inbox = lazy(() => import('./pages/Inbox'));
@@ -28,6 +30,12 @@ const Priorities = lazy(() => import('./pages/Priorities'));
 const Schedule = lazy(() => import('./pages/Schedule'));
 const Capacity = lazy(() => import('./pages/Capacity'));
 const Commitments = lazy(() => import('./pages/Commitments'));
+const NotificationsPage = lazy(() => import('./pages/Notifications'));
+const DigestPage = lazy(() => import('./pages/Digest'));
+const ProjectEnrollment = lazy(() => import('./pages/ProjectEnrollment'));
+const GovernancePage = lazy(() => import('./pages/Governance'));
+const ApprovalsPage = lazy(() => import('./pages/Approvals'));
+const DataQualityPage = lazy(() => import('./pages/DataQuality'));
 
 // Intelligence pages (kept: signals, patterns, client/person/project intel)
 const Signals = lazy(() => import('./intelligence/pages/Signals'));
@@ -36,8 +44,8 @@ const ClientIntel = lazy(() => import('./intelligence/pages/ClientIntel'));
 const PersonIntel = lazy(() => import('./intelligence/pages/PersonIntel'));
 const ProjectIntel = lazy(() => import('./intelligence/pages/ProjectIntel'));
 
-// Navigation items — Phase 9 updated nav
-const NAV_ITEMS = [
+// Navigation items — Phase 11 updated nav
+const NAV_ITEMS: Array<{ to: string; label: string; badge?: boolean }> = [
   { to: '/', label: 'Inbox' },
   { to: '/portfolio', label: 'Portfolio' },
   { to: '/tasks', label: 'Tasks' },
@@ -45,12 +53,16 @@ const NAV_ITEMS = [
   { to: '/schedule', label: 'Schedule' },
   { to: '/capacity', label: 'Capacity' },
   { to: '/commitments', label: 'Commitments' },
+  { to: '/notifications', label: 'Notifications', badge: true },
+  { to: '/digest', label: 'Digest' },
   { to: '/clients', label: 'Clients' },
   { to: '/issues', label: 'Issues' },
   { to: '/team', label: 'Team' },
+  { to: '/projects/enrollment', label: 'Enrollment' },
   { to: '/intel/signals', label: 'Intel' },
   { to: '/ops', label: 'Ops' },
-] as const;
+  { to: '/admin/governance', label: 'Admin' },
+];
 
 // NavLink component
 function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
@@ -96,6 +108,11 @@ function RootLayout() {
                 {NAV_ITEMS.map((item) => (
                   <NavLink key={item.to} to={item.to}>
                     {item.label}
+                    {item.badge && (
+                      <span className="ml-1">
+                        <NotificationBadge />
+                      </span>
+                    )}
                   </NavLink>
                 ))}
               </div>
@@ -127,9 +144,10 @@ function RootLayout() {
                     key={item.to}
                     to={item.to}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="block px-3 py-2 text-base rounded-md hover:bg-[var(--grey)] transition-colors [&.active]:bg-[var(--grey)] [&.active]:text-white"
+                    className="flex items-center gap-2 px-3 py-2 text-base rounded-md hover:bg-[var(--grey)] transition-colors [&.active]:bg-[var(--grey)] [&.active]:text-white"
                   >
                     {item.label}
+                    {item.badge && <NotificationBadge />}
                   </Link>
                 ))}
               </div>
@@ -151,6 +169,9 @@ function RootLayout() {
             </Suspense>
           </ErrorBoundary>
         </main>
+
+        {/* Global search overlay (Cmd/Ctrl+K) */}
+        <SearchOverlay />
       </div>
     </ProtectedRoute>
   );
@@ -421,6 +442,57 @@ const commitmentsRoute = createRoute({
   ),
 });
 
+// Notifications page (Phase 10)
+const notificationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/notifications',
+  component: () => (
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
+      <NotificationsPage />
+    </Suspense>
+  ),
+});
+
+// Digest page (Phase 10)
+const digestRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/digest',
+  component: () => (
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
+      <DigestPage />
+    </Suspense>
+  ),
+});
+
+// Project Enrollment page (Phase 12)
+const enrollmentRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/projects/enrollment',
+  component: () => (
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
+      <ProjectEnrollment />
+    </Suspense>
+  ),
+});
+
 // Intelligence routes — redirects for removed pages (Phase 4)
 const intelRedirectRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -520,6 +592,55 @@ const intelProjectRoute = createRoute({
   ),
 });
 
+// Admin routes (Phase 11)
+const governanceRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin/governance',
+  component: () => (
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
+      <GovernancePage />
+    </Suspense>
+  ),
+});
+
+const approvalsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin/approvals',
+  component: () => (
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
+      <ApprovalsPage />
+    </Suspense>
+  ),
+});
+
+const dataQualityRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/admin/data-quality',
+  component: () => (
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
+      <DataQualityPage />
+    </Suspense>
+  ),
+});
+
 // Route tree — Phase 4 consolidated
 const routeTree = rootRoute.addChildren([
   indexRoute, // Inbox (/)
@@ -537,6 +658,12 @@ const routeTree = rootRoute.addChildren([
   scheduleRoute, // Schedule (/schedule) — Phase 8
   capacityRoute, // Capacity (/capacity) — Phase 8
   commitmentsRoute, // Commitments (/commitments) — Phase 9
+  notificationsRoute, // Notifications (/notifications) — Phase 10
+  digestRoute, // Digest (/digest) — Phase 10
+  enrollmentRoute, // Project Enrollment (/projects/enrollment) — Phase 12
+  governanceRoute, // Governance (/admin/governance) — Phase 11
+  approvalsRoute, // Approvals (/admin/approvals) — Phase 11
+  dataQualityRoute, // Data Quality (/admin/data-quality) — Phase 11
   // Intelligence routes (kept)
   intelSignalsRoute,
   intelPatternsRoute,
