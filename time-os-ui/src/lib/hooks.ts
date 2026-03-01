@@ -233,3 +233,18 @@ export function usePrioritiesGrouped(groupBy = 'project', limit = 50) {
 export function useBundleDetail(bundleId: string) {
   return useFetch(() => api.fetchBundleDetail(bundleId), [bundleId]);
 }
+
+// ==== Priorities Workspace Hooks (Phase 7) ====
+
+// Filtered priorities (for Priorities page)
+export function usePrioritiesFiltered(filters: api.PriorityFilteredParams = {}) {
+  return useFetch(
+    () => api.fetchPrioritiesFiltered(filters),
+    [filters.due, filters.assignee, filters.source, filters.project, filters.q, filters.limit]
+  );
+}
+
+// Saved filters
+export function useSavedFilters() {
+  return useFetch(() => api.fetchSavedFilters(), []);
+}

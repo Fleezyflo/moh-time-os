@@ -1,28 +1,22 @@
 # Session Handoff
 
-**Last updated:** 2026-02-28, Session 13 (Phase 6 code complete, pending commit)
-**Branch:** `main` (Phase 6 code ready to commit on new branch)
+**Last updated:** 2026-03-01, Session 14 (Phase 7 code complete, pending commit)
+**Branch:** `main` (Phase 7 code ready to commit on new branch)
 
 ## What Just Happened
 
-Session 13: Built Phase 6 (Task Management) -- all 9 steps complete (6.1-6.9).
+Session 14: Built Phase 7 (Priorities Workspace) -- all 5 steps complete (7.1-7.5).
 
-### Phase 6 Summary
-- **6.1:** Fixed `useTasks()` response shape bug -- remapped `{tasks: [...]}` to `{items: [...]}` in `fetchTasks()`
-- **6.2:** Added 13 new fetch functions + `putJson` helper to `lib/api.ts` covering task CRUD, delegation, escalation, recall, notes, priorities/advanced, priorities/grouped, bulk actions, bundle detail
-- **6.3:** Added 5 new hooks to `lib/hooks.ts` (useTaskDetail, useDelegations, usePrioritiesAdvanced, usePrioritiesGrouped, useBundleDetail)
-- **6.4:** Created TaskList page with search, metrics grid, tabbed views (All/Active/Blocked/Delegated/Completed)
-- **6.5:** Created TaskDetail page with view/edit modes, metadata grid, notes, delegation sidebar
-- **6.6:** Created 5 components: TaskCard, TaskActions, ApprovalDialog, DelegationPanel, TaskNotesList
-- **6.7:** ApprovalDialog handles governance blocks on delegate/escalate/update
-- **6.8-6.9:** Added `/tasks` and `/tasks/$taskId` routes, "Tasks" nav item, system-map regenerated (20 routes)
-
-### Expanded Task type
-The `Task` interface now includes delegation fields (delegated_by, delegated_at, delegated_note, delegation_status), escalation fields (escalated_to, escalation_level, escalation_reason), and metadata (description, urgency, source, tags, notes, completed_at). Priority changed from string enum to `number` (0-100 score). Status changed from string enum to `string`.
+### Phase 7 Summary
+- **7.1:** Added 5 new fetch functions to `lib/api.ts`: `fetchPrioritiesFiltered()`, `fetchSavedFilters()`, `completePriority()`, `snoozePriority()`, `archiveStalePriorities()`. New types: `PriorityFilteredParams`, `SavedFilter`. Reused Phase 6's `fetchPrioritiesAdvanced()`, `fetchPrioritiesGrouped()`, `bulkPriorityAction()`.
+- **7.2:** Added 2 new hooks: `usePrioritiesFiltered(filters)`, `useSavedFilters()`
+- **7.3:** Created Priorities page (~370 lines) with SummaryGrid (4 metrics), PriorityFilters bar, TabContainer (List/Grouped views), bulk actions, single-item quick actions (complete/snooze), archive-stale button, saved filter selector
+- **7.4:** Created 4 components: PriorityFilters (filter bar with search/due/assignee/project), GroupedPriorityView (grouped display with selection), BulkActionBar (floating bottom bar), SavedFilterSelector (dropdown preset)
+- **7.5:** Added `/priorities` route, "Priorities" nav item (between Tasks and Clients), system-map regenerated (21 routes)
 
 ## What's Next
 
-### Immediate: Commit and PR Phase 6
+### Immediate: Commit and PR Phase 7
 
 All code is written but not committed. Molham needs to:
 
@@ -34,19 +28,16 @@ All code is written but not committed. Molham needs to:
 2. **Format new files:**
    ```bash
    cd time-os-ui && pnpm exec prettier --write \
-     src/components/tasks/TaskCard.tsx \
-     src/components/tasks/TaskActions.tsx \
-     src/components/tasks/ApprovalDialog.tsx \
-     src/components/tasks/DelegationPanel.tsx \
-     src/components/tasks/TaskNotesList.tsx \
-     src/components/tasks/index.ts \
-     src/pages/TaskList.tsx \
-     src/pages/TaskDetail.tsx \
+     src/components/priorities/PriorityFilters.tsx \
+     src/components/priorities/GroupedPriorityView.tsx \
+     src/components/priorities/BulkActionBar.tsx \
+     src/components/priorities/SavedFilterSelector.tsx \
+     src/components/priorities/index.ts \
+     src/pages/Priorities.tsx \
      src/pages/index.ts \
      src/router.tsx \
      src/lib/api.ts \
-     src/lib/hooks.ts \
-     src/types/api.ts && cd ..
+     src/lib/hooks.ts && cd ..
    ```
 
 3. **Run pre-commit:**
@@ -57,64 +48,56 @@ All code is written but not committed. Molham needs to:
 4. **Commit and push:**
    ```bash
    cd ~/clawd/moh_time_os
-   git checkout -b feat/phase-6-task-management
+   git checkout -b feat/phase-7-priorities-workspace
    git add \
-     time-os-ui/src/types/api.ts \
      time-os-ui/src/lib/api.ts \
      time-os-ui/src/lib/hooks.ts \
      time-os-ui/src/router.tsx \
      time-os-ui/src/pages/index.ts \
-     time-os-ui/src/pages/TaskList.tsx \
-     time-os-ui/src/pages/TaskDetail.tsx \
-     time-os-ui/src/components/tasks/TaskCard.tsx \
-     time-os-ui/src/components/tasks/TaskActions.tsx \
-     time-os-ui/src/components/tasks/ApprovalDialog.tsx \
-     time-os-ui/src/components/tasks/DelegationPanel.tsx \
-     time-os-ui/src/components/tasks/TaskNotesList.tsx \
-     time-os-ui/src/components/tasks/index.ts \
+     time-os-ui/src/pages/Priorities.tsx \
+     time-os-ui/src/components/priorities/PriorityFilters.tsx \
+     time-os-ui/src/components/priorities/GroupedPriorityView.tsx \
+     time-os-ui/src/components/priorities/BulkActionBar.tsx \
+     time-os-ui/src/components/priorities/SavedFilterSelector.tsx \
+     time-os-ui/src/components/priorities/index.ts \
      docs/system-map.json \
      SESSION_LOG.md \
      HANDOFF.md \
      BUILD_PLAN.md
    git commit -m "$(cat <<'EOF'
-   feat: phase 6 -- task management pages and components
+   feat: phase 7 -- priorities workspace page and components
 
-   Task List page with search, metrics, tabbed views (All/Active/Blocked/
-   Delegated/Completed). Task Detail page with view/edit modes, delegation
-   sidebar, notes, and governance approval handling.
+   Priorities page with filtered list view, grouped view (by project/
+   assignee/source), bulk actions (complete/snooze/archive), single-item
+   quick actions, saved filter presets, and archive-stale utility.
 
-   - Fix useTasks() response shape bug (.tasks vs .items remapping)
-   - 13 new fetch functions (task CRUD, delegate, escalate, recall, notes,
-     priorities/advanced/grouped, bulk actions, bundle detail)
-   - 5 new hooks (useTaskDetail, useDelegations, usePrioritiesAdvanced,
-     usePrioritiesGrouped, useBundleDetail)
-   - 5 new components (TaskCard, TaskActions, ApprovalDialog,
-     DelegationPanel, TaskNotesList)
-   - Routes: /tasks, /tasks/:taskId with nav item
-   - System map: 18 -> 20 UI routes
+   - 5 new API functions (filtered priorities, saved filters, complete,
+     snooze, archive-stale) + 2 new hooks
+   - 4 new components (PriorityFilters, GroupedPriorityView,
+     BulkActionBar, SavedFilterSelector)
+   - Route: /priorities with nav item
+   - System map: 20 -> 21 UI routes
 
    large-change
    EOF
    )"
-   git push -u origin feat/phase-6-task-management
-   gh pr create --title "feat: phase 6 -- task management" --body "## Phase 6: Task Management
+   git push -u origin feat/phase-7-priorities-workspace
+   gh pr create --title "feat: phase 7 -- priorities workspace" --body "## Phase 7: Priorities Workspace
 
    ### Changes
-   - Fix useTasks() response shape bug (.tasks vs .items)
-   - 13 new API fetch functions for task CRUD, delegation, escalation, priorities
-   - 5 new React hooks
-   - TaskList page with search, metrics grid, 5 tabbed views
-   - TaskDetail page with view/edit modes, governance approval
-   - 5 new components: TaskCard, TaskActions, ApprovalDialog, DelegationPanel, TaskNotesList
-   - Routes: /tasks, /tasks/:taskId
-   - Nav: Tasks added between Portfolio and Clients
-   - System map: 18 → 20 UI routes
+   - 5 new API fetch functions + 2 types (PriorityFilteredParams, SavedFilter)
+   - 2 new React hooks (usePrioritiesFiltered, useSavedFilters)
+   - Priorities page with filtered list, grouped view, bulk actions
+   - 4 new components: PriorityFilters, GroupedPriorityView, BulkActionBar, SavedFilterSelector
+   - Route: /priorities with nav item between Tasks and Clients
+   - System map: 20 → 21 UI routes
 
    ### Verification
    - [x] All imports verified (no missing references)
    - [x] All prop types verified (match interfaces)
    - [x] Response shapes verified against server.py endpoints
-   - [x] System map regenerated with both task routes
+   - [x] React hooks before early returns
+   - [x] System map regenerated with priorities route
    - [ ] tsc --noEmit
    - [ ] prettier
    - [ ] CI green"
@@ -122,10 +105,10 @@ All code is written but not committed. Molham needs to:
    gh pr checks --watch
    ```
 
-### After Phase 6 merges: Phase 7 (Priorities Workspace)
-Per BUILD_PLAN step 7.1-7.5: Priorities page with advanced filters, grouping, bulk actions, saved filters.
+### After Phase 7 merges: Phase 8 (Time & Capacity)
+Per BUILD_PLAN step 8.1-8.6: Schedule page with day/week views, Capacity page with utilization gauges and forecast chart.
 
-## Key Rules (learned hard way in Sessions 1-13)
+## Key Rules (learned hard way in Sessions 1-14)
 
 1. **No bypasses.** Never add `nosec`, `noqa`, or `type: ignore`. Fix the root cause.
 2. **Stage everything.** Before committing, `git add` all modified files to prevent ruff-format stash conflicts.
@@ -165,7 +148,7 @@ Per BUILD_PLAN step 7.1-7.5: Priorities page with advanced filters, grouping, bu
 1. **This file (HANDOFF.md)** -- you're reading it, now follow the order below
 2. `CLAUDE.md` -- coding standards, sandbox rules, verification requirements
 3. `BUILD_STRATEGY.md` §3 -- entry/exit checklists, session contract
-4. `BUILD_PLAN.md` "Phase 7: Priorities Workspace" (line ~1187) -- the next spec
+4. `BUILD_PLAN.md` "Phase 8: Time & Capacity" (line ~1209) -- the next spec
 5. `SESSION_LOG.md` -- what's done, current state, lessons learned
 
 ## Quick Reference
@@ -178,6 +161,7 @@ Per BUILD_PLAN step 7.1-7.5: Priorities page with advanced filters, grouping, bu
 - **Chart colors:** `time-os-ui/src/intelligence/components/chartColors.ts`
 - **Layout components:** `time-os-ui/src/components/layout/` (PageLayout, SummaryGrid, MetricCard, TabContainer)
 - **Task components:** `time-os-ui/src/components/tasks/` (TaskCard, TaskActions, ApprovalDialog, DelegationPanel, TaskNotesList)
+- **Priority components:** `time-os-ui/src/components/priorities/` (PriorityFilters, GroupedPriorityView, BulkActionBar, SavedFilterSelector)
 - **Accent color (D1):** `#3b82f6` (blue)
 - **Tertiary text (D2):** `slate-400` / `#94a3b8` (now `var(--grey-light)`)
 - **Do NOT run:** `uv sync`, `pnpm install`, `ruff format`, `npx`, or dev servers from the sandbox
