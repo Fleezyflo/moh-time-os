@@ -1075,3 +1075,85 @@ export async function fetchCapacityDebt(lane?: string): Promise<CapacityDebtResp
   const params = lane ? `?lane=${lane}` : '';
   return fetchJson<CapacityDebtResponse>(`/api/capacity/debt${params}`);
 }
+
+// ==== Commitments (Phase 9) ====
+
+/** Commitment from /api/commitments */
+export interface Commitment {
+  id: string;
+  text: string;
+  due_date: string | null;
+  status: string;
+  task_id: string | null;
+  source_type: string;
+  owner: string | null;
+  confidence: number;
+  created_at: string;
+}
+
+/** Commitments list response */
+export interface CommitmentsResponse {
+  commitments: Commitment[];
+  total: number;
+}
+
+/** Commitments summary response from /api/commitments/summary */
+export interface CommitmentsSummaryResponse {
+  [key: string]: unknown;
+}
+
+/** Fetch all commitments, optionally filtered by status */
+export async function fetchCommitments(status?: string, limit = 50): Promise<CommitmentsResponse> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (status) params.set('status', status);
+  return fetchJson<CommitmentsResponse>(`/api/commitments?${params.toString()}`);
+}
+
+/** Fetch untracked commitments (not linked to tasks) */
+export async function fetchUntrackedCommitments(limit = 50): Promise<CommitmentsResponse> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  return fetchJson<CommitmentsResponse>(`/api/commitments/untracked?${params.toString()}`);
+}
+
+/** Fetch commitments due by a date */
+export async function fetchCommitmentsDue(
+  date?: string
+): Promise<CommitmentsResponse & { date: string }> {
+  const params = date ? `?date=${date}` : '';
+  return fetchJson<CommitmentsResponse & { date: string }>(`/api/commitments/due${params}`);
+}
+
+/** Fetch commitments summary statistics */
+export async function fetchCommitmentsSummary(): Promise<CommitmentsSummaryResponse> {
+  return fetchJson<CommitmentsSummaryResponse>('/api/commitments/summary');
+}
+
+/** Link a commitment to a task */
+export async function linkCommitment(
+  commitmentId: string,
+  taskId: string
+): Promise<{ success: boolean; commitment_id: string; task_id: string }> {
+  const result = await postJson<{
+    success: boolean;
+    commitment_id: string;
+    task_id: string;
+  }>(`/api/commitments/${commitmentId}/link?task_id=${taskId}`, {});
+  if (result.success) {
+    invalidateCache('commitments');
+  }
+  return result;
+}
+
+/** Mark a commitment as done */
+export async function markCommitmentDone(
+  commitmentId: string
+): Promise<{ success: boolean; commitment_id: string }> {
+  const result = await postJson<{ success: boolean; commitment_id: string }>(
+    `/api/commitments/${commitmentId}/done`,
+    {}
+  );
+  if (result.success) {
+    invalidateCache('commitments');
+  }
+  return result;
+}
