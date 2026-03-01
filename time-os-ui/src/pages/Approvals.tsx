@@ -15,6 +15,16 @@ export default function Approvals() {
   const pendingActions = useMemo(() => actionsData?.actions ?? [], [actionsData]);
   const totalPending = approvals.length + pendingActions.length;
 
+  // Count by risk level — must be above early returns to satisfy rules-of-hooks
+  const riskCounts = useMemo(() => {
+    const counts: Record<string, number> = { low: 0, medium: 0, high: 0, critical: 0 };
+    for (const a of approvals) {
+      const level = a.risk_level ?? 'medium';
+      counts[level] = (counts[level] ?? 0) + 1;
+    }
+    return counts;
+  }, [approvals]);
+
   const handleRefresh = () => {
     refetch();
     refetchActions();
@@ -24,16 +34,6 @@ export default function Approvals() {
   if (error && !approvalsData) {
     return <ErrorState error={error} onRetry={refetch} hasData={false} />;
   }
-
-  // Count by risk level
-  const riskCounts = useMemo(() => {
-    const counts: Record<string, number> = { low: 0, medium: 0, high: 0, critical: 0 };
-    for (const a of approvals) {
-      const level = a.risk_level ?? 'medium';
-      counts[level] = (counts[level] ?? 0) + 1;
-    }
-    return counts;
-  }, [approvals]);
 
   return (
     <PageLayout title="Approvals" subtitle={`${totalPending} pending`}>
