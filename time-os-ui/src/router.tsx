@@ -24,6 +24,7 @@ const Portfolio = lazy(() => import('./pages/Portfolio'));
 const Operations = lazy(() => import('./pages/Operations'));
 const TaskList = lazy(() => import('./pages/TaskList'));
 const TaskDetail = lazy(() => import('./pages/TaskDetail'));
+const Priorities = lazy(() => import('./pages/Priorities'));
 
 // Intelligence pages (kept: signals, patterns, client/person/project intel)
 const Signals = lazy(() => import('./intelligence/pages/Signals'));
@@ -32,11 +33,12 @@ const ClientIntel = lazy(() => import('./intelligence/pages/ClientIntel'));
 const PersonIntel = lazy(() => import('./intelligence/pages/PersonIntel'));
 const ProjectIntel = lazy(() => import('./intelligence/pages/ProjectIntel'));
 
-// Navigation items — Phase 6 updated nav
+// Navigation items — Phase 7 updated nav
 const NAV_ITEMS = [
   { to: '/', label: 'Inbox' },
   { to: '/portfolio', label: 'Portfolio' },
   { to: '/tasks', label: 'Tasks' },
+  { to: '/priorities', label: 'Priorities' },
   { to: '/clients', label: 'Clients' },
   { to: '/issues', label: 'Issues' },
   { to: '/team', label: 'Team' },
@@ -345,6 +347,23 @@ const taskDetailRoute = createRoute({
   ),
 });
 
+// Priorities Workspace route (Phase 7)
+const prioritiesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/priorities',
+  component: () => (
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
+      <Priorities />
+    </Suspense>
+  ),
+});
+
 // Intelligence routes — redirects for removed pages (Phase 4)
 const intelRedirectRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -457,6 +476,7 @@ const routeTree = rootRoute.addChildren([
   opsRoute, // Operations (/ops)
   tasksRoute, // Tasks (/tasks) — Phase 6
   taskDetailRoute, // Task detail (/tasks/:taskId) — Phase 6
+  prioritiesRoute, // Priorities (/priorities) — Phase 7
   // Intelligence routes (kept)
   intelSignalsRoute,
   intelPatternsRoute,

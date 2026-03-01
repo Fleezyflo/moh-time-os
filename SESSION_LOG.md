@@ -2,11 +2,11 @@
 
 ## Current State
 
-- **Current phase:** Phase 6 (Task Management) IN PROGRESS. Phases -1 through 5 COMPLETE.
-- **Current track:** T3 (Task Management)
+- **Current phase:** Phase 7 (Priorities Workspace) CODE COMPLETE. Phases -1 through 6 COMPLETE.
+- **Current track:** T4 (Priorities Workspace)
 - **Blocked by:** Nothing. Code complete, pending commit + PR.
 - **D1/D2:** Resolved. Blue `#3b82f6`, slate-400 at 5.1:1.
-- **Next session:** Commit Phase 6 work, create PR, verify CI, then Phase 7.
+- **Next session:** Commit Phase 7 work (with Phase 6 if not yet merged), create PR, verify CI, then Phase 8.
 
 ## Session History
 
@@ -550,3 +550,57 @@
   - `uv run pre-commit run -a` (full repo)
 - **PRs:** Pending commit.
 - **Lessons:** None new -- existing patterns held.
+
+### Session 14 (Phase 7: Priorities Workspace) -- 2026-03-01
+
+- **Type:** A (Build)
+- **Phase:** Phase 7 (T4 -- Priorities Workspace)
+- **Work done:**
+  - **Step 7.1 -- New fetch functions in `lib/api.ts` (~80 lines):**
+    - `fetchPrioritiesFiltered(filters)` -- GET /api/priorities/filtered with PriorityFilteredParams (due, assignee, source, project, q, limit)
+    - `fetchSavedFilters()` -- GET /api/filters, returns `{filters: SavedFilter[]}`
+    - `completePriority(itemId)` -- POST /api/priorities/{itemId}/complete, returns {success, id, bundle_id, signals_resolved}
+    - `snoozePriority(itemId, days)` -- POST /api/priorities/{itemId}/snooze, returns {success, id, new_due_date, bundle_id}
+    - `archiveStalePriorities(daysThreshold)` -- POST /api/priorities/archive-stale, returns {success, archived_count}
+    - New types: `PriorityFilteredParams`, `SavedFilter`
+    - Reuses existing: `PriorityItem`, `PaginatedResponse`, `fetchPrioritiesAdvanced`, `fetchPrioritiesGrouped`, `bulkPriorityAction`
+  - **Step 7.2 -- New hooks in `lib/hooks.ts`:**
+    - `usePrioritiesFiltered(filters)` -- fetches filtered priorities with dependency on each filter field
+    - `useSavedFilters()` -- fetches saved filter presets
+  - **Step 7.3 -- New page `pages/Priorities.tsx` (~370 lines):**
+    - SummaryGrid with 4 MetricCards: Total Items, Overdue (danger/success), High Priority (warning), Avg Score
+    - PriorityFilters bar with search, due date dropdown, assignee text, project text, "Clear all" button
+    - TabContainer with List/Grouped views
+    - List view: select-all checkbox, PriorityListItem rows with checkbox, score badge, title, metadata, due date, hover quick actions (complete, snooze 1d)
+    - Grouped view: GroupedPriorityView component with group-by selector (project/assignee/source)
+    - Bulk action handlers wired to bulkPriorityAction API
+    - Single item handlers for complete, snooze via completePriority/snoozePriority
+    - Archive stale button in page header
+    - SavedFilterSelector dropdown for preset filters
+    - Inline PriorityListItem subcomponent with hover-reveal action icons
+  - **Step 7.4 -- 4 new components + barrel export:**
+    - `components/priorities/PriorityFilters.tsx` -- Filter bar with search (submit on Enter/blur), due dropdown, assignee/project inputs, clear-all
+    - `components/priorities/GroupedPriorityView.tsx` -- Renders groups sorted by count desc, each with header (name + count + avg score), checkbox-selectable items with score, assignee, reasons, due date
+    - `components/priorities/BulkActionBar.tsx` -- Fixed bottom bar appears when selection > 0. Complete/Snooze (1/3/7/14d menu)/Archive/Clear buttons with loading states
+    - `components/priorities/SavedFilterSelector.tsx` -- Select dropdown mapping saved filter fields to PriorityFilteredParams
+    - `components/priorities/index.ts` -- Barrel export
+  - **Step 7.5 -- Route and nav:**
+    - Added `/priorities` route to router.tsx with lazy-loaded Priorities component
+    - Added "Priorities" to NAV_ITEMS between Tasks and Clients
+    - System map regenerated: 21 UI routes (was 20)
+- **Files changed:** 3 modified, 7 new.
+  - Modified: `lib/api.ts`, `lib/hooks.ts`, `router.tsx`, `pages/index.ts`, `docs/system-map.json`
+  - New: `components/priorities/PriorityFilters.tsx`, `components/priorities/GroupedPriorityView.tsx`, `components/priorities/BulkActionBar.tsx`, `components/priorities/SavedFilterSelector.tsx`, `components/priorities/index.ts`, `pages/Priorities.tsx`
+- **Verification completed:**
+  - System map: 21 routes, `/priorities` confirmed present
+  - All imports verified: no missing references
+  - All prop types verified: match component interfaces
+  - Response shapes verified against server.py endpoint implementations
+  - React hooks rule verified: all hooks called before early returns in Priorities.tsx
+  - Reused Phase 6 types (PriorityItem, PaginatedResponse) -- no duplication
+- **Verification needed (Mac):**
+  - `cd time-os-ui && npx tsc --noEmit && cd ..`
+  - Prettier on all new .tsx/.ts files
+  - `uv run pre-commit run -a` (full repo)
+- **PRs:** Pending commit.
+- **Lessons:** None new -- existing patterns held. Phase 6 had already wired most priority API functions, Phase 7 added the missing filtered/saved-filter endpoints and the UI page.

@@ -9,3 +9,4 @@ export { Portfolio } from './Portfolio';
 export { Operations } from './Operations';
 export { default as TaskList } from './TaskList';
 export { default as TaskDetail } from './TaskDetail';
+export { default as Priorities } from './Priorities';

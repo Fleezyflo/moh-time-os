@@ -1157,7 +1157,7 @@ Operations.tsx
 
 ---
 
-### Phase 6: Task Management (§1 Sections 8a, 8b) -- CODE COMPLETE (Session 13, pending PR)
+### Phase 6: Task Management (§1 Sections 8a, 8b) -- ✅ COMPLETE (Session 13)
 
 **Size:** 2 new pages, ~5 new components, ~15 endpoints wired.
 **Dependencies:** Phase 5 complete (shared components, design system, layout).
@@ -1184,7 +1184,7 @@ Operations.tsx
 
 ---
 
-### Phase 7: Priorities Workspace (§1 Section 9)
+### Phase 7: Priorities Workspace (§1 Section 9) -- ✅ COMPLETE (Session 14)
 
 **Size:** 1 new page, ~4 new components, ~10 endpoints wired.
 **Dependencies:** Phase 6 (reuses task components and hooks).

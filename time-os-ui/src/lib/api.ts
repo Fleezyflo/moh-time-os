@@ -789,3 +789,97 @@ export async function bulkPriorityAction(
 export async function fetchBundleDetail(bundleId: string): Promise<Record<string, unknown>> {
   return fetchJson(`/api/bundles/${bundleId}`);
 }
+
+// ==== Priorities Workspace Endpoints (Phase 7) ====
+
+/** Filters for GET /api/priorities/filtered */
+export interface PriorityFilteredParams {
+  due?: 'today' | 'week' | 'overdue';
+  assignee?: string;
+  source?: string;
+  project?: string;
+  q?: string;
+  limit?: number;
+}
+
+/** Fetch filtered priorities from GET /api/priorities/filtered */
+export async function fetchPrioritiesFiltered(
+  filters: PriorityFilteredParams = {}
+): Promise<{ items: PriorityItem[]; total: number }> {
+  const params = new URLSearchParams();
+  if (filters.due) params.set('due', filters.due);
+  if (filters.assignee) params.set('assignee', filters.assignee);
+  if (filters.source) params.set('source', filters.source);
+  if (filters.project) params.set('project', filters.project);
+  if (filters.q) params.set('q', filters.q);
+  if (filters.limit != null) params.set('limit', String(filters.limit));
+  const qs = params.toString();
+  return fetchJson(`/api/priorities/filtered${qs ? `?${qs}` : ''}`);
+}
+
+/** Saved filter from GET /api/filters */
+export interface SavedFilter {
+  id?: string;
+  name: string;
+  filters: Record<string, unknown>;
+  created_at?: string;
+}
+
+/** Fetch saved filters from GET /api/filters */
+export async function fetchSavedFilters(): Promise<{ filters: SavedFilter[] }> {
+  return fetchJson('/api/filters');
+}
+
+/** Complete a priority item via POST /api/priorities/{itemId}/complete */
+export async function completePriority(itemId: string): Promise<{
+  success: boolean;
+  id?: string;
+  bundle_id?: string;
+  signals_resolved?: number;
+  error?: string;
+}> {
+  const result = await postJson<{
+    success: boolean;
+    id?: string;
+    bundle_id?: string;
+    signals_resolved?: number;
+    error?: string;
+  }>(`/api/priorities/${itemId}/complete`, {});
+  if (result.success) invalidateCache('priorities');
+  return result;
+}
+
+/** Snooze a priority item via POST /api/priorities/{itemId}/snooze */
+export async function snoozePriority(
+  itemId: string,
+  days = 1
+): Promise<{
+  success: boolean;
+  id?: string;
+  new_due_date?: string;
+  bundle_id?: string;
+  error?: string;
+}> {
+  const result = await postJson<{
+    success: boolean;
+    id?: string;
+    new_due_date?: string;
+    bundle_id?: string;
+    error?: string;
+  }>(`/api/priorities/${itemId}/snooze?days=${days}`, {});
+  if (result.success) invalidateCache('priorities');
+  return result;
+}
+
+/** Archive stale priorities via POST /api/priorities/archive-stale */
+export async function archiveStalePriorities(
+  daysThreshold = 14
+): Promise<{ success: boolean; archived_count?: number; error?: string }> {
+  const result = await postJson<{
+    success: boolean;
+    archived_count?: number;
+    error?: string;
+  }>(`/api/priorities/archive-stale?days_threshold=${daysThreshold}`, {});
+  if (result.success) invalidateCache('priorities');
+  return result;
+}
