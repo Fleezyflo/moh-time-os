@@ -2,13 +2,46 @@
 
 ## Current State
 
-- **Current phase:** Phase 7 (Priorities Workspace) CODE COMPLETE. Phases -1 through 6 COMPLETE.
-- **Current track:** T4 (Priorities Workspace)
-- **Blocked by:** Nothing. Code complete, pending commit + PR.
+- **Current phase:** Phase 8 IN PROGRESS (Time & Capacity). Phases -1 through 7 COMPLETE.
+- **Current track:** T5 (Time & Capacity)
+- **Blocked by:** Nothing. Awaiting Molham to run tsc, prettier, commit, and push.
 - **D1/D2:** Resolved. Blue `#3b82f6`, slate-400 at 5.1:1.
-- **Next session:** Commit Phase 7 work (with Phase 6 if not yet merged), create PR, verify CI, then Phase 8.
+- **Next session:** Phase 8 PR merge, then Phase 9 (Commitments).
 
 ## Session History
+
+### Session 15 (Phase 8: Time & Capacity) -- 2026-03-02
+
+- **Type:** B (Build)
+- **Work done:**
+  - **8.1:** Added 11 fetch functions to `lib/api.ts`: `fetchTimeBlocks()`, `fetchTimeSummary()`, `scheduleTask()`, `unscheduleTask()`, `fetchEvents()`, `fetchDayView()`, `fetchWeekView()`, `fetchCapacityLanes()`, `fetchCapacityUtilization()`, `fetchCapacityForecast()`, `fetchCapacityDebt()`. New types: `TimeBlock`, `TimeBlocksResponse`, `TimeSummaryResponse`, `CalendarEvent`, `DayViewResponse`, `WeekViewResponse`, `CapacityLane`, `CapacityUtilizationResponse`, `ForecastEntry`, `CapacityForecastResponse`, `CapacityDebtResponse`.
+  - **8.2:** Added 9 hooks to `lib/hooks.ts`: `useTimeBlocks()`, `useTimeSummary()`, `useEvents()`, `useDayView()`, `useWeekView()`, `useCapacityLanes()`, `useCapacityUtilization()`, `useCapacityForecast()`, `useCapacityDebt()`.
+  - **8.3:** Created `pages/Schedule.tsx` (~220 lines) with day view (TimeBlockGrid), week view (WeekView), events tab, date picker, ScheduleTaskDialog for scheduling tasks into available blocks, inline unschedule for scheduled blocks.
+  - **8.4:** Created `pages/Capacity.tsx` (~260 lines) with utilization gauges (CapacityGauge), forecast chart (ForecastChart), debt list, lane selector, forecast days toggle (3/7/14d).
+  - **8.5:** Created 5 components:
+    - `components/schedule/TimeBlockGrid.tsx` -- renders blocks grouped by lane with color coding
+    - `components/schedule/WeekView.tsx` -- 7-day grid with utilization bars per day
+    - `components/schedule/ScheduleTaskDialog.tsx` -- modal for scheduling task into a block
+    - `components/capacity/CapacityGauge.tsx` -- circular SVG gauge with color thresholds
+    - `components/capacity/ForecastChart.tsx` -- bar chart showing scheduled vs available per day
+  - **8.6:** Added `/schedule` and `/capacity` routes, added "Schedule" and "Capacity" nav items (between Priorities and Clients), regenerated system-map (23 routes, was 21).
+- **Files changed:**
+  - `time-os-ui/src/lib/api.ts` -- +180 lines (fetch functions + types)
+  - `time-os-ui/src/lib/hooks.ts` -- +40 lines (9 hooks)
+  - `time-os-ui/src/pages/Schedule.tsx` -- new (~220 lines)
+  - `time-os-ui/src/pages/Capacity.tsx` -- new (~260 lines)
+  - `time-os-ui/src/components/schedule/TimeBlockGrid.tsx` -- new (~110 lines)
+  - `time-os-ui/src/components/schedule/WeekView.tsx` -- new (~100 lines)
+  - `time-os-ui/src/components/schedule/ScheduleTaskDialog.tsx` -- new (~90 lines)
+  - `time-os-ui/src/components/capacity/CapacityGauge.tsx` -- new (~65 lines)
+  - `time-os-ui/src/components/capacity/ForecastChart.tsx` -- new (~95 lines)
+  - `time-os-ui/src/router.tsx` -- +35 lines (routes, lazy imports, nav items)
+  - `docs/system-map.json` -- regenerated (23 UI routes)
+- **Verification:** Import/export cross-check passed. All props match component interfaces. All severity values valid. System map regenerated. Awaiting Mac-side tsc + prettier.
+- **PRs:** Pending -- needs commit + push + PR creation.
+- **Lessons learned:** None new (smooth build following established patterns).
+
+
 
 ### Session 0 (Planning) — 2026-02-25
 

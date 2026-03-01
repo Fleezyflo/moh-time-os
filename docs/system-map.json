@@ -1145,12 +1145,16 @@
     "api_routes_count": 195,
     "collectors_count": 9,
     "db_tables_count": 31,
-    "ui_routes_count": 21
+    "ui_routes_count": 23
   },
   "ui_api_calls": [],
   "ui_routes": [
     {
       "path": "/",
+      "source": "router.tsx"
+    },
+    {
+      "path": "/capacity",
       "source": "router.tsx"
     },
     {
@@ -1211,6 +1215,10 @@
     },
     {
       "path": "/priorities",
+      "source": "router.tsx"
+    },
+    {
+      "path": "/schedule",
       "source": "router.tsx"
     },
     {

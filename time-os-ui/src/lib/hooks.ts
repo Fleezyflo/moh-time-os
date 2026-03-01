@@ -248,3 +248,50 @@ export function usePrioritiesFiltered(filters: api.PriorityFilteredParams = {}) 
 export function useSavedFilters() {
   return useFetch(() => api.fetchSavedFilters(), []);
 }
+
+// ==== Time & Capacity Hooks (Phase 8) ====
+
+// Time blocks for a given date and optional lane
+export function useTimeBlocks(date?: string, lane?: string) {
+  return useFetch(() => api.fetchTimeBlocks(date, lane), [date, lane]);
+}
+
+// Time summary for a date
+export function useTimeSummary(date?: string) {
+  return useFetch(() => api.fetchTimeSummary(date), [date]);
+}
+
+// Events with optional date range
+export function useEvents(startDate?: string, endDate?: string, limit = 50) {
+  return useFetch(() => api.fetchEvents(startDate, endDate, limit), [startDate, endDate, limit]);
+}
+
+// Day view analysis
+export function useDayView(date?: string) {
+  return useFetch(() => api.fetchDayView(date), [date]);
+}
+
+// Week view analysis
+export function useWeekView() {
+  return useFetch(() => api.fetchWeekView(), []);
+}
+
+// Capacity lanes configuration
+export function useCapacityLanes() {
+  return useFetch(() => api.fetchCapacityLanes(), []);
+}
+
+// Capacity utilization metrics
+export function useCapacityUtilization(laneId?: string, targetDate?: string) {
+  return useFetch(() => api.fetchCapacityUtilization(laneId, targetDate), [laneId, targetDate]);
+}
+
+// Capacity forecast for upcoming days
+export function useCapacityForecast(laneId = 'default', days = 7) {
+  return useFetch(() => api.fetchCapacityForecast(laneId, days), [laneId, days]);
+}
+
+// Capacity debt report
+export function useCapacityDebt(lane?: string) {
+  return useFetch(() => api.fetchCapacityDebt(lane), [lane]);
+}

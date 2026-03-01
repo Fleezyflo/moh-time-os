@@ -1,114 +1,29 @@
 # Session Handoff
 
-**Last updated:** 2026-03-01, Session 14 (Phase 7 code complete, pending commit)
-**Branch:** `main` (Phase 7 code ready to commit on new branch)
+**Last updated:** 2026-03-02, Session 15 (Phase 8 built, awaiting commit)
+**Branch:** `main` (Phase 8 changes unstaged, ready for branch + commit)
 
 ## What Just Happened
 
-Session 14: Built Phase 7 (Priorities Workspace) -- all 5 steps complete (7.1-7.5).
+Session 15: Built Phase 8 (Time & Capacity) -- all code written, verified, ready for commit.
 
-### Phase 7 Summary
-- **7.1:** Added 5 new fetch functions to `lib/api.ts`: `fetchPrioritiesFiltered()`, `fetchSavedFilters()`, `completePriority()`, `snoozePriority()`, `archiveStalePriorities()`. New types: `PriorityFilteredParams`, `SavedFilter`. Reused Phase 6's `fetchPrioritiesAdvanced()`, `fetchPrioritiesGrouped()`, `bulkPriorityAction()`.
-- **7.2:** Added 2 new hooks: `usePrioritiesFiltered(filters)`, `useSavedFilters()`
-- **7.3:** Created Priorities page (~370 lines) with SummaryGrid (4 metrics), PriorityFilters bar, TabContainer (List/Grouped views), bulk actions, single-item quick actions (complete/snooze), archive-stale button, saved filter selector
-- **7.4:** Created 4 components: PriorityFilters (filter bar with search/due/assignee/project), GroupedPriorityView (grouped display with selection), BulkActionBar (floating bottom bar), SavedFilterSelector (dropdown preset)
-- **7.5:** Added `/priorities` route, "Priorities" nav item (between Tasks and Clients), system-map regenerated (21 routes)
+### Phase 8 Summary
+- **8.1:** Added 11 new fetch functions to `lib/api.ts`: `fetchTimeBlocks()`, `fetchTimeSummary()`, `scheduleTask()`, `unscheduleTask()`, `fetchEvents()`, `fetchDayView()`, `fetchWeekView()`, `fetchCapacityLanes()`, `fetchCapacityUtilization()`, `fetchCapacityForecast()`, `fetchCapacityDebt()`. New types: `TimeBlock`, `TimeBlocksResponse`, `TimeSummaryResponse`, `CalendarEvent`, `DayViewResponse`, `WeekViewResponse`, `CapacityLane`, `CapacityUtilizationResponse`, `ForecastEntry`, `CapacityForecastResponse`, `CapacityDebtResponse`.
+- **8.2:** Added 9 hooks: `useTimeBlocks()`, `useTimeSummary()`, `useEvents()`, `useDayView()`, `useWeekView()`, `useCapacityLanes()`, `useCapacityUtilization()`, `useCapacityForecast()`, `useCapacityDebt()`.
+- **8.3:** Created Schedule page (~220 lines) with day view (TimeBlockGrid by lane), week view (7-day grid with utilization bars), events tab, date picker, ScheduleTaskDialog for scheduling tasks into available blocks, inline unschedule for scheduled blocks.
+- **8.4:** Created Capacity page (~260 lines) with utilization gauges (circular SVG), forecast chart (bar chart), debt list, lane selector, forecast days toggle (3/7/14d).
+- **8.5:** Created 5 components: TimeBlockGrid, WeekView, ScheduleTaskDialog, CapacityGauge, ForecastChart.
+- **8.6:** Added `/schedule` and `/capacity` routes, "Schedule" and "Capacity" nav items (between Priorities and Clients), system-map regenerated (23 routes).
 
 ## What's Next
 
-### Immediate: Commit and PR Phase 7
+### Immediate: Commit Phase 8
+Run the commit block below. Then create PR, watch CI.
 
-All code is written but not committed. Molham needs to:
+### After Phase 8 merges: Phase 9 (Commitments)
+Per BUILD_PLAN step 9.1-9.5: Commitments page with list, summary cards, untracked alert, link-to-task dialog.
 
-1. **Verify types compile:**
-   ```bash
-   cd ~/clawd/moh_time_os/time-os-ui && npx tsc --noEmit && cd ..
-   ```
-
-2. **Format new files:**
-   ```bash
-   cd time-os-ui && pnpm exec prettier --write \
-     src/components/priorities/PriorityFilters.tsx \
-     src/components/priorities/GroupedPriorityView.tsx \
-     src/components/priorities/BulkActionBar.tsx \
-     src/components/priorities/SavedFilterSelector.tsx \
-     src/components/priorities/index.ts \
-     src/pages/Priorities.tsx \
-     src/pages/index.ts \
-     src/router.tsx \
-     src/lib/api.ts \
-     src/lib/hooks.ts && cd ..
-   ```
-
-3. **Run pre-commit:**
-   ```bash
-   uv run pre-commit run -a
-   ```
-
-4. **Commit and push:**
-   ```bash
-   cd ~/clawd/moh_time_os
-   git checkout -b feat/phase-7-priorities-workspace
-   git add \
-     time-os-ui/src/lib/api.ts \
-     time-os-ui/src/lib/hooks.ts \
-     time-os-ui/src/router.tsx \
-     time-os-ui/src/pages/index.ts \
-     time-os-ui/src/pages/Priorities.tsx \
-     time-os-ui/src/components/priorities/PriorityFilters.tsx \
-     time-os-ui/src/components/priorities/GroupedPriorityView.tsx \
-     time-os-ui/src/components/priorities/BulkActionBar.tsx \
-     time-os-ui/src/components/priorities/SavedFilterSelector.tsx \
-     time-os-ui/src/components/priorities/index.ts \
-     docs/system-map.json \
-     SESSION_LOG.md \
-     HANDOFF.md \
-     BUILD_PLAN.md
-   git commit -m "$(cat <<'EOF'
-   feat: phase 7 -- priorities workspace page and components
-
-   Priorities page with filtered list view, grouped view (by project/
-   assignee/source), bulk actions (complete/snooze/archive), single-item
-   quick actions, saved filter presets, and archive-stale utility.
-
-   - 5 new API functions (filtered priorities, saved filters, complete,
-     snooze, archive-stale) + 2 new hooks
-   - 4 new components (PriorityFilters, GroupedPriorityView,
-     BulkActionBar, SavedFilterSelector)
-   - Route: /priorities with nav item
-   - System map: 20 -> 21 UI routes
-
-   large-change
-   EOF
-   )"
-   git push -u origin feat/phase-7-priorities-workspace
-   gh pr create --title "feat: phase 7 -- priorities workspace" --body "## Phase 7: Priorities Workspace
-
-   ### Changes
-   - 5 new API fetch functions + 2 types (PriorityFilteredParams, SavedFilter)
-   - 2 new React hooks (usePrioritiesFiltered, useSavedFilters)
-   - Priorities page with filtered list, grouped view, bulk actions
-   - 4 new components: PriorityFilters, GroupedPriorityView, BulkActionBar, SavedFilterSelector
-   - Route: /priorities with nav item between Tasks and Clients
-   - System map: 20 → 21 UI routes
-
-   ### Verification
-   - [x] All imports verified (no missing references)
-   - [x] All prop types verified (match interfaces)
-   - [x] Response shapes verified against server.py endpoints
-   - [x] React hooks before early returns
-   - [x] System map regenerated with priorities route
-   - [ ] tsc --noEmit
-   - [ ] prettier
-   - [ ] CI green"
-   gh pr merge --merge --auto
-   gh pr checks --watch
-   ```
-
-### After Phase 7 merges: Phase 8 (Time & Capacity)
-Per BUILD_PLAN step 8.1-8.6: Schedule page with day/week views, Capacity page with utilization gauges and forecast chart.
-
-## Key Rules (learned hard way in Sessions 1-14)
+## Key Rules (learned hard way in Sessions 1-15)
 
 1. **No bypasses.** Never add `nosec`, `noqa`, or `type: ignore`. Fix the root cause.
 2. **Stage everything.** Before committing, `git add` all modified files to prevent ruff-format stash conflicts.
@@ -142,13 +57,15 @@ Per BUILD_PLAN step 8.1-8.6: Schedule page with day/week views, Capacity page wi
 30. **Always run commands from the correct directory.** Session 12 wasted time because commit commands ran from ~/enforcement instead of ~/clawd/moh_time_os.
 31. **Cross-file consistency on every doc update.** After updating any doc, verify all four files (SESSION_LOG, HANDOFF, CLAUDE, BUILD_PLAN) are consistent.
 32. **BUILD_PLAN.md is a documentation file.** Mark phases complete with session number the moment the phase PR merges.
+33. **Wrap derived arrays in useMemo.** `const items = data?.items || []` creates unstable references. Use `useMemo(() => data?.items ?? [], [data])` to prevent react-hooks/exhaustive-deps warnings.
+34. **Prettier api.ts after Phase changes.** api.ts accumulates additions across phases. Always include it in the prettier step even if you think only "small" changes were made.
 
 ## Documents to Read (in order)
 
 1. **This file (HANDOFF.md)** -- you're reading it, now follow the order below
 2. `CLAUDE.md` -- coding standards, sandbox rules, verification requirements
 3. `BUILD_STRATEGY.md` §3 -- entry/exit checklists, session contract
-4. `BUILD_PLAN.md` "Phase 8: Time & Capacity" (line ~1209) -- the next spec
+4. `BUILD_PLAN.md` "Phase 9: Commitments" -- the next spec
 5. `SESSION_LOG.md` -- what's done, current state, lessons learned
 
 ## Quick Reference
@@ -162,6 +79,8 @@ Per BUILD_PLAN step 8.1-8.6: Schedule page with day/week views, Capacity page wi
 - **Layout components:** `time-os-ui/src/components/layout/` (PageLayout, SummaryGrid, MetricCard, TabContainer)
 - **Task components:** `time-os-ui/src/components/tasks/` (TaskCard, TaskActions, ApprovalDialog, DelegationPanel, TaskNotesList)
 - **Priority components:** `time-os-ui/src/components/priorities/` (PriorityFilters, GroupedPriorityView, BulkActionBar, SavedFilterSelector)
+- **Schedule components:** `time-os-ui/src/components/schedule/` (TimeBlockGrid, WeekView, ScheduleTaskDialog)
+- **Capacity components:** `time-os-ui/src/components/capacity/` (CapacityGauge, ForecastChart)
 - **Accent color (D1):** `#3b82f6` (blue)
 - **Tertiary text (D2):** `slate-400` / `#94a3b8` (now `var(--grey-light)`)
 - **Do NOT run:** `uv sync`, `pnpm install`, `ruff format`, `npx`, or dev servers from the sandbox

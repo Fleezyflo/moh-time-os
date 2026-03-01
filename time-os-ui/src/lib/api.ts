@@ -883,3 +883,195 @@ export async function archiveStalePriorities(
   if (result.success) invalidateCache('priorities');
   return result;
 }
+
+// ==== Time & Capacity Functions (Phase 8) ====
+
+/** Time block from /api/time/blocks */
+export interface TimeBlock {
+  id: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  lane: string;
+  task_id: string | null;
+  is_protected: boolean;
+  is_buffer: boolean;
+  duration_min: number;
+  is_available: boolean;
+  task_title?: string;
+  task_status?: string;
+}
+
+/** Response from /api/time/blocks */
+export interface TimeBlocksResponse {
+  date: string;
+  blocks: TimeBlock[];
+  total: number;
+}
+
+/** Fetch time blocks for a given date and optional lane */
+export async function fetchTimeBlocks(date?: string, lane?: string): Promise<TimeBlocksResponse> {
+  const params = new URLSearchParams();
+  if (date) params.set('date', date);
+  if (lane) params.set('lane', lane);
+  const qs = params.toString();
+  return fetchJson<TimeBlocksResponse>(`/api/time/blocks${qs ? `?${qs}` : ''}`);
+}
+
+/** Response from /api/time/summary */
+export interface TimeSummaryResponse {
+  date: string;
+  time: Record<string, unknown>;
+  scheduling: Record<string, unknown>;
+}
+
+/** Fetch time summary for a date */
+export async function fetchTimeSummary(date?: string): Promise<TimeSummaryResponse> {
+  const params = date ? `?date=${date}` : '';
+  return fetchJson<TimeSummaryResponse>(`/api/time/summary${params}`);
+}
+
+/** Schedule a task into a time block */
+export async function scheduleTask(
+  taskId: string,
+  blockId?: string,
+  date?: string
+): Promise<{ success: boolean; message: string; block_id?: string }> {
+  const params = new URLSearchParams({ task_id: taskId });
+  if (blockId) params.set('block_id', blockId);
+  if (date) params.set('date', date);
+  const result = await postJson<{ success: boolean; message: string; block_id?: string }>(
+    `/api/time/schedule?${params.toString()}`,
+    {}
+  );
+  if (result.success) {
+    invalidateCache('time');
+    invalidateCache('blocks');
+  }
+  return result;
+}
+
+/** Unschedule a task from its time block */
+export async function unscheduleTask(
+  taskId: string
+): Promise<{ success: boolean; message: string }> {
+  const result = await postJson<{ success: boolean; message: string }>(
+    `/api/time/unschedule?task_id=${taskId}`,
+    {}
+  );
+  if (result.success) {
+    invalidateCache('time');
+    invalidateCache('blocks');
+  }
+  return result;
+}
+
+/** Event from /api/v2/events */
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  start_time: string;
+  end_time: string;
+  location?: string;
+  status?: string;
+  source?: string;
+}
+
+/** Fetch events with optional date range */
+export async function fetchEvents(
+  startDate?: string,
+  endDate?: string,
+  limit = 50
+): Promise<ApiListResponse<CalendarEvent>> {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (startDate) params.set('start_date', startDate);
+  if (endDate) params.set('end_date', endDate);
+  return fetchJson<ApiListResponse<CalendarEvent>>(`${API_BASE}/events?${params.toString()}`);
+}
+
+/** Day view response from /api/day/{date} */
+export interface DayViewResponse {
+  [key: string]: unknown;
+}
+
+/** Fetch day view analysis */
+export async function fetchDayView(date?: string): Promise<DayViewResponse> {
+  const path = date ? `/api/day/${date}` : '/api/day/';
+  return fetchJson<DayViewResponse>(path);
+}
+
+/** Week view response from /api/week */
+export interface WeekViewResponse {
+  [key: string]: unknown;
+}
+
+/** Fetch week view analysis */
+export async function fetchWeekView(): Promise<WeekViewResponse> {
+  return fetchJson<WeekViewResponse>('/api/week');
+}
+
+/** Capacity lane from /api/capacity/lanes */
+export interface CapacityLane {
+  id: string;
+  name: string;
+  [key: string]: unknown;
+}
+
+/** Fetch capacity lanes configuration */
+export async function fetchCapacityLanes(): Promise<{ lanes: CapacityLane[] }> {
+  return fetchJson<{ lanes: CapacityLane[] }>('/api/capacity/lanes');
+}
+
+/** Capacity utilization response */
+export interface CapacityUtilizationResponse {
+  utilization?: Record<string, unknown>;
+  [key: string]: unknown;
+}
+
+/** Fetch capacity utilization metrics */
+export async function fetchCapacityUtilization(
+  laneId?: string,
+  targetDate?: string
+): Promise<CapacityUtilizationResponse> {
+  const params = new URLSearchParams();
+  if (laneId) params.set('lane_id', laneId);
+  if (targetDate) params.set('target_date', targetDate);
+  const qs = params.toString();
+  return fetchJson<CapacityUtilizationResponse>(`/api/capacity/utilization${qs ? `?${qs}` : ''}`);
+}
+
+/** Forecast entry from /api/capacity/forecast */
+export interface ForecastEntry {
+  date: string;
+  [key: string]: unknown;
+}
+
+/** Capacity forecast response */
+export interface CapacityForecastResponse {
+  lane_id: string;
+  days: number;
+  forecasts: ForecastEntry[];
+}
+
+/** Fetch capacity forecast for upcoming days */
+export async function fetchCapacityForecast(
+  laneId = 'default',
+  days = 7
+): Promise<CapacityForecastResponse> {
+  const params = new URLSearchParams({
+    lane_id: laneId,
+    days: String(days),
+  });
+  return fetchJson<CapacityForecastResponse>(`/api/capacity/forecast?${params.toString()}`);
+}
+
+/** Capacity debt response */
+export interface CapacityDebtResponse {
+  [key: string]: unknown;
+}
+
+/** Fetch capacity debt report */
+export async function fetchCapacityDebt(lane?: string): Promise<CapacityDebtResponse> {
+  const params = lane ? `?lane=${lane}` : '';
+  return fetchJson<CapacityDebtResponse>(`/api/capacity/debt${params}`);
+}
