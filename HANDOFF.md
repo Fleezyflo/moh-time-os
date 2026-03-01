@@ -1,29 +1,109 @@
 # Session Handoff
 
-**Last updated:** 2026-03-02, Session 15 (Phase 8 built, awaiting commit)
-**Branch:** `main` (Phase 8 changes unstaged, ready for branch + commit)
+**Last updated:** 2026-03-02, Session 16 (Phase 9 built, pending commit)
+**Branch:** `main` (need to create feature branch for Phase 9)
 
 ## What Just Happened
 
-Session 15: Built Phase 8 (Time & Capacity) -- all code written, verified, ready for commit.
+Session 16: Built Phase 9 (Commitments). All code written, pending commit/PR/CI.
 
-### Phase 8 Summary
-- **8.1:** Added 11 new fetch functions to `lib/api.ts`: `fetchTimeBlocks()`, `fetchTimeSummary()`, `scheduleTask()`, `unscheduleTask()`, `fetchEvents()`, `fetchDayView()`, `fetchWeekView()`, `fetchCapacityLanes()`, `fetchCapacityUtilization()`, `fetchCapacityForecast()`, `fetchCapacityDebt()`. New types: `TimeBlock`, `TimeBlocksResponse`, `TimeSummaryResponse`, `CalendarEvent`, `DayViewResponse`, `WeekViewResponse`, `CapacityLane`, `CapacityUtilizationResponse`, `ForecastEntry`, `CapacityForecastResponse`, `CapacityDebtResponse`.
-- **8.2:** Added 9 hooks: `useTimeBlocks()`, `useTimeSummary()`, `useEvents()`, `useDayView()`, `useWeekView()`, `useCapacityLanes()`, `useCapacityUtilization()`, `useCapacityForecast()`, `useCapacityDebt()`.
-- **8.3:** Created Schedule page (~220 lines) with day view (TimeBlockGrid by lane), week view (7-day grid with utilization bars), events tab, date picker, ScheduleTaskDialog for scheduling tasks into available blocks, inline unschedule for scheduled blocks.
-- **8.4:** Created Capacity page (~260 lines) with utilization gauges (circular SVG), forecast chart (bar chart), debt list, lane selector, forecast days toggle (3/7/14d).
-- **8.5:** Created 5 components: TimeBlockGrid, WeekView, ScheduleTaskDialog, CapacityGauge, ForecastChart.
-- **8.6:** Added `/schedule` and `/capacity` routes, "Schedule" and "Capacity" nav items (between Priorities and Clients), system-map regenerated (23 routes).
+### Phase 9 Summary
+- **9.1:** Added 4 fetch + 2 mutation functions to `lib/api.ts`: `fetchCommitments()`, `fetchUntrackedCommitments()`, `fetchCommitmentsDue()`, `fetchCommitmentsSummary()`, `linkCommitment()`, `markCommitmentDone()`. New types: `Commitment`, `CommitmentsResponse`, `CommitmentsSummaryResponse`.
+- **9.2:** Added 4 hooks: `useCommitments()`, `useUntrackedCommitments()`, `useCommitmentsDue()`, `useCommitmentsSummary()`.
+- **9.3:** Created Commitments page (~190 lines) with three tabs (All, Untracked, Due Soon), summary cards, status filter, untracked alert banner, LinkToTaskDialog.
+- **9.4:** Created 2 components: CommitmentList (status dots, actions), LinkToTaskDialog (modal for linking to task ID).
+- **9.5:** Added `/commitments` route, "Commitments" nav item (between Capacity and Clients).
 
 ## What's Next
 
-### Immediate: Commit Phase 8
-Run the commit block below. Then create PR, watch CI.
+### Immediate: Commit Phase 9
 
-### After Phase 8 merges: Phase 9 (Commitments)
-Per BUILD_PLAN step 9.1-9.5: Commitments page with list, summary cards, untracked alert, link-to-task dialog.
+Run the commit block below from `~/clawd/moh_time_os`. System-map must be regenerated before commit.
 
-## Key Rules (learned hard way in Sessions 1-15)
+```bash
+# 1. Verify types compile
+cd time-os-ui && npx tsc --noEmit && cd ..
+
+# 2. Format new/changed files
+cd time-os-ui && pnpm exec prettier --write \
+  src/lib/api.ts \
+  src/lib/hooks.ts \
+  src/pages/Commitments.tsx \
+  src/components/commitments/CommitmentList.tsx \
+  src/components/commitments/LinkToTaskDialog.tsx \
+  src/router.tsx \
+  && cd ..
+
+# 3. Regenerate system map (new /commitments route)
+uv run python scripts/generate_system_map.py
+
+# 4. Create branch and commit
+git checkout -b phase-9-commitments
+git add \
+  time-os-ui/src/lib/api.ts \
+  time-os-ui/src/lib/hooks.ts \
+  time-os-ui/src/pages/Commitments.tsx \
+  time-os-ui/src/components/commitments/CommitmentList.tsx \
+  time-os-ui/src/components/commitments/LinkToTaskDialog.tsx \
+  time-os-ui/src/router.tsx \
+  docs/system-map.json \
+  SESSION_LOG.md \
+  HANDOFF.md
+
+git commit -m "$(cat <<'EOF'
+feat: add commitments page with list, untracked alert, link-to-task
+
+Phase 9 -- commitments tracking UI. Wires 6 server.py endpoints:
+GET /api/commitments, /api/commitments/untracked,
+/api/commitments/due, /api/commitments/summary,
+POST /api/commitments/{id}/link, POST /api/commitments/{id}/done.
+
+New page with three tabs (All, Untracked, Due Soon), summary cards,
+status filter, untracked alert banner, and LinkToTaskDialog.
+
+Components: CommitmentList, LinkToTaskDialog.
+Route: /commitments (nav between Capacity and Clients).
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
+EOF
+)"
+
+# 5. Push and create PR
+git push -u origin phase-9-commitments
+gh pr create --title "feat: phase 9 -- commitments page" --body "$(cat <<'EOF'
+## Summary
+- Wires 6 commitment endpoints from server.py
+- New Commitments page with All/Untracked/Due tabs, summary cards, status filter
+- CommitmentList component with status dots, link/done actions
+- LinkToTaskDialog for linking untracked commitments to tasks
+- Nav item between Capacity and Clients, system-map regenerated
+
+## Files
+- `lib/api.ts` — 4 fetch + 2 mutation functions, 3 new types
+- `lib/hooks.ts` — 4 new hooks
+- `pages/Commitments.tsx` — new page (~190 lines)
+- `components/commitments/CommitmentList.tsx` — new component
+- `components/commitments/LinkToTaskDialog.tsx` — new component
+- `router.tsx` — route + nav item
+
+## Test plan
+- [ ] Commitments page loads at /commitments
+- [ ] All/Untracked/Due tabs render commitment lists
+- [ ] Status filter dropdown filters by status
+- [ ] Untracked alert shows when untracked count > 0
+- [ ] Link Task button opens dialog, linking updates list
+- [ ] Done button marks commitment done, list refreshes
+- [ ] Nav shows Commitments between Capacity and Clients
+EOF
+)"
+gh pr merge --merge --auto
+gh pr checks --watch
+```
+
+### After Phase 9 merges: Phase 10 (Notifications, Digest & Email)
+Per BUILD_PLAN step 10.1-10.7.
+
+## Key Rules (learned hard way in Sessions 1-16)
 
 1. **No bypasses.** Never add `nosec`, `noqa`, or `type: ignore`. Fix the root cause.
 2. **Stage everything.** Before committing, `git add` all modified files to prevent ruff-format stash conflicts.
@@ -65,7 +145,7 @@ Per BUILD_PLAN step 9.1-9.5: Commitments page with list, summary cards, untracke
 1. **This file (HANDOFF.md)** -- you're reading it, now follow the order below
 2. `CLAUDE.md` -- coding standards, sandbox rules, verification requirements
 3. `BUILD_STRATEGY.md` §3 -- entry/exit checklists, session contract
-4. `BUILD_PLAN.md` "Phase 9: Commitments" -- the next spec
+4. `BUILD_PLAN.md` "Phase 10: Notifications, Digest & Email" -- the next spec
 5. `SESSION_LOG.md` -- what's done, current state, lessons learned
 
 ## Quick Reference
@@ -81,6 +161,7 @@ Per BUILD_PLAN step 9.1-9.5: Commitments page with list, summary cards, untracke
 - **Priority components:** `time-os-ui/src/components/priorities/` (PriorityFilters, GroupedPriorityView, BulkActionBar, SavedFilterSelector)
 - **Schedule components:** `time-os-ui/src/components/schedule/` (TimeBlockGrid, WeekView, ScheduleTaskDialog)
 - **Capacity components:** `time-os-ui/src/components/capacity/` (CapacityGauge, ForecastChart)
+- **Commitment components:** `time-os-ui/src/components/commitments/` (CommitmentList, LinkToTaskDialog)
 - **Accent color (D1):** `#3b82f6` (blue)
 - **Tertiary text (D2):** `slate-400` / `#94a3b8` (now `var(--grey-light)`)
 - **Do NOT run:** `uv sync`, `pnpm install`, `ruff format`, `npx`, or dev servers from the sandbox

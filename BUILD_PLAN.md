@@ -1206,7 +1206,7 @@ Operations.tsx
 
 ---
 
-### Phase 8: Time & Capacity (§1 Sections 10, 11)
+### Phase 8: Time & Capacity (§1 Sections 10, 11) ✅ COMPLETE (Session 15, PR #45)
 
 **Size:** 2 new pages, ~5 new components, ~10 endpoints wired.
 **Dependencies:** Phase 6 (task references for scheduling).
@@ -1229,7 +1229,7 @@ Operations.tsx
 
 ---
 
-### Phase 9: Commitments (§1 Section 12)
+### Phase 9: Commitments (§1 Section 12) — BUILT Session 16, pending PR
 
 **Size:** 1 new page, ~3 new components, ~6 endpoints wired.
 **Dependencies:** Phase 5 (shared components). Can run parallel with Phases 6-8.

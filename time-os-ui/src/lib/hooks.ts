@@ -295,3 +295,25 @@ export function useCapacityForecast(laneId = 'default', days = 7) {
 export function useCapacityDebt(lane?: string) {
   return useFetch(() => api.fetchCapacityDebt(lane), [lane]);
 }
+
+// ==== Commitments Hooks (Phase 9) ====
+
+// All commitments, optionally filtered by status
+export function useCommitments(status?: string, limit = 50) {
+  return useFetch(() => api.fetchCommitments(status, limit), [status, limit]);
+}
+
+// Untracked commitments (not linked to tasks)
+export function useUntrackedCommitments(limit = 50) {
+  return useFetch(() => api.fetchUntrackedCommitments(limit), [limit]);
+}
+
+// Commitments due by a date
+export function useCommitmentsDue(date?: string) {
+  return useFetch(() => api.fetchCommitmentsDue(date), [date]);
+}
+
+// Commitments summary statistics
+export function useCommitmentsSummary() {
+  return useFetch(() => api.fetchCommitmentsSummary(), []);
+}

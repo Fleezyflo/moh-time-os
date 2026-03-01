@@ -2,13 +2,35 @@
 
 ## Current State
 
-- **Current phase:** Phase 8 IN PROGRESS (Time & Capacity). Phases -1 through 7 COMPLETE.
-- **Current track:** T5 (Time & Capacity)
-- **Blocked by:** Nothing. Awaiting Molham to run tsc, prettier, commit, and push.
+- **Current phase:** Phase 9 IN PROGRESS (Commitments). Phases -1 through 8 COMPLETE.
+- **Current track:** T6 (Commitments)
+- **Blocked by:** Nothing.
 - **D1/D2:** Resolved. Blue `#3b82f6`, slate-400 at 5.1:1.
-- **Next session:** Phase 8 PR merge, then Phase 9 (Commitments).
+- **Next session:** Phase 9 commit, then Phase 10 (Notifications, Digest & Email).
 
 ## Session History
+
+### Session 16 (Phase 9: Commitments) -- 2026-03-02
+
+- **Type:** B (Build)
+- **Work done:**
+  - **9.1:** Added 4 fetch functions + 2 mutation functions to `lib/api.ts`: `fetchCommitments()`, `fetchUntrackedCommitments()`, `fetchCommitmentsDue()`, `fetchCommitmentsSummary()`, `linkCommitment()`, `markCommitmentDone()`. New types: `Commitment`, `CommitmentsResponse`, `CommitmentsSummaryResponse`.
+  - **9.2:** Added 4 hooks to `lib/hooks.ts`: `useCommitments()`, `useUntrackedCommitments()`, `useCommitmentsDue()`, `useCommitmentsSummary()`.
+  - **9.3:** Created `pages/Commitments.tsx` (~190 lines) with three tabs (All, Untracked, Due Soon), summary cards (total/untracked/due/done), status filter dropdown, untracked alert banner, LinkToTaskDialog integration.
+  - **9.4:** Created 2 components:
+    - `components/commitments/CommitmentList.tsx` -- renders commitments with status dots, owner, due date, source type, link/done actions
+    - `components/commitments/LinkToTaskDialog.tsx` -- modal dialog to link a commitment to a task ID
+  - **9.5:** Added `/commitments` route, "Commitments" nav item (between Capacity and Clients), lazy-loaded import.
+- **Files changed:**
+  - `time-os-ui/src/lib/api.ts` -- added ~95 lines (types + fetch/mutation functions)
+  - `time-os-ui/src/lib/hooks.ts` -- added ~20 lines (4 hooks)
+  - `time-os-ui/src/pages/Commitments.tsx` -- new file (~190 lines)
+  - `time-os-ui/src/components/commitments/CommitmentList.tsx` -- new file (~115 lines)
+  - `time-os-ui/src/components/commitments/LinkToTaskDialog.tsx` -- new file (~80 lines)
+  - `time-os-ui/src/router.tsx` -- added lazy import, route, nav item
+  - `docs/system-map.json` -- needs regeneration (Mac only)
+- **Verification:** Pending (Mac: tsc, prettier, system-map regeneration)
+
 
 ### Session 15 (Phase 8: Time & Capacity) -- 2026-03-02
 
