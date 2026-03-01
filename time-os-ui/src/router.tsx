@@ -27,6 +27,7 @@ const TaskDetail = lazy(() => import('./pages/TaskDetail'));
 const Priorities = lazy(() => import('./pages/Priorities'));
 const Schedule = lazy(() => import('./pages/Schedule'));
 const Capacity = lazy(() => import('./pages/Capacity'));
+const Commitments = lazy(() => import('./pages/Commitments'));
 
 // Intelligence pages (kept: signals, patterns, client/person/project intel)
 const Signals = lazy(() => import('./intelligence/pages/Signals'));
@@ -35,7 +36,7 @@ const ClientIntel = lazy(() => import('./intelligence/pages/ClientIntel'));
 const PersonIntel = lazy(() => import('./intelligence/pages/PersonIntel'));
 const ProjectIntel = lazy(() => import('./intelligence/pages/ProjectIntel'));
 
-// Navigation items — Phase 8 updated nav
+// Navigation items — Phase 9 updated nav
 const NAV_ITEMS = [
   { to: '/', label: 'Inbox' },
   { to: '/portfolio', label: 'Portfolio' },
@@ -43,6 +44,7 @@ const NAV_ITEMS = [
   { to: '/priorities', label: 'Priorities' },
   { to: '/schedule', label: 'Schedule' },
   { to: '/capacity', label: 'Capacity' },
+  { to: '/commitments', label: 'Commitments' },
   { to: '/clients', label: 'Clients' },
   { to: '/issues', label: 'Issues' },
   { to: '/team', label: 'Team' },
@@ -402,6 +404,23 @@ const capacityRoute = createRoute({
   ),
 });
 
+// Commitments page (Phase 9)
+const commitmentsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/commitments',
+  component: () => (
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
+      <Commitments />
+    </Suspense>
+  ),
+});
+
 // Intelligence routes — redirects for removed pages (Phase 4)
 const intelRedirectRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -517,6 +536,7 @@ const routeTree = rootRoute.addChildren([
   prioritiesRoute, // Priorities (/priorities) — Phase 7
   scheduleRoute, // Schedule (/schedule) — Phase 8
   capacityRoute, // Capacity (/capacity) — Phase 8
+  commitmentsRoute, // Commitments (/commitments) — Phase 9
   // Intelligence routes (kept)
   intelSignalsRoute,
   intelPatternsRoute,
