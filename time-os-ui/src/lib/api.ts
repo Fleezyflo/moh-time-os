@@ -831,9 +831,7 @@ export async function fetchSavedFilters(): Promise<{ filters: SavedFilter[] }> {
 }
 
 /** Complete a priority item via POST /api/priorities/{itemId}/complete */
-export async function completePriority(
-  itemId: string
-): Promise<{
+export async function completePriority(itemId: string): Promise<{
   success: boolean;
   id?: string;
   bundle_id?: string;
