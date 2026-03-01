@@ -44,8 +44,8 @@ export default function Priorities() {
   const { data: savedFilterData } = useSavedFilters();
   const { data: groupedData } = usePrioritiesGrouped(groupBy, 100);
 
-  const items = priorityData?.items || [];
-  const savedFilters = savedFilterData?.filters || [];
+  const items = useMemo(() => priorityData?.items ?? [], [priorityData]);
+  const savedFilters = useMemo(() => savedFilterData?.filters ?? [], [savedFilterData]);
 
   // Derive metrics
   const totalCount = priorityData?.total || 0;
