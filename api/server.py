@@ -2942,8 +2942,8 @@ async def get_notifications(include_dismissed: bool = False, limit: int = 50):
 @app.get("/api/notifications/stats", response_model=DetailResponse)
 async def get_notification_stats():
     """Get notification statistics."""
-    total = store.count("notifications", "1=1")
-    unread = store.count("notifications", "(dismissed = 0 OR dismissed IS NULL)")
+    total = store.count("notifications")
+    unread = store.count("notifications", "read_at IS NULL")
 
     return {"total": total, "unread": unread}
 
