@@ -3626,7 +3626,7 @@
             "required": true,
             "schema": {
               "title": "Client Id",
-              "type": "integer"
+              "type": "string"
             }
           }
         ],

@@ -7440,7 +7440,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                client_id: number;
+                client_id: string;
             };
             cookie?: never;
         };
