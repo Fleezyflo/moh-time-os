@@ -5354,6 +5354,74 @@ async def seed_identities():
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
+# ==== Command Center ====
+
+
+@app.get("/api/command/client-health", response_model=DetailResponse)
+async def command_client_health():
+    """Client health overview for agency command center."""
+    try:
+        from lib.command_center import ClientHealthView
+
+        view = ClientHealthView(get_store())
+        return {"success": True, "data": view.get_client_health()}
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("command/client-health error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@app.get("/api/command/client-health/{client_id}", response_model=DetailResponse)
+async def command_client_detail(client_id: int):
+    """Single client deep-dive for command center."""
+    try:
+        from lib.command_center import ClientHealthView
+
+        view = ClientHealthView(get_store())
+        return {"success": True, "data": view.get_client_detail(client_id)}
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("command/client-health detail error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@app.get("/api/command/team-load", response_model=DetailResponse)
+async def command_team_load():
+    """Team load overview for agency command center."""
+    try:
+        from lib.command_center import TeamLoadView
+
+        view = TeamLoadView(get_store())
+        return {"success": True, "data": view.get_team_load()}
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("command/team-load error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@app.get("/api/command/team-load/{member_name}", response_model=DetailResponse)
+async def command_member_detail(member_name: str):
+    """Single team member deep-dive for command center."""
+    try:
+        from lib.command_center import TeamLoadView
+
+        view = TeamLoadView(get_store())
+        return {"success": True, "data": view.get_member_detail(member_name)}
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("command/team-load detail error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@app.get("/api/command/decisions", response_model=DetailResponse)
+async def command_decisions():
+    """Decision queue -- items waiting on Molham."""
+    try:
+        from lib.command_center import DecisionQueueView
+
+        view = DecisionQueueView(get_store())
+        return {"success": True, "data": view.get_queue()}
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("command/decisions error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
 # ==== SPA Fallback (MUST be last route) ====
 
 

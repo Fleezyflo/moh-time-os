@@ -3596,6 +3596,143 @@
         "summary": "Get Client Projects"
       }
     },
+    "/api/command/client-health": {
+      "get": {
+        "description": "Client health overview for agency command center.",
+        "operationId": "command_client_health_api_command_client_health_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Command Client Health"
+      }
+    },
+    "/api/command/client-health/{client_id}": {
+      "get": {
+        "description": "Single client deep-dive for command center.",
+        "operationId": "command_client_detail_api_command_client_health__client_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Command Client Detail"
+      }
+    },
+    "/api/command/decisions": {
+      "get": {
+        "description": "Decision queue -- items waiting on Molham.",
+        "operationId": "command_decisions_api_command_decisions_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Command Decisions"
+      }
+    },
+    "/api/command/team-load": {
+      "get": {
+        "description": "Team load overview for agency command center.",
+        "operationId": "command_team_load_api_command_team_load_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Command Team Load"
+      }
+    },
+    "/api/command/team-load/{member_name}": {
+      "get": {
+        "description": "Single team member deep-dive for command center.",
+        "operationId": "command_member_detail_api_command_team_load__member_name__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "member_name",
+            "required": true,
+            "schema": {
+              "title": "Member Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Command Member Detail"
+      }
+    },
     "/api/commitments": {
       "get": {
         "description": "Get all commitments.",

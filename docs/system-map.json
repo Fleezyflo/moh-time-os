@@ -122,6 +122,31 @@
     },
     {
       "method": "GET",
+      "path": "/api/command/client-health",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/command/client-health/{client_id}",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/command/decisions",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/command/team-load",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/command/team-load/{member_name}",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
       "path": "/api/commitments",
       "source": "api/server.py"
     },
@@ -1187,10 +1212,10 @@
   ],
   "generated_by": "scripts/generate_system_map.py",
   "summary": {
-    "api_routes_count": 204,
+    "api_routes_count": 209,
     "collectors_count": 9,
     "db_tables_count": 31,
-    "ui_routes_count": 30
+    "ui_routes_count": 31
   },
   "ui_api_calls": [],
   "ui_routes": [
@@ -1220,6 +1245,10 @@
     },
     {
       "path": "/clients/$clientId",
+      "source": "router.tsx"
+    },
+    {
+      "path": "/command",
       "source": "router.tsx"
     },
     {
