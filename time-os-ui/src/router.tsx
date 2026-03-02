@@ -35,6 +35,7 @@ const ProjectEnrollment = lazy(() => import('./pages/ProjectEnrollment'));
 const GovernancePage = lazy(() => import('./pages/Governance'));
 const ApprovalsPage = lazy(() => import('./pages/Approvals'));
 const DataQualityPage = lazy(() => import('./pages/DataQuality'));
+const CommandCenter = lazy(() => import('./pages/CommandCenter'));
 
 // Intelligence pages (kept: signals, patterns, client/person/project intel)
 const Signals = lazy(() => import('./intelligence/pages/Signals'));
@@ -45,6 +46,7 @@ const ProjectIntel = lazy(() => import('./intelligence/pages/ProjectIntel'));
 
 // Navigation items — Phase 11 updated nav
 const NAV_ITEMS: Array<{ to: string; label: string; badge?: boolean }> = [
+  { to: '/command', label: 'Command' },
   { to: '/', label: 'Inbox' },
   { to: '/portfolio', label: 'Portfolio' },
   { to: '/tasks', label: 'Tasks' },
@@ -183,6 +185,22 @@ const rootRoute = createRootRoute({
 // Route definitions
 
 // Inbox is the primary page (Control Room per spec §1)
+const commandCenterRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/command',
+  component: () => (
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
+      <CommandCenter />
+    </Suspense>
+  ),
+});
+
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
@@ -633,6 +651,7 @@ const dataQualityRoute = createRoute({
 
 // Route tree — Phase 4 consolidated
 const routeTree = rootRoute.addChildren([
+  commandCenterRoute, // Command Center (/command)
   indexRoute, // Inbox (/)
   portfolioRoute, // Portfolio (/portfolio)
   issuesRoute,
