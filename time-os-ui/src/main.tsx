@@ -7,8 +7,8 @@ import { ErrorBoundary, ToastProvider } from './components';
 import { EventStreamSetup } from './components/EventStreamSetup';
 import './index.css';
 
-// Register service worker for PWA
-if ('serviceWorker' in navigator) {
+// Register service worker for PWA (production only — dev uses VitePWA devOptions)
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
   navigator.serviceWorker
     .getRegistrations()
     .then((registrations) => {
@@ -18,7 +18,6 @@ if ('serviceWorker' in navigator) {
       }
     })
     .then(() => {
-      // Register the new service worker from VitePWA
       return navigator.serviceWorker.register('/sw.js', { scope: '/' });
     })
     .then((registration) => {
