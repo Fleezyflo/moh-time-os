@@ -19,13 +19,18 @@ const taskPriorityColors: Record<string, string> = {
   urgent: 'text-[var(--danger)] bg-red-900/30',
   high: 'text-[var(--warning)] bg-orange-900/30',
   medium: 'text-amber-400 bg-[var(--warning)]/30',
+  normal: 'text-amber-400 bg-[var(--warning)]/30',
   low: 'text-[var(--grey-light)] bg-[var(--grey)]',
 };
 
 const taskStatusIcons: Record<string, { icon: string; color: string }> = {
+  active: { icon: '○', color: 'text-[var(--info)]' },
   open: { icon: '○', color: 'text-[var(--info)]' },
+  pending: { icon: '○', color: 'text-[var(--grey-light)]' },
   in_progress: { icon: '◐', color: 'text-purple-400' },
+  overdue: { icon: '⚠', color: 'text-[var(--danger)]' },
   blocked: { icon: '⊘', color: 'text-[var(--danger)]' },
+  completed: { icon: '✓', color: 'text-[var(--success)]' },
   done: { icon: '✓', color: 'text-[var(--success)]' },
   cancelled: { icon: '✗', color: 'text-[var(--grey-light)]' },
 };
@@ -250,7 +255,7 @@ export function TeamDetail() {
                     {memberTasks.slice(0, 10).map((task) => {
                       const statusStyle = taskStatusIcons[task.status] || taskStatusIcons.open;
                       const priorityStyle =
-                        taskPriorityColors[task.priority] || taskPriorityColors.low;
+                        taskPriorityColors[String(task.priority)] || taskPriorityColors.low;
                       const isOverdue = task.due_date && new Date(task.due_date) < new Date();
                       return (
                         <div

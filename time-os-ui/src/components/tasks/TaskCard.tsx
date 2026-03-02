@@ -1,14 +1,16 @@
 // TaskCard — Compact task display for list views
+import { Link } from '@tanstack/react-router';
 import type { Task } from '../../types/api';
 
 interface TaskCardProps {
   task: Task;
-  onClick?: (task: Task) => void;
 }
 
 const statusColors: Record<string, string> = {
+  active: 'var(--accent)',
   pending: 'var(--grey-light)',
   in_progress: 'var(--accent)',
+  overdue: 'var(--danger)',
   blocked: 'var(--danger)',
   completed: 'var(--success)',
   done: 'var(--success)',
@@ -23,18 +25,35 @@ const urgencyLabels: Record<string, string> = {
   low: 'Low',
 };
 
-function priorityLabel(score: number): string {
-  if (score >= 80) return 'Urgent';
-  if (score >= 60) return 'High';
-  if (score >= 30) return 'Medium';
-  return 'Low';
-}
+// Priority can be a number (0-100 score) or a string ("high", "normal", etc.)
+// from the Asana collector. Handle both.
+const STRING_PRIORITY_MAP: Record<string, { label: string; color: string; score: number }> = {
+  urgent: { label: 'Urgent', color: 'var(--danger)', score: 90 },
+  high: { label: 'High', color: 'var(--warning)', score: 70 },
+  medium: { label: 'Medium', color: 'var(--accent)', score: 50 },
+  normal: { label: 'Normal', color: 'var(--accent)', score: 40 },
+  low: { label: 'Low', color: 'var(--grey-light)', score: 20 },
+};
 
-function priorityColor(score: number): string {
-  if (score >= 80) return 'var(--danger)';
-  if (score >= 60) return 'var(--warning)';
-  if (score >= 30) return 'var(--accent)';
-  return 'var(--grey-light)';
+function parsePriority(raw: number | string | null | undefined): {
+  label: string;
+  color: string;
+  score: number | null;
+} {
+  if (raw == null) return { label: 'None', color: 'var(--grey-muted)', score: null };
+
+  // String priority from collector
+  if (typeof raw === 'string') {
+    const mapped = STRING_PRIORITY_MAP[raw.toLowerCase()];
+    if (mapped) return mapped;
+    return { label: raw, color: 'var(--grey-light)', score: null };
+  }
+
+  // Numeric priority (0-100 score)
+  if (raw >= 80) return { label: 'Urgent', color: 'var(--danger)', score: raw };
+  if (raw >= 60) return { label: 'High', color: 'var(--warning)', score: raw };
+  if (raw >= 30) return { label: 'Medium', color: 'var(--accent)', score: raw };
+  return { label: 'Low', color: 'var(--grey-light)', score: raw };
 }
 
 function formatDate(dateStr: string | null): string {
@@ -62,24 +81,16 @@ function dueDateColor(dateStr: string | null): string {
   return 'var(--grey-light)';
 }
 
-export function TaskCard({ task, onClick }: TaskCardProps) {
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if ((e.key === 'Enter' || e.key === ' ') && onClick) {
-      e.preventDefault();
-      onClick(task);
-    }
-  };
-
+export function TaskCard({ task }: TaskCardProps) {
   const isDelegated = !!task.delegated_by;
   const isEscalated = !!task.escalated_to;
+  const pri = parsePriority(task.priority);
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={() => onClick?.(task)}
-      onKeyDown={handleKeyDown}
-      className="card p-4 cursor-pointer hover:bg-[var(--grey)]/50 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
+    <Link
+      to="/tasks/$taskId"
+      params={{ taskId: task.id }}
+      className="block card p-4 cursor-pointer hover:bg-[var(--grey)]/50 transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
     >
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1 min-w-0">
@@ -95,9 +106,9 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
 
           {/* Metadata row */}
           <div className="flex items-center gap-3 text-xs text-[var(--grey-light)]">
-            <span style={{ color: priorityColor(task.priority) }}>
-              {priorityLabel(task.priority)}
-              {task.priority > 0 ? ` (${task.priority})` : ''}
+            <span style={{ color: pri.color }}>
+              {pri.label}
+              {pri.score != null && pri.score > 0 ? ` (${pri.score})` : ''}
             </span>
             {task.urgency && task.urgency !== 'normal' && (
               <span
@@ -115,7 +126,11 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
                 {urgencyLabels[task.urgency] || task.urgency}
               </span>
             )}
-            {task.assignee && <span title="Assignee">{task.assignee}</span>}
+            {task.assignee && (
+              <span title="Assignee" className="text-[var(--grey-light)]">
+                {task.assignee}
+              </span>
+            )}
             {task.project && (
               <span
                 className="text-[var(--grey-muted)] truncate max-w-[120px]"
@@ -146,6 +161,6 @@ export function TaskCard({ task, onClick }: TaskCardProps) {
           )}
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

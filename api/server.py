@@ -4,6 +4,7 @@ MOH TIME OS API Server - REST API for dashboard and integrations.
 # ruff: noqa: B904
 # B904: Legacy exception handling patterns throughout (3 instances of raise in except blocks without from)
 
+import dataclasses
 import json
 import logging
 import os
@@ -254,33 +255,37 @@ async def get_time_blocks(date: str | None = None, lane: str | None = None):
     if not date:
         date = dt.today().isoformat()
 
-    bm = BlockManager(store)
-    blocks = bm.get_all_blocks(date, lane or "")
+    try:
+        bm = BlockManager(store)
+        blocks = bm.get_all_blocks(date, lane or "")
 
-    result = []
-    for block in blocks:
-        block_dict = {
-            "id": block.id,
-            "date": block.date,
-            "start_time": block.start_time,
-            "end_time": block.end_time,
-            "lane": block.lane,
-            "task_id": block.task_id,
-            "is_protected": block.is_protected,
-            "is_buffer": block.is_buffer,
-            "duration_min": block.duration_min,
-            "is_available": block.is_available,
-        }
+        result = []
+        for block in blocks:
+            block_dict = {
+                "id": block.id,
+                "date": block.date,
+                "start_time": block.start_time,
+                "end_time": block.end_time,
+                "lane": block.lane,
+                "task_id": block.task_id,
+                "is_protected": block.is_protected,
+                "is_buffer": block.is_buffer,
+                "duration_min": block.duration_min,
+                "is_available": block.is_available,
+            }
 
-        if block.task_id:
-            task = store.get("tasks", block.task_id)
-            if task:
-                block_dict["task_title"] = task.get("title", "")
-                block_dict["task_status"] = task.get("status", "")
+            if block.task_id:
+                task = store.get("tasks", block.task_id)
+                if task:
+                    block_dict["task_title"] = task.get("title", "")
+                    block_dict["task_status"] = task.get("status", "")
 
-        result.append(block_dict)
+            result.append(block_dict)
 
-    return {"date": date, "blocks": result, "total": len(result)}
+        return {"date": date, "blocks": result, "total": len(result)}
+    except Exception as e:
+        logger.exception("time/blocks error: %s", e)
+        return {"date": date, "blocks": [], "total": 0, "error": str(e)}
 
 
 @app.get("/api/time/summary", response_model=DetailResponse)
@@ -293,13 +298,17 @@ async def get_time_summary(date: str | None = None):
     if not date:
         date = dt.today().isoformat()
 
-    cs = CalendarSync(store)
-    scheduler = Scheduler(store)
+    try:
+        cs = CalendarSync(store)
+        scheduler = Scheduler(store)
 
-    day_summary = cs.get_day_summary(date)
-    scheduling_summary = scheduler.get_scheduling_summary(date)
+        day_summary = cs.get_day_summary(date)
+        scheduling_summary = scheduler.get_scheduling_summary(date)
 
-    return {"date": date, "time": day_summary, "scheduling": scheduling_summary}
+        return {"date": date, "time": day_summary, "scheduling": scheduling_summary}
+    except Exception as e:
+        logger.exception("time/summary error: %s", e)
+        return {"date": date, "time": {}, "scheduling": {}, "error": str(e)}
 
 
 @app.post("/api/time/schedule", response_model=MutationResponse)
@@ -456,42 +465,76 @@ async def mark_commitment_done(commitment_id: str):
 @app.get("/api/capacity/lanes", response_model=DetailResponse)
 async def get_capacity_lanes_endpoint():
     """Get capacity lanes configuration."""
-    from lib.capacity_truth import CapacityCalculator
+    try:
+        from lib.capacity_truth import CapacityCalculator
 
-    calc = CapacityCalculator(store)
-    lanes = calc.get_lanes()
-    return {"lanes": lanes}
+        calc = CapacityCalculator(store)
+        lanes = calc.get_lanes()
+        return {"lanes": lanes}
+    except Exception as e:
+        logger.exception("capacity/lanes error: %s", e)
+        return {"lanes": [], "error": str(e)}
 
 
 @app.get("/api/capacity/utilization", response_model=DetailResponse)
 async def get_capacity_utilization(lane_id: str | None = None, target_date: str | None = None):
     """Get capacity utilization metrics."""
-    from lib.capacity_truth import CapacityCalculator
+    try:
+        from lib.capacity_truth import CapacityCalculator
 
-    calc = CapacityCalculator(store)
-    if lane_id:
-        util = calc.get_lane_utilization(lane_id, target_date=target_date)
-        return {"utilization": util}
-    return calc.get_capacity_summary(target_date=target_date)
+        calc = CapacityCalculator(store)
+        if lane_id:
+            util = calc.get_lane_utilization(lane_id, target_date=target_date)
+            return {"utilization": dataclasses.asdict(util)}
+        return calc.get_capacity_summary(target_date=target_date)
+    except Exception as e:
+        logger.exception("capacity/utilization error: %s", e)
+        return {"utilization": {}, "error": str(e)}
 
 
 @app.get("/api/capacity/forecast", response_model=DetailResponse)
 async def get_capacity_forecast(lane_id: str = "default", days: int = 7):
     """Get capacity forecast for upcoming days."""
-    from lib.capacity_truth import CapacityCalculator
+    try:
+        from lib.capacity_truth import CapacityCalculator
 
-    calc = CapacityCalculator(store)
-    forecasts = calc.forecast_capacity(lane_id, days_ahead=days)
-    return {"lane_id": lane_id, "days": days, "forecasts": forecasts}
+        calc = CapacityCalculator(store)
+        forecasts = calc.forecast_capacity(lane_id, days_ahead=days)
+        # Convert dataclass to dict and add _hours fields for frontend ForecastChart
+        forecast_dicts = []
+        for f in forecasts:
+            d = dataclasses.asdict(f)
+            d["available_hours"] = round(d.get("available_min", 0) / 60, 1)
+            d["scheduled_hours"] = round(d.get("scheduled_min", 0) / 60, 1)
+            d["total_hours"] = round(d.get("capacity_min", 0) / 60, 1)
+            forecast_dicts.append(d)
+        return {
+            "lane_id": lane_id,
+            "days": days,
+            "forecasts": forecast_dicts,
+        }
+    except Exception as e:
+        logger.exception("capacity/forecast error: %s", e)
+        return {"lane_id": lane_id, "days": days, "forecasts": [], "error": str(e)}
 
 
 @app.get("/api/capacity/debt", response_model=DetailResponse)
 async def get_capacity_debt(lane: str | None = None):
     """Get capacity debt (overcommitments)."""
-    from lib.capacity_truth import DebtTracker
+    try:
+        from lib.capacity_truth import DebtTracker
 
-    tracker = DebtTracker(store)
-    return tracker.get_debt_report(lane=lane)
+        tracker = DebtTracker(store)
+        return tracker.get_debt_report(lane=lane)
+    except Exception as e:
+        logger.exception("capacity/debt error: %s", e)
+        return {
+            "lane": lane,
+            "total_open_min": 0,
+            "total_resolved_min": 0,
+            "entries": [],
+            "error": str(e),
+        }
 
 
 @app.post("/api/capacity/debt/accrue", status_code=501)
@@ -2817,20 +2860,23 @@ async def archive_stale(days_threshold: int = 14):
 @app.get("/api/events", response_model=DetailResponse)
 async def get_events(hours: int = 24):
     """Get upcoming events."""
+    try:
+        start = datetime.now().isoformat()
+        end = (datetime.now() + timedelta(hours=hours)).isoformat()
 
-    start = datetime.now().isoformat()
-    end = (datetime.now() + timedelta(hours=hours)).isoformat()
+        events = store.query(
+            """
+            SELECT * FROM events
+            WHERE start_time >= ? AND start_time <= ?
+            ORDER BY start_time
+        """,
+            [start, end],
+        )
 
-    events = store.query(
-        """
-        SELECT * FROM events
-        WHERE start_time >= ? AND start_time <= ?
-        ORDER BY start_time
-    """,
-        [start, end],
-    )
-
-    return {"events": [dict(e) for e in events], "total": len(events)}
+        return {"events": [dict(e) for e in events], "total": len(events)}
+    except Exception as e:
+        logger.exception("events error: %s", e)
+        return {"events": [], "total": 0, "error": str(e)}
 
 
 @app.get("/api/day/{date}", response_model=DetailResponse)
@@ -2848,10 +2894,14 @@ async def get_day_analysis(date: str | None = None):
 @app.get("/api/week", response_model=DetailResponse)
 async def get_week_analysis():
     """Get analysis for the current week."""
-    from lib.time_truth import CalendarSync
+    try:
+        from lib.time_truth import CalendarSync
 
-    cs = CalendarSync(store)
-    return cs.ensure_blocks_for_week()
+        cs = CalendarSync(store)
+        return cs.ensure_blocks_for_week()
+    except Exception as e:
+        logger.exception("week error: %s", e)
+        return {"events_found": 0, "blocks_created": 0, "dates_processed": [], "errors": [str(e)]}
 
 
 @app.get("/api/emails", response_model=DetailResponse)
@@ -2942,10 +2992,13 @@ async def get_notifications(include_dismissed: bool = False, limit: int = 50):
 @app.get("/api/notifications/stats", response_model=DetailResponse)
 async def get_notification_stats():
     """Get notification statistics."""
-    total = store.count("notifications")
-    unread = store.count("notifications", "read_at IS NULL")
-
-    return {"total": total, "unread": unread}
+    try:
+        total = store.count("notifications")
+        unread = store.count("notifications", "read_at IS NULL")
+        return {"total": total, "unread": unread}
+    except Exception as e:
+        logger.exception("notifications/stats error: %s", e)
+        return {"total": 0, "unread": 0, "error": str(e)}
 
 
 @app.post("/api/notifications/{notif_id}/dismiss", response_model=MutationResponse)

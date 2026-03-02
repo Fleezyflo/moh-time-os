@@ -2,13 +2,48 @@
 
 ## Current State
 
-- **Current phase:** Phase 14 BUILT (Cleanup, Bug Fixes & Hardening). Phases -1 through 13 COMPLETE (PR #48 merged).
-- **Current track:** T11 (Final polish)
-- **Blocked by:** Phase 14 commit (needs Mac: file deletions, tsc, prettier, system-map regen).
+- **Current phase:** Post-buildout bug fixes. All phases (-1 through 14) COMPLETE.
+- **Current track:** Tasks page issues + collector consolidation
+- **Blocked by:** Nothing. PR fix/collector-consolidation pushed, pending format fix on api/server.py.
 - **D1/D2:** Resolved. Blue `#3b82f6`, slate-400 at 5.1:1.
-- **Next session:** Commit Phase 14. FULL BUILDOUT COMPLETE.
+- **Next session:** Commit UI fixes (TaskCard, TaskList, TaskDetail, TeamDetail, api.ts). Build preferences/display config system.
 
 ## Session History
+
+### Session 21 (Tasks Page Issues + Collector Consolidation) -- 2026-03-02
+
+- **Type:** F (Fix)
+- **Pre-session:** Full buildout complete (Phases -1 through 14).
+- **Investigation:**
+  - Tasks page showing all "Low" priority because collector writes `priority: "high" | "normal"` (strings) but UI expected `priority: number` (0-100 score).
+  - Filter counters (Active 0, Blocked 0, Overdue 0) because UI checked `"pending"/"in_progress"/"blocked"` but collector writes `"active"/"overdue"/"completed"`.
+  - Tasks not clickable: `<div onClick>` instead of `<Link>`.
+  - Collector architecture: THREE parallel Asana paths, only one writes to DB, and that one was never called.
+  - Mystery `tasks` module: `from tasks import collect_tasks` resolved to `tasks/` directory (markdown folder). Import always failed silently.
+- **Work done:**
+  - **UI fixes (unstaged, pending commit):**
+    - `types/api.ts`: Changed `Task.priority` from `number` to `number | string`
+    - `TaskCard.tsx`: Replaced `<div onClick>` with `<Link>`, added `parsePriority()` for string/numeric priority, expanded `statusColors` map with `active`/`overdue`
+    - `TaskList.tsx`: Added `ACTIVE_STATUSES`/`BLOCKED_STATUSES`/`COMPLETED_STATUSES` arrays, fixed filter logic and counter derivation, removed `useNavigate`/`useCallback`
+    - `TaskDetail.tsx`: Added `parsePriority()`, expanded `STATUS_OPTIONS` and `statusColor()`, edit form coerces string priority to number
+    - `TeamDetail.tsx`: Added `normal`/`active`/`overdue` etc to priority/status maps
+  - **Collector consolidation (PR fix/collector-consolidation, commit 9451e92):**
+    - `collectors/scheduled_collect.py`: Rewrote `collect_asana()` to call `AsanaCollector.sync()` (8-table DB write) instead of `asana_ops.generate_asana_report()` (JSON file only). Rewrote `collect_tasks()` to call `TasksCollector.sync()` instead of broken `from tasks import` (module doesn't exist).
+    - `lib/collector_registry.py`: Updated `tables_written` for asana (8 tables), removed stale `json_output` references from asana and tasks entries.
+- **Verification:** ruff check clean, ruff format clean, bandit clean (only pre-existing B404/B603 Low findings on subprocess).
+- **Files changed:**
+  - `collectors/scheduled_collect.py` -- 50 insertions, 22 deletions
+  - `lib/collector_registry.py` -- registry metadata updated
+  - `time-os-ui/src/types/api.ts` -- Task.priority type (unstaged)
+  - `time-os-ui/src/components/tasks/TaskCard.tsx` -- Link + parsePriority (unstaged)
+  - `time-os-ui/src/pages/TaskList.tsx` -- filter logic (unstaged)
+  - `time-os-ui/src/pages/TaskDetail.tsx` -- parsePriority + status (unstaged)
+  - `time-os-ui/src/pages/TeamDetail.tsx` -- priority/status maps (unstaged)
+- **Lessons learned:**
+  - Collector wiring: class-based collectors can be initialized but never called if the orchestrator delegates to function-based wrappers. Always verify the call chain end-to-end.
+  - Mystery imports: `from X import Y` can resolve to a directory (namespace package) that contains no Python code. The import fails silently inside `except Exception: return {}`.
+
+
 
 ### Session 20 (Phase 14: Cleanup, Bug Fixes & Hardening) -- 2026-03-02
 

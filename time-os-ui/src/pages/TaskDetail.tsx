@@ -12,26 +12,49 @@ import { useTaskDetail, useTaskAsanaDetail } from '../lib/hooks';
 import * as api from '../lib/api';
 import type { TaskUpdatePayload } from '../lib/api';
 
-const STATUS_OPTIONS = ['pending', 'in_progress', 'blocked', 'completed', 'cancelled', 'archived'];
+const STATUS_OPTIONS = [
+  'active',
+  'pending',
+  'in_progress',
+  'overdue',
+  'blocked',
+  'completed',
+  'cancelled',
+  'archived',
+];
 
-function priorityLabel(score: number): string {
-  if (score >= 80) return 'Urgent';
-  if (score >= 60) return 'High';
-  if (score >= 30) return 'Medium';
-  return 'Low';
-}
+// Priority can be a number (0-100) or string ("high", "normal") from Asana collector
+const STRING_PRIORITY_MAP: Record<string, { label: string; color: string; score: number }> = {
+  urgent: { label: 'Urgent', color: 'var(--danger)', score: 90 },
+  high: { label: 'High', color: 'var(--warning)', score: 70 },
+  medium: { label: 'Medium', color: 'var(--accent)', score: 50 },
+  normal: { label: 'Normal', color: 'var(--accent)', score: 40 },
+  low: { label: 'Low', color: 'var(--grey-light)', score: 20 },
+};
 
-function priorityColor(score: number): string {
-  if (score >= 80) return 'var(--danger)';
-  if (score >= 60) return 'var(--warning)';
-  if (score >= 30) return 'var(--accent)';
-  return 'var(--grey-light)';
+function parsePriority(raw: number | string | null | undefined): {
+  label: string;
+  color: string;
+  score: number | null;
+} {
+  if (raw == null) return { label: 'None', color: 'var(--grey-muted)', score: null };
+  if (typeof raw === 'string') {
+    const mapped = STRING_PRIORITY_MAP[raw.toLowerCase()];
+    if (mapped) return mapped;
+    return { label: raw, color: 'var(--grey-light)', score: null };
+  }
+  if (raw >= 80) return { label: 'Urgent', color: 'var(--danger)', score: raw };
+  if (raw >= 60) return { label: 'High', color: 'var(--warning)', score: raw };
+  if (raw >= 30) return { label: 'Medium', color: 'var(--accent)', score: raw };
+  return { label: 'Low', color: 'var(--grey-light)', score: raw };
 }
 
 function statusColor(status: string): string {
   const colors: Record<string, string> = {
+    active: 'var(--accent)',
     pending: 'var(--grey-light)',
     in_progress: 'var(--accent)',
+    overdue: 'var(--danger)',
     blocked: 'var(--danger)',
     completed: 'var(--success)',
     done: 'var(--success)',
@@ -93,11 +116,16 @@ export default function TaskDetail() {
   ];
 
   const startEdit = () => {
+    // Coerce priority to number for the edit form (API expects number)
+    const numPriority =
+      typeof task.priority === 'number'
+        ? task.priority
+        : (STRING_PRIORITY_MAP[String(task.priority).toLowerCase()]?.score ?? 50);
     setEditFields({
       title: task.title,
       description: task.description || '',
       status: task.status,
-      priority: task.priority,
+      priority: numPriority,
       assignee: task.assignee || '',
       project: task.project || '',
       due_date: task.due_date || '',
@@ -120,7 +148,7 @@ export default function TaskDetail() {
       if (editFields.description !== (task.description || ''))
         changes.description = editFields.description;
       if (editFields.status !== task.status) changes.status = editFields.status;
-      if (editFields.priority !== task.priority) changes.priority = editFields.priority;
+      if (editFields.priority !== Number(task.priority)) changes.priority = editFields.priority;
       if (editFields.assignee !== (task.assignee || '')) changes.assignee = editFields.assignee;
       if (editFields.project !== (task.project || '')) changes.project = editFields.project;
       if (editFields.due_date !== (task.due_date || '')) changes.due_date = editFields.due_date;
@@ -158,7 +186,7 @@ export default function TaskDetail() {
       subtitle={
         editing
           ? undefined
-          : `${task.status} · Priority ${task.priority} · ${task.assignee || 'Unassigned'}`
+          : `${task.status} · ${parsePriority(task.priority).label} priority · ${task.assignee || 'Unassigned'}`
       }
       actions={
         <div className="flex gap-2">
@@ -217,9 +245,12 @@ export default function TaskDetail() {
                       </span>
                       <span
                         className="text-sm font-medium"
-                        style={{ color: priorityColor(task.priority) }}
+                        style={{ color: parsePriority(task.priority).color }}
                       >
-                        {priorityLabel(task.priority)} ({task.priority})
+                        {parsePriority(task.priority).label}
+                        {parsePriority(task.priority).score != null
+                          ? ` (${parsePriority(task.priority).score})`
+                          : ''}
                       </span>
                       {task.urgency && task.urgency !== 'normal' && (
                         <span className="text-xs text-[var(--warning)]">{task.urgency}</span>

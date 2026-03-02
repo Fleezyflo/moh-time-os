@@ -1,6 +1,5 @@
 // TaskList page — Task management with filter, group, and delegation views
-import { useState, useCallback } from 'react';
-import { useNavigate } from '@tanstack/react-router';
+import { useState } from 'react';
 import { SkeletonCardList, ErrorState, NoTasks } from '../components';
 import ExportButton from '../components/ExportButton';
 import { PageLayout } from '../components/layout/PageLayout';
@@ -21,23 +20,35 @@ const TABS: TabDef<TaskTab>[] = [
   { id: 'completed', label: 'Completed' },
 ];
 
+// Status values from Asana collector: "active", "overdue", "completed"
+// Status values from manual/API: "pending", "in_progress", "blocked", "done", "cancelled", "archived"
+const ACTIVE_STATUSES = ['active', 'pending', 'in_progress'];
+const BLOCKED_STATUSES = ['blocked', 'overdue'];
+const COMPLETED_STATUSES = ['completed', 'done'];
+
+function isOverdue(task: Task): boolean {
+  if (!task.due_date) return false;
+  if (task.status === 'overdue') return true;
+  const due = new Date(task.due_date);
+  return due < new Date() && !COMPLETED_STATUSES.includes(task.status);
+}
+
 function filterByTab(tasks: Task[], tab: TaskTab): Task[] {
   switch (tab) {
     case 'active':
-      return tasks.filter((t) => t.status === 'pending' || t.status === 'in_progress');
+      return tasks.filter((t) => ACTIVE_STATUSES.includes(t.status));
     case 'blocked':
-      return tasks.filter((t) => t.status === 'blocked');
+      return tasks.filter((t) => BLOCKED_STATUSES.includes(t.status));
     case 'delegated':
       return tasks.filter((t) => !!t.delegated_by);
     case 'completed':
-      return tasks.filter((t) => t.status === 'completed' || t.status === 'done');
+      return tasks.filter((t) => COMPLETED_STATUSES.includes(t.status));
     default:
       return tasks;
   }
 }
 
 export default function TaskList() {
-  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
 
   // Fetch all tasks (unfiltered, server-side)
@@ -63,16 +74,11 @@ export default function TaskList() {
       )
     : allTasks;
 
-  // Derive counts
+  // Derive counts using same status groupings as tab filters
   const totalCount = allTasks.length;
-  const activeCount = allTasks.filter(
-    (t) => t.status === 'pending' || t.status === 'in_progress'
-  ).length;
-  const blockedCount = allTasks.filter((t) => t.status === 'blocked').length;
-  const overdueCount = allTasks.filter((t) => {
-    if (!t.due_date) return false;
-    return new Date(t.due_date) < new Date();
-  }).length;
+  const activeCount = allTasks.filter((t) => ACTIVE_STATUSES.includes(t.status)).length;
+  const blockedCount = allTasks.filter((t) => BLOCKED_STATUSES.includes(t.status)).length;
+  const overdueCount = allTasks.filter((t) => isOverdue(t)).length;
   const delegatedByMe = delegationData?.delegated_by_me?.length || 0;
 
   // Tab badges
@@ -80,13 +86,6 @@ export default function TaskList() {
     const count = filterByTab(filteredTasks, tab.id).length;
     return { ...tab, badge: count };
   });
-
-  const handleTaskClick = useCallback(
-    (task: Task) => {
-      navigate({ to: '/tasks/$taskId', params: { taskId: task.id } });
-    },
-    [navigate]
-  );
 
   if (taskLoading) return <SkeletonCardList count={6} />;
   if (taskError) return <ErrorState error={taskError} onRetry={refetchTasks} hasData={false} />;
@@ -157,7 +156,7 @@ export default function TaskList() {
           return (
             <div className="space-y-2">
               {visibleTasks.map((task) => (
-                <TaskCard key={task.id} task={task} onClick={handleTaskClick} />
+                <TaskCard key={task.id} task={task} />
               ))}
             </div>
           );
