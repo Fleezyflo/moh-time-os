@@ -2,13 +2,35 @@
 
 ## Current State
 
-- **Current phase:** Phase 13 BUILT (Collector Data Depth). Phases -1 through 12 COMPLETE (PR #47 merged).
-- **Current track:** T10 (Collector Data Depth)
-- **Blocked by:** Phase 13 commit (needs Mac: tsc, prettier, system-map regen).
+- **Current phase:** Phase 14 BUILT (Cleanup, Bug Fixes & Hardening). Phases -1 through 13 COMPLETE (PR #48 merged).
+- **Current track:** T11 (Final polish)
+- **Blocked by:** Phase 14 commit (needs Mac: file deletions, tsc, prettier, system-map regen).
 - **D1/D2:** Resolved. Blue `#3b82f6`, slate-400 at 5.1:1.
-- **Next session:** Commit Phase 13, then buildout complete.
+- **Next session:** Commit Phase 14. FULL BUILDOUT COMPLETE.
 
 ## Session History
+
+### Session 20 (Phase 14: Cleanup, Bug Fixes & Hardening) -- 2026-03-02
+
+- **Type:** B (Build)
+- **Pre-session:** Phase 13 PR #48 confirmed MERGED.
+- **Work done:**
+  - **14.1:** Removed 3 dead intelligence page re-exports from index.ts (CommandCenter, Briefing, Proposals). Files marked for deletion on Mac (485 lines).
+  - **14.2:** Added `GET /api/v2/proposals/{proposal_id}` endpoint to spec_router.py (~140 lines). Ported enrichment logic from server.py with 4 bug fixes: (1) unhandled signal types get fallback description instead of None, (2) title truncation adds "..." ellipsis, (3) signal limit configurable via `?max_signals=` query param, (4) value field parsed from string if needed. Extracted `_build_signal_description()` helper.
+  - **14.3:** Migrated `fetchProposalDetailLegacy` to `fetchProposalDetail` in lib/api.ts. Changed URL from `/api/control-room/proposals/{id}` to `/api/v2/proposals/{id}`. Added proper TypeScript types (`ProposalDetailResponse`, `ProposalSignalDetail`). Updated RoomDrawer.tsx import/call.
+  - **14.4:** Migrated `fetchTasks` from `/api/tasks` to `/api/v2/priorities`. Removed response shape translation (v2 returns `{items:[...]}` natively). This also fixes the TeamDetail bug where `.items` was always undefined because legacy returned `{tasks:[...]}`.
+  - **14.5:** Fixed 6 stale `slate-*` Tailwind classes in 4 governance files: GovernanceDomainCards (2x bg-slate-600 → bg-[var(--grey-mid)]), DataQualityHealthScore (2x text-slate-400 → text-[var(--grey-light)]), BundleTimeline (1x bg-slate-500 → bg-[var(--grey-muted)]), ApprovalQueue (1x text-slate-400 → text-[var(--grey-light)]). Verified: 0 slate-* class references remain in .tsx/.ts files.
+  - **14.6:** Created `ExportButton.tsx` component (client-side CSV export). Wired to 4 list pages: TaskList, Priorities, Issues, Commitments. Each with appropriate column whitelist.
+  - **14.7:** Added 12 chart color CSS custom properties to tokens.css (--chart-blue through --chart-overdue). Updated chartColors.ts to read from CSS vars via `getComputedStyle()` with hardcoded fallbacks for SSR/tests.
+  - **14.8:** Replaced `/fix-data` standalone route with redirect to `/ops`. Removed lazy import of FixData page. pages/FixData.tsx is now dead code (marked for deletion).
+- **Verification:**
+  - ruff check: 0 errors on spec_router.py
+  - bandit: 0 findings on spec_router.py
+  - grep slate-*: 0 class references in .tsx/.ts
+  - grep control-room: 0 references in lib/api.ts
+- **Files changed:** api/spec_router.py, time-os-ui/src/lib/api.ts, time-os-ui/src/components/RoomDrawer.tsx, time-os-ui/src/intelligence/pages/index.ts, time-os-ui/src/components/governance/{GovernanceDomainCards,DataQualityHealthScore,BundleTimeline,ApprovalQueue}.tsx, time-os-ui/src/components/ExportButton.tsx (new), time-os-ui/src/pages/{TaskList,Priorities,Commitments,Issues}.tsx, time-os-ui/src/intelligence/components/chartColors.ts, design/system/tokens.css, time-os-ui/src/router.tsx
+- **Files to delete on Mac:** time-os-ui/src/intelligence/pages/{CommandCenter,Briefing,Proposals}.tsx, time-os-ui/src/pages/FixData.tsx
+
 
 ### Session 19 (Phase 13: Collector Data Depth) -- 2026-03-02
 

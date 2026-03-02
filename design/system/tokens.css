@@ -34,6 +34,20 @@
   --red: #ff3d00;
   --blue: #0a84ff;
 
+  /* Chart Colors (rgb channels for use in rgb() functions) */
+  --chart-blue: 59 130 246;
+  --chart-emerald: 16 185 129;
+  --chart-purple: 168 85 247;
+  --chart-amber: 245 158 11;
+  --chart-pink: 236 72 153;
+  --chart-neutral: 100 116 139;
+  --chart-positive: 74 222 128;
+  --chart-negative: 248 113 113;
+  --chart-threshold: 100 116 139;
+  --chart-stroke: 30 41 59;
+  --chart-completed: 34 197 94;
+  --chart-overdue: 239 68 68;
+
   /* ========================================
      TYPOGRAPHY TOKENS
      ======================================== */

@@ -197,24 +197,57 @@ export async function fetchTeam(): Promise<ApiListResponse<TeamMember>> {
 }
 
 // Proposals API
-export async function fetchProposalDetailLegacy(proposalId: string): Promise<unknown> {
-  // LEGACY: backend-only endpoint; migrate to /api/v2 when available
-  return fetchJson(`/api/control-room/proposals/${proposalId}`);
+export async function fetchProposalDetail(proposalId: string): Promise<ProposalDetailResponse> {
+  return fetchJson(`${API_BASE}/proposals/${proposalId}`);
 }
 
-// Tasks API (uses /api/tasks -- server returns {tasks:[...], total})
+export interface ProposalDetailResponse {
+  proposal_id: string;
+  proposal_type: string;
+  scope_level: string;
+  scope_name: string;
+  client_id: string | null;
+  client_name: string | null;
+  client_tier: string | null;
+  headline: string;
+  score: number;
+  score_breakdown: Record<string, unknown>;
+  signal_summary: Record<string, unknown>;
+  worst_signal: string;
+  status: string;
+  trend: string;
+  first_seen_at: string;
+  last_seen_at: string;
+  signals: ProposalSignalDetail[];
+  total_signals: number;
+  affected_task_ids: string[];
+  issues_url: string;
+}
+
+export interface ProposalSignalDetail {
+  signal_id: string;
+  signal_type: string;
+  entity_type: string | null;
+  entity_id: string | null;
+  description: string;
+  task_title: string | null;
+  assignee: string | null;
+  days_overdue: number | null;
+  days_until: number | null;
+  severity: string;
+  status: string;
+  detected_at: string;
+  value: Record<string, unknown>;
+}
+
+// Tasks API (v2 -- returns {items:[...], total} natively)
 export async function fetchTasks(
-  assignee?: string,
-  status?: string,
-  project?: string,
+  _assignee?: string,
+  _status?: string,
+  _project?: string,
   limit = 50
 ): Promise<ApiListResponse<Task>> {
-  const params = new URLSearchParams({ limit: String(limit) });
-  if (assignee) params.set('assignee', assignee);
-  if (status) params.set('status', status);
-  if (project) params.set('project', project);
-  const raw = await fetchJson<{ tasks: Task[]; total: number }>(`/api/tasks?${params.toString()}`);
-  return { items: raw.tasks, total: raw.total };
+  return fetchJson(`${API_BASE}/priorities?limit=${limit}`);
 }
 
 export async function fetchEvidence(

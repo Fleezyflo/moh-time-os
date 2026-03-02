@@ -50,7 +50,9 @@ export function ApprovalQueue({ approvals, onRefresh }: Props) {
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <span className="text-sm font-medium">{a.description || a.action_type}</span>
-                <span className={`text-xs ${RISK_COLORS[a.risk_level] ?? 'text-slate-400'}`}>
+                <span
+                  className={`text-xs ${RISK_COLORS[a.risk_level] ?? 'text-[var(--grey-light)]'}`}
+                >
                   {a.risk_level}
                 </span>
               </div>

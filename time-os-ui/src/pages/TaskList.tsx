@@ -2,6 +2,7 @@
 import { useState, useCallback } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { SkeletonCardList, ErrorState, NoTasks } from '../components';
+import ExportButton from '../components/ExportButton';
 import { PageLayout } from '../components/layout/PageLayout';
 import { SummaryGrid } from '../components/layout/SummaryGrid';
 import { MetricCard } from '../components/layout/MetricCard';
@@ -95,13 +96,20 @@ export default function TaskList() {
       title="Tasks"
       subtitle={`${totalCount} tasks across all projects`}
       actions={
-        <input
-          type="text"
-          placeholder="Search tasks..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="px-3 py-1.5 text-sm rounded bg-[var(--grey)] border border-[var(--border)] text-[var(--white)] placeholder-[var(--grey-muted)] w-48 sm:w-64"
-        />
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            placeholder="Search tasks..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="px-3 py-1.5 text-sm rounded bg-[var(--grey)] border border-[var(--border)] text-[var(--white)] placeholder-[var(--grey-muted)] w-48 sm:w-64"
+          />
+          <ExportButton
+            data={filteredTasks}
+            filename="tasks"
+            columns={['id', 'title', 'status', 'priority', 'assignee', 'due_date', 'project']}
+          />
+        </div>
       }
     >
       <SummaryGrid>

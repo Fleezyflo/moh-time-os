@@ -1298,6 +1298,160 @@ async def get_proposals_v2(
         conn.close()
 
 
+@spec_router.get("/proposals/{proposal_id}", response_model=DetailResponse)
+async def get_proposal_detail_v2(
+    proposal_id: str,
+    max_signals: int = Query(5, ge=1, le=50),
+):
+    """
+    GET /api/v2/proposals/{proposal_id}
+
+    Detailed proposal view with signal enrichment.
+    Ported from server.py /api/control-room/proposals/{id} with bug fixes:
+    - Unhandled signal types now get a fallback description (was None)
+    - Title truncation adds ellipsis indicator
+    - Signal limit is configurable via ?max_signals= (was hardcoded 5)
+    - Signal value key names normalized
+    """
+    import json
+
+    from lib.v4.proposal_service import ProposalService
+    from lib.v4.signal_service import SignalService
+
+    svc = ProposalService()
+    proposal = svc.get_proposal(proposal_id)
+
+    if not proposal:
+        raise HTTPException(status_code=404, detail="Proposal not found")
+
+    signal_svc = SignalService()
+    signals = signal_svc.get_signals_for_proposal(proposal_id)
+
+    # Parse JSON fields safely
+    def _parse_json(raw: str | dict | list | None, default: dict | list) -> dict | list:
+        if raw is None:
+            return default
+        if isinstance(raw, dict | list):
+            return raw
+        try:
+            parsed = json.loads(raw)
+            if isinstance(parsed, dict | list):
+                return parsed
+            return default
+        except (json.JSONDecodeError, TypeError):
+            logger.warning("malformed JSON in proposal %s: %.80s", proposal_id, raw)
+            return default
+
+    signal_summary = _parse_json(proposal.get("signal_summary_json"), {})
+    score_breakdown = _parse_json(proposal.get("score_breakdown_json"), {})
+    impact = _parse_json(proposal.get("impact"), {})
+    affected_tasks = _parse_json(proposal.get("affected_task_ids_json"), [])
+
+    # Build signal details with type-specific descriptions
+    signal_details = []
+    for sig in signals[:max_signals]:
+        value = sig.get("value", {})
+        if isinstance(value, str):
+            try:
+                value = json.loads(value)
+            except (json.JSONDecodeError, TypeError):
+                value = {}
+        signal_type = sig.get("signal_type", "")
+
+        description = _build_signal_description(signal_type, value)
+
+        signal_details.append(
+            {
+                "signal_id": sig.get("signal_id"),
+                "signal_type": signal_type,
+                "entity_type": sig.get("entity_ref_type"),
+                "entity_id": sig.get("entity_ref_id"),
+                "description": description,
+                "task_title": value.get("title", value.get("task_title")),
+                "assignee": value.get("assignee", value.get("owner")),
+                "days_overdue": value.get("days_overdue"),
+                "days_until": value.get("days_until"),
+                "severity": sig.get("severity"),
+                "status": sig.get("status"),
+                "detected_at": sig.get("detected_at"),
+                "value": value,
+            }
+        )
+
+    client_id = proposal.get("client_id")
+    return {
+        "proposal_id": proposal.get("proposal_id"),
+        "proposal_type": proposal.get("proposal_type"),
+        "scope_level": proposal.get("scope_level"),
+        "scope_name": proposal.get("scope_name"),
+        "client_id": client_id,
+        "client_name": proposal.get("client_name"),
+        "client_tier": proposal.get("client_tier"),
+        "headline": proposal.get("headline"),
+        "score": proposal.get("score"),
+        "score_breakdown": score_breakdown,
+        "signal_summary": signal_summary,
+        "worst_signal": impact.get("worst_signal", "") if isinstance(impact, dict) else "",
+        "status": proposal.get("status"),
+        "trend": proposal.get("trend"),
+        "first_seen_at": proposal.get("first_seen_at"),
+        "last_seen_at": proposal.get("last_seen_at"),
+        "signals": signal_details,
+        "total_signals": len(signals),
+        "affected_task_ids": affected_tasks,
+        "issues_url": f"/issues?client_id={client_id}" if client_id else "/issues",
+    }
+
+
+def _build_signal_description(signal_type: str, value: dict) -> str:
+    """Build human-readable description for a signal based on its type."""
+    if signal_type == "ar_aging_risk":
+        ar_amount = value.get("ar_overdue", value.get("amount", 0))
+        aging = value.get("aging_bucket", value.get("aging", "unknown"))
+        if ar_amount:
+            return f"${ar_amount:,.0f} overdue ({aging})"
+        return f"AR aging: {aging}"
+
+    if signal_type == "client_health_declining":
+        health = value.get("current_health", value.get("health", "unknown"))
+        trend = value.get("trend", "declining")
+        return f"Health: {health}, Trend: {trend}"
+
+    if signal_type == "communication_gap":
+        days = value.get("days_since_contact", value.get("days", 0))
+        return f"No contact in {days} days" if days else "Communication gap detected"
+
+    if signal_type == "data_quality_issue":
+        issue = value.get("issue", value.get("description", "Data quality issue"))
+        return issue if isinstance(issue, str) else "Data quality issue"
+
+    if signal_type == "deadline_overdue":
+        title = value.get("title", "Task")
+        truncated = f"{title[:40]}..." if len(title) > 40 else title
+        days = value.get("days_overdue", 0)
+        return f"'{truncated}' is {days} days overdue"
+
+    if signal_type == "deadline_approaching":
+        title = value.get("title", "Task")
+        truncated = f"{title[:40]}..." if len(title) > 40 else title
+        days = value.get("days_until", 0)
+        return f"'{truncated}' due in {days} days"
+
+    if signal_type == "hierarchy_violation":
+        return str(value.get("violation", "Hierarchy violation detected"))
+
+    if signal_type == "commitment_made":
+        text = value.get("commitment_text", "Commitment detected")
+        if isinstance(text, str):
+            return f"{text[:80]}..." if len(text) > 80 else text
+        return "Commitment detected"
+
+    # Fallback for unhandled signal types (was None in legacy -- bug fix)
+    fallback = str(value.get("title", signal_type.replace("_", " ").title()))
+    logger.debug("unhandled signal type '%s', using fallback description", signal_type)
+    return fallback
+
+
 @spec_router.get("/watchers", response_model=ListResponse)
 async def get_watchers_v2(hours: int = Query(24)):
     """

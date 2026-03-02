@@ -4940,6 +4940,33 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/proposals/{proposal_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Proposal Detail V2
+         * @description GET /api/v2/proposals/{proposal_id}
+         *
+         *     Detailed proposal view with signal enrichment.
+         *     Ported from server.py /api/control-room/proposals/{id} with bug fixes:
+         *     - Unhandled signal types now get a fallback description (was None)
+         *     - Title truncation adds ellipsis indicator
+         *     - Signal limit is configurable via ?max_signals= (was hardcoded 5)
+         *     - Signal value key names normalized
+         */
+        get: operations["get_proposal_detail_v2_api_v2_proposals__proposal_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/proposals/{proposal_id}/dismiss": {
         parameters: {
             query?: never;
@@ -13072,6 +13099,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ListResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_proposal_detail_v2_api_v2_proposals__proposal_id__get: {
+        parameters: {
+            query?: {
+                max_signals?: number;
+            };
+            header?: never;
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
                 };
             };
             /** @description Validation Error */
