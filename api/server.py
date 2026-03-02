@@ -5371,7 +5371,7 @@ async def command_client_health():
 
 
 @app.get("/api/command/client-health/{client_id}", response_model=DetailResponse)
-async def command_client_detail(client_id: int):
+async def command_client_detail(client_id: str):
     """Single client deep-dive for command center."""
     try:
         from lib.command_center import ClientHealthView
