@@ -13,6 +13,7 @@ import logging
 import sqlite3
 from collections.abc import Generator
 from contextlib import contextmanager
+from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from pydantic import BaseModel
@@ -2362,3 +2363,157 @@ async def get_evidence_v2(entity_type: str, entity_id: str):
         raise HTTPException(status_code=500, detail=str(e)) from e
     finally:
         conn.close()
+
+
+# ==== Collector Data Depth Endpoints (Phase 13) ====
+
+# These endpoints use QueryEngine for read-only cross-entity queries
+# against collector secondary tables.
+
+_query_engine_instance: Any = None
+
+
+def _get_query_engine() -> Any:
+    """Get or create a QueryEngine instance for collector depth queries."""
+    global _query_engine_instance
+    if _query_engine_instance is None:
+        from lib.query_engine import QueryEngine
+
+        _query_engine_instance = QueryEngine(DB_PATH)
+    return _query_engine_instance
+
+
+@spec_router.get("/clients/{client_id}/email-participants", response_model=DetailResponse)
+async def get_client_email_participants(client_id: str):
+    """
+    GET /api/v2/clients/:id/email-participants
+
+    Phase 13: Email participants and labels from gmail collector.
+    """
+    try:
+        engine = _get_query_engine()
+        return engine.client_email_participants(client_id)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("get_client_email_participants failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@spec_router.get("/clients/{client_id}/attachments", response_model=DetailResponse)
+async def get_client_attachments(client_id: str):
+    """
+    GET /api/v2/clients/:id/attachments
+
+    Phase 13: Email attachments from gmail collector.
+    """
+    try:
+        engine = _get_query_engine()
+        return engine.client_attachments(client_id)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("get_client_attachments failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@spec_router.get("/clients/{client_id}/invoice-detail", response_model=DetailResponse)
+async def get_client_invoice_detail(client_id: str):
+    """
+    GET /api/v2/clients/:id/invoice-detail
+
+    Phase 13: Invoice line items and credit notes from xero collector.
+    """
+    try:
+        engine = _get_query_engine()
+        return engine.client_invoice_detail(client_id)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("get_client_invoice_detail failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@spec_router.get("/team/{person_id}/calendar-detail", response_model=DetailResponse)
+async def get_person_calendar_detail(person_id: str):
+    """
+    GET /api/v2/team/:id/calendar-detail
+
+    Phase 13: Calendar attendees and recurrence from calendar collector.
+    """
+    try:
+        engine = _get_query_engine()
+        return engine.person_calendar_detail(person_id)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("get_person_calendar_detail failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@spec_router.get("/tasks/{task_id}/asana-detail", response_model=DetailResponse)
+async def get_task_asana_detail(task_id: str):
+    """
+    GET /api/v2/tasks/:id/asana-detail
+
+    Phase 13: Asana custom fields, subtasks, stories, dependencies, attachments.
+    """
+    try:
+        engine = _get_query_engine()
+        return engine.task_asana_detail(task_id)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("get_task_asana_detail failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@spec_router.get("/chat/analytics", response_model=DetailResponse)
+async def get_chat_analytics():
+    """
+    GET /api/v2/chat/analytics
+
+    Phase 13: Chat space analytics with reactions and attachments.
+    """
+    try:
+        engine = _get_query_engine()
+        return engine.chat_analytics()
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("get_chat_analytics failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@spec_router.get("/financial/detail", response_model=DetailResponse)
+async def get_financial_detail():
+    """
+    GET /api/v2/financial/detail
+
+    Phase 13: Xero contacts, bank transactions, tax rates.
+    """
+    try:
+        engine = _get_query_engine()
+        return engine.financial_detail()
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("get_financial_detail failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@spec_router.get("/projects/asana-context", response_model=DetailResponse)
+async def get_asana_portfolio_context():
+    """
+    GET /api/v2/projects/asana-context
+
+    Phase 13: Asana portfolios and goals for project context.
+    """
+    try:
+        engine = _get_query_engine()
+        return engine.asana_portfolio_context()
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=503, detail=str(e)) from e
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("get_asana_portfolio_context failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e

@@ -1229,7 +1229,7 @@ Operations.tsx
 
 ---
 
-### Phase 9: Commitments (§1 Section 12) — BUILT Session 16, pending PR
+### Phase 9: Commitments (§1 Section 12) ✅ COMPLETE (Session 16, PR #47)
 
 **Size:** 1 new page, ~3 new components, ~6 endpoints wired.
 **Dependencies:** Phase 5 (shared components). Can run parallel with Phases 6-8.
@@ -1251,7 +1251,7 @@ Operations.tsx
 
 ---
 
-### Phase 10: Notifications, Digest & Email (§1 Sections 13, 14)
+### Phase 10: Notifications, Digest & Email (§1 Sections 13, 14) ✅ COMPLETE (Session 17, PR #47)
 
 **Size:** 2 new pages, ~4 new components, ~8 endpoints wired.
 **Dependencies:** Phase 5. Can run parallel with Phase 9.
@@ -1276,7 +1276,7 @@ Operations.tsx
 
 ---
 
-### Phase 11: Governance & Admin (§1 Section 15) ✅ COMPLETE (Session 18)
+### Phase 11: Governance & Admin (§1 Section 15) ✅ COMPLETE (Session 18, PR #47)
 
 **Size:** 3 new pages, ~9 new components, ~18 endpoints wired.
 **Dependencies:** Phase 5. Can run parallel with Phases 9-10.
@@ -1303,7 +1303,7 @@ Operations.tsx
 
 ---
 
-### Phase 12: Project Enrollment (§1 Section 16)
+### Phase 12: Project Enrollment (§1 Section 16) ✅ COMPLETE (Session 18, PR #47)
 
 **Size:** 1 new page, ~4 new components, ~7 endpoints wired.
 **Dependencies:** Phase 5 + Phase 3 (client/project pages exist).
@@ -1325,7 +1325,7 @@ Operations.tsx
 
 ---
 
-### Phase 13: Collector Data Depth (§1 Section 17)
+### Phase 13: Collector Data Depth (§1 Section 17) ✅ COMPLETE (Session 19)
 
 **Size:** 0 new pages (tabs on existing), ~6 new components, ~8 new backend endpoints, ~8 new query_engine methods.
 **Dependencies:** Phase 3 (detail pages must exist). This is the only phase requiring significant new backend work.

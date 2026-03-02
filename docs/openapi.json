@@ -8429,6 +8429,28 @@
         "summary": "Unschedule Task"
       }
     },
+    "/api/v2/chat/analytics": {
+      "get": {
+        "description": "GET /api/v2/chat/analytics\n\nPhase 13: Chat space analytics with reactions and attachments.",
+        "operationId": "get_chat_analytics_api_v2_chat_analytics_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Chat Analytics",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
     "/api/v2/clients": {
       "get": {
         "description": "GET /api/v2/clients\n\nSpec: 7.1 Client Index",
@@ -8634,6 +8656,135 @@
           }
         },
         "summary": "Get Client Ar Aging",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
+    "/api/v2/clients/{client_id}/attachments": {
+      "get": {
+        "description": "GET /api/v2/clients/:id/attachments\n\nPhase 13: Email attachments from gmail collector.",
+        "operationId": "get_client_attachments_api_v2_clients__client_id__attachments_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Client Attachments",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
+    "/api/v2/clients/{client_id}/email-participants": {
+      "get": {
+        "description": "GET /api/v2/clients/:id/email-participants\n\nPhase 13: Email participants and labels from gmail collector.",
+        "operationId": "get_client_email_participants_api_v2_clients__client_id__email_participants_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Client Email Participants",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
+    "/api/v2/clients/{client_id}/invoice-detail": {
+      "get": {
+        "description": "GET /api/v2/clients/:id/invoice-detail\n\nPhase 13: Invoice line items and credit notes from xero collector.",
+        "operationId": "get_client_invoice_detail_api_v2_clients__client_id__invoice_detail_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Client Invoice Detail",
         "tags": [
           "Spec v2.9"
         ]
@@ -9522,6 +9673,28 @@
           }
         },
         "summary": "Get Evidence V2",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
+    "/api/v2/financial/detail": {
+      "get": {
+        "description": "GET /api/v2/financial/detail\n\nPhase 13: Xero contacts, bank transactions, tax rates.",
+        "operationId": "get_financial_detail_api_v2_financial_detail_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Financial Detail",
         "tags": [
           "Spec v2.9"
         ]
@@ -12804,6 +12977,28 @@
         ]
       }
     },
+    "/api/v2/projects/asana-context": {
+      "get": {
+        "description": "GET /api/v2/projects/asana-context\n\nPhase 13: Asana portfolios and goals for project context.",
+        "operationId": "get_asana_portfolio_context_api_v2_projects_asana_context_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Asana Portfolio Context",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
     "/api/v2/proposals": {
       "get": {
         "description": "GET /api/v2/proposals",
@@ -12990,6 +13185,49 @@
         ]
       }
     },
+    "/api/v2/tasks/{task_id}/asana-detail": {
+      "get": {
+        "description": "GET /api/v2/tasks/:id/asana-detail\n\nPhase 13: Asana custom fields, subtasks, stories, dependencies, attachments.",
+        "operationId": "get_task_asana_detail_api_v2_tasks__task_id__asana_detail_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Task Asana Detail",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
     "/api/v2/team": {
       "get": {
         "description": "GET /api/v2/team\n\nReturns all team members with workload metrics.",
@@ -13007,6 +13245,49 @@
           }
         },
         "summary": "Get Team",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
+    "/api/v2/team/{person_id}/calendar-detail": {
+      "get": {
+        "description": "GET /api/v2/team/:id/calendar-detail\n\nPhase 13: Calendar attendees and recurrence from calendar collector.",
+        "operationId": "get_person_calendar_detail_api_v2_team__person_id__calendar_detail_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "person_id",
+            "required": true,
+            "schema": {
+              "title": "Person Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Person Calendar Detail",
         "tags": [
           "Spec v2.9"
         ]

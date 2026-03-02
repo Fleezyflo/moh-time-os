@@ -1977,3 +1977,258 @@ export async function proposeProject(
   invalidateCache('candidates');
   return result;
 }
+
+// ==== Collector Data Depth Types & Functions (Phase 13) ====
+
+export interface EmailParticipant {
+  email: string;
+  name: string | null;
+  role: string;
+  message_count: number;
+}
+
+export interface EmailLabel {
+  label_name: string;
+  message_count: number;
+}
+
+export interface ClientEmailParticipantsResponse {
+  participants: EmailParticipant[];
+  labels: EmailLabel[];
+  total_participants: number;
+  total_labels: number;
+}
+
+export interface Attachment {
+  filename: string;
+  mime_type: string | null;
+  size_bytes: number | null;
+  message_id: string;
+  created_at: string;
+}
+
+export interface ClientAttachmentsResponse {
+  attachments: Attachment[];
+  total: number;
+  total_size_bytes: number;
+}
+
+export interface InvoiceLineItem {
+  invoice_id: string;
+  description: string | null;
+  quantity: number | null;
+  unit_amount: number | null;
+  line_amount: number | null;
+  tax_type: string | null;
+  tax_amount: number | null;
+  account_code: string | null;
+  tracking_category: string | null;
+  tracking_option: string | null;
+}
+
+export interface CreditNote {
+  id: string;
+  contact_id: string | null;
+  date: string | null;
+  status: string | null;
+  total: number | null;
+  currency_code: string | null;
+  remaining_credit: number | null;
+  allocated_amount: number | null;
+}
+
+export interface ClientInvoiceDetailResponse {
+  line_items: InvoiceLineItem[];
+  credit_notes: CreditNote[];
+  total_line_items: number;
+  total_credit_notes: number;
+}
+
+export interface CalendarAttendee {
+  event_id: string;
+  email: string;
+  display_name: string | null;
+  response_status: string | null;
+  organizer: number;
+}
+
+export interface RecurrenceRule {
+  event_id: string;
+  rrule: string;
+}
+
+export interface PersonCalendarDetailResponse {
+  attendees: CalendarAttendee[];
+  recurrence: RecurrenceRule[];
+  total_attendees: number;
+  total_recurrence: number;
+}
+
+export interface AsanaCustomField {
+  field_name: string;
+  field_type: string;
+  text_value: string | null;
+  number_value: number | null;
+  enum_value: string | null;
+  date_value: string | null;
+}
+
+export interface AsanaSubtask {
+  id: string;
+  name: string;
+  assignee_name: string | null;
+  completed: number;
+  due_on: string | null;
+}
+
+export interface AsanaStory {
+  id: string;
+  type: string;
+  text: string | null;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface AsanaAttachment {
+  id: string;
+  name: string;
+  download_url: string | null;
+  host: string | null;
+  size_bytes: number | null;
+}
+
+export interface TaskAsanaDetailResponse {
+  custom_fields: AsanaCustomField[];
+  subtasks: AsanaSubtask[];
+  stories: AsanaStory[];
+  dependencies: { depends_on_task_id: string }[];
+  attachments: AsanaAttachment[];
+}
+
+export interface ChatSpace {
+  space_id: string;
+  display_name: string | null;
+  space_type: string | null;
+  threaded: number;
+  member_count: number | null;
+  created_time: string | null;
+  last_synced: string | null;
+}
+
+export interface ChatAnalyticsResponse {
+  spaces: ChatSpace[];
+  reactions: { emoji: string; count: number }[];
+  attachments: { content_type: string; count: number }[];
+  total_spaces: number;
+  total_reactions: number;
+  total_attachments: number;
+}
+
+export interface XeroContact {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  is_supplier: number;
+  is_customer: number;
+  default_currency: string | null;
+  outstanding_balance: number | null;
+  overdue_balance: number | null;
+}
+
+export interface BankTransaction {
+  id: string;
+  type: string | null;
+  contact_id: string | null;
+  date: string | null;
+  status: string | null;
+  total: number | null;
+  currency_code: string | null;
+  reference: string | null;
+}
+
+export interface TaxRate {
+  name: string;
+  tax_type: string | null;
+  effective_rate: number | null;
+  status: string | null;
+}
+
+export interface FinancialDetailResponse {
+  contacts: XeroContact[];
+  transactions: BankTransaction[];
+  tax_rates: TaxRate[];
+  total_contacts: number;
+  total_transactions: number;
+}
+
+export interface AsanaPortfolio {
+  id: string;
+  name: string;
+  owner_id: string | null;
+  owner_name: string | null;
+}
+
+export interface AsanaGoal {
+  id: string;
+  name: string;
+  owner_id: string | null;
+  owner_name: string | null;
+  status: string | null;
+  due_on: string | null;
+}
+
+export interface AsanaPortfolioContextResponse {
+  portfolios: AsanaPortfolio[];
+  goals: AsanaGoal[];
+  total_portfolios: number;
+  total_goals: number;
+}
+
+/** Fetch email participants for a client */
+export async function fetchClientEmailParticipants(
+  clientId: string
+): Promise<ClientEmailParticipantsResponse> {
+  return fetchJson<ClientEmailParticipantsResponse>(
+    `/api/v2/clients/${clientId}/email-participants`
+  );
+}
+
+/** Fetch email attachments for a client */
+export async function fetchClientAttachments(clientId: string): Promise<ClientAttachmentsResponse> {
+  return fetchJson<ClientAttachmentsResponse>(`/api/v2/clients/${clientId}/attachments`);
+}
+
+/** Fetch invoice line items and credit notes for a client */
+export async function fetchClientInvoiceDetail(
+  clientId: string
+): Promise<ClientInvoiceDetailResponse> {
+  return fetchJson<ClientInvoiceDetailResponse>(`/api/v2/clients/${clientId}/invoice-detail`);
+}
+
+/** Fetch calendar attendees and recurrence for a person */
+export async function fetchPersonCalendarDetail(
+  personId: string
+): Promise<PersonCalendarDetailResponse> {
+  return fetchJson<PersonCalendarDetailResponse>(`/api/v2/team/${personId}/calendar-detail`);
+}
+
+/** Fetch Asana detail for a task */
+export async function fetchTaskAsanaDetail(taskId: string): Promise<TaskAsanaDetailResponse> {
+  return fetchJson<TaskAsanaDetailResponse>(`/api/v2/tasks/${taskId}/asana-detail`);
+}
+
+/** Fetch chat analytics */
+export async function fetchChatAnalytics(): Promise<ChatAnalyticsResponse> {
+  return fetchJson<ChatAnalyticsResponse>('/api/v2/chat/analytics');
+}
+
+/** Fetch financial detail (contacts, transactions, tax rates) */
+export async function fetchFinancialDetail(): Promise<FinancialDetailResponse> {
+  return fetchJson<FinancialDetailResponse>('/api/v2/financial/detail');
+}
+
+/** Fetch Asana portfolio context (portfolios and goals) */
+export async function fetchAsanaPortfolioContext(): Promise<AsanaPortfolioContextResponse> {
+  return fetchJson<AsanaPortfolioContextResponse>('/api/v2/projects/asana-context');
+}

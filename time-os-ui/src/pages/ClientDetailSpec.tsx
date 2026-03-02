@@ -10,6 +10,11 @@ import { TabContainer, type TabDef } from '../components/layout/TabContainer';
 import { TrajectorySparkline } from '../components/layout/TrajectorySparkline';
 import * as api from '../lib/api';
 import { useClientTrajectory } from '../intelligence/hooks';
+import {
+  useClientEmailParticipants,
+  useClientAttachments,
+  useClientInvoiceDetail,
+} from '../lib/hooks';
 import type { Tier, Severity } from '../types/spec';
 
 // Types for this page
@@ -123,7 +128,15 @@ interface TeamMember {
 }
 
 // Tab definitions
-type TabId = 'overview' | 'engagements' | 'financials' | 'signals' | 'team';
+type TabId =
+  | 'overview'
+  | 'engagements'
+  | 'financials'
+  | 'signals'
+  | 'team'
+  | 'email-participants'
+  | 'attachments'
+  | 'invoice-detail';
 
 const TABS: TabDef<TabId>[] = [
   { id: 'overview', label: 'Overview' },
@@ -131,6 +144,9 @@ const TABS: TabDef<TabId>[] = [
   { id: 'financials', label: 'Financials' },
   { id: 'signals', label: 'Signals' },
   { id: 'team', label: 'Team' },
+  { id: 'email-participants', label: 'Email Participants' },
+  { id: 'attachments', label: 'Attachments' },
+  { id: 'invoice-detail', label: 'Invoice Detail' },
 ];
 
 // Severity colors
@@ -194,6 +210,15 @@ export function ClientDetailSpec() {
     date: w.start,
     value: w.metrics?.composite_score ?? w.metrics?.health_score ?? 0,
   }));
+
+  // Email Participants data hook
+  const { data: emailParticipantsData } = useClientEmailParticipants(clientId);
+
+  // Attachments data hook
+  const { data: attachmentsData } = useClientAttachments(clientId);
+
+  // Invoice Detail data hook
+  const { data: invoiceDetailData } = useClientInvoiceDetail(clientId);
 
   const loadClient = useCallback(async () => {
     setLoading(true);
@@ -361,6 +386,12 @@ export function ClientDetailSpec() {
               );
             case 'team':
               return <TeamTab members={client.team_members || []} />;
+            case 'email-participants':
+              return <EmailParticipantsTab data={emailParticipantsData ?? undefined} />;
+            case 'attachments':
+              return <AttachmentsTab data={attachmentsData ?? undefined} />;
+            case 'invoice-detail':
+              return <InvoiceDetailTab data={invoiceDetailData ?? undefined} />;
             default:
               return null;
           }
@@ -781,6 +812,238 @@ function TeamTab({ members }: { members: TeamMember[] }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ==== Tab: Email Participants (§3.7) ====
+
+function EmailParticipantsTab({ data }: { data?: api.ClientEmailParticipantsResponse }) {
+  if (!data || (!data.participants?.length && !data.labels?.length)) {
+    return (
+      <div className="text-center py-8 text-[var(--grey-light)]">
+        No email participant data available. Run the Gmail collector to populate.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Participants Table */}
+      {data.participants && data.participants.length > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold mb-3">Participants</h3>
+          <div className="bg-[var(--black)] rounded overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-[var(--grey-dim)]">
+                <tr>
+                  <th className="text-left p-3">Email</th>
+                  <th className="text-left p-3">Name</th>
+                  <th className="text-left p-3">Role</th>
+                  <th className="text-right p-3">Messages</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.participants.map((participant) => (
+                  <tr key={participant.email} className="border-t border-[var(--grey)]">
+                    <td className="p-3 text-[var(--info)]">{participant.email}</td>
+                    <td className="p-3">{participant.name}</td>
+                    <td className="p-3 text-[var(--grey-light)]">{participant.role}</td>
+                    <td className="p-3 text-right">{participant.message_count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Labels Section */}
+      {data.labels && data.labels.length > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold mb-3">Labels</h3>
+          <div className="bg-[var(--black)] rounded overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-[var(--grey-dim)]">
+                <tr>
+                  <th className="text-left p-3">Label</th>
+                  <th className="text-right p-3">Messages</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.labels.map((label) => (
+                  <tr key={label.label_name} className="border-t border-[var(--grey)]">
+                    <td className="p-3">{label.label_name}</td>
+                    <td className="p-3 text-right">{label.message_count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ==== Tab: Attachments (§3.8) ====
+
+function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 B';
+  const k = 1024;
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+}
+
+function AttachmentsTab({ data }: { data?: api.ClientAttachmentsResponse }) {
+  if (!data || !data.attachments?.length) {
+    return (
+      <div className="text-center py-8 text-[var(--grey-light)]">
+        No attachment data available. Run the Gmail collector to populate.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Summary */}
+      {(data.total !== undefined || data.total_size_bytes !== undefined) && (
+        <div className="bg-[var(--black)] rounded p-4 grid grid-cols-2 gap-4 text-sm">
+          {data.total !== undefined && (
+            <div>
+              <div className="text-[var(--grey-light)] text-xs mb-1">Total Count</div>
+              <div className="text-lg font-medium">{data.total}</div>
+            </div>
+          )}
+          {data.total_size_bytes !== undefined && (
+            <div>
+              <div className="text-[var(--grey-light)] text-xs mb-1">Total Size</div>
+              <div className="text-lg font-medium">{formatFileSize(data.total_size_bytes)}</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Attachments Table */}
+      <div className="bg-[var(--black)] rounded overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-[var(--grey-dim)]">
+            <tr>
+              <th className="text-left p-3">Filename</th>
+              <th className="text-left p-3">MIME Type</th>
+              <th className="text-right p-3">Size</th>
+              <th className="text-left p-3">Created</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.attachments.map((attachment, idx) => (
+              <tr key={`${attachment.filename}-${idx}`} className="border-t border-[var(--grey)]">
+                <td className="p-3">{attachment.filename}</td>
+                <td className="p-3 text-[var(--grey-light)]">{attachment.mime_type}</td>
+                <td className="p-3 text-right">{formatFileSize(attachment.size_bytes ?? 0)}</td>
+                <td className="p-3 text-[var(--grey-light)]">{formatAge(attachment.created_at)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+// ==== Tab: Invoice Detail (§3.9) ====
+
+function InvoiceDetailTab({ data }: { data?: api.ClientInvoiceDetailResponse }) {
+  if (!data || (!data.line_items?.length && !data.credit_notes?.length)) {
+    return (
+      <div className="text-center py-8 text-[var(--grey-light)]">
+        No invoice detail data available. Run the Xero collector to populate.
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Line Items Table */}
+      {data.line_items && data.line_items.length > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold mb-3">Line Items</h3>
+          <div className="bg-[var(--black)] rounded overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-[var(--grey-dim)]">
+                <tr>
+                  <th className="text-left p-3">Invoice ID</th>
+                  <th className="text-left p-3">Description</th>
+                  <th className="text-right p-3">Quantity</th>
+                  <th className="text-right p-3">Unit Amount</th>
+                  <th className="text-right p-3">Line Amount</th>
+                  <th className="text-left p-3">Tax Type</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.line_items.map((item, idx) => (
+                  <tr key={`${item.invoice_id}-${idx}`} className="border-t border-[var(--grey)]">
+                    <td className="p-3 text-[var(--info)]">{item.invoice_id}</td>
+                    <td className="p-3">{item.description}</td>
+                    <td className="p-3 text-right">{item.quantity}</td>
+                    <td className="p-3 text-right">{formatCurrency(item.unit_amount ?? 0)}</td>
+                    <td className="p-3 text-right font-medium">
+                      {formatCurrency(item.line_amount ?? 0)}
+                    </td>
+                    <td className="p-3 text-[var(--grey-light)]">{item.tax_type}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Credit Notes Table */}
+      {data.credit_notes && data.credit_notes.length > 0 && (
+        <div>
+          <h3 className="text-lg font-semibold mb-3">Credit Notes</h3>
+          <div className="bg-[var(--black)] rounded overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-[var(--grey-dim)]">
+                <tr>
+                  <th className="text-left p-3">Date</th>
+                  <th className="text-left p-3">Status</th>
+                  <th className="text-right p-3">Total</th>
+                  <th className="text-left p-3">Currency</th>
+                  <th className="text-right p-3">Remaining Credit</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data.credit_notes.map((note, idx) => (
+                  <tr key={`${note.date}-${idx}`} className="border-t border-[var(--grey)]">
+                    <td className="p-3 text-[var(--grey-light)]">{note.date}</td>
+                    <td className="p-3">
+                      <span
+                        className={`px-2 py-0.5 rounded text-xs ${
+                          note.status === 'submitted'
+                            ? 'bg-[var(--success)]'
+                            : note.status === 'draft'
+                              ? 'bg-[var(--grey-light)]'
+                              : 'bg-[var(--info)]'
+                        }`}
+                      >
+                        {(note.status ?? 'unknown').toUpperCase()}
+                      </span>
+                    </td>
+                    <td className="p-3 text-right font-medium">
+                      {formatCurrency(note.total ?? 0)}
+                    </td>
+                    <td className="p-3 text-[var(--grey-light)]">{note.currency_code}</td>
+                    <td className="p-3 text-right">{formatCurrency(note.remaining_credit ?? 0)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
