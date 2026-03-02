@@ -392,6 +392,11 @@
     },
     {
       "method": "GET",
+      "path": "/chat/analytics",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
       "path": "/clients",
       "source": "api/spec_router.py"
     },
@@ -403,6 +408,21 @@
     {
       "method": "GET",
       "path": "/clients/{client_id}/ar-aging",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/clients/{client_id}/attachments",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/clients/{client_id}/email-participants",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/clients/{client_id}/invoice-detail",
       "source": "api/spec_router.py"
     },
     {
@@ -448,6 +468,11 @@
     {
       "method": "GET",
       "path": "/evidence/{entity_type}/{entity_id}",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/financial/detail",
       "source": "api/spec_router.py"
     },
     {
@@ -607,12 +632,27 @@
     },
     {
       "method": "GET",
+      "path": "/projects/asana-context",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
       "path": "/proposals",
       "source": "api/spec_router.py"
     },
     {
       "method": "GET",
+      "path": "/tasks/{task_id}/asana-detail",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
       "path": "/team",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/team/{person_id}/calendar-detail",
       "source": "api/spec_router.py"
     },
     {
@@ -1142,7 +1182,7 @@
   ],
   "generated_by": "scripts/generate_system_map.py",
   "summary": {
-    "api_routes_count": 195,
+    "api_routes_count": 203,
     "collectors_count": 9,
     "db_tables_count": 31,
     "ui_routes_count": 30

@@ -2969,6 +2969,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/chat/analytics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Chat Analytics
+         * @description GET /api/v2/chat/analytics
+         *
+         *     Phase 13: Chat space analytics with reactions and attachments.
+         */
+        get: operations["get_chat_analytics_api_v2_chat_analytics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/clients": {
         parameters: {
             query?: never;
@@ -3027,6 +3049,72 @@ export interface paths {
          *     Spec: 7.5 AR Aging Breakdown
          */
         get: operations["get_client_ar_aging_api_v2_clients__client_id__ar_aging_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/clients/{client_id}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Client Attachments
+         * @description GET /api/v2/clients/:id/attachments
+         *
+         *     Phase 13: Email attachments from gmail collector.
+         */
+        get: operations["get_client_attachments_api_v2_clients__client_id__attachments_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/clients/{client_id}/email-participants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Client Email Participants
+         * @description GET /api/v2/clients/:id/email-participants
+         *
+         *     Phase 13: Email participants and labels from gmail collector.
+         */
+        get: operations["get_client_email_participants_api_v2_clients__client_id__email_participants_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/clients/{client_id}/invoice-detail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Client Invoice Detail
+         * @description GET /api/v2/clients/:id/invoice-detail
+         *
+         *     Phase 13: Invoice line items and credit notes from xero collector.
+         */
+        get: operations["get_client_invoice_detail_api_v2_clients__client_id__invoice_detail_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3317,6 +3405,28 @@ export interface paths {
          * @description GET /api/v2/evidence/{entity_type}/{entity_id}
          */
         get: operations["get_evidence_v2_api_v2_evidence__entity_type___entity_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/financial/detail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Financial Detail
+         * @description GET /api/v2/financial/detail
+         *
+         *     Phase 13: Xero contacts, bank transactions, tax rates.
+         */
+        get: operations["get_financial_detail_api_v2_financial_detail_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4788,6 +4898,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/projects/asana-context": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Asana Portfolio Context
+         * @description GET /api/v2/projects/asana-context
+         *
+         *     Phase 13: Asana portfolios and goals for project context.
+         */
+        get: operations["get_asana_portfolio_context_api_v2_projects_asana_context_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/proposals": {
         parameters: {
             query?: never;
@@ -4852,6 +4984,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/tasks/{task_id}/asana-detail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Task Asana Detail
+         * @description GET /api/v2/tasks/:id/asana-detail
+         *
+         *     Phase 13: Asana custom fields, subtasks, stories, dependencies, attachments.
+         */
+        get: operations["get_task_asana_detail_api_v2_tasks__task_id__asana_detail_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/team": {
         parameters: {
             query?: never;
@@ -4866,6 +5020,28 @@ export interface paths {
          *     Returns all team members with workload metrics.
          */
         get: operations["get_team_api_v2_team_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/team/{person_id}/calendar-detail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Person Calendar Detail
+         * @description GET /api/v2/team/:id/calendar-detail
+         *
+         *     Phase 13: Calendar attendees and recurrence from calendar collector.
+         */
+        get: operations["get_person_calendar_detail_api_v2_team__person_id__calendar_detail_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -10325,6 +10501,26 @@ export interface operations {
             };
         };
     };
+    get_chat_analytics_api_v2_chat_analytics_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
+                };
+            };
+        };
+    };
     get_clients_api_v2_clients_get: {
         parameters: {
             query?: {
@@ -10398,6 +10594,99 @@ export interface operations {
         };
     };
     get_client_ar_aging_api_v2_clients__client_id__ar_aging_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_client_attachments_api_v2_clients__client_id__attachments_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_client_email_participants_api_v2_clients__client_id__email_participants_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                client_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_client_invoice_detail_api_v2_clients__client_id__invoice_detail_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -10854,6 +11143,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_financial_detail_api_v2_financial_detail_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
                 };
             };
         };
@@ -12722,6 +13031,26 @@ export interface operations {
             };
         };
     };
+    get_asana_portfolio_context_api_v2_projects_asana_context_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
+                };
+            };
+        };
+    };
     get_proposals_v2_api_v2_proposals_get: {
         parameters: {
             query?: {
@@ -12826,6 +13155,37 @@ export interface operations {
             };
         };
     };
+    get_task_asana_detail_api_v2_tasks__task_id__asana_detail_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                task_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_team_api_v2_team_get: {
         parameters: {
             query?: never;
@@ -12842,6 +13202,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ListResponse"];
+                };
+            };
+        };
+    };
+    get_person_calendar_detail_api_v2_team__person_id__calendar_detail_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                person_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

@@ -3,11 +3,12 @@ import { useState } from 'react';
 import { useParams, useNavigate } from '@tanstack/react-router';
 import { SkeletonCardList, ErrorState, useToast } from '../components';
 import { PageLayout } from '../components/layout/PageLayout';
+import { TabContainer, type TabDef } from '../components/layout/TabContainer';
 import { TaskActions } from '../components/tasks/TaskActions';
 import { DelegationPanel } from '../components/tasks/DelegationPanel';
 import { TaskNotesList } from '../components/tasks/TaskNotesList';
 import { ApprovalDialog } from '../components/tasks/ApprovalDialog';
-import { useTaskDetail } from '../lib/hooks';
+import { useTaskDetail, useTaskAsanaDetail } from '../lib/hooks';
 import * as api from '../lib/api';
 import type { TaskUpdatePayload } from '../lib/api';
 
@@ -47,6 +48,9 @@ export default function TaskDetail() {
 
   const { data: task, loading, error, refetch } = useTaskDetail(taskId || '');
 
+  // Asana detail data for tabs (Phase 13)
+  const { data: asanaDetail } = useTaskAsanaDetail(taskId);
+
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [editFields, setEditFields] = useState<TaskUpdatePayload>({});
@@ -72,6 +76,21 @@ export default function TaskDetail() {
       </PageLayout>
     );
   }
+
+  // Tab definitions for Phase 13 depth tabs
+  const detailsTabs: TabDef<'details' | 'asana'>[] = [
+    { id: 'details', label: 'Details' },
+    {
+      id: 'asana',
+      label: 'Asana Detail',
+      badge:
+        (asanaDetail?.custom_fields?.length ?? 0) +
+        (asanaDetail?.subtasks?.length ?? 0) +
+        (asanaDetail?.stories?.length ?? 0) +
+        (asanaDetail?.dependencies?.length ?? 0) +
+        (asanaDetail?.attachments?.length ?? 0),
+    },
+  ];
 
   const startEdit = () => {
     setEditFields({
@@ -168,114 +187,312 @@ export default function TaskDetail() {
         />
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Main content */}
-        <div className="lg:col-span-2 space-y-6">
-          {editing ? (
-            <EditForm
-              fields={editFields}
-              onChange={setEditFields}
-              onSave={saveEdit}
-              onCancel={cancelEdit}
-              saving={saving}
-            />
+      {/* Tabbed content - Details and Asana Detail */}
+      <TabContainer<'details' | 'asana'> tabs={detailsTabs} defaultTab="details">
+        {(activeTab) =>
+          activeTab === 'details' ? (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Main content */}
+              <div className="lg:col-span-2 space-y-6">
+                {editing ? (
+                  <EditForm
+                    fields={editFields}
+                    onChange={setEditFields}
+                    onSave={saveEdit}
+                    onCancel={cancelEdit}
+                    saving={saving}
+                  />
+                ) : (
+                  <>
+                    {/* Status + Priority bar */}
+                    <div className="flex items-center gap-4 flex-wrap">
+                      <span
+                        className="px-2 py-1 rounded text-xs font-medium"
+                        style={{
+                          backgroundColor: statusColor(task.status),
+                          color: 'var(--white)',
+                        }}
+                      >
+                        {task.status}
+                      </span>
+                      <span
+                        className="text-sm font-medium"
+                        style={{ color: priorityColor(task.priority) }}
+                      >
+                        {priorityLabel(task.priority)} ({task.priority})
+                      </span>
+                      {task.urgency && task.urgency !== 'normal' && (
+                        <span className="text-xs text-[var(--warning)]">{task.urgency}</span>
+                      )}
+                      {task.due_date && (
+                        <span className="text-sm text-[var(--grey-light)]">
+                          Due:{' '}
+                          {new Date(task.due_date).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Description */}
+                    {task.description && (
+                      <div>
+                        <h3 className="text-xs font-medium text-[var(--grey-muted)] uppercase tracking-wide mb-2">
+                          Description
+                        </h3>
+                        <p className="text-sm text-[var(--grey-light)]">{task.description}</p>
+                      </div>
+                    )}
+
+                    {/* Metadata grid */}
+                    <div className="grid grid-cols-2 gap-3">
+                      <MetadataItem label="Assignee" value={task.assignee || 'Unassigned'} />
+                      <MetadataItem label="Project" value={task.project || 'None'} />
+                      <MetadataItem label="Source" value={task.source || 'Unknown'} />
+                      <MetadataItem label="Tags" value={task.tags || 'None'} />
+                      <MetadataItem
+                        label="Created"
+                        value={new Date(task.created_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
+                      />
+                      <MetadataItem
+                        label="Updated"
+                        value={new Date(task.updated_at).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
+                      />
+                    </div>
+
+                    {/* Notes */}
+                    <div>
+                      <h3 className="text-xs font-medium text-[var(--grey-muted)] uppercase tracking-wide mb-2">
+                        Notes
+                      </h3>
+                      <TaskNotesList notesJson={task.notes || null} />
+                    </div>
+
+                    {/* Actions */}
+                    <div>
+                      <h3 className="text-xs font-medium text-[var(--grey-muted)] uppercase tracking-wide mb-2">
+                        Actions
+                      </h3>
+                      <TaskActions
+                        task={task}
+                        onAction={refetch}
+                        onApprovalRequired={setApprovalInfo}
+                        toast={toast}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Sidebar */}
+              <div className="space-y-4">
+                <DelegationPanel task={task} />
+              </div>
+            </div>
           ) : (
             <>
-              {/* Status + Priority bar */}
-              <div className="flex items-center gap-4 flex-wrap">
-                <span
-                  className="px-2 py-1 rounded text-xs font-medium"
-                  style={{
-                    backgroundColor: statusColor(task.status),
-                    color: 'var(--white)',
-                  }}
-                >
-                  {task.status}
-                </span>
-                <span
-                  className="text-sm font-medium"
-                  style={{ color: priorityColor(task.priority) }}
-                >
-                  {priorityLabel(task.priority)} ({task.priority})
-                </span>
-                {task.urgency && task.urgency !== 'normal' && (
-                  <span className="text-xs text-[var(--warning)]">{task.urgency}</span>
-                )}
-                {task.due_date && (
-                  <span className="text-sm text-[var(--grey-light)]">
-                    Due:{' '}
-                    {new Date(task.due_date).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                      year: 'numeric',
-                    })}
-                  </span>
-                )}
-              </div>
+              {/* Asana Detail Tab */}
+              <div className="space-y-6">
+                {/* Custom Fields Section */}
+                <section className="bg-[var(--grey-dim)] rounded-lg p-4">
+                  <h2 className="text-lg font-medium mb-4">
+                    Custom Fields ({asanaDetail?.custom_fields?.length ?? 0})
+                  </h2>
+                  {!asanaDetail || asanaDetail.custom_fields.length === 0 ? (
+                    <p className="text-[var(--grey-light)]">
+                      No custom fields. Run the Asana collector to populate.
+                    </p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-[var(--grey)]">
+                            <th className="text-left px-3 py-2 text-[var(--grey-light)]">
+                              Field Name
+                            </th>
+                            <th className="text-left px-3 py-2 text-[var(--grey-light)]">Type</th>
+                            <th className="text-left px-3 py-2 text-[var(--grey-light)]">Value</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {asanaDetail.custom_fields.map((field, idx) => (
+                            <tr key={idx} className="border-b border-[var(--grey)]/20">
+                              <td className="px-3 py-2 text-[var(--white)]">{field.field_name}</td>
+                              <td className="px-3 py-2 text-[var(--grey-light)]">
+                                {field.field_type}
+                              </td>
+                              <td className="px-3 py-2 text-[var(--white)] font-mono text-xs">
+                                {field.text_value ||
+                                  field.number_value ||
+                                  field.enum_value ||
+                                  field.date_value ||
+                                  '--'}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </section>
 
-              {/* Description */}
-              {task.description && (
-                <div>
-                  <h3 className="text-xs font-medium text-[var(--grey-muted)] uppercase tracking-wide mb-2">
-                    Description
-                  </h3>
-                  <p className="text-sm text-[var(--grey-light)]">{task.description}</p>
-                </div>
-              )}
+                {/* Subtasks Section */}
+                <section className="bg-[var(--grey-dim)] rounded-lg p-4">
+                  <h2 className="text-lg font-medium mb-4">
+                    Subtasks ({asanaDetail?.subtasks?.length ?? 0})
+                  </h2>
+                  {!asanaDetail || asanaDetail.subtasks.length === 0 ? (
+                    <p className="text-[var(--grey-light)]">
+                      No subtasks. Run the Asana collector to populate.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {asanaDetail.subtasks.map((subtask, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-3 p-3 bg-[var(--grey-dim)] rounded-lg border border-[var(--grey)]"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={subtask.completed === 1}
+                            disabled
+                            className="h-4 w-4"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div
+                              className={`text-sm ${subtask.completed === 1 ? 'line-through text-[var(--grey)]' : 'text-[var(--white)]'}`}
+                            >
+                              {subtask.name}
+                            </div>
+                            {subtask.assignee_name && (
+                              <div className="text-xs text-[var(--grey-light)]">
+                                {subtask.assignee_name}
+                              </div>
+                            )}
+                          </div>
+                          {subtask.due_on && (
+                            <div className="text-xs text-[var(--grey-light)]">{subtask.due_on}</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
 
-              {/* Metadata grid */}
-              <div className="grid grid-cols-2 gap-3">
-                <MetadataItem label="Assignee" value={task.assignee || 'Unassigned'} />
-                <MetadataItem label="Project" value={task.project || 'None'} />
-                <MetadataItem label="Source" value={task.source || 'Unknown'} />
-                <MetadataItem label="Tags" value={task.tags || 'None'} />
-                <MetadataItem
-                  label="Created"
-                  value={new Date(task.created_at).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })}
-                />
-                <MetadataItem
-                  label="Updated"
-                  value={new Date(task.updated_at).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                    year: 'numeric',
-                  })}
-                />
-              </div>
+                {/* Stories Section */}
+                <section className="bg-[var(--grey-dim)] rounded-lg p-4">
+                  <h2 className="text-lg font-medium mb-4">
+                    Stories ({asanaDetail?.stories?.length ?? 0})
+                  </h2>
+                  {!asanaDetail || asanaDetail.stories.length === 0 ? (
+                    <p className="text-[var(--grey-light)]">
+                      No stories. Run the Asana collector to populate.
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {asanaDetail.stories.map((story, idx) => (
+                        <div
+                          key={idx}
+                          className="p-3 bg-[var(--grey-dim)] rounded-lg border border-[var(--grey)]"
+                        >
+                          <div className="flex items-start gap-3 mb-2">
+                            <span className="px-2 py-1 bg-[var(--grey)] rounded text-xs text-[var(--grey-light)]">
+                              {story.type}
+                            </span>
+                            {story.created_by && (
+                              <span className="text-xs text-[var(--grey-light)]">
+                                {story.created_by}
+                              </span>
+                            )}
+                            {story.created_at && (
+                              <span className="text-xs text-[var(--grey-light)]">
+                                {new Date(story.created_at).toLocaleDateString('en-US', {
+                                  month: 'short',
+                                  day: 'numeric',
+                                  year: 'numeric',
+                                })}
+                              </span>
+                            )}
+                          </div>
+                          {story.text && (
+                            <p className="text-sm text-[var(--white)] line-clamp-3">{story.text}</p>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
 
-              {/* Notes */}
-              <div>
-                <h3 className="text-xs font-medium text-[var(--grey-muted)] uppercase tracking-wide mb-2">
-                  Notes
-                </h3>
-                <TaskNotesList notesJson={task.notes || null} />
-              </div>
+                {/* Dependencies Section */}
+                <section className="bg-[var(--grey-dim)] rounded-lg p-4">
+                  <h2 className="text-lg font-medium mb-4">
+                    Dependencies ({asanaDetail?.dependencies?.length ?? 0})
+                  </h2>
+                  {!asanaDetail || asanaDetail.dependencies.length === 0 ? (
+                    <p className="text-[var(--grey-light)]">
+                      No dependencies. Run the Asana collector to populate.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {asanaDetail.dependencies.map((dep, idx) => (
+                        <div
+                          key={idx}
+                          className="p-2 bg-[var(--grey-dim)] rounded-lg border border-[var(--grey)] text-sm font-mono text-[var(--white)]"
+                        >
+                          {dep.depends_on_task_id}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
 
-              {/* Actions */}
-              <div>
-                <h3 className="text-xs font-medium text-[var(--grey-muted)] uppercase tracking-wide mb-2">
-                  Actions
-                </h3>
-                <TaskActions
-                  task={task}
-                  onAction={refetch}
-                  onApprovalRequired={setApprovalInfo}
-                  toast={toast}
-                />
+                {/* Attachments Section */}
+                <section className="bg-[var(--grey-dim)] rounded-lg p-4">
+                  <h2 className="text-lg font-medium mb-4">
+                    Attachments ({asanaDetail?.attachments?.length ?? 0})
+                  </h2>
+                  {!asanaDetail || asanaDetail.attachments.length === 0 ? (
+                    <p className="text-[var(--grey-light)]">
+                      No attachments. Run the Asana collector to populate.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {asanaDetail.attachments.map((att, idx) => (
+                        <div
+                          key={idx}
+                          className="flex items-center gap-3 p-3 bg-[var(--grey-dim)] rounded-lg border border-[var(--grey)]"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm text-[var(--white)] truncate">{att.name}</div>
+                            {att.host && (
+                              <div className="text-xs text-[var(--grey-light)]">{att.host}</div>
+                            )}
+                          </div>
+                          {att.size_bytes != null && (
+                            <div className="text-xs text-[var(--grey-light)] whitespace-nowrap">
+                              {(att.size_bytes / 1024).toFixed(1)} KB
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </section>
               </div>
             </>
-          )}
-        </div>
-
-        {/* Sidebar */}
-        <div className="space-y-4">
-          <DelegationPanel task={task} />
-        </div>
-      </div>
+          )
+        }
+      </TabContainer>
     </PageLayout>
   );
 }

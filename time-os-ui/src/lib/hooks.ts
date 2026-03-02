@@ -432,3 +432,60 @@ export function useProjectDetail(projectId: string | undefined) {
 export function useLinkingStats() {
   return useFetch(() => api.fetchLinkingStats(), []);
 }
+
+// ==== Collector Data Depth Hooks (Phase 13) ====
+
+// Email participants and labels for a client
+export function useClientEmailParticipants(clientId: string | undefined) {
+  return useFetch(
+    () => (clientId ? api.fetchClientEmailParticipants(clientId) : Promise.resolve(null)),
+    [clientId]
+  );
+}
+
+// Email attachments for a client
+export function useClientAttachments(clientId: string | undefined) {
+  return useFetch(
+    () => (clientId ? api.fetchClientAttachments(clientId) : Promise.resolve(null)),
+    [clientId]
+  );
+}
+
+// Invoice line items and credit notes for a client
+export function useClientInvoiceDetail(clientId: string | undefined) {
+  return useFetch(
+    () => (clientId ? api.fetchClientInvoiceDetail(clientId) : Promise.resolve(null)),
+    [clientId]
+  );
+}
+
+// Calendar attendees and recurrence for a person
+export function usePersonCalendarDetail(personId: string | undefined) {
+  return useFetch(
+    () => (personId ? api.fetchPersonCalendarDetail(personId) : Promise.resolve(null)),
+    [personId]
+  );
+}
+
+// Asana detail for a task
+export function useTaskAsanaDetail(taskId: string | undefined) {
+  return useFetch(
+    () => (taskId ? api.fetchTaskAsanaDetail(taskId) : Promise.resolve(null)),
+    [taskId]
+  );
+}
+
+// Chat analytics
+export function useChatAnalytics() {
+  return useFetch(() => api.fetchChatAnalytics(), []);
+}
+
+// Financial detail (contacts, transactions, tax rates)
+export function useFinancialDetail() {
+  return useFetch(() => api.fetchFinancialDetail(), []);
+}
+
+// Asana portfolio context (portfolios and goals)
+export function useAsanaPortfolioContext() {
+  return useFetch(() => api.fetchAsanaPortfolioContext(), []);
+}

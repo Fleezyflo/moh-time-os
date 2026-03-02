@@ -2,13 +2,46 @@
 
 ## Current State
 
-- **Current phase:** Phase 11 BUILT (Governance & Admin). Phases -1 through 8 COMPLETE. Phases 9, 10, 11 pending commits.
-- **Current track:** T7 (Governance & Admin)
-- **Blocked by:** Phase 9 commit must go first, then Phase 10, then Phase 11.
+- **Current phase:** Phase 13 BUILT (Collector Data Depth). Phases -1 through 12 COMPLETE (PR #47 merged).
+- **Current track:** T10 (Collector Data Depth)
+- **Blocked by:** Phase 13 commit (needs Mac: tsc, prettier, system-map regen).
 - **D1/D2:** Resolved. Blue `#3b82f6`, slate-400 at 5.1:1.
-- **Next session:** Commit Phase 9, then Phase 10, then Phase 11.
+- **Next session:** Commit Phase 13, then buildout complete.
 
 ## Session History
+
+### Session 19 (Phase 13: Collector Data Depth) -- 2026-03-02
+
+- **Type:** B (Build)
+- **Pre-session:** Phases 9-12 already merged via PR #47 (confirmed MERGED 2026-03-01T22:44:31Z).
+- **Investigation:**
+  - All 22 collector secondary tables already exist in lib/schema.py and the live database. No migrations needed.
+  - Xero tables have live data (7,802 rows across 4 tables). Gmail/Asana/Calendar/Chat tables exist but empty (collectors not yet run).
+  - spec_router.py is NOT protected -- safe to edit.
+- **Work done:**
+  - **13.2:** Added 8 query_engine methods to `lib/query_engine.py`: `client_email_participants()`, `client_attachments()`, `client_invoice_detail()`, `person_calendar_detail()`, `task_asana_detail()`, `chat_analytics()`, `financial_detail()`, `asana_portfolio_context()`. All use parameterized SQL, return structured dicts.
+  - **13.3:** Added 8 spec_router endpoints to `api/spec_router.py`: GET email-participants, attachments, invoice-detail, calendar-detail, asana-detail, chat/analytics, financial/detail, projects/asana-context. All use QueryEngine via lazy singleton, proper error handling (no except-pass).
+  - **13.4:** Added ~250 lines of types and 8 fetch functions to `lib/api.ts`. Added 8 hooks to `lib/hooks.ts`.
+  - **13.5-13.6-13.7:** Added 3 new tabs to ClientDetailSpec.tsx: Email Participants, Attachments, Invoice Detail. Each with proper tables and empty states.
+  - **13.8:** Added Calendar Detail tab to TeamDetail.tsx (wrapped existing content in TabContainer with overview + calendar tabs).
+  - **13.9:** Added Asana Detail tab to TaskDetail.tsx (wrapped existing content in TabContainer with details + asana tabs). Shows custom fields, subtasks, stories, dependencies, attachments.
+  - **13.10:** Added Chat Analytics tab to Operations.tsx (4th tab alongside data-quality, watchers, couplings). Shows spaces, reactions, attachments.
+  - **13.11-13.12:** Added Financial Detail and Asana Context collapsible sections to Portfolio.tsx. Contacts, transactions, tax rates, portfolios, goals.
+- **Bugs found and fixed:**
+  - ClientDetailSpec.tsx: Phase 13 hooks were imported from `../intelligence/hooks` instead of `../lib/hooks` -- fixed.
+- **Files changed:**
+  - `lib/query_engine.py` -- added ~270 lines (8 methods)
+  - `api/spec_router.py` -- added ~160 lines (8 endpoints + QueryEngine lazy singleton + Any import)
+  - `time-os-ui/src/lib/api.ts` -- added ~270 lines (types + fetch functions)
+  - `time-os-ui/src/lib/hooks.ts` -- added ~55 lines (8 hooks)
+  - `time-os-ui/src/pages/ClientDetailSpec.tsx` -- 3 new tabs + import fix
+  - `time-os-ui/src/pages/TeamDetail.tsx` -- TabContainer wrapper + Calendar Detail tab
+  - `time-os-ui/src/pages/TaskDetail.tsx` -- TabContainer wrapper + Asana Detail tab
+  - `time-os-ui/src/pages/Operations.tsx` -- Chat Analytics tab
+  - `time-os-ui/src/pages/Portfolio.tsx` -- Financial Detail + Asana Context sections
+- **Verification:** Ruff check clean, ruff format clean, bandit clean. Pending Mac: tsc, prettier, system-map regen.
+
+
 
 ### Session 18 (Phase 11: Governance & Admin) -- 2026-03-02
 

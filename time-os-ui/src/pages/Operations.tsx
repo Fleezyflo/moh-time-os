@@ -7,16 +7,23 @@ import { PageLayout } from '../components/layout/PageLayout';
 import { SummaryGrid } from '../components/layout/SummaryGrid';
 import { MetricCard } from '../components/layout/MetricCard';
 import { TabContainer, type TabDef } from '../components/layout/TabContainer';
-import { useFixData, useWatchers, useAllCouplings, useHealth } from '../lib/hooks';
+import {
+  useFixData,
+  useWatchers,
+  useAllCouplings,
+  useHealth,
+  useChatAnalytics,
+} from '../lib/hooks';
 import * as api from '../lib/api';
 import type { Watcher, Coupling, FixData } from '../types/api';
 
-type OpsTab = 'data-quality' | 'watchers' | 'couplings';
+type OpsTab = 'data-quality' | 'watchers' | 'couplings' | 'chat-analytics';
 
 const TABS: TabDef<OpsTab>[] = [
   { id: 'data-quality', label: 'Data Quality' },
   { id: 'watchers', label: 'Watchers' },
   { id: 'couplings', label: 'Couplings' },
+  { id: 'chat-analytics', label: 'Chat Analytics' },
 ];
 
 export function Operations() {
@@ -28,6 +35,7 @@ export function Operations() {
   const { data: watcherData, refetch: refetchWatchers } = useWatchers(24);
   const { data: couplingData } = useAllCouplings();
   const { data: healthData } = useHealth();
+  const { data: chatAnalytics } = useChatAnalytics();
 
   // Derive counts
   const identityCount = fixData?.identity_conflicts?.length || 0;
@@ -38,10 +46,12 @@ export function Operations() {
   const systemStatus = healthData?.status || 'unknown';
 
   // Update tab badges
+  const spaceCount = chatAnalytics?.spaces?.length || 0;
   const tabsWithBadges: TabDef<OpsTab>[] = TABS.map((tab) => {
     if (tab.id === 'data-quality') return { ...tab, badge: totalFixItems };
     if (tab.id === 'watchers') return { ...tab, badge: watcherCount };
     if (tab.id === 'couplings') return { ...tab, badge: couplingCount };
+    if (tab.id === 'chat-analytics') return { ...tab, badge: spaceCount };
     return tab;
   });
 
@@ -108,6 +118,8 @@ export function Operations() {
               );
             case 'couplings':
               return <CouplingsTab couplings={couplingData?.items || []} />;
+            case 'chat-analytics':
+              return <ChatAnalyticsTab chatAnalytics={chatAnalytics} />;
             default:
               return null;
           }
@@ -320,6 +332,137 @@ function CouplingsTab({ couplings }: { couplings: Coupling[] }) {
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ---- Chat Analytics Tab ----
+
+function ChatAnalyticsTab({ chatAnalytics }: { chatAnalytics: api.ChatAnalyticsResponse | null }) {
+  if (
+    !chatAnalytics ||
+    (!chatAnalytics.spaces && !chatAnalytics.reactions && !chatAnalytics.attachments)
+  ) {
+    return (
+      <div className="p-8 text-center">
+        <p className="text-[var(--grey-light)]">
+          No chat analytics data available. Run the Chat collector to populate.
+        </p>
+      </div>
+    );
+  }
+
+  const spaces = chatAnalytics.spaces || [];
+  const reactions = chatAnalytics.reactions || [];
+  const attachments = chatAnalytics.attachments || [];
+
+  // Sort reactions by count and take top 20
+  const topReactions = reactions
+    .sort(
+      (a: { emoji: string; count: number }, b: { emoji: string; count: number }) =>
+        (b.count || 0) - (a.count || 0)
+    )
+    .slice(0, 20);
+
+  return (
+    <div className="space-y-6 pt-4">
+      {/* Spaces Section */}
+      {spaces.length > 0 && (
+        <div>
+          <h3 className="text-sm font-medium text-[var(--grey-light)] mb-3">
+            Spaces ({spaces.length})
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="border-b border-[var(--grey)]">
+                  <th className="text-left p-2 text-[var(--grey-light)]">Display Name</th>
+                  <th className="text-left p-2 text-[var(--grey-light)]">Type</th>
+                  <th className="text-left p-2 text-[var(--grey-light)]">Members</th>
+                  <th className="text-left p-2 text-[var(--grey-light)]">Threaded</th>
+                </tr>
+              </thead>
+              <tbody>
+                {spaces.map((space: api.ChatSpace, idx: number) => (
+                  <tr
+                    key={idx}
+                    className="border-b border-[var(--grey)]/30 hover:bg-[var(--grey-dim)]"
+                  >
+                    <td className="p-2 text-[var(--white)]">{space.display_name || '--'}</td>
+                    <td className="p-2 text-[var(--grey-light)]">{space.space_type || '--'}</td>
+                    <td className="p-2 text-[var(--grey-light)]">{space.member_count || '--'}</td>
+                    <td className="p-2 text-[var(--grey-light)]">
+                      {space.threaded ? 'Yes' : 'No'}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Reactions Section */}
+      {topReactions.length > 0 && (
+        <div>
+          <h3 className="text-sm font-medium text-[var(--grey-light)] mb-3">
+            Top Reactions ({topReactions.length})
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="border-b border-[var(--grey)]">
+                  <th className="text-left p-2 text-[var(--grey-light)]">Emoji</th>
+                  <th className="text-left p-2 text-[var(--grey-light)]">Count</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topReactions.map((reaction: { emoji: string; count: number }, idx: number) => (
+                  <tr
+                    key={idx}
+                    className="border-b border-[var(--grey)]/30 hover:bg-[var(--grey-dim)]"
+                  >
+                    <td className="p-2 text-[var(--white)]">{reaction.emoji || '--'}</td>
+                    <td className="p-2 text-[var(--grey-light)]">{reaction.count || 0}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Attachments Section */}
+      {attachments.length > 0 && (
+        <div>
+          <h3 className="text-sm font-medium text-[var(--grey-light)] mb-3">
+            Attachments ({attachments.length})
+          </h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="border-b border-[var(--grey)]">
+                  <th className="text-left p-2 text-[var(--grey-light)]">Content Type</th>
+                  <th className="text-left p-2 text-[var(--grey-light)]">Count</th>
+                </tr>
+              </thead>
+              <tbody>
+                {attachments.map(
+                  (attachment: { content_type: string; count: number }, idx: number) => (
+                    <tr
+                      key={idx}
+                      className="border-b border-[var(--grey)]/30 hover:bg-[var(--grey-dim)]"
+                    >
+                      <td className="p-2 text-[var(--white)]">{attachment.content_type || '--'}</td>
+                      <td className="p-2 text-[var(--grey-light)]">{attachment.count || 0}</td>
+                    </tr>
+                  )
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

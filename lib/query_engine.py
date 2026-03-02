@@ -1000,6 +1000,339 @@ class QueryEngine:
             "trends": trends,
         }
 
+    # =========================================================================
+    # COLLECTOR DATA DEPTH — Phase 13
+    # =========================================================================
+
+    def client_email_participants(self, client_id: str) -> dict:
+        """
+        Email participants and labels for a client's communications.
+
+        Returns:
+            {participants: [{email, name, role, message_count}],
+             labels: [{label_name, message_count}],
+             total_participants: int, total_labels: int}
+        """
+        participants = self._execute(
+            """
+            SELECT gp.email, gp.name, gp.role, COUNT(*) as message_count
+            FROM gmail_participants gp
+            JOIN communications c ON gp.message_id = c.id
+            WHERE c.client_id = ?
+            GROUP BY gp.email, gp.name, gp.role
+            ORDER BY message_count DESC
+            """,
+            (client_id,),
+        )
+        labels = self._execute(
+            """
+            SELECT gl.label_name, COUNT(*) as message_count
+            FROM gmail_labels gl
+            JOIN communications c ON gl.message_id = c.id
+            WHERE c.client_id = ?
+            GROUP BY gl.label_name
+            ORDER BY message_count DESC
+            """,
+            (client_id,),
+        )
+        return {
+            "participants": participants,
+            "labels": labels,
+            "total_participants": len(participants),
+            "total_labels": len(labels),
+        }
+
+    def client_attachments(self, client_id: str) -> dict:
+        """
+        Email attachments for a client's communications.
+
+        Returns:
+            {attachments: [{filename, mime_type, size_bytes, message_id, created_at}],
+             total: int, total_size_bytes: int}
+        """
+        attachments = self._execute(
+            """
+            SELECT ga.filename, ga.mime_type, ga.size_bytes,
+                   ga.message_id, c.created_at
+            FROM gmail_attachments ga
+            JOIN communications c ON ga.message_id = c.id
+            WHERE c.client_id = ?
+            ORDER BY c.created_at DESC
+            """,
+            (client_id,),
+        )
+        total_size = sum(a.get("size_bytes") or 0 for a in attachments)
+        return {
+            "attachments": attachments,
+            "total": len(attachments),
+            "total_size_bytes": total_size,
+        }
+
+    def client_invoice_detail(self, client_id: str) -> dict:
+        """
+        Invoice line items and credit notes for a client.
+
+        Returns:
+            {line_items: [{invoice_id, description, quantity, unit_amount,
+                          line_amount, tax_type, tax_amount, account_code}],
+             credit_notes: [{id, contact_id, date, status, total,
+                            currency_code, remaining_credit}],
+             total_line_items: int, total_credit_notes: int}
+        """
+        line_items = self._execute(
+            """
+            SELECT xl.invoice_id, xl.description, xl.quantity,
+                   xl.unit_amount, xl.line_amount, xl.tax_type,
+                   xl.tax_amount, xl.account_code,
+                   xl.tracking_category, xl.tracking_option
+            FROM xero_line_items xl
+            JOIN invoices i ON xl.invoice_id = i.id
+            WHERE i.client_id = ?
+            ORDER BY xl.invoice_id
+            """,
+            (client_id,),
+        )
+        credit_notes = self._execute(
+            """
+            SELECT xc.id, xc.contact_id, xc.date, xc.status,
+                   xc.total, xc.currency_code, xc.remaining_credit,
+                   xc.allocated_amount
+            FROM xero_credit_notes xc
+            JOIN xero_contacts xcon ON xc.contact_id = xcon.id
+            JOIN clients c ON LOWER(xcon.name) = LOWER(c.name)
+            WHERE c.id = ?
+            ORDER BY xc.date DESC
+            """,
+            (client_id,),
+        )
+        return {
+            "line_items": line_items,
+            "credit_notes": credit_notes,
+            "total_line_items": len(line_items),
+            "total_credit_notes": len(credit_notes),
+        }
+
+    def person_calendar_detail(self, person_id: str) -> dict:
+        """
+        Calendar attendees and recurrence rules for a person's events.
+
+        Returns:
+            {attendees: [{event_id, email, display_name, response_status,
+                         organizer}],
+             recurrence: [{event_id, rrule}],
+             total_attendees: int, total_recurrence: int}
+        """
+        attendees = self._execute(
+            """
+            SELECT ca.event_id, ca.email, ca.display_name,
+                   ca.response_status, ca.organizer
+            FROM calendar_attendees ca
+            JOIN events e ON ca.event_id = e.id
+            WHERE e.assignee_id = ?
+            ORDER BY e.start_time DESC
+            """,
+            (person_id,),
+        )
+        recurrence = self._execute(
+            """
+            SELECT cr.event_id, cr.rrule
+            FROM calendar_recurrence_rules cr
+            JOIN events e ON cr.event_id = e.id
+            WHERE e.assignee_id = ?
+            """,
+            (person_id,),
+        )
+        return {
+            "attendees": attendees,
+            "recurrence": recurrence,
+            "total_attendees": len(attendees),
+            "total_recurrence": len(recurrence),
+        }
+
+    def task_asana_detail(self, task_id: str) -> dict:
+        """
+        Asana detail data for a task: custom fields, subtasks, stories,
+        dependencies, and attachments.
+
+        Returns:
+            {custom_fields: [{field_name, field_type, text_value, number_value,
+                             enum_value, date_value}],
+             subtasks: [{id, name, assignee_name, completed, due_on}],
+             stories: [{id, type, text, created_by, created_at}],
+             dependencies: [{depends_on_task_id}],
+             attachments: [{id, name, download_url, host, size_bytes}]}
+        """
+        custom_fields = self._execute(
+            """
+            SELECT field_name, field_type, text_value, number_value,
+                   enum_value, date_value
+            FROM asana_custom_fields
+            WHERE task_id = ?
+            ORDER BY field_name
+            """,
+            (task_id,),
+        )
+        subtasks = self._execute(
+            """
+            SELECT id, name, assignee_name, completed, due_on
+            FROM asana_subtasks
+            WHERE parent_task_id = ?
+            ORDER BY completed ASC, due_on ASC
+            """,
+            (task_id,),
+        )
+        stories = self._execute(
+            """
+            SELECT id, type, text, created_by, created_at
+            FROM asana_stories
+            WHERE task_id = ?
+            ORDER BY created_at DESC
+            LIMIT 50
+            """,
+            (task_id,),
+        )
+        dependencies = self._execute(
+            """
+            SELECT depends_on_task_id
+            FROM asana_task_dependencies
+            WHERE task_id = ?
+            """,
+            (task_id,),
+        )
+        attachments = self._execute(
+            """
+            SELECT id, name, download_url, host, size_bytes
+            FROM asana_attachments
+            WHERE task_id = ?
+            ORDER BY name
+            """,
+            (task_id,),
+        )
+        return {
+            "custom_fields": custom_fields,
+            "subtasks": subtasks,
+            "stories": stories,
+            "dependencies": dependencies,
+            "attachments": attachments,
+        }
+
+    def chat_analytics(self) -> dict:
+        """
+        Chat analytics: space metadata, reaction summary, attachment summary.
+
+        Returns:
+            {spaces: [{space_id, display_name, space_type, member_count, ...}],
+             reactions: [{emoji, count}],
+             attachments: [{content_type, count}],
+             total_spaces: int, total_reactions: int, total_attachments: int}
+        """
+        spaces = self._execute(
+            """
+            SELECT space_id, display_name, space_type, threaded,
+                   member_count, created_time, last_synced
+            FROM chat_space_metadata
+            ORDER BY member_count DESC
+            """
+        )
+        reactions = self._execute(
+            """
+            SELECT emoji, COUNT(*) as count
+            FROM chat_reactions
+            GROUP BY emoji
+            ORDER BY count DESC
+            LIMIT 50
+            """
+        )
+        attachment_types = self._execute(
+            """
+            SELECT content_type, COUNT(*) as count
+            FROM chat_attachments
+            GROUP BY content_type
+            ORDER BY count DESC
+            """
+        )
+        return {
+            "spaces": spaces,
+            "reactions": reactions,
+            "attachments": attachment_types,
+            "total_spaces": len(spaces),
+            "total_reactions": sum(r.get("count", 0) for r in reactions),
+            "total_attachments": sum(a.get("count", 0) for a in attachment_types),
+        }
+
+    def financial_detail(self) -> dict:
+        """
+        Financial detail: Xero contacts, bank transactions, tax rates.
+
+        Returns:
+            {contacts: [{id, name, email, is_supplier, is_customer,
+                        outstanding_balance, overdue_balance}],
+             transactions: [{id, type, date, status, total, reference}],
+             tax_rates: [{name, tax_type, effective_rate, status}],
+             total_contacts: int, total_transactions: int}
+        """
+        contacts = self._execute(
+            """
+            SELECT id, name, email, phone, is_supplier, is_customer,
+                   default_currency, outstanding_balance, overdue_balance
+            FROM xero_contacts
+            ORDER BY name
+            """
+        )
+        transactions = self._execute(
+            """
+            SELECT id, type, contact_id, date, status, total,
+                   currency_code, reference
+            FROM xero_bank_transactions
+            ORDER BY date DESC
+            LIMIT 200
+            """
+        )
+        tax_rates = self._execute(
+            """
+            SELECT name, tax_type, effective_rate, status
+            FROM xero_tax_rates
+            ORDER BY name
+            """
+        )
+        return {
+            "contacts": contacts,
+            "transactions": transactions,
+            "tax_rates": tax_rates,
+            "total_contacts": len(contacts),
+            "total_transactions": len(transactions),
+        }
+
+    def asana_portfolio_context(self) -> dict:
+        """
+        Asana portfolios and goals for project-level context.
+
+        Returns:
+            {portfolios: [{id, name, owner_name}],
+             goals: [{id, name, owner_name, status, due_on}],
+             total_portfolios: int, total_goals: int}
+        """
+        portfolios = self._execute(
+            """
+            SELECT id, name, owner_id, owner_name
+            FROM asana_portfolios
+            ORDER BY name
+            """
+        )
+        goals = self._execute(
+            """
+            SELECT id, name, owner_id, owner_name, status, due_on
+            FROM asana_goals
+            ORDER BY due_on ASC
+            """
+        )
+        return {
+            "portfolios": portfolios,
+            "goals": goals,
+            "total_portfolios": len(portfolios),
+            "total_goals": len(goals),
+        }
+
 
 def _compute_trend(values: list[float]) -> dict:
     """
