@@ -92,7 +92,7 @@ COLLECTOR_REGISTRY: dict[str, CollectorSpec] = {
         source="tasks",
         module="collectors.scheduled_collect",
         function="collect_tasks",
-        json_output="tasks.json",
+        tables_written=["tasks"],
     ),
     "chat": CollectorSpec(
         source="chat",
@@ -104,8 +104,16 @@ COLLECTOR_REGISTRY: dict[str, CollectorSpec] = {
         source="asana",
         module="collectors.scheduled_collect",
         function="collect_asana",
-        tables_written=["tasks"],
-        json_output="asana-ops.json",
+        tables_written=[
+            "tasks",
+            "asana_custom_fields",
+            "asana_subtasks",
+            "asana_stories",
+            "asana_task_dependencies",
+            "asana_attachments",
+            "asana_portfolios",
+            "asana_goals",
+        ],
     ),
     "xero": CollectorSpec(
         source="xero",

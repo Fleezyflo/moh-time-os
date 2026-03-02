@@ -101,19 +101,28 @@ def collect_gmail():
 
 
 def collect_tasks():
-    """Collect all tasks from all lists."""
+    """Collect Google Tasks via TasksCollector (DB sync)."""
     print("📋 Collecting tasks...")
     try:
-        from tasks import collect_tasks as _collect
-        from tasks import save as save_tasks
+        from lib.collectors.tasks import TasksCollector
+        from lib.state_store import get_store
 
-        data = _collect()
-        save_tasks(data)
-        mark_collected("tasks")
-        print(f"   → {len(data.get('tasks', []))} tasks")
-        return data
+        collector = TasksCollector({}, store=get_store())
+        sync_result = collector.sync()
+
+        if sync_result.get("success"):
+            mark_collected("tasks")
+            stored = sync_result.get("stored", 0)
+            print(f"   → {stored} tasks to DB")
+        else:
+            print(f"   → Tasks sync failed: {sync_result.get('error', 'unknown')}")
+
+        return sync_result
     except Exception as e:
-        print(f"   → Error: {e}")
+        import traceback
+
+        print(f"   → Tasks error: {e}")
+        traceback.print_exc()
         return {}
 
 
@@ -144,21 +153,32 @@ def collect_chat():
 
 
 def collect_asana():
-    """Collect Asana hygiene data."""
+    """Collect Asana tasks and expanded data via AsanaCollector (DB + JSON)."""
     print("📊 Collecting asana...")
     try:
-        from asana_ops import generate_asana_report
+        from lib.collectors.asana import AsanaCollector
+        from lib.state_store import get_store
 
-        report = generate_asana_report()
-        if report:
-            (OUT_DIR / "asana-ops.json").write_text(json.dumps(report, indent=2))
+        collector = AsanaCollector({}, store=get_store())
+        sync_result = collector.sync()
+
+        if sync_result.get("success"):
             mark_collected("asana")
-            print(
-                f"   → {report.get('overdue_count', 0)} overdue, {report.get('stale_count', 0)} stale"
-            )
-        return report
+            stored = sync_result.get("stored_tasks", 0)
+            secondary = sync_result.get("secondary_tables", {})
+            print(f"   → {stored} tasks to DB")
+            for table, count in secondary.items():
+                if count > 0:
+                    print(f"   → {count} {table}")
+        else:
+            print(f"   → Asana sync failed: {sync_result.get('error', 'unknown')}")
+
+        return sync_result
     except Exception as e:
-        print(f"   → Error: {e}")
+        import traceback
+
+        print(f"   → Asana error: {e}")
+        traceback.print_exc()
         return {}
 
 
