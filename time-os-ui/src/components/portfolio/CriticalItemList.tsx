@@ -5,6 +5,7 @@
  * Data comes from useCriticalItems() intelligence hook.
  */
 
+import { Link } from '@tanstack/react-router';
 import type { CriticalItem } from '../../intelligence/api';
 
 interface CriticalItemListProps {
@@ -23,11 +24,13 @@ export function CriticalItemList({ items, maxItems = 5 }: CriticalItemListProps)
 
   return (
     <div className="space-y-3">
-      {displayed.map((item, idx) => (
-        <div
-          key={`${item.entity.id}-${idx}`}
-          className="p-4 bg-[var(--grey-dim)] rounded-lg border-l-4 border-red-500/70 hover:bg-[var(--grey)] transition-colors"
-        >
+      {displayed.map((item, idx) => {
+        const isClient = item.entity.type === 'client';
+        const cardClassName =
+          'block p-4 bg-[var(--grey-dim)] rounded-lg border-l-4 border-red-500/70 hover:bg-[var(--grey)] transition-colors' +
+          (isClient ? ' cursor-pointer' : '');
+
+        const cardContent = (
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
               <h4 className="font-medium text-[var(--white)] truncate">{item.headline}</h4>
@@ -53,8 +56,23 @@ export function CriticalItemList({ items, maxItems = 5 }: CriticalItemListProps)
               )}
             </div>
           </div>
-        </div>
-      ))}
+        );
+
+        return isClient ? (
+          <Link
+            key={`${item.entity.id}-${idx}`}
+            to="/clients/$clientId"
+            params={{ clientId: item.entity.id }}
+            className={cardClassName}
+          >
+            {cardContent}
+          </Link>
+        ) : (
+          <div key={`${item.entity.id}-${idx}`} className={cardClassName}>
+            {cardContent}
+          </div>
+        );
+      })}
       {items.length > maxItems && (
         <div className="text-center text-sm text-[var(--grey-muted)]">
           +{items.length - maxItems} more critical items

@@ -5,6 +5,7 @@
  * Data comes from usePortfolioRisks() hook.
  */
 
+import { Link } from '@tanstack/react-router';
 import type { AtRiskClient } from '../../lib/api';
 
 interface RiskListProps {
@@ -35,9 +36,11 @@ export function RiskList({ clients, maxItems = 10 }: RiskListProps) {
   return (
     <div className="space-y-2">
       {displayed.map((client) => (
-        <div
+        <Link
           key={client.client_id}
-          className="flex items-center justify-between p-3 bg-[var(--grey-dim)] rounded-lg hover:bg-[var(--grey)] transition-colors"
+          to="/clients/$clientId"
+          params={{ clientId: client.client_id }}
+          className="flex items-center justify-between p-3 bg-[var(--grey-dim)] rounded-lg hover:bg-[var(--grey)] transition-colors cursor-pointer"
         >
           <div className="flex-1 min-w-0">
             <span className="font-medium text-[var(--white)] truncate block">{client.name}</span>
@@ -53,7 +56,7 @@ export function RiskList({ clients, maxItems = 10 }: RiskListProps) {
             </span>
             <span className="text-xs text-[var(--grey-muted)]">health</span>
           </div>
-        </div>
+        </Link>
       ))}
       {clients.length > maxItems && (
         <div className="text-center text-sm text-[var(--grey-muted)]">
