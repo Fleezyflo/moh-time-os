@@ -162,7 +162,7 @@ export interface Task {
   title: string;
   description?: string | null;
   status: string;
-  priority: number;
+  priority: number | string;
   urgency?: string | null;
   assignee: string | null;
   assignee_id?: string | null;
