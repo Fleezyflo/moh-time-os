@@ -21,7 +21,6 @@ const ClientIndex = lazy(() => import('./pages/ClientIndex'));
 const ClientDetailSpec = lazy(() => import('./pages/ClientDetailSpec'));
 const Team = lazy(() => import('./pages/Team'));
 const TeamDetail = lazy(() => import('./pages/TeamDetail'));
-const FixData = lazy(() => import('./pages/FixData'));
 const Portfolio = lazy(() => import('./pages/Portfolio'));
 const Operations = lazy(() => import('./pages/Operations'));
 const TaskList = lazy(() => import('./pages/TaskList'));
@@ -291,20 +290,11 @@ const teamDetailRoute = createRoute({
   ),
 });
 
-const fixDataRoute = createRoute({
+// Redirect: /fix-data → /ops (accessible via Operations "Data Quality" tab)
+const fixDataRedirectRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/fix-data',
-  component: () => (
-    <Suspense
-      fallback={
-        <PageSuspense>
-          <div />
-        </PageSuspense>
-      }
-    >
-      <FixData />
-    </Suspense>
-  ),
+  component: () => <Navigate to="/ops" />,
 });
 
 // Portfolio page (Phase 3.1)
@@ -650,7 +640,7 @@ const routeTree = rootRoute.addChildren([
   clientDetailRoute,
   teamRoute,
   teamDetailRoute,
-  fixDataRoute, // Still accessible via direct URL, removed from nav
+  fixDataRedirectRoute, // /fix-data → /ops
   opsRoute, // Operations (/ops)
   tasksRoute, // Tasks (/tasks) — Phase 6
   taskDetailRoute, // Task detail (/tasks/:taskId) — Phase 6

@@ -54,7 +54,9 @@ export function DataQualityHealthScore({ data }: Props) {
           <div className="text-xs text-[var(--grey-light)]">Ancient tasks</div>
         </div>
         <div className="bg-[var(--grey-dim)] border border-[var(--grey)] rounded-lg p-3">
-          <div className="text-lg font-semibold text-slate-400">{issues.inactive_tasks.count}</div>
+          <div className="text-lg font-semibold text-[var(--grey-light)]">
+            {issues.inactive_tasks.count}
+          </div>
           <div className="text-xs text-[var(--grey-light)]">Inactive tasks</div>
         </div>
       </div>
@@ -88,7 +90,7 @@ export function DataQualityHealthScore({ data }: Props) {
                       ? 'text-orange-400'
                       : s.severity === 'medium'
                         ? 'text-amber-400'
-                        : 'text-slate-400'
+                        : 'text-[var(--grey-light)]'
                 }
               >
                 [{s.severity}]

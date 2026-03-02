@@ -1,7 +1,7 @@
 // RoomDrawer — detail view for a proposal with signals
 import { useEffect, useRef, useState } from 'react';
 import type { Proposal } from '../types/api';
-import { fetchProposalDetailLegacy } from '../lib/api';
+import { fetchProposalDetail } from '../lib/api';
 
 interface SignalValue {
   // Deadline signals
@@ -224,9 +224,9 @@ export function RoomDrawer({
     setLoading(true);
     setDetail(null); // Clear previous detail
 
-    fetchProposalDetailLegacy(proposal.proposal_id)
+    fetchProposalDetail(proposal.proposal_id)
       .then((data) => {
-        const detail = data as ProposalDetail;
+        const detail = data as unknown as ProposalDetail;
         setDetail(detail);
         setLoading(false);
       })

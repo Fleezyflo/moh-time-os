@@ -2,6 +2,7 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { SkeletonCardList, ErrorState, NoResults } from '../components';
+import ExportButton from '../components/ExportButton';
 import { PageLayout } from '../components/layout/PageLayout';
 import { SummaryGrid } from '../components/layout/SummaryGrid';
 import { MetricCard } from '../components/layout/MetricCard';
@@ -207,6 +208,11 @@ export default function Priorities() {
           >
             Archive stale
           </button>
+          <ExportButton
+            data={items}
+            filename="priorities"
+            columns={['id', 'title', 'score', 'status', 'due', 'client_name', 'project_name']}
+          />
         </div>
       }
     >

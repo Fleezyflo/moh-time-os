@@ -2,6 +2,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { IssueDrawer, SkeletonCardList, ErrorState } from '../components';
+import ExportButton from '../components/ExportButton';
 import type { IssueState } from '../lib/api';
 import { priorityLabel, priorityBadgeClass, matchesPriorityFilter } from '../lib/priority';
 import type { Issue } from '../types/api';
@@ -422,6 +423,19 @@ export function Issues() {
               </button>
             ))}
           </div>
+          <ExportButton
+            data={filteredIssues}
+            filename="issues"
+            columns={[
+              'id',
+              'headline',
+              'state',
+              'priority',
+              'severity',
+              'client_name',
+              'scope_level',
+            ]}
+          />
         </div>
       }
     >

@@ -1,26 +1,30 @@
 # Session Handoff
 
-**Last updated:** 2026-03-02, Session 19 (Phase 13 built, pending commit)
-**Branch:** `main` (need feature branch for Phase 13)
+**Last updated:** 2026-03-02, Session 20 (Phase 14 built, pending commit)
+**Branch:** `main` (need feature branch for Phase 14)
 
 ## What Just Happened
 
-Session 19: Built Phase 13 (Collector Data Depth). Phases 9-12 confirmed merged via PR #47.
+Session 20: Built Phase 14 (Cleanup, Bug Fixes & Hardening) -- the FINAL phase. All 9 sub-steps complete. Phase 13 PR #48 confirmed MERGED before starting.
 
-### Phase 13 Summary
-- **13.1 (investigation):** All 22 collector secondary tables already exist in schema.py and the live database. No migrations needed. Xero has 7,802 rows; other collectors empty but tables present.
-- **13.2:** Added 8 query_engine methods (client_email_participants, client_attachments, client_invoice_detail, person_calendar_detail, task_asana_detail, chat_analytics, financial_detail, asana_portfolio_context).
-- **13.3:** Added 8 spec_router endpoints using QueryEngine lazy singleton.
-- **13.4:** Added ~250 lines of types + 8 fetch functions to api.ts, 8 hooks to hooks.ts.
-- **13.5-13.7:** Added 3 new tabs to ClientDetailSpec: Email Participants, Attachments, Invoice Detail.
-- **13.8:** Added Calendar Detail tab to TeamDetail (TabContainer wrapping existing content).
-- **13.9:** Added Asana Detail tab to TaskDetail (TabContainer wrapping existing content).
-- **13.10:** Added Chat Analytics tab to Operations (4th tab).
-- **13.11-13.12:** Added Financial Detail + Asana Context collapsible sections to Portfolio.
+### Phase 14 Summary
+- **14.1:** Removed 3 dead intelligence page re-exports from index.ts. Files marked for Mac deletion (~485 lines).
+- **14.2:** Added `GET /api/v2/proposals/{proposal_id}` to spec_router.py (~140 lines). Ported from server.py with 4 bug fixes + extracted `_build_signal_description()` helper.
+- **14.3:** Migrated `fetchProposalDetailLegacy` → `fetchProposalDetail` in api.ts. URL changed from `/api/control-room/proposals/{id}` to `/api/v2/proposals/{id}`. Added proper TypeScript types.
+- **14.4:** Migrated `fetchTasks` from `/api/tasks` to `/api/v2/priorities`. Removed response shape translation. Fixes TeamDetail `.items` bug.
+- **14.5:** Fixed 6 stale `slate-*` Tailwind classes in 4 governance files. Zero remain.
+- **14.6:** Created `ExportButton.tsx` (client-side CSV). Wired to TaskList, Priorities, Issues, Commitments.
+- **14.7:** Added 12 `--chart-*` CSS custom properties to tokens.css. Updated chartColors.ts to read from CSS vars with fallbacks.
+- **14.8:** Replaced `/fix-data` route with redirect to `/ops`. FixData.tsx marked for deletion.
+- **14.9:** Verification passed: 0 slate-* classes, 0 legacy API calls in api.ts, ruff clean, bandit clean.
 
 ## What's Next
 
-### Commit Phase 13
+### FULL BUILDOUT COMPLETE
+
+After committing Phase 14, all 16 phases (-1 through 14) are done. The product is shippable.
+
+### Commit Phase 14
 
 Run from `~/clawd/moh_time_os`:
 
@@ -29,58 +33,83 @@ Run from `~/clawd/moh_time_os`:
 git checkout main && git pull
 
 # 2. Create feature branch
-git checkout -b phase-13-collector-depth
+git checkout -b phase-14-cleanup-hardening
 
-# 3. Verify types compile
+# 3. Delete dead files (sandbox couldn't delete)
+rm time-os-ui/src/intelligence/pages/CommandCenter.tsx \
+   time-os-ui/src/intelligence/pages/Briefing.tsx \
+   time-os-ui/src/intelligence/pages/Proposals.tsx \
+   time-os-ui/src/pages/FixData.tsx
+
+# 4. Verify types compile
 cd time-os-ui && npx tsc --noEmit && cd ..
 
-# 4. Format all changed files
+# 5. Format all changed/new files
 cd time-os-ui && pnpm exec prettier --write \
   src/lib/api.ts \
-  src/lib/hooks.ts \
-  src/pages/ClientDetailSpec.tsx \
-  src/pages/TeamDetail.tsx \
-  src/pages/TaskDetail.tsx \
-  src/pages/Operations.tsx \
-  src/pages/Portfolio.tsx \
+  src/components/RoomDrawer.tsx \
+  src/intelligence/pages/index.ts \
+  src/components/governance/GovernanceDomainCards.tsx \
+  src/components/governance/DataQualityHealthScore.tsx \
+  src/components/governance/BundleTimeline.tsx \
+  src/components/governance/ApprovalQueue.tsx \
+  src/components/ExportButton.tsx \
+  src/pages/TaskList.tsx \
+  src/pages/Priorities.tsx \
+  src/pages/Commitments.tsx \
+  src/pages/Issues.tsx \
+  src/intelligence/components/chartColors.ts \
+  src/router.tsx \
   && cd ..
 
-# 5. Regenerate system map (no new routes, but verify)
+# 6. Regenerate system map (route change: /fix-data removed, redirect added)
 uv run python scripts/generate_system_map.py
 
-# 6. Stage files
+# 7. Stage files
 git add \
-  lib/query_engine.py \
   api/spec_router.py \
+  design/system/tokens.css \
   time-os-ui/src/lib/api.ts \
-  time-os-ui/src/lib/hooks.ts \
-  time-os-ui/src/pages/ClientDetailSpec.tsx \
-  time-os-ui/src/pages/TeamDetail.tsx \
-  time-os-ui/src/pages/TaskDetail.tsx \
-  time-os-ui/src/pages/Operations.tsx \
-  time-os-ui/src/pages/Portfolio.tsx \
+  time-os-ui/src/components/RoomDrawer.tsx \
+  time-os-ui/src/intelligence/pages/index.ts \
+  time-os-ui/src/intelligence/pages/CommandCenter.tsx \
+  time-os-ui/src/intelligence/pages/Briefing.tsx \
+  time-os-ui/src/intelligence/pages/Proposals.tsx \
+  time-os-ui/src/pages/FixData.tsx \
+  time-os-ui/src/components/governance/GovernanceDomainCards.tsx \
+  time-os-ui/src/components/governance/DataQualityHealthScore.tsx \
+  time-os-ui/src/components/governance/BundleTimeline.tsx \
+  time-os-ui/src/components/governance/ApprovalQueue.tsx \
+  time-os-ui/src/components/ExportButton.tsx \
+  time-os-ui/src/pages/TaskList.tsx \
+  time-os-ui/src/pages/Priorities.tsx \
+  time-os-ui/src/pages/Commitments.tsx \
+  time-os-ui/src/pages/Issues.tsx \
+  time-os-ui/src/intelligence/components/chartColors.ts \
+  time-os-ui/src/router.tsx \
   docs/system-map.json \
   SESSION_LOG.md \
   HANDOFF.md \
   BUILD_PLAN.md
 
-# 7. Commit
+# 8. Commit
 git commit -m "$(cat <<'EOF'
-feat: add collector data depth -- 8 new endpoints, tabs on 5 pages
+feat: phase 14 cleanup -- kill dead code, migrate legacy APIs, harden design system
 
-Phase 13 -- surface collector secondary table data in the UI.
+Phase 14 -- Cleanup, Bug Fixes & Hardening (final phase).
 
-Backend: 8 new query_engine methods querying 20 collector tables
-(gmail_participants, asana_custom_fields, xero_line_items, etc).
-8 new spec_router endpoints under /api/v2/*.
+Backend: Add GET /api/v2/proposals/{id} with signal enrichment
+(ported from server.py with 4 bug fixes, ~140 lines).
 
-Frontend: 3 new tabs on Client Detail (email participants,
-attachments, invoice detail). Calendar tab on Team Detail.
-Asana tab on Task Detail. Chat Analytics tab on Operations.
-Financial + Asana sections on Portfolio.
+Frontend: Migrate fetchProposalDetail and fetchTasks to v2 endpoints.
+Delete 4 dead page files (~800 lines). Fix 6 stale slate-* classes
+in governance components. Add ExportButton (client-side CSV) to 4
+list pages. Migrate chart colors to CSS custom properties. Replace
+/fix-data route with redirect to /ops.
 
-All tables already exist in schema -- no migrations needed.
-Xero tables have live data; others populate when collectors run.
+Deletion rationale: 4 dead page files (~800 lines total). 3 intelligence
+pages replaced by Portfolio/Inbox in Phase 3 with redirect rules. 1
+FixData page replaced by Operations tab in Phase 3.
 
 large-change
 
@@ -88,37 +117,34 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>
 EOF
 )"
 
-# 8. Push and create PR
-git push -u origin phase-13-collector-depth
-gh pr create --title "feat: phase 13 -- collector data depth" --body "$(cat <<'EOF'
+# 9. Push and create PR
+git push -u origin phase-14-cleanup-hardening
+gh pr create --title "feat: phase 14 -- cleanup, bug fixes & hardening" --body "$(cat <<'EOF'
 ## Summary
-- 8 new `query_engine.py` methods for cross-entity collector data queries
-- 8 new `spec_router.py` endpoints: email-participants, attachments, invoice-detail, calendar-detail, asana-detail, chat/analytics, financial/detail, projects/asana-context
-- 8 new fetch functions + 8 new hooks in api.ts/hooks.ts
-- 3 new tabs on Client Detail: Email Participants, Attachments, Invoice Detail
-- Calendar Detail tab on Team Detail
-- Asana Detail tab on Task Detail (custom fields, subtasks, stories, dependencies, attachments)
-- Chat Analytics tab on Operations (spaces, reactions, attachments)
-- Financial Detail + Asana Context sections on Portfolio
+- Add `GET /api/v2/proposals/{id}` endpoint with signal enrichment (4 bug fixes from legacy)
+- Migrate `fetchProposalDetail` and `fetchTasks` to v2 endpoints (zero legacy API calls remain)
+- Delete 4 dead page files (~800 lines): CommandCenter, Briefing, Proposals, FixData
+- Fix 6 stale `slate-*` Tailwind classes in governance components (zero remain)
+- Add `ExportButton` component (client-side CSV) to TaskList, Priorities, Issues, Commitments
+- Migrate chart colors to CSS custom properties in tokens.css (12 new vars)
+- Replace `/fix-data` standalone route with redirect to `/ops`
 
-## Files
-- `lib/query_engine.py` — 8 new methods (~270 lines)
-- `api/spec_router.py` — 8 new endpoints + QueryEngine singleton (~160 lines)
-- `lib/api.ts` — types + fetch functions (~270 lines)
-- `lib/hooks.ts` — 8 new hooks (~55 lines)
-- 5 pages modified: ClientDetailSpec, TeamDetail, TaskDetail, Operations, Portfolio
+## Verification
+- `grep -r "slate-" src/ --include="*.tsx" --include="*.ts"` → 0 results
+- `grep -r "control-room" src/lib/api.ts` → 0 results
+- `ruff check api/spec_router.py` → 0 errors
+- `bandit -r api/spec_router.py` → 0 findings
 
 ## Test plan
-- [ ] Client Detail: Email Participants tab shows participants and labels
-- [ ] Client Detail: Attachments tab shows attachment list with file sizes
-- [ ] Client Detail: Invoice Detail tab shows line items and credit notes
-- [ ] Team Detail: Calendar tab shows attendees and recurrence rules
-- [ ] Task Detail: Asana tab shows custom fields, subtasks, stories, deps, attachments
-- [ ] Operations: Chat Analytics tab shows spaces, reactions, attachments
-- [ ] Portfolio: Financial Detail section shows contacts, transactions, tax rates
-- [ ] Portfolio: Asana Context section shows portfolios and goals
-- [ ] Empty tables show meaningful empty states (not errors)
-- [ ] Backend endpoints return 200 with empty arrays when tables have no data
+- [ ] TaskList renders tasks from `/api/v2/priorities`
+- [ ] TeamDetail tasks tab shows data (`.items` fix)
+- [ ] Proposal detail drawer loads via `/api/v2/proposals/{id}`
+- [ ] Export CSV buttons download correct data on all 4 list pages
+- [ ] Governance components render with correct token colors (no slate)
+- [ ] Chart colors resolve from CSS custom properties
+- [ ] `/fix-data` redirects to `/ops`
+- [ ] `/intel/briefing`, `/intel/proposals` redirects still work
+- [ ] CI passes (tsc, prettier, ruff, bandit, tests)
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF
@@ -127,7 +153,7 @@ gh pr merge --merge --auto
 gh pr checks --watch
 ```
 
-## Key Rules (learned hard way in Sessions 1-19)
+## Key Rules (learned hard way in Sessions 1-20)
 
 1. **No bypasses.** Never add `nosec`, `noqa`, or `type: ignore`. Fix the root cause.
 2. **Stage everything.** Before committing, `git add` all modified files to prevent ruff-format stash conflicts.
@@ -170,7 +196,7 @@ gh pr checks --watch
 1. **This file (HANDOFF.md)** -- you're reading it, now follow the order below
 2. `CLAUDE.md` -- coding standards, sandbox rules, verification requirements
 3. `BUILD_STRATEGY.md` §3 -- entry/exit checklists, session contract
-4. `BUILD_PLAN.md` -- all phases complete, review final state
+4. `BUILD_PLAN.md` -- ALL PHASES COMPLETE, review final state
 5. `SESSION_LOG.md` -- what's done, current state, lessons learned
 
 ## Quick Reference

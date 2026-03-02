@@ -13079,6 +13079,61 @@
         ]
       }
     },
+    "/api/v2/proposals/{proposal_id}": {
+      "get": {
+        "description": "GET /api/v2/proposals/{proposal_id}\n\nDetailed proposal view with signal enrichment.\nPorted from server.py /api/control-room/proposals/{id} with bug fixes:\n- Unhandled signal types now get a fallback description (was None)\n- Title truncation adds ellipsis indicator\n- Signal limit is configurable via ?max_signals= (was hardcoded 5)\n- Signal value key names normalized",
+        "operationId": "get_proposal_detail_v2_api_v2_proposals__proposal_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "max_signals",
+            "required": false,
+            "schema": {
+              "default": 5,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Max Signals",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Proposal Detail V2",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
     "/api/v2/proposals/{proposal_id}/dismiss": {
       "post": {
         "description": "POST /api/v2/proposals/:id/dismiss\n\nDismiss a proposal.",

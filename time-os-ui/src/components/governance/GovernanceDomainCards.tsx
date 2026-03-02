@@ -4,7 +4,7 @@ import type { GovernanceDomain } from '../../lib/api';
 import { setGovernanceMode, setGovernanceThreshold } from '../../lib/api';
 
 const MODE_LABELS: Record<string, { label: string; color: string }> = {
-  observe: { label: 'Observe', color: 'bg-slate-600' },
+  observe: { label: 'Observe', color: 'bg-[var(--grey-mid)]' },
   advise: { label: 'Advise', color: 'bg-blue-600' },
   guard: { label: 'Guard', color: 'bg-amber-600' },
   enforce: { label: 'Enforce', color: 'bg-red-600' },
@@ -47,7 +47,7 @@ export function GovernanceDomainCards({ domains, onRefresh }: Props) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
       {domains.map((d) => {
-        const modeInfo = MODE_LABELS[d.mode] ?? { label: d.mode, color: 'bg-slate-600' };
+        const modeInfo = MODE_LABELS[d.mode] ?? { label: d.mode, color: 'bg-[var(--grey-mid)]' };
         return (
           <div
             key={d.domain}
