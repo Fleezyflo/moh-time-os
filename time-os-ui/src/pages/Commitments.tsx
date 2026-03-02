@@ -1,6 +1,7 @@
 // Commitments page — list, summary, untracked alert, due view (Phase 9)
 import { useState, useCallback, useMemo } from 'react';
 import { SkeletonCardList, ErrorState } from '../components';
+import ExportButton from '../components/ExportButton';
 import { PageLayout } from '../components/layout/PageLayout';
 import { SummaryGrid } from '../components/layout/SummaryGrid';
 import { MetricCard } from '../components/layout/MetricCard';
@@ -102,17 +103,24 @@ export default function Commitments() {
       title="Commitments"
       subtitle={`${totalCount} commitments tracked`}
       actions={
-        <select
-          value={statusFilter ?? ''}
-          onChange={(e) => setStatusFilter(e.target.value || undefined)}
-          className="px-3 py-1.5 rounded-lg bg-[var(--black)] border border-[var(--grey)] text-sm focus:border-[var(--accent)] outline-none"
-        >
-          <option value="">All statuses</option>
-          <option value="open">Open</option>
-          <option value="done">Done</option>
-          <option value="overdue">Overdue</option>
-          <option value="at_risk">At Risk</option>
-        </select>
+        <div className="flex items-center gap-2">
+          <select
+            value={statusFilter ?? ''}
+            onChange={(e) => setStatusFilter(e.target.value || undefined)}
+            className="px-3 py-1.5 rounded-lg bg-[var(--black)] border border-[var(--grey)] text-sm focus:border-[var(--accent)] outline-none"
+          >
+            <option value="">All statuses</option>
+            <option value="open">Open</option>
+            <option value="done">Done</option>
+            <option value="overdue">Overdue</option>
+            <option value="at_risk">At Risk</option>
+          </select>
+          <ExportButton
+            data={allCommitments}
+            filename="commitments"
+            columns={['id', 'text', 'status', 'source', 'due_date', 'client_name']}
+          />
+        </div>
       }
     >
       {/* Untracked alert */}

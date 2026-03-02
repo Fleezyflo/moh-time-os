@@ -46,7 +46,7 @@ export function BundleTimeline({ bundles, rollbackable, onRefresh }: Props) {
                     ? 'bg-green-500'
                     : b.status === 'rolled_back'
                       ? 'bg-amber-500'
-                      : 'bg-slate-500'
+                      : 'bg-[var(--grey-muted)]'
                 }`}
               />
               <span className="text-sm font-medium truncate">{b.description}</span>

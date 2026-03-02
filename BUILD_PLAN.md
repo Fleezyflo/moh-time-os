@@ -1,8 +1,8 @@
 # MOH Time OS — Unified Build Plan
 
 **Date:** 2026-02-25
-**Status:** Draft for review
-**Scope:** Full product buildout — Phases 0-13. Foundation + redesign (0-5), capability buildout (6-13).
+**Status:** COMPLETE — All phases (-1 through 14) built and verified.
+**Scope:** Full product buildout — Phases 0-14. Foundation + redesign (0-5), capability buildout (6-13), cleanup & hardening (14).
 **Session governance:** `BUILD_STRATEGY.md` (sequencing, drift prevention, session contracts) + `SESSION_LOG.md` (living record)
 
 ---
@@ -1355,6 +1355,139 @@ Operations.tsx
 
 ---
 
+### Phase 14: Cleanup, Bug Fixes & Hardening ✅ COMPLETE (Session 20)
+
+**Status:** COMPLETE
+**Size:** ~15 files edited, ~3 files deleted, ~1 new file, ~200 lines changed, ~800 lines deleted.
+**Dependencies:** Phase 13 committed. All feature work complete.
+**Track:** T11 (Final polish)
+
+**Purpose:** Close every gap found in the post-buildout audit. No new features. Fix bugs, delete dead code, replace design system violations, add the one missing backend endpoint, and remove the one remaining legacy API call. The product should be shippable after this phase.
+
+#### 14.1 Delete dead page files (~800 lines deleted)
+
+3 files in `time-os-ui/src/intelligence/pages/` are unrouted dead code since Phase 4. Router has redirect rules — these files are unreachable.
+
+| File | Lines | Why dead |
+|------|-------|----------|
+| `CommandCenter.tsx` | ~250 | Replaced by Portfolio. Not imported anywhere. |
+| `Briefing.tsx` | ~200 | Replaced by Portfolio. Redirect at `/intel/briefing` → `/portfolio`. |
+| `Proposals.tsx` | ~350 | Merged into Inbox. Redirect at `/intel/proposals` → `/`. |
+
+**Action:** Delete all 3 files. Verify no imports reference them (confirmed: zero imports).
+
+**Deletion rationale:** 3 unrouted page files (~800 lines). Replaced by Portfolio and Inbox in Phase 3. Redirect rules handle old URLs. No component in the tree imports these files.
+
+#### 14.2 Add `GET /api/v2/proposals/{proposal_id}` endpoint (~130 lines)
+
+**Why:** `fetchProposalDetailLegacy()` in `lib/api.ts:200` still hits the legacy `GET /api/control-room/proposals/{id}` endpoint in server.py. This is the only remaining legacy API call from the redesigned UI. The v2 endpoint doesn't exist.
+
+**Action:**
+- Port enrichment logic from `server.py:5016-5147` to `api/spec_router.py`
+- New endpoint: `@spec_router.get("/proposals/{proposal_id}")`
+- Fix 4 bugs during port: (1) unhandled signal types get `description=None` — add fallback, (2) title truncation with no `"..."` — add ellipsis, (3) hardcoded top-5 signal limit — make configurable via query param `?max_signals=`, (4) inconsistent signal value key names — normalize
+- Dependencies: `ProposalService`, `SignalService` from `lib/v4/`
+
+**Protected files check:** spec_router.py may be protected. Verify with enforcement repo before editing.
+
+#### 14.3 Migrate `fetchProposalDetailLegacy` to v2 (~10 lines)
+
+**Why:** Once 14.2 ships, the legacy call can be replaced.
+
+**Action:**
+- Rename `fetchProposalDetailLegacy()` → `fetchProposalDetail()` in `lib/api.ts`
+- Change URL from `/api/control-room/proposals/${id}` to `/api/v2/proposals/${id}`
+- Add proper TypeScript return type (currently `Promise<unknown>`)
+- Update any callers (grep for `fetchProposalDetailLegacy`)
+
+#### 14.4 Migrate `fetchTasks` to v2 endpoint (~10 lines)
+
+**Why:** `fetchTasks()` in `lib/api.ts:206` calls `/api/tasks` (legacy) and manually remaps `{tasks:[...]}` → `{items:[...]}`. The v2 endpoint `/api/v2/priorities` returns `{items:[...]}` natively.
+
+**Action:**
+- Change URL from `/api/tasks` to `/api/v2/priorities`
+- Remove the response shape translation (`raw.tasks` → `raw.items` is no longer needed)
+- Verify all callers (TaskList, TeamDetail) work with v2 response shape (v2 returns 10 selected columns vs legacy returns `SELECT *` — verify no caller uses columns not in v2)
+
+**Verification:** Open TaskList and TeamDetail — tasks render correctly. Network tab shows `/api/v2/priorities`, not `/api/tasks`.
+
+#### 14.5 Fix stale `slate-` Tailwind classes (5 occurrences in 4 files)
+
+Phase 1 replaced all `slate-*` classes with CSS custom property references. Phase 11 governance components were built after Phase 1 and reintroduced 5 hardcoded `slate-` classes.
+
+| File | Line | Current | Replacement |
+|------|------|---------|-------------|
+| `components/governance/GovernanceDomainCards.tsx` | 7 | `bg-slate-600` | `bg-[var(--grey-mid)]` |
+| `components/governance/GovernanceDomainCards.tsx` | 50 | `bg-slate-600` | `bg-[var(--grey-mid)]` |
+| `components/governance/DataQualityHealthScore.tsx` | 57 | `text-slate-400` | `text-[var(--grey-light)]` |
+| `components/governance/DataQualityHealthScore.tsx` | 91 | `text-slate-400` | `text-[var(--grey-light)]` |
+| `components/governance/BundleTimeline.tsx` | 49 | `bg-slate-500` | `bg-[var(--grey-muted)]` |
+| `components/governance/ApprovalQueue.tsx` | 53 | `text-slate-400` | `text-[var(--grey-light)]` |
+
+**Verification:** `grep -r "slate-" src/ --include="*.tsx" --include="*.ts"` returns 0 results.
+
+#### 14.6 Add export buttons on list pages (deferred from 11.8) (~60 lines)
+
+**Why:** Step 11.8 was explicitly skipped. The backend `/governance/export/*` endpoints exist but no UI wires them.
+
+**Action:**
+- Add export button component: `components/shared/ExportButton.tsx` — generic button that calls a fetch-and-download function
+- Wire to: TaskList (export tasks CSV), Priorities (export priorities CSV), Issues (export issues CSV), Commitments (export commitments CSV)
+- Each button calls the relevant export endpoint and triggers a browser download
+
+**Endpoints to wire:**
+- `GET /api/governance/export/tasks`
+- `GET /api/governance/export/priorities`
+- `GET /api/governance/export/issues`
+- `GET /api/governance/export/commitments`
+
+Verify endpoints exist in server.py/governance_router before wiring. If endpoints don't exist, create a generic CSV export helper that serializes the current list data client-side.
+
+#### 14.7 Chart colors: CSS custom property migration (~30 lines)
+
+**Why:** `chartColors.ts` centralizes 15 hardcoded `rgb()` values. These work, but they're disconnected from the design system. If token values change (e.g., dark/light theme switch), charts won't update.
+
+**Action:**
+- Add chart-specific CSS custom properties to `design/system/tokens.css`:
+  ```
+  --chart-blue: #3b82f6;
+  --chart-emerald: #10b981;
+  --chart-purple: #a855f7;
+  --chart-amber: #f59e0b;
+  --chart-pink: #ec4899;
+  --chart-neutral: #64748b;
+  --chart-positive: #4ade80;
+  --chart-negative: #f87171;
+  --chart-threshold: #64748b;
+  --chart-stroke: #1e293b;
+  ```
+- Update `chartColors.ts` to read from CSS custom properties: `getComputedStyle(document.documentElement).getPropertyValue('--chart-blue')`
+- All chart components already import from `chartColors.ts` — no downstream changes needed
+
+#### 14.8 Remove `/fix-data` standalone route (~5 lines)
+
+**Why:** FixData is accessible via the Operations page tabs (Phase 3). The standalone `/fix-data` route is a legacy path with no nav link. It creates a second way to reach the same content.
+
+**Action:**
+- Remove `fixDataRoute` from `router.tsx`
+- Add redirect: `/fix-data` → `/ops` (in case of bookmarks)
+- Verify Operations page "Data Quality" tab still works
+
+#### 14.9 Final verification gate
+
+| Check | Command/Action | Expected |
+|-------|---------------|----------|
+| Zero `slate-` classes | `grep -r "slate-" src/ --include="*.tsx" --include="*.ts"` | 0 results |
+| Zero legacy API calls | `grep -r "control-room\|/api/tasks" src/lib/api.ts` | 0 results |
+| Zero dead page files | `ls src/intelligence/pages/` | Only Signals, Patterns, ClientIntel, PersonIntel, ProjectIntel |
+| Zero unrouted pages | Compare `ls src/pages/` against router.tsx imports | All match |
+| v2 proposal endpoint | `curl localhost:8000/api/v2/proposals/{id}` | 200 with enriched data |
+| Chart tokens resolve | DevTools: inspect `--chart-blue` | `#3b82f6` |
+| Export buttons work | Click export on TaskList | CSV downloads |
+| All CI gates pass | `uv run pre-commit run -a` + `tsc --noEmit` | Green |
+
+---
+
 ## §4 — Backend Changes
 
 ### 4.1 Legacy Endpoint Migration
@@ -1483,14 +1616,15 @@ Collector secondary tables (20 tables) are write-only — no read paths exist. N
 
 | Change | Phase | Size | Protected? | PR |
 |--------|-------|------|-----------|-----|
-| Add `GET /api/v2/proposals/{id}` to spec_router | 3 | 132 lines | Check | Standalone, before Phase 3 |
-| Fix 3 `except Exception: pass` in spec_router | 3 | ~15 lines | Check | Bundle with proposal endpoint |
-| Fix `useTasks()` response shape (`.tasks` → `.items`) | 6 | ~5 lines | No (frontend) | Phase 6 PR |
-| Update UI legacy callsites (proposal detail) | 3 | ~10 lines | No (frontend) | Phase 3 PR |
-| Delete wave2_router.py | Any | -368 lines | Check | Standalone |
-| Fix `payment_date` → `paid_date` in spec_router | Any | 1 line | Check | Standalone |
-| Add 8 new spec_router endpoints (collector depth) | 13 | ~400 lines | Check | 2-3 PRs |
-| Add 8 new query_engine methods (collector depth) | 13 | ~300 lines | No | Bundle with endpoints |
+| Add `GET /api/v2/proposals/{id}` to spec_router | ~~3~~ 14 | 140 lines | No | ✅ DONE (Session 20) |
+| Fix 3 `except Exception: pass` in spec_router | -1 | ~15 lines | — | ✅ DONE (PR #28) |
+| Fix `useTasks()` response shape (`.tasks` → `.items`) | 6→14 | ~5 lines | No (frontend) | ✅ DONE (Session 20, migrated to v2) |
+| Update UI legacy callsites (proposal detail) | 14 | ~10 lines | No (frontend) | ✅ DONE (Session 20) |
+| Delete wave2_router.py | -1 | -368 lines | — | ✅ DONE (PR #28) |
+| ~~Fix `payment_date` → `paid_date` in spec_router~~ | — | — | — | NOT A BUG (both columns exist in schema.py) |
+| Add 8 new spec_router endpoints (collector depth) | 13 | ~400 lines | Check | ✅ DONE (Session 19) |
+| Add 8 new query_engine methods (collector depth) | 13 | ~300 lines | No | ✅ DONE (Session 19) |
+| Migrate fetchTasks to /api/v2/priorities | 14 | ~10 lines | No (frontend) | ✅ DONE (Session 20) |
 | Resolve route shadowing (21 endpoints) | Future | Medium | Check | After buildout |
 
 ---
@@ -1515,6 +1649,7 @@ Collector secondary tables (20 tables) are write-only — no read paths exist. N
 | 11 (Governance) | Admin pages functional. Approval flow works end-to-end. | Change domain mode → saved. Approve decision → side effects execute. Search returns results. |
 | 12 (Enrollment) | Project enrollment workflow complete. | Detect → candidates appear. Enroll → moves to enrolled. Reject → removed. |
 | 13 (Collector Depth) | All 8 new endpoints return data. Tabs render on detail pages. | curl each endpoint → valid JSON. Open detail pages → new tabs show data. |
+| 14 (Cleanup & Hardening) | Zero dead files. Zero legacy API calls. Zero slate-* classes. Export buttons work. v2 proposal endpoint exists. | Full checklist in Phase 14 step 14.9. |
 
 ### Pre-Push Checks (Every PR)
 
@@ -1573,14 +1708,17 @@ Phase 0 ─── Design System Foundation
          ├──▶ Phase 12 ── Project Enrollment (needs Phase 3 client/project pages)
          │
          └──▶ Phase 13 ── Collector Data Depth (needs detail pages from Phase 3+6)
-                          REQUIRES: 8 new backend endpoints + query_engine methods
+         │                REQUIRES: 8 new backend endpoints + query_engine methods
+         │
+         └──▶ Phase 14 ── Cleanup, Bug Fixes & Hardening (needs all phases complete)
+                          Dead file deletion, legacy API migration, design system fixes
 
 Backend (parallel track):
-  ├── Add GET /api/v2/proposals/{id} ────── before Phase 3
-  ├── Delete wave2_router.py ─────────────── anytime
-  ├── Fix payment_date bug ────────────────── anytime
-  ├── Fix useTasks() response shape ────────── Phase 6
-  └── Add 8 collector-depth endpoints ─────── before Phase 13
+  ├── Add GET /api/v2/proposals/{id} ────── before Phase 3 [DEFERRED → Phase 14]
+  ├── Delete wave2_router.py ─────────────── done (Phase -1)
+  ├── Fix payment_date bug ────────────────── NOT A BUG (both columns exist in schema)
+  ├── Fix useTasks() response shape ────────── Phase 6 [workaround] → Phase 14 [v2 migration]
+  └── Add 8 collector-depth endpoints ─────── done (Phase 13)
 ```
 
 **Critical path (foundation):** Phase -1 → Phase 0 → Phase 2 → Phase 3 → Phase 4 → Phase 5
