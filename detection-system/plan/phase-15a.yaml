@@ -1,0 +1,84 @@
+id: "phase-15a"
+name: "CalendarSync Horizon + Schema Formalization"
+description: |
+  Extend time block generation from 7 to 10 business days. Formalize
+  time_blocks in schema.py. Ensure revenue columns exist or are added.
+  This phase makes collision detection possible by ensuring future blocks exist.
+
+dependencies: []
+
+track: "T1"
+
+estimated_sessions: 1
+
+tasks:
+  - id: "task-01"
+    name: "Extend block generation to 10 business days"
+    description: |
+      In lib/time_truth/calendar_sync.py at line 235, change
+      ensure_blocks_for_week() from timedelta(days=6) to timedelta(days=13)
+      to cover 10 business days across 2 calendar weeks. Add weekend-skip
+      logic in sync_events() to skip Saturday/Sunday dates.
+    files:
+      create: []
+      modify:
+        - "lib/time_truth/calendar_sync.py"
+      delete: []
+    verification:
+      - "After truth cycle run, time_blocks has rows for the next 10 business days"
+      - "Weekends are skipped — no rows for Saturday or Sunday dates"
+      - "Idempotent: running twice doesn't create duplicate blocks (existing check at line 127-130)"
+      - "ruff check lib/time_truth/calendar_sync.py — zero errors"
+    estimated_lines: 25
+    depends_on: []
+
+  - id: "task-02"
+    name: "Formalize time_blocks in schema.py"
+    description: |
+      Add TABLES["time_blocks"] to lib/schema.py with columns from
+      SCHEMA_ATLAS: id, date, start_time, end_time, lane, task_id,
+      is_protected, is_buffer, created_at, updated_at. This formalizes
+      a table that already exists at runtime (created by BlockManager).
+      Migration is safe because CREATE TABLE IF NOT EXISTS is idempotent.
+    files:
+      create: []
+      modify:
+        - "lib/schema.py"
+      delete: []
+    verification:
+      - "time_blocks appears in TABLES dict in schema.py"
+      - "Columns match SCHEMA_ATLAS exactly"
+      - "CREATE TABLE IF NOT EXISTS — safe for existing DBs"
+      - "ruff check lib/schema.py — zero errors"
+    estimated_lines: 15
+    depends_on: []
+
+  - id: "task-03"
+    name: "Revenue column verification at startup"
+    description: |
+      Add startup verification for revenue columns (prior_year_revenue,
+      ytd_revenue, lifetime_revenue) on the clients table. Use ALTER TABLE
+      ADD COLUMN IF NOT EXISTS pattern. The drift detector queries these
+      columns with COALESCE fallback, but they must exist in the table for
+      the query to parse at all.
+    files:
+      create: []
+      modify:
+        - "lib/schema.py"
+      delete: []
+    verification:
+      - "Revenue columns either exist or are added at startup"
+      - "If columns already exist, no error (idempotent)"
+      - "Drift detector can query COALESCE(clients.ytd_revenue, 0) without error"
+      - "ruff check lib/schema.py — zero errors"
+      - "bandit -r lib/schema.py — zero findings"
+    estimated_lines: 20
+    depends_on: []
+
+completion_criteria:
+  - "All 3 tasks marked complete in state.json"
+  - "PR merged to main, CI green"
+  - "time_blocks in schema.py with correct columns"
+  - "10 business days of blocks generated after truth cycle"
+  - "Revenue columns present in clients table"
+  - "No references to truth_cycle.py (dead code)"

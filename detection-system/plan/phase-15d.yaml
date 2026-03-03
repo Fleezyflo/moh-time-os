@@ -1,0 +1,100 @@
+id: "phase-15d"
+name: "Command Center UI Redesign"
+description: |
+  Replace three-tab scored layout with single-view design. New components:
+  StalenessBar, WeekStrip, FindingCard, CorrelatedGroup, TeamCollisions.
+  All inline hooks replaced with shared hooks from hooks.ts.
+
+dependencies:
+  - "phase-15c"
+
+track: "T1"
+
+estimated_sessions: 2
+
+tasks:
+  - id: "task-01"
+    name: "Add fetch functions and hooks for detection endpoints"
+    description: |
+      Add fetch functions to time-os-ui/src/lib/api.ts for all new endpoints:
+      fetchWeekStrip, fetchFindings, fetchFinding, acknowledgeFinding,
+      suppressFinding, fetchStaleness, fetchWeightReview, submitWeightReview.
+      Add corresponding hooks to time-os-ui/src/lib/hooks.ts:
+      useWeekStrip, useFindings, useFinding, useStaleness, useWeightReview.
+      Replace the inline useFetchCommand() hook (lines 17-30 of current
+      CommandCenter.tsx) with the shared hooks.
+    files:
+      create: []
+      modify:
+        - "time-os-ui/src/lib/api.ts"
+        - "time-os-ui/src/lib/hooks.ts"
+      delete: []
+    verification:
+      - "All fetch functions typed with correct request/response shapes"
+      - "All hooks use correct endpoints"
+      - "No inline hooks remain in CommandCenter.tsx"
+      - "npx tsc --noEmit -- zero type errors (run on Mac)"
+    estimated_lines: 80
+    depends_on: []
+
+  - id: "task-02"
+    name: "Rewrite CommandCenter.tsx with new layout"
+    description: |
+      Full rewrite of time-os-ui/src/pages/CommandCenter.tsx to single-view
+      layout. New components (all in CommandCenter.tsx):
+      - StalenessBar: yellow warning when detection is stale
+      - WeekStrip: 10-day horizontal cards with ratio coloring, clickable days
+      - FindingCard: single finding with expandable adjacent data, "Got it"
+        and "Expected" buttons. On expand, calls ?refresh=true and shows
+        "Refreshing calendar & email..." state before rendering.
+      - CorrelatedGroup: groups related findings, primary + subordinates
+      - TeamCollisions: collapsible section for team member collisions
+
+      Empty state: "Nothing requires attention" (only when not stale).
+      Stale state: yellow warning, no "nothing requires attention".
+      No scored lists or color-coded labels anywhere.
+    files:
+      create: []
+      modify:
+        - "time-os-ui/src/pages/CommandCenter.tsx"
+      delete: []
+    verification:
+      - "Renders with staleness bar, week strip, findings, decision queue"
+      - "Empty state shows 'Nothing requires attention' only when not stale"
+      - "Stale state shows yellow warning"
+      - "Finding cards expand on click with adjacent data"
+      - "'Got it' / 'Expected' buttons call correct API endpoints"
+      - "Correlated findings render as grouped cards"
+      - "Team collisions in collapsible section"
+      - "Week strip days are clickable"
+      - "No scored lists or color-coded labels anywhere"
+      - "npx tsc --noEmit -- zero type errors (run on Mac)"
+      - "prettier --check passes (run on Mac)"
+    estimated_lines: 350
+    depends_on: ["task-01"]
+
+  - id: "task-03"
+    name: "Update system map for UI route changes"
+    description: |
+      If CommandCenter.tsx adds new fetch() calls with literal /api/ URLs,
+      regenerate docs/system-map.json. If only using fetchJson wrapper or
+      hooks, system map may not need updating -- verify first.
+    files:
+      create: []
+      modify:
+        - "docs/system-map.json"
+      delete: []
+    verification:
+      - "system-map.json reflects any new fetch('/api/...') calls"
+      - "Drift Detection CI passes"
+    estimated_lines: 0
+    depends_on: ["task-02"]
+
+completion_criteria:
+  - "All 3 tasks marked complete in state.json"
+  - "PR merged to main, CI green"
+  - "CommandCenter renders without scored views"
+  - "All new components render correctly"
+  - "npx tsc --noEmit passes (Mac)"
+  - "prettier --check passes (Mac)"
+  - "No references to old three-tab layout"

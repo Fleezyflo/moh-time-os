@@ -1,0 +1,93 @@
+id: "phase-15e"
+name: "Morning Brief + Staleness Alert"
+description: |
+  Daily morning brief via Google Chat. Staleness warning when detection
+  hasn't run in 2+ hours during business hours. Can run in parallel with
+  15c/15d since it only depends on 15b (detectors exist).
+
+dependencies:
+  - "phase-15b"
+
+track: "T2"
+
+estimated_sessions: 1
+
+tasks:
+  - id: "task-01"
+    name: "Create morning brief module"
+    description: |
+      Create lib/detectors/morning_brief.py with:
+      - send_if_changed(): compares current findings against notified_at,
+        formats message, sends via GoogleChatChannel (existing NotificationEngine)
+      - Morning brief includes: new findings (with client tier, revenue if
+        available), worsened findings (acknowledged that got worse are
+        un-acknowledged), resolved findings, weight review prompt (if pending),
+        suppressed findings excluded entirely
+      - Gracefully omits revenue figures when not available
+      - Timing gate: current_hour >= morning_brief_hour AND last_brief_sent < today
+      - Exactly one brief per day
+    files:
+      create:
+        - "lib/detectors/morning_brief.py"
+      modify: []
+      delete: []
+    verification:
+      - "New finding -> morning brief fires"
+      - "Same finding next day, no change -> brief doesn't fire"
+      - "Finding resolves -> brief includes 'Resolved: ...'"
+      - "Acknowledged finding worsens -> un-acknowledged and included"
+      - "Suppressed finding -> excluded from brief"
+      - "Brief fires exactly once per day"
+      - "Missing revenue -> brief shows tier only, no error"
+      - "ruff check lib/detectors/morning_brief.py -- zero errors"
+      - "bandit -r lib/detectors/morning_brief.py -- zero findings"
+    estimated_lines: 80
+    depends_on: []
+
+  - id: "task-02"
+    name: "Wire morning brief + staleness alert into autonomous loop"
+    description: |
+      In lib/autonomous_loop.py:
+      - Call morning_brief.send_if_changed() after detection phase
+      - Add staleness check: if detection_last_run > 2 hours old during
+        business hours (9-21), send one-time stale warning via GoogleChatChannel
+      - stale_alert_sent_today flag prevents duplicate alerts
+      - Staleness clears on next successful detection run
+    files:
+      create: []
+      modify:
+        - "lib/autonomous_loop.py"
+      delete: []
+    verification:
+      - "Detection stale 2+ hours during business hours -> staleness alert fires once"
+      - "Detection resumes -> staleness clears"
+      - "No duplicate staleness alerts in same day"
+      - "ruff check lib/autonomous_loop.py -- zero errors"
+    estimated_lines: 30
+    depends_on: ["task-01"]
+
+  - id: "task-03"
+    name: "Add morning_brief_hour to governance.yaml"
+    description: |
+      Add morning_brief_hour: 8 setting to config/governance.yaml.
+      This configures the morning brief timing gate. Value of 8 avoids
+      quiet hours (23:00-08:00).
+    files:
+      create: []
+      modify:
+        - "config/governance.yaml"
+      delete: []
+    verification:
+      - "morning_brief_hour: 8 present in governance.yaml"
+      - "Autonomous loop reads this value correctly"
+      - "Brief timing gate uses configurable hour, not hardcoded"
+    estimated_lines: 5
+    depends_on: []
+
+completion_criteria:
+  - "All 3 tasks marked complete in state.json"
+  - "PR merged to main, CI green"
+  - "Morning brief fires for new/changed findings"
+  - "Staleness alert fires when detection is stale during business hours"
+  - "morning_brief_hour configurable via governance.yaml"
+  - "All notifications use existing GoogleChatChannel"

@@ -1,0 +1,201 @@
+id: "phase-15b"
+name: "Three Detectors + Correlator + Findings Table"
+description: |
+  Implement CollisionDetector, DriftDetector, BottleneckDetector, the
+  correlator, the findings table, the task weight system, and dry-run
+  preview mode. This is the core detection engine -- everything else
+  depends on it.
+
+dependencies:
+  - "phase-15a"
+
+track: "T1"
+
+estimated_sessions: 3
+
+tasks:
+  - id: "task-01"
+    name: "Create detection_findings and related tables in schema.py"
+    description: |
+      Add four new tables to lib/schema.py:
+      - detection_findings: main findings table with detector, entity, severity_data,
+        adjacent_data, related_findings, timestamps for detected/resolved/notified/
+        acknowledged/suppressed
+      - detection_findings_preview: identical schema, used during dry-run week
+      - task_weight_rules: pattern-based weight derivation (keyword/project -> quick/standard/heavy)
+      - task_weight_overrides: per-task manual corrections
+      All use CREATE TABLE IF NOT EXISTS for idempotency.
+    files:
+      create: []
+      modify:
+        - "lib/schema.py"
+      delete: []
+    verification:
+      - "All 4 tables appear in schema.py TABLES dict"
+      - "detection_findings has all columns from design doc"
+      - "detection_findings_preview has identical schema"
+      - "ruff check lib/schema.py -- zero errors"
+    estimated_lines: 60
+    depends_on: []
+
+  - id: "task-02"
+    name: "Create CollisionDetector"
+    description: |
+      Create lib/detectors/collision.py with CollisionDetector class.
+      Two detection paths:
+      - Path A (Molham): query time_blocks for future days, count tasks due
+        that day, compute weighted_ratio = sum(task_weights) / available_minutes
+      - Path B (team members): available_minutes = 480 - meeting_minutes where
+        meetings come from events JOIN calendar_attendees (NEVER calendar_events)
+      Returns list[CollisionFinding] dataclasses with date, person,
+      available_minutes, tasks_due, weighted_ratio, meetings, tasks, moveable_tasks.
+      Moveable = tasks where due_date > date + 2 days.
+    files:
+      create:
+        - "lib/detectors/collision.py"
+      modify: []
+      delete: []
+    verification:
+      - "Collision fires when tasks due tomorrow and no open blocks"
+      - "Path B uses events JOIN calendar_attendees, NOT calendar_events"
+      - "Task-to-person matching uses tasks.assignee = team_members.name"
+      - "Moveable tasks correctly identified (due_date > date + 2)"
+      - "ruff check lib/detectors/collision.py -- zero errors"
+      - "bandit -r lib/detectors/collision.py -- zero findings"
+    estimated_lines: 150
+    depends_on: ["task-01"]
+
+  - id: "task-03"
+    name: "Create DriftDetector"
+    description: |
+      Create lib/detectors/drift.py with DriftDetector class.
+      Detects clients with overdue tasks and zero completions in 5 days.
+      Includes client tier from clients table and revenue via COALESCE
+      with try/except for missing columns. Revenue query failure is graceful --
+      finding still fires with revenue=None.
+      Task-to-client linking: tasks.project_id -> projects.client_id.
+      Returns list[DriftFinding] with client info, overdue tasks, assigned team,
+      last completion, days since last meeting.
+    files:
+      create:
+        - "lib/detectors/drift.py"
+      modify: []
+      delete: []
+    verification:
+      - "Drift fires for client with overdue tasks + 0 completions in 5d"
+      - "Revenue columns missing -> finding fires with revenue=None, no error"
+      - "Revenue columns present -> finding includes ytd_revenue"
+      - "Client tier correctly pulled from clients table"
+      - "ruff check lib/detectors/drift.py -- zero errors"
+      - "bandit -r lib/detectors/drift.py -- zero findings"
+    estimated_lines: 120
+    depends_on: ["task-01"]
+
+  - id: "task-04"
+    name: "Create BottleneckDetector"
+    description: |
+      Create lib/detectors/bottleneck.py with BottleneckDetector class.
+      Detects team members with active tasks > 2x team median AND completed
+      tasks below median in 5 days. Absence exclusion: members with 0 calendar
+      events for 3+ consecutive days (via events JOIN calendar_attendees) are
+      excluded from median calculations and noted in finding.
+      Returns list[BottleneckFinding] with member stats, breakdown by client,
+      overdue items, peers with shared clients, excluded members.
+    files:
+      create:
+        - "lib/detectors/bottleneck.py"
+      modify: []
+      delete: []
+    verification:
+      - "Bottleneck fires when member has 2x median active AND below median completions"
+      - "Absent members excluded from median, noted in excluded_members"
+      - "Absence detection uses events JOIN calendar_attendees, NOT calendar_events"
+      - "Peers list includes only members with shared clients"
+      - "ruff check lib/detectors/bottleneck.py -- zero errors"
+      - "bandit -r lib/detectors/bottleneck.py -- zero findings"
+    estimated_lines: 140
+    depends_on: ["task-01"]
+
+  - id: "task-05"
+    name: "Create task weight system"
+    description: |
+      Create lib/detectors/task_weight.py with weight derivation from
+      title/project patterns (keyword matching -> quick/standard/heavy),
+      learning loop storage (confidence + corrections + confirmations),
+      and per-task override support. Default weight = 'standard'.
+      Weight affects collision ratio calculation.
+    files:
+      create:
+        - "lib/detectors/task_weight.py"
+      modify: []
+      delete: []
+    verification:
+      - "'proposal' in title -> derived as heavy"
+      - "Manual correction updates rule confidence"
+      - "Default weight is 'standard' when no pattern matches"
+      - "Overrides take precedence over derived weights"
+      - "ruff check lib/detectors/task_weight.py -- zero errors"
+    estimated_lines: 80
+    depends_on: ["task-01"]
+
+  - id: "task-06"
+    name: "Create correlator"
+    description: |
+      Create lib/detectors/correlator.py with post-detection entity
+      overlap pass. Takes all findings from the three detectors, finds
+      shared entities (e.g., drift client's tasks assigned to bottlenecked
+      member), and outputs list[FindingGroup] with primary finding,
+      subordinates, and shared_entity identifier.
+    files:
+      create:
+        - "lib/detectors/correlator.py"
+      modify: []
+      delete: []
+    verification:
+      - "Drift client + bottlenecked assignee -> merged FindingGroup"
+      - "Uncorrelated findings each become their own group (no subordinates)"
+      - "shared_entity correctly identifies the linking entity"
+      - "ruff check lib/detectors/correlator.py -- zero errors"
+    estimated_lines: 80
+    depends_on: ["task-02", "task-03", "task-04"]
+
+  - id: "task-07"
+    name: "Create orchestrator + wire into autonomous loop"
+    description: |
+      Create lib/detectors/__init__.py with run_all_detectors(dry_run=False)
+      orchestrator that runs all three detectors, passes results through
+      correlator, and writes to detection_findings (or detection_findings_preview
+      if dry_run=True). Handles deduplication: existing findings get
+      last_detected updated, new findings get inserted.
+
+      Wire into lib/autonomous_loop.py: add DETECTION phase (Phase 1b5)
+      after AUTO-RESOLVE (after line 223), before TRUTH MODULES (line 225).
+      Call run_all_detectors(dry_run=True) for first week. Write
+      detection_last_run to sync_state on success.
+    files:
+      create:
+        - "lib/detectors/__init__.py"
+      modify:
+        - "lib/autonomous_loop.py"
+      delete: []
+    verification:
+      - "Run autonomous loop -> detection_findings_preview populated (dry-run)"
+      - "Run again with no changes -> no duplicate rows, last_detected updated"
+      - "detection_last_run written to sync_state"
+      - "All three detectors called in correct order"
+      - "Correlator runs after all detectors"
+      - "ruff check lib/detectors/__init__.py -- zero errors"
+      - "ruff check lib/autonomous_loop.py -- zero errors"
+      - "python -m pytest tests/ -x -- all tests pass"
+    estimated_lines: 110
+    depends_on: ["task-05", "task-06"]
+
+completion_criteria:
+  - "All 7 tasks marked complete in state.json"
+  - "PR merged to main, CI green"
+  - "lib/detectors/ has 6 files: __init__.py, collision.py, drift.py, bottleneck.py, correlator.py, task_weight.py"
+  - "4 new tables in schema.py"
+  - "Autonomous loop calls run_all_detectors in dry-run mode"
+  - "All calendar queries use events JOIN calendar_attendees pattern"
+  - "No references to calendar_events table in new code"
+  - "Revenue column queries use COALESCE with graceful fallback"

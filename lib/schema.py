@@ -17,7 +17,7 @@ from collections import OrderedDict
 # =============================================================================
 # Schema version — bump when you change this file
 # =============================================================================
-SCHEMA_VERSION = 12
+SCHEMA_VERSION = 13
 
 # =============================================================================
 # Table Definitions
@@ -54,6 +54,10 @@ TABLES["clients"] = {
         # JSON blobs
         ("contacts_json", "TEXT"),
         ("active_projects_json", "TEXT"),
+        # Revenue (used by drift detector with COALESCE fallback)
+        ("prior_year_revenue", "REAL"),
+        ("ytd_revenue", "REAL"),
+        ("lifetime_revenue", "REAL"),
         # External IDs
         ("xero_contact_id", "TEXT"),
         # Timestamps
@@ -848,6 +852,26 @@ TABLES["time_debt"] = {
         ("source_task_id", "TEXT"),
         ("incurred_at", "TEXT NOT NULL"),
         ("resolved_at", "TEXT"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# §15 Time Truth: time_blocks — scheduled time blocks for tasks
+# Source: block_manager.py / calendar_sync.py
+# Matches SCHEMA_ATLAS (03_SCHEMA_ATLAS.sql)
+# ---------------------------------------------------------------------------
+TABLES["time_blocks"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("date", "TEXT NOT NULL"),
+        ("start_time", "TEXT NOT NULL"),
+        ("end_time", "TEXT NOT NULL"),
+        ("lane", "TEXT NOT NULL"),
+        ("task_id", "TEXT REFERENCES tasks(id)"),
+        ("is_protected", "INTEGER DEFAULT 0"),
+        ("is_buffer", "INTEGER DEFAULT 0"),
+        ("created_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+        ("updated_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
     ],
 }
 

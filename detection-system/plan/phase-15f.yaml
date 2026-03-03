@@ -1,0 +1,75 @@
+id: "phase-15f"
+name: "Retire Scored Views + Fix Broken Calendar Queries"
+description: |
+  Remove scoring logic from Command Center views. Fix the broken
+  calendar_events queries that exist in current code. This is the
+  cleanup phase -- safe to do last because detectors already use
+  the correct query patterns.
+
+dependencies:
+  - "phase-15d"
+
+track: "T1"
+
+estimated_sessions: 1
+
+tasks:
+  - id: "task-01"
+    name: "Remove scoring logic from command_center.py"
+    description: |
+      In lib/command_center.py:
+      - ClientHealthView.get_client_health(): remove health_status/health_reason
+        (lines 146-160). Keep raw data queries.
+      - TeamLoadView.get_team_load(): remove load_status/load_reason
+        (lines 359-377).
+      Detail views (get_client_detail, get_member_detail) otherwise unchanged.
+    files:
+      create: []
+      modify:
+        - "lib/command_center.py"
+      delete: []
+    verification:
+      - "No scoring labels in API responses"
+      - "Raw data queries still work correctly"
+      - "Detail views still function from finding card drill-down"
+      - "ruff check lib/command_center.py -- zero errors"
+      - "python -m pytest tests/ -x -- all tests pass"
+    estimated_lines: 50
+    depends_on: []
+
+  - id: "task-02"
+    name: "Fix broken calendar_events queries"
+    description: |
+      In lib/command_center.py, fix two broken queries:
+      - Line 351 (get_team_load): change from
+        SELECT id FROM calendar_events WHERE subject_email = ?
+        to
+        SELECT e.id FROM events e JOIN calendar_attendees ca
+        ON ca.event_id = e.id WHERE ca.email = ?
+        AND date(e.start_time) >= ? AND date(e.start_time) <= ?
+      - Line 461 (get_member_detail): same pattern fix.
+      After fix, no references to calendar_events table should remain
+      in command_center.py.
+    files:
+      create: []
+      modify:
+        - "lib/command_center.py"
+      delete: []
+    verification:
+      - "Team load meeting counts return correct data (previously broken)"
+      - "Member detail meeting counts return correct data"
+      - "No references to calendar_events table in command_center.py"
+      - "All calendar queries use events JOIN calendar_attendees"
+      - "ruff check lib/command_center.py -- zero errors"
+      - "bandit -r lib/command_center.py -- zero findings"
+      - "python -m pytest tests/ -x -- all tests pass"
+    estimated_lines: 20
+    depends_on: []
+
+completion_criteria:
+  - "All 2 tasks marked complete in state.json"
+  - "PR merged to main, CI green"
+  - "No scoring labels in any API response"
+  - "No references to calendar_events table in command_center.py"
+  - "Team load and member detail meeting counts correct"
+  - "All existing tests still pass"

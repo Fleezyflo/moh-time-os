@@ -1,0 +1,98 @@
+# Detection System Phase Index
+# Master index of all phases for Phase 15 build.
+# Must stay in sync with state.json.
+
+project: "MOH Time OS — Detection System (Phase 15)"
+
+phases:
+  - id: phase-15a
+    name: "CalendarSync Expansion + Schema Formalization"
+    status: pending
+    file: phase-15a.yaml
+    description: |
+      Extend time block generation from 7 to 10 business days.
+      Formalize time_blocks in schema.py.
+      Verify/add revenue columns with ALTER TABLE fallback.
+    dependencies: []
+    estimated_sessions: 1
+    track: "T1"
+    tasks_total: 3
+    tasks_complete: 0
+
+  - id: phase-15b
+    name: "Three Detectors + Correlator + Findings Table"
+    status: blocked
+    file: phase-15b.yaml
+    description: |
+      Implement CollisionDetector (two-path: Molham via time_blocks, team via events+calendar_attendees),
+      DriftDetector (deadline-anchored, client tier/revenue with COALESCE fallback),
+      BottleneckDetector (dual trigger with absence exclusion),
+      cross-detection correlator, detection_findings table,
+      task weight system with learning loop, and dry-run preview mode.
+    dependencies:
+      - phase-15a
+    estimated_sessions: 3
+    track: "T1"
+    tasks_total: 7
+    tasks_complete: 0
+
+  - id: phase-15c
+    name: "API Endpoints + Micro-Sync + ADR"
+    status: blocked
+    file: phase-15c.yaml
+    description: |
+      Wire detection findings, week strip, staleness, feedback loop to API.
+      Micro-sync for calendar and email only (Asana excluded).
+      Micro-sync storage helpers in all_users_runner.py.
+      ADR required (server.py is modified).
+    dependencies:
+      - phase-15b
+    estimated_sessions: 2
+    track: "T1"
+    tasks_total: 4
+    tasks_complete: 0
+
+  - id: phase-15d
+    name: "Command Center UI Redesign"
+    status: blocked
+    file: phase-15d.yaml
+    description: |
+      Replace three-tab scored layout with single-view detection design.
+      Week strip, finding cards, correlated groups, feedback buttons,
+      team collisions section, staleness bar.
+    dependencies:
+      - phase-15c
+    estimated_sessions: 2
+    track: "T1"
+    tasks_total: 3
+    tasks_complete: 0
+
+  - id: phase-15e
+    name: "Morning Brief + Staleness Alert"
+    status: blocked
+    file: phase-15e.yaml
+    description: |
+      Daily morning brief via Google Chat at 8 AM.
+      Staleness warning when detection hasn't run in 2+ hours.
+      Revenue-aware formatting with graceful fallback.
+    dependencies:
+      - phase-15b
+    estimated_sessions: 1
+    track: "T2"
+    tasks_total: 3
+    tasks_complete: 0
+
+  - id: phase-15f
+    name: "Retire Scored Views + Fix Broken Calendar Queries"
+    status: blocked
+    file: phase-15f.yaml
+    description: |
+      Remove scoring logic from command_center.py.
+      Fix broken calendar_events queries at lines 351 and 461.
+      Replace with events + calendar_attendees JOIN pattern.
+    dependencies:
+      - phase-15d
+    estimated_sessions: 1
+    track: "T1"
+    tasks_total: 2
+    tasks_complete: 0

@@ -1,0 +1,51 @@
+# Session Record Template
+# Copy as session-NNN.yaml at the START of each session.
+# Fill in as work progresses. Do not wait until the end.
+
+session: 0                    # Replace with actual session number
+date: "YYYY-MM-DD"           # Replace with actual date
+type: "build"                 # build | verify | plan | investigate
+
+assignment:
+  phase: "phase-NNx"         # Replace with actual phase ID
+  tasks: []                   # Replace with actual task IDs
+  description: |
+    Brief description of the session's goal.
+
+work_done:
+  # Add entries here as you complete work
+  # - description: "Extended block generation to 10 business days"
+  #   files_changed:
+  #     - "lib/time_truth/calendar_sync.py"
+  #   lines_added: 15
+  #   lines_removed: 2
+  #   timestamp: "HH:MM"
+
+prs:
+  # - number: 57
+  #   branch: "feat/detection-15a-calendar-schema"
+  #   status: "merged"
+  #   ci_status: "green"
+
+discovered:
+  # Things found during implementation that need attention later
+
+lessons:
+  # Rules or patterns learned during this session
+
+state_changes:
+  # - field: "phases.phase-15a.status"
+  #   old_value: "pending"
+  #   new_value: "in_progress"
+  #   reason: "Starting Phase 15a work"
+
+end_state:
+  tasks_completed: []
+  tasks_remaining: ["task-01", "task-02", "task-03"]
+  blockers: []
+  next_session_should: |
+    If all 3 tasks completed and PR merged:
+    - Update state.json: phase-15a complete, phase-15b unblocked
+    - Start Phase 15b: detection tables in schema.py, then CollisionDetector
+    If not all tasks completed:
+    - Continue remaining task(s) from where left off
