@@ -1049,3 +1049,71 @@ CREATE TABLE IF NOT EXISTS [entity_links] (
     method TEXT DEFAULT 'system',
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 )
+
+CREATE TABLE IF NOT EXISTS [detection_findings] (
+    id TEXT PRIMARY KEY,
+    detector TEXT NOT NULL,
+    finding_type TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    entity_name TEXT,
+    severity TEXT NOT NULL DEFAULT 'medium',
+    severity_data TEXT,
+    adjacent_data TEXT,
+    related_findings TEXT,
+    first_detected_at TEXT NOT NULL DEFAULT (datetime('now')),
+    last_detected_at TEXT NOT NULL DEFAULT (datetime('now')),
+    resolved_at TEXT,
+    notified_at TEXT,
+    acknowledged_at TEXT,
+    suppressed_until TEXT,
+    suppressed_by TEXT,
+    cycle_id TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+)
+
+CREATE TABLE IF NOT EXISTS [detection_findings_preview] (
+    id TEXT PRIMARY KEY,
+    detector TEXT NOT NULL,
+    finding_type TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    entity_name TEXT,
+    severity TEXT NOT NULL DEFAULT 'medium',
+    severity_data TEXT,
+    adjacent_data TEXT,
+    related_findings TEXT,
+    first_detected_at TEXT NOT NULL DEFAULT (datetime('now')),
+    last_detected_at TEXT NOT NULL DEFAULT (datetime('now')),
+    resolved_at TEXT,
+    notified_at TEXT,
+    acknowledged_at TEXT,
+    suppressed_until TEXT,
+    suppressed_by TEXT,
+    cycle_id TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+)
+
+CREATE TABLE IF NOT EXISTS [task_weight_rules] (
+    id TEXT PRIMARY KEY,
+    pattern TEXT NOT NULL,
+    field TEXT NOT NULL DEFAULT 'title',
+    assigned_weight TEXT NOT NULL DEFAULT 'standard',
+    weight_value REAL NOT NULL DEFAULT 1.0,
+    confidence REAL NOT NULL DEFAULT 0.5,
+    corrections_count INTEGER NOT NULL DEFAULT 0,
+    confirmations_count INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+)
+
+CREATE TABLE IF NOT EXISTS [task_weight_overrides] (
+    id TEXT PRIMARY KEY,
+    task_id TEXT NOT NULL,
+    weight_class TEXT NOT NULL,
+    weight_value REAL NOT NULL,
+    set_by TEXT NOT NULL DEFAULT 'user',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+)

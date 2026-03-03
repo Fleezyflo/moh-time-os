@@ -17,7 +17,7 @@ from collections import OrderedDict
 # =============================================================================
 # Schema version — bump when you change this file
 # =============================================================================
-SCHEMA_VERSION = 13
+SCHEMA_VERSION = 14
 
 # =============================================================================
 # Table Definitions
@@ -1478,6 +1478,98 @@ TABLES["entity_links"] = {
         ("to_entity_id", "TEXT NOT NULL"),
         ("confidence", "REAL DEFAULT 1.0"),
         ("method", "TEXT DEFAULT 'system'"),
+        ("created_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# §15b Detection System: detection_findings
+# Main findings table -- stores detector outputs with lifecycle tracking
+# ---------------------------------------------------------------------------
+TABLES["detection_findings"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("detector", "TEXT NOT NULL"),
+        ("finding_type", "TEXT NOT NULL"),
+        ("entity_type", "TEXT NOT NULL"),
+        ("entity_id", "TEXT NOT NULL"),
+        ("entity_name", "TEXT"),
+        ("severity", "TEXT NOT NULL DEFAULT 'medium'"),
+        ("severity_data", "TEXT"),
+        ("adjacent_data", "TEXT"),
+        ("related_findings", "TEXT"),
+        ("first_detected_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+        ("last_detected_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+        ("resolved_at", "TEXT"),
+        ("notified_at", "TEXT"),
+        ("acknowledged_at", "TEXT"),
+        ("suppressed_until", "TEXT"),
+        ("suppressed_by", "TEXT"),
+        ("cycle_id", "TEXT"),
+        ("created_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+        ("updated_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# §15b Detection System: detection_findings_preview
+# Identical schema to detection_findings -- used during dry-run week
+# ---------------------------------------------------------------------------
+TABLES["detection_findings_preview"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("detector", "TEXT NOT NULL"),
+        ("finding_type", "TEXT NOT NULL"),
+        ("entity_type", "TEXT NOT NULL"),
+        ("entity_id", "TEXT NOT NULL"),
+        ("entity_name", "TEXT"),
+        ("severity", "TEXT NOT NULL DEFAULT 'medium'"),
+        ("severity_data", "TEXT"),
+        ("adjacent_data", "TEXT"),
+        ("related_findings", "TEXT"),
+        ("first_detected_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+        ("last_detected_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+        ("resolved_at", "TEXT"),
+        ("notified_at", "TEXT"),
+        ("acknowledged_at", "TEXT"),
+        ("suppressed_until", "TEXT"),
+        ("suppressed_by", "TEXT"),
+        ("cycle_id", "TEXT"),
+        ("created_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+        ("updated_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# §15b Detection System: task_weight_rules
+# Pattern-based weight derivation (keyword/project -> quick/standard/heavy)
+# ---------------------------------------------------------------------------
+TABLES["task_weight_rules"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("pattern", "TEXT NOT NULL"),
+        ("field", "TEXT NOT NULL DEFAULT 'title'"),
+        ("assigned_weight", "TEXT NOT NULL DEFAULT 'standard'"),
+        ("weight_value", "REAL NOT NULL DEFAULT 1.0"),
+        ("confidence", "REAL NOT NULL DEFAULT 0.5"),
+        ("corrections_count", "INTEGER NOT NULL DEFAULT 0"),
+        ("confirmations_count", "INTEGER NOT NULL DEFAULT 0"),
+        ("created_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+        ("updated_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# §15b Detection System: task_weight_overrides
+# Per-task manual weight corrections
+# ---------------------------------------------------------------------------
+TABLES["task_weight_overrides"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("task_id", "TEXT NOT NULL"),
+        ("weight_class", "TEXT NOT NULL"),
+        ("weight_value", "REAL NOT NULL"),
+        ("set_by", "TEXT NOT NULL DEFAULT 'user'"),
         ("created_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
     ],
 }
