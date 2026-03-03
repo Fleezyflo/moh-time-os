@@ -30,7 +30,7 @@ class CalendarSync:
         self.store = store or get_store()
         self.block_manager = BlockManager(self.store)
 
-    def sync_events(self, start_date: str, end_date: str) -> dict:
+    def sync_events(self, start_date: str, end_date: str, *, skip_weekends: bool = True) -> dict:
         """
         Sync events from the events table for a date range.
 
@@ -40,6 +40,7 @@ class CalendarSync:
         Args:
             start_date: Start date YYYY-MM-DD
             end_date: End date YYYY-MM-DD
+            skip_weekends: If True, skip Saturday (5) and Sunday (6) dates.
 
         Returns:
             Dict with sync results
@@ -58,6 +59,7 @@ class CalendarSync:
             "events_found": len(events),
             "blocks_created": 0,
             "dates_processed": [],
+            "skipped_weekends": [],
             "errors": [],
         }
 
@@ -75,6 +77,12 @@ class CalendarSync:
         end = datetime.strptime(end_date, "%Y-%m-%d").date()
 
         while current <= end:
+            # Skip weekends: Saturday=5, Sunday=6
+            if skip_weekends and current.weekday() >= 5:
+                results["skipped_weekends"].append(current.isoformat())
+                current += timedelta(days=1)
+                continue
+
             date_str = current.isoformat()
             day_events = events_by_date.get(date_str, [])
 
@@ -83,7 +91,7 @@ class CalendarSync:
                 results["blocks_created"] += len(blocks)
                 results["dates_processed"].append(date_str)
             except (sqlite3.Error, ValueError, OSError, KeyError) as e:
-                results["errors"].append(f"{date_str}: {str(e)}")
+                results["errors"].append(f"{date_str}: {e!s}")
 
             current += timedelta(days=1)
 
@@ -232,9 +240,13 @@ class CalendarSync:
             "conflicts": len(self.block_manager.get_conflicts(date)),
         }
 
-    def ensure_blocks_for_week(self, start_date: str = None) -> dict:
+    def ensure_blocks_for_horizon(self, start_date: str = None) -> dict:
         """
-        Ensure time blocks exist for the next 7 days.
+        Ensure time blocks exist for the next 10 business days.
+
+        Covers 2 calendar weeks (14 calendar days) to guarantee 10 business
+        days even when the start date is a Monday. Weekend dates are skipped
+        by sync_events(skip_weekends=True).
 
         This is the main entry point for scheduled sync.
 
@@ -247,11 +259,15 @@ class CalendarSync:
         if not start_date:
             start_date = date.today().isoformat()
 
-        end_date = (datetime.strptime(start_date, "%Y-%m-%d") + timedelta(days=6)).strftime(
+        # 13-day span covers 10 business days across any 2-week window
+        end_date = (datetime.strptime(start_date, "%Y-%m-%d") + timedelta(days=13)).strftime(
             "%Y-%m-%d"
         )
 
-        return self.sync_events(start_date, end_date)
+        return self.sync_events(start_date, end_date, skip_weekends=True)
+
+    # Keep backward-compatible alias
+    ensure_blocks_for_week = ensure_blocks_for_horizon
 
 
 # Test

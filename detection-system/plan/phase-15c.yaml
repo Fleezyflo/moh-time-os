@@ -1,0 +1,123 @@
+id: "phase-15c"
+name: "API Endpoints + Micro-Sync + ADR"
+description: |
+  Wire detection findings, week strip, and staleness to the API.
+  Micro-sync for calendar and email data only (Asana excluded).
+  ADR required because api/server.py is modified.
+
+dependencies:
+  - "phase-15b"
+
+track: "T1"
+
+estimated_sessions: 2
+
+tasks:
+  - id: "task-01"
+    name: "Create micro-sync helpers in all_users_runner.py"
+    description: |
+      Add two new helpers to lib/collectors/all_users_runner.py:
+      - micro_sync_calendar(user_email, since, until, db_path): instantiates
+        CalendarCollector scoped to user, calls sync(since, until). Note:
+        collect_calendar_for_user() fetches but does NOT persist -- must use
+        CalendarCollector.sync() which calls transform() -> store.insert_many().
+      - micro_sync_gmail(user_email, since, until, db_path): instantiates
+        GmailCollector scoped to user, calls sync(since, until).
+      Verify whether CalendarCollector.sync() accepts since/until params.
+      If not, extend sync() to accept date range (~10 lines).
+    files:
+      create: []
+      modify:
+        - "lib/collectors/all_users_runner.py"
+      delete: []
+    verification:
+      - "micro_sync_calendar persists events to DB (not just fetches)"
+      - "micro_sync_gmail persists messages to DB"
+      - "Scoped to single user -- doesn't sync all users"
+      - "Latency < 3 seconds for calendar + email scoped pull"
+      - "ruff check lib/collectors/all_users_runner.py -- zero errors"
+      - "bandit -r lib/collectors/all_users_runner.py -- zero findings"
+    estimated_lines: 60
+    depends_on: []
+
+  - id: "task-02"
+    name: "Create detection API endpoints in server.py"
+    description: |
+      Add 8 endpoints to api/server.py:
+      - GET /api/command/week-strip: 10-day array with date, available_minutes,
+        tasks_due, weighted_ratio, has_collision
+      - GET /api/command/findings: active findings grouped by correlation,
+        with acknowledged/suppressed sections
+      - GET /api/command/findings/{id}?refresh=true: single finding detail
+        with optional on-demand micro-sync (calendar + email only)
+      - POST /api/command/findings/{id}/acknowledge: mark "Got it"
+      - POST /api/command/findings/{id}/suppress: mark "Expected" (30-day)
+      - GET /api/command/staleness: last_run, is_stale, stale_since
+      - GET /api/command/weight-review: pending weight confirmations
+      - POST /api/command/weight-review/{task_id}: confirm or correct weight
+
+      When refresh=true: call micro_sync_calendar + micro_sync_gmail for
+      the relevant member. Task data comes from last scheduled collection
+      (Asana NOT micro-synced).
+    files:
+      create: []
+      modify:
+        - "api/server.py"
+      delete: []
+    verification:
+      - "Each endpoint returns correct response shape from design doc"
+      - "No findings -> {groups: [], count: 0}"
+      - "Correlated findings -> grouped correctly"
+      - "Acknowledge -> finding moves to acknowledged section"
+      - "Suppress -> finding moves to suppressed, reappears after 30 days"
+      - "Staleness -> correct stale flag based on detection_last_run"
+      - "refresh=true triggers calendar + email micro-sync, NOT Asana"
+      - "ruff check api/server.py -- zero errors"
+      - "bandit -r api/server.py -- zero findings"
+    estimated_lines: 270
+    depends_on: ["task-01"]
+
+  - id: "task-03"
+    name: "Write ADR for detection system"
+    description: |
+      Create docs/adr/0013-detection-system.md documenting the architectural
+      decision to add a detection system. Required by Governance Checks CI
+      because api/server.py is being modified.
+      Follow existing ADR format from docs/adr/ directory.
+    files:
+      create:
+        - "docs/adr/0013-detection-system.md"
+      modify: []
+      delete: []
+    verification:
+      - "ADR follows existing format in docs/adr/"
+      - "ADR number (0013) doesn't conflict with existing ADRs"
+      - "Governance Checks CI passes"
+    estimated_lines: 30
+    depends_on: []
+
+  - id: "task-04"
+    name: "Update system map"
+    description: |
+      Run scripts/generate_system_map.py to regenerate docs/system-map.json
+      after adding new /api/command/* endpoints. Include system-map.json
+      in the git add for the commit. Drift Detection CI will fail without it.
+    files:
+      create: []
+      modify:
+        - "docs/system-map.json"
+      delete: []
+    verification:
+      - "system-map.json includes all new /api/command/* endpoints"
+      - "Drift Detection CI passes"
+      - "python scripts/generate_system_map.py runs without error"
+    estimated_lines: 0
+    depends_on: ["task-02"]
+
+completion_criteria:
+  - "All 4 tasks marked complete in state.json"
+  - "PR merged to main, CI green"
+  - "All 8 endpoints return correct response shapes"
+  - "Micro-sync works for calendar + email (not Asana)"
+  - "ADR exists and Governance Checks pass"
+  - "System map updated, Drift Detection passes"
