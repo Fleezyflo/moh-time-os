@@ -222,6 +222,31 @@ class AutonomousLoop:
                 )
 
             # ═══════════════════════════════════════
+            # PHASE 1b5: DETECTION SYSTEM
+            # Run collision, drift, bottleneck detectors
+            # Dry-run mode: writes to preview table
+            # ═══════════════════════════════════════
+            logger.info("▶ Phase 1b5: DETECTION")
+            try:
+                from .detectors import run_all_detectors
+
+                db_path = str(paths.data_dir() / "moh_time_os.db")
+                detection_results = run_all_detectors(
+                    db_path=db_path,
+                    dry_run=True,
+                    cycle_id=f"cycle_{self.cycle_count}",
+                )
+                results["phases"]["detection"] = detection_results
+                total_findings = sum(
+                    d.get("findings", 0) for d in detection_results.get("detectors", {}).values()
+                )
+                groups = detection_results.get("correlation", {}).get("groups", 0)
+                logger.info(f"  Detection: {total_findings} findings, {groups} groups (dry-run)")
+            except (sqlite3.Error, ValueError, OSError) as e:
+                logger.warning(f"  Detection skipped: {e}")
+                results["phases"]["detection"] = {"error": str(e)}
+
+            # ═══════════════════════════════════════
             # PHASE 1b-1e: TRUTH MODULES
             # SKIP if project_brand_required or project_brand_consistency fails
             # ═══════════════════════════════════════

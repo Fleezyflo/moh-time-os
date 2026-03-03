@@ -2,22 +2,22 @@
   "$schema": "../session-system-v2/core/state.schema.json",
   "project": "MOH Time OS — Detection System (Phase 15)",
   "owner": "Fleezyflo",
-  "current_phase": "phase-15a",
-  "current_session": 0,
+  "current_phase": "phase-15b",
+  "current_session": 1,
   "phases": {
     "phase-15a": {
+      "status": "complete",
+      "started_session": 1,
+      "completed_session": 1,
+      "prs": [57],
+      "tasks_total": 3,
+      "tasks_complete": 3
+    },
+    "phase-15b": {
       "status": "pending",
       "started_session": null,
       "completed_session": null,
-      "prs": [],
-      "tasks_total": 3,
-      "tasks_complete": 0
-    },
-    "phase-15b": {
-      "status": "blocked",
-      "started_session": null,
-      "completed_session": null,
-      "blocked_by": ["phase-15a"],
+      "blocked_by": [],
       "prs": [],
       "tasks_total": 7,
       "tasks_complete": 0
@@ -59,7 +59,7 @@
       "tasks_complete": 0
     }
   },
-  "last_pr": 56,
+  "last_pr": 57,
   "last_verified": null,
   "enforcement": {
     "repo": "Fleezyflo/enforcement",
