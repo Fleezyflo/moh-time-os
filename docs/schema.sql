@@ -15,6 +15,9 @@ CREATE TABLE IF NOT EXISTS [clients] (
     relationship_notes TEXT,
     contacts_json TEXT,
     active_projects_json TEXT,
+    prior_year_revenue REAL,
+    ytd_revenue REAL,
+    lifetime_revenue REAL,
     xero_contact_id TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -637,6 +640,19 @@ CREATE TABLE IF NOT EXISTS [time_debt] (
     source_task_id TEXT,
     incurred_at TEXT NOT NULL,
     resolved_at TEXT
+)
+
+CREATE TABLE IF NOT EXISTS [time_blocks] (
+    id TEXT PRIMARY KEY,
+    date TEXT NOT NULL,
+    start_time TEXT NOT NULL,
+    end_time TEXT NOT NULL,
+    lane TEXT NOT NULL,
+    task_id TEXT REFERENCES tasks(id),
+    is_protected INTEGER DEFAULT 0,
+    is_buffer INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 )
 
 CREATE TABLE IF NOT EXISTS [asana_custom_fields] (
