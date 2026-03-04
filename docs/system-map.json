@@ -137,12 +137,37 @@
     },
     {
       "method": "GET",
+      "path": "/api/command/findings",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/command/findings/{finding_id}",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/command/staleness",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
       "path": "/api/command/team-load",
       "source": "api/server.py"
     },
     {
       "method": "GET",
       "path": "/api/command/team-load/{member_name}",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/command/week-strip",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
+      "path": "/api/command/weight-review",
       "source": "api/server.py"
     },
     {
@@ -767,6 +792,21 @@
     },
     {
       "method": "POST",
+      "path": "/api/command/findings/{finding_id}/acknowledge",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/command/findings/{finding_id}/suppress",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
+      "path": "/api/command/weight-review/{task_id}",
+      "source": "api/server.py"
+    },
+    {
+      "method": "POST",
       "path": "/api/commitments/{commitment_id}/done",
       "source": "api/server.py"
     },
@@ -1212,7 +1252,7 @@
   ],
   "generated_by": "scripts/generate_system_map.py",
   "summary": {
-    "api_routes_count": 209,
+    "api_routes_count": 217,
     "collectors_count": 9,
     "db_tables_count": 31,
     "ui_routes_count": 31
