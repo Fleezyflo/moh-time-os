@@ -1,386 +1,91 @@
-// Agency Command Center — Executive dashboard for client health, team load, and decision queue
-import { useState, useEffect } from 'react';
+// Command Center — Detection-based single-view dashboard
+// Replaces three-tab scored layout with factual findings
+import { useState, useCallback } from 'react';
 import { PageLayout } from '../components/layout/PageLayout';
-import { SummaryGrid } from '../components/layout/SummaryGrid';
-import { MetricCard } from '../components/layout/MetricCard';
-import { TabContainer, type TabDef } from '../components/layout/TabContainer';
-import { SkeletonCardGrid, SkeletonPanel } from '../components';
+import { SkeletonPanel } from '../components';
+import { useWeekStrip, useFindings, useStaleness } from '../lib/hooks';
+import * as api from '../lib/api';
+import type { WeekStripDay, DetectionFinding, FindingGroup, StalenessResponse } from '../lib/api';
 
-// Inline fetch utility for this component
-async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json();
-}
+// --- Staleness Bar ---
 
-// Reusable fetch hook for command center endpoints
-function useFetchCommand<T>(url: string) {
-  const [data, setData] = useState<T | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+function StalenessBar({ staleness }: { staleness: StalenessResponse | null }) {
+  if (!staleness) return null;
 
-  useEffect(() => {
-    fetchJson<T>(url)
-      .then(setData)
-      .catch((e) => setError(e.message))
-      .finally(() => setLoading(false));
-  }, [url]);
-
-  return { data, loading, error };
-}
-
-// Type definitions
-type CommandTab = 'health' | 'load' | 'decisions';
-
-interface Client {
-  client_name: string;
-  total_tasks: number;
-  overdue_tasks: number;
-  last_meeting: string;
-  days_since_last_meeting: number;
-  health_status: 'critical' | 'warning' | 'healthy';
-  health_reason: string;
-}
-
-interface ClientHealthResponse {
-  clients: Client[];
-  total: number;
-  critical_count: number;
-  warning_count: number;
-}
-
-interface TeamMember {
-  member_name: string;
-  member_email: string;
-  active_tasks: number;
-  overdue_tasks: number;
-  meetings_this_week: number;
-  load_status: 'overloaded' | 'heavy' | 'normal' | 'light';
-  load_reason: string;
-}
-
-interface TeamLoadResponse {
-  members: TeamMember[];
-  total: number;
-  overloaded_count: number;
-  heavy_count: number;
-}
-
-interface DataFreshness {
-  source: string;
-  last_sync: string;
-}
-
-interface DecisionQueueItem {
-  title?: string;
-  name?: string;
-}
-
-interface DecisionQueueResponse {
-  my_tasks: { count: number; items: DecisionQueueItem[] };
-  my_overdue: { count: number; items: DecisionQueueItem[] };
-  open_commitments: { count: number };
-  critical_signals: { count: number; items: DecisionQueueItem[] };
-  pending_responses: { count: number };
-  resolution_items: { count: number };
-  data_freshness: DataFreshness[];
-  queue_summary: { total_attention_items: number; attention_flags: number };
-}
-
-const TABS: TabDef<CommandTab>[] = [
-  { id: 'health', label: 'Client Health' },
-  { id: 'load', label: 'Team Load' },
-  { id: 'decisions', label: 'Decision Queue' },
-];
-
-function getHealthColor(status: string): string {
-  switch (status) {
-    case 'critical':
-      return 'var(--danger)';
-    case 'warning':
-      return 'var(--warning)';
-    case 'healthy':
-      return 'var(--success)';
-    default:
-      return 'var(--grey)';
-  }
-}
-
-function getHealthBgColor(status: string): string {
-  switch (status) {
-    case 'critical':
-      return 'bg-[var(--danger)]/20';
-    case 'warning':
-      return 'bg-[var(--warning)]/20';
-    case 'healthy':
-      return 'bg-[var(--success)]/20';
-    default:
-      return 'bg-[var(--grey)]/20';
-  }
-}
-
-function getLoadColor(status: string): string {
-  switch (status) {
-    case 'overloaded':
-      return 'var(--danger)';
-    case 'heavy':
-      return 'var(--warning)';
-    case 'normal':
-      return 'var(--success)';
-    case 'light':
-      return 'var(--info)';
-    default:
-      return 'var(--grey)';
-  }
-}
-
-function getLoadBgColor(status: string): string {
-  switch (status) {
-    case 'overloaded':
-      return 'bg-[var(--danger)]/20';
-    case 'heavy':
-      return 'bg-[var(--warning)]/20';
-    case 'normal':
-      return 'bg-[var(--success)]/20';
-    case 'light':
-      return 'bg-[var(--info)]/20';
-    default:
-      return 'bg-[var(--grey)]/20';
-  }
-}
-
-function getLoadLabel(status: string): string {
-  return status.charAt(0).toUpperCase() + status.slice(1);
-}
-
-// Tab 1: Client Health
-function ClientHealthTab({
-  data,
-  loading,
-}: {
-  data: ClientHealthResponse | null;
-  loading: boolean;
-}) {
-  if (loading) {
+  if (staleness.is_stale) {
     return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-24 bg-[var(--grey-dim)] rounded animate-pulse" />
-          ))}
-        </div>
-        <SkeletonCardGrid count={3} />
+      <div className="rounded-lg border border-[var(--warning)] bg-[var(--warning)]/10 px-4 py-3 mb-4">
+        <p className="text-sm font-medium text-[var(--warning)]">
+          Detection stale — last run{' '}
+          {staleness.stale_since ? formatTimeAgo(staleness.last_run) : 'unknown'} ago. Findings may
+          be outdated.
+        </p>
       </div>
     );
   }
-
-  if (!data || data.clients.length === 0) {
-    return (
-      <div className="bg-[var(--grey-dim)]/50 rounded-lg border border-[var(--grey)] p-8 text-center">
-        <p className="text-[var(--grey-light)]">No client data available</p>
-      </div>
-    );
-  }
-
-  const healthyCount = data.total - data.critical_count - data.warning_count;
-  const sortedClients = [...data.clients].sort((a, b) => {
-    const statusOrder = { critical: 0, warning: 1, healthy: 2 };
-    if (
-      statusOrder[a.health_status as keyof typeof statusOrder] !==
-      statusOrder[b.health_status as keyof typeof statusOrder]
-    ) {
-      return (
-        statusOrder[a.health_status as keyof typeof statusOrder] -
-        statusOrder[b.health_status as keyof typeof statusOrder]
-      );
-    }
-    return (b.overdue_tasks || 0) - (a.overdue_tasks || 0);
-  });
 
   return (
-    <div className="space-y-6">
-      {/* Summary Metrics */}
-      <SummaryGrid>
-        <MetricCard
-          label="Critical"
-          value={data.critical_count}
-          severity={data.critical_count > 0 ? 'danger' : 'success'}
-        />
-        <MetricCard
-          label="Warning"
-          value={data.warning_count}
-          severity={data.warning_count > 0 ? 'warning' : 'success'}
-        />
-        <MetricCard label="Healthy" value={healthyCount} severity="success" />
-        <MetricCard label="Total Clients" value={data.total} />
-      </SummaryGrid>
-
-      {/* Client Cards */}
-      <div className="space-y-3">
-        {sortedClients.map((client) => (
-          <div
-            key={client.client_name}
-            className="bg-[var(--grey-dim)] rounded-lg border border-[var(--grey)] p-4 hover:border-[var(--grey-light)] transition-colors"
-          >
-            <div className="flex items-start justify-between gap-4 mb-3">
-              <div className="flex-1 min-w-0">
-                <h3 className="font-medium text-[var(--white)] truncate">{client.client_name}</h3>
-                <p className="text-sm text-[var(--grey)] mt-1">{client.health_reason}</p>
-              </div>
-              <span
-                className={`px-2.5 py-1 rounded text-xs font-medium shrink-0 ${getHealthBgColor(client.health_status)}`}
-                style={{ color: getHealthColor(client.health_status) }}
-              >
-                {client.health_status.charAt(0).toUpperCase() + client.health_status.slice(1)}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-4 gap-2">
-              <div className="text-center p-2 bg-[var(--black)]/50 rounded">
-                <div className="text-lg font-semibold text-[var(--white)]">
-                  {client.total_tasks}
-                </div>
-                <div className="text-xs text-[var(--grey)]">Total</div>
-              </div>
-              <div
-                className={`text-center p-2 rounded ${
-                  client.overdue_tasks > 0 ? 'bg-[var(--danger)]/30' : 'bg-[var(--black)]/50'
-                }`}
-              >
-                <div
-                  className={`text-lg font-semibold ${
-                    client.overdue_tasks > 0 ? 'text-[var(--danger)]' : 'text-[var(--white)]'
-                  }`}
-                >
-                  {client.overdue_tasks}
-                </div>
-                <div className="text-xs text-[var(--grey)]">Overdue</div>
-              </div>
-              <div className="text-center p-2 bg-[var(--black)]/50 rounded">
-                <div className="text-lg font-semibold text-[var(--white)]">
-                  {client.days_since_last_meeting}
-                </div>
-                <div className="text-xs text-[var(--grey)]">Days</div>
-              </div>
-              <div className="text-center p-2 bg-[var(--black)]/50 rounded">
-                <div className="text-sm font-semibold text-[var(--white)] truncate">
-                  {client.last_meeting}
-                </div>
-                <div className="text-xs text-[var(--grey)]">Last Mtg</div>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
+    <div className="text-xs text-[var(--grey)] mb-4">
+      Last detection: {formatTimeAgo(staleness.last_run)} ago
     </div>
   );
 }
 
-// Tab 2: Team Load
-function TeamLoadTab({ data, loading }: { data: TeamLoadResponse | null; loading: boolean }) {
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-24 bg-[var(--grey-dim)] rounded animate-pulse" />
-          ))}
-        </div>
-        <SkeletonCardGrid count={6} />
-      </div>
-    );
-  }
+// --- Week Strip ---
 
-  if (!data || data.members.length === 0) {
-    return (
-      <div className="bg-[var(--grey-dim)]/50 rounded-lg border border-[var(--grey)] p-8 text-center">
-        <p className="text-[var(--grey-light)]">No team data available</p>
-      </div>
-    );
-  }
+function getRatioColor(ratio: number): string {
+  if (ratio > 2.0) return 'var(--danger)';
+  if (ratio >= 1.0) return 'var(--warning)';
+  return 'var(--success)';
+}
 
-  const normalCount = data.total - data.overloaded_count - data.heavy_count;
-  const sortedMembers = [...data.members].sort(
-    (a, b) => (b.overdue_tasks || 0) - (a.overdue_tasks || 0)
-  );
+function getRatioBg(ratio: number): string {
+  if (ratio > 2.0) return 'bg-[var(--danger)]/20';
+  if (ratio >= 1.0) return 'bg-[var(--warning)]/20';
+  return 'bg-[var(--success)]/10';
+}
 
+function WeekStrip({
+  days,
+  selectedDate,
+  onSelectDate,
+}: {
+  days: WeekStripDay[];
+  selectedDate: string | null;
+  onSelectDate: (date: string) => void;
+}) {
   return (
-    <div className="space-y-6">
-      {/* Summary Metrics */}
-      <SummaryGrid>
-        <MetricCard
-          label="Overloaded"
-          value={data.overloaded_count}
-          severity={data.overloaded_count > 0 ? 'danger' : 'success'}
-        />
-        <MetricCard
-          label="Heavy Load"
-          value={data.heavy_count}
-          severity={data.heavy_count > 0 ? 'warning' : 'success'}
-        />
-        <MetricCard label="Normal" value={normalCount} severity="success" />
-        <MetricCard label="Total Members" value={data.total} />
-      </SummaryGrid>
-
-      {/* Team Member Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {sortedMembers.map((member) => {
-          const hasOverdue = (member.overdue_tasks || 0) > 0;
+    <div className="mb-6">
+      <div className="flex gap-2 overflow-x-auto pb-2">
+        {days.map((day) => {
+          const hours = Math.round((day.available_minutes / 60) * 10) / 10;
+          const isSelected = selectedDate === day.date;
+          const dayLabel = formatDayLabel(day.date);
 
           return (
-            <div
-              key={member.member_email}
-              className={`bg-[var(--grey-dim)] rounded-lg border transition-colors p-4 ${
-                hasOverdue
-                  ? 'border-[var(--danger)]/50 hover:border-[var(--danger)]'
-                  : 'border-[var(--grey)] hover:border-[var(--grey-light)]'
-              }`}
+            <button
+              key={day.date}
+              onClick={() => onSelectDate(day.date)}
+              className={`flex-shrink-0 w-20 rounded-lg border p-2 text-center transition-colors cursor-pointer ${
+                isSelected
+                  ? 'border-[var(--white)] bg-[var(--grey-dim)]'
+                  : 'border-[var(--grey)] bg-[var(--black)]/30 hover:border-[var(--grey-light)]'
+              } ${day.has_collision ? getRatioBg(day.weighted_ratio) : ''}`}
             >
-              {/* Header */}
-              <div className="flex items-start justify-between mb-3">
-                <div className="flex-1 min-w-0">
-                  <h3 className="font-medium text-[var(--white)] truncate">{member.member_name}</h3>
-                  <p className="text-xs text-[var(--grey)] truncate">{member.member_email}</p>
-                </div>
-                <span
-                  className={`px-2.5 py-1 rounded text-xs font-medium shrink-0 ${getLoadBgColor(member.load_status)}`}
-                  style={{ color: getLoadColor(member.load_status) }}
-                >
-                  {getLoadLabel(member.load_status)}
-                </span>
+              <div className="text-xs text-[var(--grey)] mb-1">{dayLabel}</div>
+              <div className="text-sm font-semibold text-[var(--white)]">{hours}h</div>
+              <div className="text-xs mt-0.5" style={{ color: getRatioColor(day.weighted_ratio) }}>
+                {day.tasks_due} task{day.tasks_due !== 1 ? 's' : ''}
               </div>
-
-              {/* Reason */}
-              <p className="text-xs text-[var(--grey)] mb-3">{member.load_reason}</p>
-
-              {/* Stats Grid */}
-              <div className="grid grid-cols-3 gap-2">
-                <div className="text-center p-2 bg-[var(--black)]/50 rounded">
-                  <div className="text-lg font-semibold text-[var(--white)]">
-                    {member.active_tasks}
-                  </div>
-                  <div className="text-xs text-[var(--grey)]">Active</div>
-                </div>
+              {day.has_collision && (
                 <div
-                  className={`text-center p-2 rounded ${
-                    hasOverdue ? 'bg-[var(--danger)]/30' : 'bg-[var(--black)]/50'
-                  }`}
+                  className="text-xs font-medium mt-0.5"
+                  style={{ color: getRatioColor(day.weighted_ratio) }}
                 >
-                  <div
-                    className={`text-lg font-semibold ${hasOverdue ? 'text-[var(--danger)]' : 'text-[var(--white)]'}`}
-                  >
-                    {member.overdue_tasks}
-                  </div>
-                  <div className="text-xs text-[var(--grey)]">Overdue</div>
+                  {day.weighted_ratio.toFixed(1)}:1
                 </div>
-                <div className="text-center p-2 bg-[var(--black)]/50 rounded">
-                  <div className="text-lg font-semibold text-[var(--info)]">
-                    {member.meetings_this_week}
-                  </div>
-                  <div className="text-xs text-[var(--grey)]">Meetings</div>
-                </div>
-              </div>
-            </div>
+              )}
+            </button>
           );
         })}
       </div>
@@ -388,168 +93,397 @@ function TeamLoadTab({ data, loading }: { data: TeamLoadResponse | null; loading
   );
 }
 
-// Tab 3: Decision Queue
-function DecisionQueueTab({
-  data,
-  loading,
+// --- Finding Card ---
+
+function FindingCard({
+  finding,
+  onAcknowledge,
+  onSuppress,
 }: {
-  data: DecisionQueueResponse | null;
-  loading: boolean;
+  finding: DetectionFinding;
+  onAcknowledge: (id: string) => void;
+  onSuppress: (id: string) => void;
 }) {
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="h-16 bg-[var(--grey-dim)] rounded animate-pulse" />
-        {Array.from({ length: 3 }).map((_, i) => (
-          <SkeletonPanel key={i} rows={2} />
-        ))}
-      </div>
-    );
-  }
+  const [expanded, setExpanded] = useState(false);
+  const [detail, setDetail] = useState<DetectionFinding | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  if (!data) {
-    return (
-      <div className="bg-[var(--grey-dim)]/50 rounded-lg border border-[var(--grey)] p-8 text-center">
-        <p className="text-[var(--grey-light)]">No decision queue data available</p>
-      </div>
-    );
-  }
+  const handleExpand = useCallback(async () => {
+    if (expanded) {
+      setExpanded(false);
+      return;
+    }
+    setExpanded(true);
+    setRefreshing(true);
+    try {
+      const result = await api.fetchFinding(finding.id, true);
+      setDetail(result.finding);
+    } catch {
+      // Show existing data on refresh failure
+      setDetail(finding);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [expanded, finding]);
 
-  const attentionLevel =
-    data.queue_summary.total_attention_items > 0
-      ? data.queue_summary.total_attention_items === 1
-        ? '1 item'
-        : `${data.queue_summary.total_attention_items} items`
-      : 'nothing';
+  const detectorLabel = finding.detector.charAt(0).toUpperCase() + finding.detector.slice(1);
 
   return (
-    <div className="space-y-6">
-      {/* Attention Summary */}
-      <div
-        className="rounded-lg border p-4"
-        style={{
-          backgroundColor:
-            data.queue_summary.total_attention_items > 0 ? 'var(--danger)' : 'var(--success)',
-          borderColor: 'currentColor',
-          opacity: 0.2,
-        }}
-      >
-        <p
-          className="text-lg font-semibold"
-          style={{
-            color:
-              data.queue_summary.total_attention_items > 0 ? 'var(--danger)' : 'var(--success)',
-          }}
-        >
-          {attentionLevel} need{data.queue_summary.total_attention_items === 1 ? 's' : ''} your
-          attention
-        </p>
-      </div>
-
-      {/* My Overdue Tasks */}
-      {data.my_overdue.count > 0 && (
-        <div className="bg-[var(--grey-dim)] rounded-lg border border-[var(--danger)]/50 p-4">
-          <h3 className="font-medium text-[var(--danger)] mb-3">
-            My Overdue Tasks ({data.my_overdue.count})
-          </h3>
-          <ul className="space-y-2">
-            {data.my_overdue.items.map((item, idx) => (
-              <li key={idx} className="text-sm text-[var(--white)] flex items-start gap-2">
-                <span className="text-[var(--danger)] mt-0.5">•</span>
-                <span>{item.title || item.name || 'Untitled task'}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Critical Signals */}
-      {data.critical_signals.count > 0 && (
-        <div className="bg-[var(--grey-dim)] rounded-lg border border-[var(--warning)]/50 p-4">
-          <h3 className="font-medium text-[var(--warning)] mb-3">
-            Critical Signals ({data.critical_signals.count})
-          </h3>
-          <ul className="space-y-2">
-            {data.critical_signals.items.map((item, idx) => (
-              <li key={idx} className="text-sm text-[var(--white)] flex items-start gap-2">
-                <span className="text-[var(--warning)] mt-0.5">▲</span>
-                <span>{item.title || item.name || 'Unknown signal'}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Open Commitments */}
-      <div className="bg-[var(--grey-dim)] rounded-lg border border-[var(--grey)] p-4">
-        <h3 className="font-medium text-[var(--white)] mb-2">Open Commitments</h3>
-        <p className="text-2xl font-semibold text-[var(--info)]">{data.open_commitments.count}</p>
-      </div>
-
-      {/* Pending Responses */}
-      <div className="bg-[var(--grey-dim)] rounded-lg border border-[var(--grey)] p-4">
-        <h3 className="font-medium text-[var(--white)] mb-2">Pending Responses</h3>
-        <p className="text-2xl font-semibold text-[var(--info)]">{data.pending_responses.count}</p>
-      </div>
-
-      {/* Resolution Items */}
-      <div className="bg-[var(--grey-dim)] rounded-lg border border-[var(--grey)] p-4">
-        <h3 className="font-medium text-[var(--white)] mb-2">Resolution Items</h3>
-        <p className="text-2xl font-semibold text-[var(--success)]">
-          {data.resolution_items.count}
-        </p>
-      </div>
-
-      {/* Data Freshness */}
-      {data.data_freshness.length > 0 && (
-        <div className="bg-[var(--grey-dim)] rounded-lg border border-[var(--grey)] p-4">
-          <h3 className="font-medium text-[var(--white)] mb-3">Data Freshness</h3>
-          <div className="space-y-2">
-            {data.data_freshness.map((item) => (
-              <div key={item.source} className="flex items-center justify-between text-sm">
-                <span className="text-[var(--grey)]">{item.source}</span>
-                <span className="text-[var(--grey-light)]">{item.last_sync}</span>
-              </div>
-            ))}
+    <div className="bg-[var(--grey-dim)] rounded-lg border border-[var(--grey)] p-4 mb-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs text-[var(--grey)] uppercase tracking-wide">
+              {detectorLabel}
+            </span>
           </div>
+          <h3 className="font-medium text-[var(--white)]">{finding.entity_name}</h3>
+          <p className="text-sm text-[var(--grey-light)] mt-1">{finding.summary}</p>
+        </div>
+        <button
+          onClick={handleExpand}
+          className="text-xs text-[var(--grey-light)] hover:text-[var(--white)] px-2 py-1 rounded hover:bg-[var(--grey)]/20 transition-colors"
+        >
+          {expanded ? '▾ Hide' : '▸ Detail'}
+        </button>
+      </div>
+
+      {/* Expanded detail */}
+      {expanded && (
+        <div className="mt-3 pt-3 border-t border-[var(--grey)]/50">
+          {refreshing ? (
+            <p className="text-sm text-[var(--grey)] animate-pulse">
+              Refreshing calendar &amp; email...
+            </p>
+          ) : (
+            <AdjacentData data={(detail ?? finding).adjacent_data} />
+          )}
+        </div>
+      )}
+
+      {/* Action buttons */}
+      <div className="flex gap-2 mt-3">
+        <button
+          onClick={() => onAcknowledge(finding.id)}
+          className="text-xs px-3 py-1.5 rounded border border-[var(--grey)] text-[var(--grey-light)] hover:text-[var(--white)] hover:border-[var(--grey-light)] transition-colors"
+        >
+          Got it
+        </button>
+        <button
+          onClick={() => onSuppress(finding.id)}
+          className="text-xs px-3 py-1.5 rounded border border-[var(--grey)] text-[var(--grey-light)] hover:text-[var(--white)] hover:border-[var(--grey-light)] transition-colors"
+        >
+          Expected
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// --- Adjacent Data renderer ---
+
+function AdjacentData({ data }: { data: Record<string, unknown> }) {
+  if (!data || Object.keys(data).length === 0) {
+    return <p className="text-sm text-[var(--grey)]">No additional data available.</p>;
+  }
+
+  return (
+    <div className="space-y-2">
+      {Object.entries(data).map(([key, value]) => (
+        <div key={key}>
+          <span className="text-xs text-[var(--grey)] uppercase tracking-wide">
+            {key.replace(/_/g, ' ')}
+          </span>
+          <div className="text-sm text-[var(--grey-light)] mt-0.5">
+            {renderAdjacentValue(value)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function renderAdjacentValue(value: unknown): string {
+  if (value === null || value === undefined) return '—';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number') return String(value);
+  if (typeof value === 'boolean') return value ? 'Yes' : 'No';
+  if (Array.isArray(value)) {
+    return value.map((v) => (typeof v === 'object' ? JSON.stringify(v) : String(v))).join(', ');
+  }
+  return JSON.stringify(value);
+}
+
+// --- Correlated Group ---
+
+function CorrelatedGroup({
+  group,
+  onAcknowledge,
+  onSuppress,
+}: {
+  group: FindingGroup;
+  onAcknowledge: (id: string) => void;
+  onSuppress: (id: string) => void;
+}) {
+  return (
+    <div className="mb-4">
+      <FindingCard finding={group.primary} onAcknowledge={onAcknowledge} onSuppress={onSuppress} />
+      {group.subordinates.length > 0 && (
+        <div className="ml-4 border-l-2 border-[var(--grey)]/30 pl-3">
+          <div className="text-xs text-[var(--grey)] mb-2 uppercase tracking-wide">
+            Related findings
+          </div>
+          {group.subordinates.map((sub) => (
+            <FindingCard
+              key={sub.id}
+              finding={sub}
+              onAcknowledge={onAcknowledge}
+              onSuppress={onSuppress}
+            />
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-// Main Component
-export default function CommandCenter() {
-  const clientHealthData = useFetchCommand<ClientHealthResponse>('/api/command/client-health');
-  const teamLoadData = useFetchCommand<TeamLoadResponse>('/api/command/team-load');
-  const decisionQueueData = useFetchCommand<DecisionQueueResponse>('/api/command/decisions');
+// --- Team Collisions ---
+
+function TeamCollisions({ collisions }: { collisions: DetectionFinding[] }) {
+  const [open, setOpen] = useState(false);
+
+  if (collisions.length === 0) return null;
+
+  // Group by entity_name (team member)
+  const byPerson = new Map<string, DetectionFinding[]>();
+  for (const c of collisions) {
+    const existing = byPerson.get(c.entity_name) ?? [];
+    existing.push(c);
+    byPerson.set(c.entity_name, existing);
+  }
 
   return (
-    <PageLayout
-      title="Agency Command Center"
-      subtitle="Executive dashboard for operations oversight"
-    >
-      <TabContainer tabs={TABS} defaultTab="health">
-        {(activeTab) => {
-          switch (activeTab) {
-            case 'health':
-              return (
-                <ClientHealthTab data={clientHealthData.data} loading={clientHealthData.loading} />
-              );
-            case 'load':
-              return <TeamLoadTab data={teamLoadData.data} loading={teamLoadData.loading} />;
-            case 'decisions':
-              return (
-                <DecisionQueueTab
-                  data={decisionQueueData.data}
-                  loading={decisionQueueData.loading}
-                />
-              );
-            default:
-              return null;
-          }
-        }}
-      </TabContainer>
+    <div className="border-t border-[var(--grey)]/30 pt-4 mt-6">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 text-sm font-medium text-[var(--grey-light)] hover:text-[var(--white)] transition-colors w-full text-left"
+      >
+        <span>{open ? '▾' : '▸'}</span>
+        <span>
+          Team Collisions ({byPerson.size} member{byPerson.size !== 1 ? 's' : ''} with collisions)
+        </span>
+      </button>
+      {open && (
+        <div className="mt-3 space-y-4">
+          {Array.from(byPerson.entries()).map(([person, findings]) => (
+            <div key={person}>
+              <h4 className="text-sm font-medium text-[var(--white)] mb-2">{person}</h4>
+              {findings.map((f) => (
+                <div
+                  key={f.id}
+                  className="bg-[var(--black)]/30 rounded border border-[var(--grey)]/50 p-3 mb-2"
+                >
+                  <p className="text-sm text-[var(--grey-light)]">{f.summary}</p>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// --- Collapsible Section ---
+
+function CollapsibleSection({
+  title,
+  count,
+  children,
+}: {
+  title: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+
+  if (count === 0) return null;
+
+  return (
+    <div className="border-t border-[var(--grey)]/30 pt-4 mt-4">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 text-sm font-medium text-[var(--grey-light)] hover:text-[var(--white)] transition-colors w-full text-left"
+      >
+        <span>{open ? '▾' : '▸'}</span>
+        <span>
+          {title} ({count})
+        </span>
+      </button>
+      {open && <div className="mt-3">{children}</div>}
+    </div>
+  );
+}
+
+// --- Helpers ---
+
+function formatTimeAgo(isoDate: string): string {
+  const diff = Date.now() - new Date(isoDate).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
+  return `${days}d`;
+}
+
+function formatDayLabel(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+}
+
+// --- Main Component ---
+
+export default function CommandCenter() {
+  const { data: weekStrip, loading: weekLoading } = useWeekStrip();
+  const { data: findings, loading: findingsLoading, refetch: refetchFindings } = useFindings();
+  const { data: staleness, loading: stalenessLoading } = useStaleness();
+
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const handleAcknowledge = useCallback(
+    async (findingId: string) => {
+      setActionLoading(findingId);
+      try {
+        await api.acknowledgeFinding(findingId);
+        refetchFindings();
+      } catch (err) {
+        if (import.meta.env.DEV) {
+          console.error('Acknowledge failed:', err);
+        }
+      } finally {
+        setActionLoading(null);
+      }
+    },
+    [refetchFindings]
+  );
+
+  const handleSuppress = useCallback(
+    async (findingId: string) => {
+      setActionLoading(findingId);
+      try {
+        await api.suppressFinding(findingId);
+        refetchFindings();
+      } catch (err) {
+        if (import.meta.env.DEV) {
+          console.error('Suppress failed:', err);
+        }
+      } finally {
+        setActionLoading(null);
+      }
+    },
+    [refetchFindings]
+  );
+
+  const loading = weekLoading || findingsLoading || stalenessLoading;
+  const isStale = staleness?.is_stale ?? false;
+  const hasActiveFindings = (findings?.groups.length ?? 0) > 0;
+
+  return (
+    <PageLayout title="Command Center" subtitle="Detection-based operations dashboard">
+      {/* Staleness indicator */}
+      {!stalenessLoading && <StalenessBar staleness={staleness} />}
+
+      {/* Week strip -- always visible */}
+      {weekLoading ? (
+        <div className="flex gap-2 mb-6">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <div key={i} className="w-20 h-24 bg-[var(--grey-dim)] rounded-lg animate-pulse" />
+          ))}
+        </div>
+      ) : weekStrip ? (
+        <WeekStrip days={weekStrip} selectedDate={selectedDate} onSelectDate={setSelectedDate} />
+      ) : null}
+
+      {/* Active findings */}
+      <div className="mb-6">
+        {findingsLoading ? (
+          <div className="space-y-3">
+            <SkeletonPanel rows={3} />
+            <SkeletonPanel rows={2} />
+          </div>
+        ) : hasActiveFindings ? (
+          <>
+            {findings?.groups.map((group) => (
+              <CorrelatedGroup
+                key={group.primary.id}
+                group={group}
+                onAcknowledge={handleAcknowledge}
+                onSuppress={handleSuppress}
+              />
+            ))}
+          </>
+        ) : !isStale ? (
+          <div className="bg-[var(--grey-dim)]/50 rounded-lg border border-[var(--grey)] p-8 text-center">
+            <p className="text-[var(--grey-light)]">Nothing requires attention.</p>
+          </div>
+        ) : null}
+      </div>
+
+      {/* Acknowledged section (collapsed) */}
+      {!loading && findings && (
+        <CollapsibleSection title="Acknowledged" count={findings.acknowledged.length}>
+          {findings.acknowledged.map((f) => (
+            <div
+              key={f.id}
+              className="bg-[var(--black)]/30 rounded border border-[var(--grey)]/50 p-3 mb-2"
+            >
+              <div className="text-xs text-[var(--grey)] uppercase tracking-wide mb-1">
+                {f.detector}
+              </div>
+              <p className="text-sm text-[var(--grey-light)]">
+                {f.entity_name} — {f.summary}
+              </p>
+            </div>
+          ))}
+        </CollapsibleSection>
+      )}
+
+      {/* Suppressed section (collapsed) */}
+      {!loading && findings && (
+        <CollapsibleSection title="Suppressed" count={findings.suppressed.length}>
+          {findings.suppressed.map((f) => (
+            <div
+              key={f.id}
+              className="bg-[var(--black)]/30 rounded border border-[var(--grey)]/50 p-3 mb-2"
+            >
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-[var(--grey)] uppercase tracking-wide">
+                  {f.detector}
+                </span>
+                {f.suppressed_until && (
+                  <span className="text-xs text-[var(--grey)]">until {f.suppressed_until}</span>
+                )}
+              </div>
+              <p className="text-sm text-[var(--grey-light)]">
+                {f.entity_name} — {f.summary}
+              </p>
+            </div>
+          ))}
+        </CollapsibleSection>
+      )}
+
+      {/* Team Collisions (collapsed) */}
+      {!loading && findings && <TeamCollisions collisions={findings.team_collisions} />}
+
+      {/* Loading overlay for action buttons */}
+      {actionLoading && (
+        <div className="fixed bottom-4 right-4 bg-[var(--grey-dim)] border border-[var(--grey)] rounded-lg px-4 py-2 text-xs text-[var(--grey-light)]">
+          Processing...
+        </div>
+      )}
     </PageLayout>
   );
 }
