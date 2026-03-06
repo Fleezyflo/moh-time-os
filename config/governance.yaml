@@ -1,3 +1,7 @@
+# Morning brief timing: hour (0-23) after which the daily brief can fire.
+# Value of 8 avoids quiet hours (23:00-08:00).
+morning_brief_hour: 8
+
 approval_required:
 - action: send
   condition: always

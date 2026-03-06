@@ -62,16 +62,19 @@ class AutonomousLoop:
         self.cycle_count = 0
         self.running = False
 
-    def _load_notification_config(self) -> dict:
-        """Load notification config from governance.yaml."""
+    def _load_governance_yaml(self) -> dict:
+        """Load full governance.yaml config."""
         import yaml
 
         config_file = Path(self.config_path) / "governance.yaml"
         if config_file.exists():
             with open(config_file) as f:
-                config = yaml.safe_load(f)
-                return config.get("notification_settings", {})
+                return yaml.safe_load(f) or {}
         return {}
+
+    def _load_notification_config(self) -> dict:
+        """Load notification config from governance.yaml."""
+        return self._load_governance_yaml().get("notification_settings", {})
 
     def run_cycle(self) -> dict[str, Any]:
         """
@@ -245,6 +248,41 @@ class AutonomousLoop:
             except (sqlite3.Error, ValueError, OSError) as e:
                 logger.warning(f"  Detection skipped: {e}")
                 results["phases"]["detection"] = {"error": str(e)}
+
+            # ═══════════════════════════════════════
+            # PHASE 1b5a: MORNING BRIEF + STALENESS
+            # Daily digest of detection findings via Google Chat.
+            # Staleness alert if detection hasn't run in 2+ hours
+            # during business hours (9-21).
+            # ═══════════════════════════════════════
+            logger.info("▶ Phase 1b5a: MORNING BRIEF + STALENESS")
+            try:
+                from .detectors.morning_brief import send_if_changed
+
+                gov_config = self._load_governance_yaml()
+                brief_hour = gov_config.get("morning_brief_hour", 8)
+                db_path = str(paths.data_dir() / "moh_time_os.db")
+
+                brief_result = send_if_changed(
+                    db_path=db_path,
+                    notifier=self.notifier,
+                    morning_brief_hour=brief_hour,
+                )
+                results["phases"]["morning_brief"] = brief_result
+                logger.info("  Morning brief: %s", brief_result.get("status", "unknown"))
+            except (sqlite3.Error, ValueError, OSError) as e:
+                logger.warning(f"  Morning brief skipped: {e}")
+                results["phases"]["morning_brief"] = {"error": str(e)}
+
+            # Staleness alert: detection_last_run > 2 hours old during 9-21
+            try:
+                staleness_result = self._check_staleness_alert(db_path)
+                results["phases"]["staleness_alert"] = staleness_result
+                if staleness_result.get("status") == "sent":
+                    logger.info("  Staleness alert sent")
+            except (sqlite3.Error, ValueError, OSError) as e:
+                logger.warning(f"  Staleness check failed: {e}")
+                results["phases"]["staleness_alert"] = {"error": str(e)}
 
             # ═══════════════════════════════════════
             # PHASE 1b-1e: TRUTH MODULES
@@ -813,6 +851,74 @@ class AutonomousLoop:
             results["error"] = str(e)
 
         return results
+
+    def _check_staleness_alert(self, db_path: str) -> dict:
+        """
+        Send one-time staleness alert if detection hasn't run in 2+ hours
+        during business hours (9-21). Resets on next successful detection run.
+        """
+        now = datetime.now()
+
+        # Only alert during business hours (9-21)
+        if now.hour < 9 or now.hour >= 21:
+            return {"status": "skipped", "reason": "outside_business_hours"}
+
+        # Check if already sent today
+        if getattr(self, "_stale_alert_sent_today", None) == now.date():
+            return {"status": "skipped", "reason": "already_sent_today"}
+
+        # Check detection_last_run from sync_state
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        try:
+            cursor = conn.execute(
+                "SELECT last_sync FROM sync_state WHERE source = 'detection_last_run'"
+            )
+            row = cursor.fetchone()
+        finally:
+            conn.close()
+
+        if not row or not row["last_sync"]:
+            # No detection run ever recorded -- alert
+            pass
+        else:
+            try:
+                last_run = datetime.fromisoformat(row["last_sync"])
+                hours_since = (now - last_run).total_seconds() / 3600
+                if hours_since < 2.0:
+                    # Detection is fresh -- clear stale flag
+                    self._stale_alert_sent_today = None
+                    return {"status": "skipped", "reason": "detection_fresh"}
+            except ValueError as e:
+                logger.warning("Could not parse detection_last_run: %s", e)
+
+        # Detection is stale -- send alert
+        channel = self.notifier.channels.get("google_chat")
+        if not channel:
+            return {"status": "error", "error": "no_google_chat_channel"}
+
+        hours_stale = "2+"
+        if row and row["last_sync"]:
+            try:
+                last_run = datetime.fromisoformat(row["last_sync"])
+                hours_stale = f"{(now - last_run).total_seconds() / 3600:.1f}"
+            except ValueError:
+                pass
+
+        message = f"Detection system has not run in {hours_stale} hours. Findings may be outdated."
+
+        try:
+            result = channel.send_sync(message, title="Staleness Warning")
+        except (ValueError, OSError) as e:
+            logger.error("Failed to send staleness alert: %s", e)
+            return {"status": "error", "error": str(e)}
+
+        if result.get("success"):
+            self._stale_alert_sent_today = now.date()
+            logger.info("Staleness alert sent (%s hours since last detection)", hours_stale)
+            return {"status": "sent", "hours_stale": hours_stale}
+
+        return {"status": "error", "error": result.get("error", "send failed")}
 
     def _check_gates(self) -> dict:
         """
