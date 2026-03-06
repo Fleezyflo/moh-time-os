@@ -1150,3 +1150,113 @@ def entity_profile(
     except (sqlite3.Error, ValueError, OSError) as e:
         logger.exception("entity_profile failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# =============================================================================
+# INTELLIGENCE OBSERVABILITY ENDPOINTS (Audit Trail, Explainability)
+# =============================================================================
+
+
+@intelligence_router.get("/audit-trail", response_model=IntelligenceResponse)
+def audit_trail_entries(
+    entity_type: str | None = Query(None, description="Filter by entity type"),
+    entity_id: str | None = Query(None, description="Filter by entity ID"),
+    operation: str | None = Query(None, description="Filter by operation type"),
+    limit: int = Query(50, description="Max entries to return"),
+):
+    """
+    Get recent intelligence audit trail entries.
+
+    Returns a log of intelligence operations with inputs, outputs, and timing.
+    """
+    from pathlib import Path as PathLib
+
+    from lib.db import get_db_path_str
+    from lib.intelligence.audit_trail import AuditTrail
+
+    try:
+        db_path = PathLib(get_db_path_str())
+        trail = AuditTrail(db_path)
+        entries = trail.get_entries(
+            entity_type=entity_type,
+            entity_id=entity_id,
+            operation=operation,
+            limit=limit,
+        )
+        return _wrap_response(
+            [e.to_dict() for e in entries],
+            {
+                "entity_type": entity_type,
+                "entity_id": entity_id,
+                "operation": operation,
+                "limit": limit,
+            },
+        )
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("audit_trail_entries failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@intelligence_router.get(
+    "/explain/{entity_type}/{entity_id}",
+    response_model=IntelligenceResponse,
+)
+def explain_entity(
+    entity_type: str = PathParam(..., description="Entity type (client, project, person)"),
+    entity_id: str = PathParam(..., description="Entity identifier"),
+):
+    """
+    Get human-readable explanations for an entity's intelligence outputs.
+
+    Returns explanations for health score, active signals, and attention level.
+    """
+    from pathlib import Path as PathLib
+
+    from lib.db import get_db_path_str
+    from lib.intelligence.explainability import IntelligenceExplainer
+    from lib.intelligence.health_unifier import HealthUnifier
+    from lib.intelligence.signals import get_active_signals
+
+    try:
+        db_path = PathLib(get_db_path_str())
+        explainer = IntelligenceExplainer()
+        explanations = []
+
+        # Explain health score
+        try:
+            unifier = HealthUnifier(db_path)
+            health = unifier.get_latest_health(entity_type, entity_id)
+            if health:
+                dims = [{"dimension": k, "score": v} for k, v in (health.dimensions or {}).items()]
+                explanation = explainer.explain_health_score(
+                    entity_name=entity_id,
+                    health_score=health.composite_score,
+                    dimensions=dims,
+                    weights={k: 1.0 / max(len(dims), 1) for k in health.dimensions},
+                )
+                explanations.append(explanation.to_dict())
+        except (sqlite3.Error, ValueError, OSError) as e:
+            logger.error(f"explain_entity: health score explanation failed: {e}")
+
+        # Explain active signals
+        try:
+            active = get_active_signals(entity_type=entity_type, entity_id=entity_id)
+            for sig in active if isinstance(active, list) else active.get("signals", []):
+                explanation = explainer.explain_signal(
+                    signal_type=sig.get("signal_type", ""),
+                    severity=sig.get("severity", "watch"),
+                    entity_name=entity_id,
+                    trigger_value=sig.get("current_value", 0),
+                    threshold=sig.get("threshold", 0),
+                )
+                explanations.append(explanation.to_dict())
+        except (sqlite3.Error, ValueError, OSError) as e:
+            logger.error(f"explain_entity: signal explanation failed: {e}")
+
+        return _wrap_response(
+            explanations,
+            {"entity_type": entity_type, "entity_id": entity_id},
+        )
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("explain_entity failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e

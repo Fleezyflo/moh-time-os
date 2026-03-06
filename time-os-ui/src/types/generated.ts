@@ -3871,6 +3871,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/intelligence/audit-trail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Audit Trail Entries
+         * @description Get recent intelligence audit trail entries.
+         *
+         *     Returns a log of intelligence operations with inputs, outputs, and timing.
+         */
+        get: operations["audit_trail_entries_api_v2_intelligence_audit_trail_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/intelligence/briefing": {
         parameters: {
             query?: never;
@@ -4199,6 +4221,28 @@ export interface paths {
          *     into a single EntityIntelligenceProfile via build_entity_profile().
          */
         get: operations["entity_profile_api_v2_intelligence_entity__entity_type___entity_id__profile_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/explain/{entity_type}/{entity_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Explain Entity
+         * @description Get human-readable explanations for an entity's intelligence outputs.
+         *
+         *     Returns explanations for health score, active signals, and attention level.
+         */
+        get: operations["explain_entity_api_v2_intelligence_explain__entity_type___entity_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -12094,6 +12138,44 @@ export interface operations {
             };
         };
     };
+    audit_trail_entries_api_v2_intelligence_audit_trail_get: {
+        parameters: {
+            query?: {
+                /** @description Filter by entity type */
+                entity_type?: string | null;
+                /** @description Filter by entity ID */
+                entity_id?: string | null;
+                /** @description Filter by operation type */
+                operation?: string | null;
+                /** @description Max entries to return */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntelligenceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     daily_briefing_api_v2_intelligence_briefing_get: {
         parameters: {
             query?: never;
@@ -12469,6 +12551,40 @@ export interface operations {
         };
     };
     entity_profile_api_v2_intelligence_entity__entity_type___entity_id__profile_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Entity type (client, project, person) */
+                entity_type: string;
+                /** @description Entity identifier */
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntelligenceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    explain_entity_api_v2_intelligence_explain__entity_type___entity_id__get: {
         parameters: {
             query?: never;
             header?: never;
