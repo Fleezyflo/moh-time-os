@@ -489,3 +489,30 @@ export function useFinancialDetail() {
 export function useAsanaPortfolioContext() {
   return useFetch(() => api.fetchAsanaPortfolioContext(), []);
 }
+
+// ==== Detection System Hooks (Phase 15d) ====
+
+// 10-day week strip with collision data
+export function useWeekStrip() {
+  return useFetch(() => api.fetchWeekStrip(), []);
+}
+
+// Active findings grouped by correlation
+export function useFindings() {
+  return useFetch(() => api.fetchFindings(), []);
+}
+
+// Single finding detail with optional micro-sync refresh
+export function useFinding(findingId: string, refresh = false) {
+  return useFetch(() => api.fetchFinding(findingId, refresh), [findingId, refresh]);
+}
+
+// Staleness status
+export function useStaleness() {
+  return useFetch(() => api.fetchStaleness(), []);
+}
+
+// Pending weight review items
+export function useWeightReview() {
+  return useFetch(() => api.fetchWeightReview(), []);
+}

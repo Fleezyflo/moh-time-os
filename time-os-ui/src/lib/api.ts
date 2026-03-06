@@ -2265,3 +2265,134 @@ export async function fetchFinancialDetail(): Promise<FinancialDetailResponse> {
 export async function fetchAsanaPortfolioContext(): Promise<AsanaPortfolioContextResponse> {
   return fetchJson<AsanaPortfolioContextResponse>('/api/v2/projects/asana-context');
 }
+
+// ==== Detection System Endpoints (Phase 15d) ====
+
+/** Week strip day entry: one of 10 business days with collision data */
+export interface WeekStripDay {
+  date: string;
+  available_minutes: number;
+  tasks_due: number;
+  weighted_ratio: number;
+  has_collision: boolean;
+}
+
+/** Single detection finding */
+export interface DetectionFinding {
+  id: string;
+  detector: 'collision' | 'drift' | 'bottleneck';
+  entity_name: string;
+  summary: string;
+  severity_data: Record<string, unknown>;
+  adjacent_data: Record<string, unknown>;
+  client_tier?: string;
+  ytd_revenue?: number;
+  acknowledged_at?: string | null;
+  suppressed_until?: string | null;
+}
+
+/** Correlated finding group: primary + subordinates */
+export interface FindingGroup {
+  primary: DetectionFinding;
+  subordinates: DetectionFinding[];
+  shared_entity: string;
+}
+
+/** Response shape for GET /api/command/findings */
+export interface FindingsResponse {
+  groups: FindingGroup[];
+  acknowledged: DetectionFinding[];
+  suppressed: DetectionFinding[];
+  team_collisions: DetectionFinding[];
+  count: number;
+  last_detection: string;
+  is_stale: boolean;
+}
+
+/** Single finding detail (with optional refreshed data) */
+export interface FindingDetailResponse {
+  finding: DetectionFinding;
+  refreshed: boolean;
+  refresh_time_ms?: number;
+}
+
+/** Staleness status */
+export interface StalenessResponse {
+  last_run: string;
+  is_stale: boolean;
+  stale_since?: string | null;
+}
+
+/** Weight review item for the learning loop */
+export interface WeightReviewItem {
+  task_id: string;
+  task_title: string;
+  derived_weight: number;
+  weight_label: 'quick' | 'standard' | 'heavy';
+  confidence: number;
+  project_name?: string;
+  client_name?: string;
+}
+
+/** Response shape for GET /api/command/weight-review */
+export interface WeightReviewResponse {
+  items: WeightReviewItem[];
+  count: number;
+}
+
+/** Fetch 10-day week strip with collision data */
+export async function fetchWeekStrip(): Promise<WeekStripDay[]> {
+  return fetchJson<WeekStripDay[]>('/api/command/week-strip');
+}
+
+/** Fetch active findings grouped by correlation */
+export async function fetchFindings(): Promise<FindingsResponse> {
+  return fetchJson<FindingsResponse>('/api/command/findings');
+}
+
+/** Fetch single finding detail, optionally triggering micro-sync */
+export async function fetchFinding(
+  findingId: string,
+  refresh = false
+): Promise<FindingDetailResponse> {
+  const url = `/api/command/findings/${encodeURIComponent(findingId)}${refresh ? '?refresh=true' : ''}`;
+  return fetchJson<FindingDetailResponse>(url);
+}
+
+/** Acknowledge a finding ("Got it") */
+export async function acknowledgeFinding(findingId: string): Promise<{ success: boolean }> {
+  return postJson<{ success: boolean }>(
+    `/api/command/findings/${encodeURIComponent(findingId)}/acknowledge`,
+    {}
+  );
+}
+
+/** Suppress a finding ("Expected" -- 30-day suppression) */
+export async function suppressFinding(findingId: string): Promise<{ success: boolean }> {
+  return postJson<{ success: boolean }>(
+    `/api/command/findings/${encodeURIComponent(findingId)}/suppress`,
+    {}
+  );
+}
+
+/** Fetch staleness status */
+export async function fetchStaleness(): Promise<StalenessResponse> {
+  return fetchJson<StalenessResponse>('/api/command/staleness');
+}
+
+/** Fetch pending weight review items */
+export async function fetchWeightReview(): Promise<WeightReviewResponse> {
+  return fetchJson<WeightReviewResponse>('/api/command/weight-review');
+}
+
+/** Submit weight correction for a task */
+export async function submitWeightReview(
+  taskId: string,
+  correctedWeight: number,
+  correctedLabel: 'quick' | 'standard' | 'heavy'
+): Promise<{ success: boolean }> {
+  return postJson<{ success: boolean }>(
+    `/api/command/weight-review/${encodeURIComponent(taskId)}`,
+    { weight: correctedWeight, label: correctedLabel }
+  );
+}
