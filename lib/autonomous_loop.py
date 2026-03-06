@@ -537,12 +537,14 @@ class AutonomousLoop:
 
     def _intelligence_phase(self) -> dict:
         """
-        Run intelligence pipeline: score → signal → pattern → cost → events.
+        Run intelligence pipeline: score → signal → pattern → cost → events
+        → memory → observability.
 
         Each sub-step is isolated so a failure in one does not block the others.
         Results are persisted to their respective tables for downstream consumption
         by the preparation engine (Brief 24) and conversational interface (Brief 25).
         """
+        import time
         from pathlib import Path
 
         from lib.intelligence.cost_to_serve import CostToServeEngine
@@ -565,6 +567,7 @@ class AutonomousLoop:
         from lib.intelligence.signals import detect_all_signals, update_signal_state
 
         db_path = Path(self.store.db_path)
+        phase_start_time = time.monotonic()
 
         results = {
             "scores_recorded": 0,
@@ -580,7 +583,33 @@ class AutonomousLoop:
             "outcomes_tracked": 0,
             "pattern_trends_analyzed": 0,
             "events_emitted": 0,
+            "decisions_recorded": 0,
+            "entity_memory_updates": 0,
+            "signal_lifecycle_updates": 0,
+            "behavioral_patterns_found": 0,
+            "audit_entries_recorded": 0,
+            "explanations_generated": 0,
+            "drift_alerts": 0,
         }
+
+        # --- 0. Audit trail START (wraps entire intelligence phase) ---
+        audit_trail = None
+        try:
+            from lib.intelligence.audit_trail import AuditTrail
+
+            audit_trail = AuditTrail(db_path)
+            audit_trail.record(
+                operation="intelligence_phase_start",
+                entity_type="system",
+                entity_id="autonomous_loop",
+                inputs_summary={
+                    "cycle": self.cycle_count,
+                    "started_at": datetime.now().isoformat(),
+                },
+            )
+            results["audit_entries_recorded"] += 1
+        except (sqlite3.Error, ValueError, OSError) as e:
+            logger.error(f"Intelligence: audit trail init failed: {e}")
 
         # --- 1. Score all entities and persist to score_history ---
         try:
@@ -789,6 +818,168 @@ class AutonomousLoop:
 
         except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Intelligence: event emission failed: {e}")
+
+        # --- 6. Signal lifecycle tracking (complementary to step 2) ---
+        try:
+            from lib.intelligence.signal_lifecycle import SignalLifecycleTracker
+
+            lifecycle_tracker = SignalLifecycleTracker(db_path)
+
+            # Update lifecycle metadata for each detected signal
+            for sig in signal_results.get("signals", []):
+                try:
+                    lifecycle_tracker.update_lifecycle_on_detection(
+                        signal_key=sig.get("signal_id", sig.get("id", "")),
+                        current_severity=sig.get("severity", "watch").lower(),
+                        signal_type=sig.get("signal_type", ""),
+                        entity_type=sig.get("entity_type", ""),
+                        entity_id=sig.get("entity_id", ""),
+                    )
+                    results["signal_lifecycle_updates"] += 1
+                except (sqlite3.Error, ValueError, OSError) as e:
+                    logger.error(f"Intelligence: signal lifecycle update failed: {e}")
+
+            # Auto-escalate chronic watch signals
+            escalations = lifecycle_tracker.auto_escalate_chronic_signals()
+            if escalations:
+                logger.info("Intelligence: auto-escalated %d chronic signals", len(escalations))
+                results["signal_lifecycle_updates"] += len(escalations)
+        except (sqlite3.Error, ValueError, OSError) as e:
+            logger.error(f"Intelligence: signal lifecycle tracking failed: {e}")
+
+        # --- 7. Decision journal (memory -- records cycle decisions) ---
+        try:
+            from lib.intelligence.decision_journal import DecisionJournal
+
+            decision_journal = DecisionJournal(db_path)
+            # Record a cycle-level decision summarizing what the reasoner decided
+            decision_journal.record(
+                decision_type="intelligence_cycle",
+                entity_type="system",
+                entity_id="autonomous_loop",
+                action_taken="cycle_completed",
+                context_snapshot={
+                    "cycle": self.cycle_count,
+                    "scores_recorded": results["scores_recorded"],
+                    "signals_detected": results["signals_detected"],
+                    "patterns_detected": results["patterns_detected"],
+                },
+                source="system",
+            )
+            results["decisions_recorded"] += 1
+        except (sqlite3.Error, ValueError, OSError) as e:
+            logger.error(f"Intelligence: decision journal failed: {e}")
+
+        # --- 8. Entity memory (tracks interaction history per entity) ---
+        try:
+            from lib.intelligence.entity_memory import EntityMemory
+
+            entity_memory = EntityMemory(db_path)
+            # Record that the system reviewed entities this cycle
+            entity_memory.record_interaction(
+                entity_type="system",
+                entity_id="autonomous_loop",
+                interaction_type="review",
+                summary=f"Cycle {self.cycle_count}: scored {results['scores_recorded']} entities, "
+                f"detected {results['signals_detected']} signals",
+                details={
+                    "cycle": self.cycle_count,
+                    "scores": results["scores_recorded"],
+                    "signals": results["signals_detected"],
+                    "patterns": results["patterns_detected"],
+                },
+            )
+            results["entity_memory_updates"] += 1
+        except (sqlite3.Error, ValueError, OSError) as e:
+            logger.error(f"Intelligence: entity memory update failed: {e}")
+
+        # --- 9. Behavioral pattern analysis (learns from decision journal) ---
+        try:
+            from lib.intelligence.behavioral_patterns import BehavioralPatternAnalyzer
+
+            pattern_analyzer = BehavioralPatternAnalyzer(db_path)
+            behavioral_patterns = pattern_analyzer.discover_patterns(days_back=90, min_frequency=3)
+            results["behavioral_patterns_found"] = len(behavioral_patterns)
+            if behavioral_patterns:
+                logger.info(
+                    "Intelligence: discovered %d behavioral patterns",
+                    len(behavioral_patterns),
+                )
+        except (sqlite3.Error, ValueError, OSError) as e:
+            logger.error(f"Intelligence: behavioral pattern analysis failed: {e}")
+
+        # --- 10. Explainability (generate explanations for top findings) ---
+        try:
+            from lib.intelligence.explainability import IntelligenceExplainer
+
+            explainer = IntelligenceExplainer()
+            # Explain top signals from this cycle
+            for sig in signal_results.get("signals", [])[:5]:
+                try:
+                    explainer.explain_signal(
+                        signal_type=sig.get("signal_type", ""),
+                        severity=sig.get("severity", "watch"),
+                        entity_name=sig.get("entity_id", ""),
+                        trigger_value=sig.get("current_value", 0),
+                        threshold=sig.get("threshold", 0),
+                    )
+                    results["explanations_generated"] += 1
+                except (ValueError, TypeError) as e:
+                    logger.error(f"Intelligence: explanation generation failed: {e}")
+        except (sqlite3.Error, ValueError, OSError) as e:
+            logger.error(f"Intelligence: explainability module failed: {e}")
+
+        # --- 11. Drift detection (VERY END -- compares against baselines) ---
+        try:
+            from lib.intelligence.drift_detection import DriftDetector
+
+            drift_detector = DriftDetector(db_path)
+            # Check drift for each scored entity using latest scores
+            # (The scores were recorded in step 1; we check if they deviate from baseline)
+            try:
+                from lib.intelligence.health_unifier import HealthUnifier as HU
+
+                unifier = HU(db_path)
+                for etype in ("client", "project", "person"):
+                    try:
+                        recent = unifier.get_all_latest_health(etype)
+                        for hs in recent:
+                            if hs.composite_score is not None and hs.entity_id:
+                                alert = drift_detector.check_drift(
+                                    metric_name="health_score",
+                                    entity_type=etype,
+                                    entity_id=hs.entity_id,
+                                    current_value=float(hs.composite_score),
+                                )
+                                if alert:
+                                    results["drift_alerts"] += 1
+                                    logger.info(
+                                        "Intelligence: drift alert for %s/%s: %s",
+                                        etype,
+                                        hs.entity_id,
+                                        alert.severity,
+                                    )
+                    except (sqlite3.Error, ValueError, OSError) as e:
+                        logger.error(f"Intelligence: drift check for {etype} failed: {e}")
+            except (sqlite3.Error, ValueError, OSError) as e:
+                logger.error(f"Intelligence: drift detection scoring lookup failed: {e}")
+        except (sqlite3.Error, ValueError, OSError) as e:
+            logger.error(f"Intelligence: drift detection failed: {e}")
+
+        # --- 12. Audit trail END (wraps entire intelligence phase) ---
+        if audit_trail is not None:
+            try:
+                phase_duration_ms = (time.monotonic() - phase_start_time) * 1000
+                audit_trail.record(
+                    operation="intelligence_phase_end",
+                    entity_type="system",
+                    entity_id="autonomous_loop",
+                    outputs_summary=results,
+                    duration_ms=phase_duration_ms,
+                )
+                results["audit_entries_recorded"] += 1
+            except (sqlite3.Error, ValueError, OSError) as e:
+                logger.error(f"Intelligence: audit trail end failed: {e}")
 
         return results
 
