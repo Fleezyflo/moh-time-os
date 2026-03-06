@@ -1,0 +1,166 @@
+name: Bless Protected Files
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_repo:
+        description: 'Project repo in owner/repo format (e.g., Org/my-project)'
+        required: true
+        type: string
+      branch:
+        description: 'Branch to pull blessed files from'
+        required: false
+        default: 'main'
+        type: string
+      files:
+        description: 'Comma-separated list of file paths to bless (e.g., pyproject.toml,.pre-commit-config.yaml)'
+        required: true
+        type: string
+      reason:
+        description: 'Why these files are being blessed'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  bless:
+    # Only repo admins can trigger this workflow via GitHub UI permissions
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout enforcement repo
+        uses: actions/checkout@v4
+
+      - name: Clone project repo at specified branch
+        run: |
+          git clone --depth 1 --branch "${{ github.event.inputs.branch }}" \
+            "https://x-access-token:${{ secrets.PROJECT_STATUS_TOKEN }}@github.com/${{ github.event.inputs.project_repo }}.git" \
+            project-clone
+
+      - name: Parse and validate file list
+        id: parse_files
+        run: |
+          files="${{ github.event.inputs.files }}"
+          # Convert comma-separated list to array and trim whitespace
+          IFS=',' read -ra file_array <<< "$files"
+          file_count=0
+          for file in "${file_array[@]}"; do
+            file="${file#"${file%%[![:space:]]*}"}"  # trim leading whitespace
+            file="${file%"${file##*[![:space:]]}"}"  # trim trailing whitespace
+            if [ -n "$file" ]; then
+              ((file_count++))
+            fi
+          done
+          echo "count=$file_count" >> $GITHUB_OUTPUT
+
+      - name: Copy files to blessed directory
+        run: |
+          files="${{ github.event.inputs.files }}"
+          IFS=',' read -ra file_array <<< "$files"
+          blessed_files=""
+
+          for file in "${file_array[@]}"; do
+            file="${file#"${file%%[![:space:]]*}"}"  # trim leading
+            file="${file%"${file##*[![:space:]]}"}"  # trim trailing
+
+            if [ -z "$file" ]; then
+              continue
+            fi
+
+            # Check if file exists in project clone
+            if [ ! -f "project-clone/$file" ]; then
+              echo "ERROR: File not found in project repo: $file"
+              exit 1
+            fi
+
+            # Create directory structure in blessed/
+            dir=$(dirname "blessed/$file")
+            mkdir -p "$dir"
+
+            # Copy file
+            cp "project-clone/$file" "blessed/$file"
+            echo "Blessed: $file"
+
+            # Append to blessed_files list
+            if [ -n "$blessed_files" ]; then
+              blessed_files="$blessed_files, $file"
+            else
+              blessed_files="$file"
+            fi
+          done
+
+          echo "blessed_files=$blessed_files" >> $GITHUB_ENV
+
+      - name: Update protected-files.txt
+        run: |
+          files="${{ github.event.inputs.files }}"
+          IFS=',' read -ra file_array <<< "$files"
+
+          # Ensure protected-files.txt exists
+          touch protected-files.txt
+
+          for file in "${file_array[@]}"; do
+            file="${file#"${file%%[![:space:]]*}"}"  # trim leading
+            file="${file%"${file##*[![:space:]]}"}"  # trim trailing
+
+            if [ -z "$file" ]; then
+              continue
+            fi
+
+            # Add file if not already present
+            if ! grep -Fxq "$file" protected-files.txt; then
+              echo "$file" >> protected-files.txt
+              echo "Added to protected-files.txt: $file"
+            else
+              echo "Already in protected-files.txt: $file"
+            fi
+          done
+
+          # Sort and deduplicate
+          sort -u protected-files.txt -o protected-files.txt
+
+      - name: Commit blessed files to branch
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+
+          # Create blessing branch
+          branch_name="bless/$(date +%Y%m%d-%H%M%S)"
+          git checkout -b "$branch_name"
+
+          # Stage blessed files and protected-files.txt
+          git add blessed/ protected-files.txt
+
+          # Create commit message with audit trail
+          commit_message="bless: update ${{ steps.parse_files.outputs.count }} file(s) from ${{ github.event.inputs.project_repo }}
+
+Reason: ${{ github.event.inputs.reason }}
+
+Files blessed:
+${{ env.blessed_files }}
+
+Source branch: ${{ github.event.inputs.branch }}
+Triggered by: ${{ github.actor }}
+Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+          git commit -m "$commit_message"
+          git push origin "$branch_name"
+
+      - name: Create blessing PR
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          branch_name=$(git branch --show-current)
+          gh pr create \
+            --title "bless: ${{ steps.parse_files.outputs.count }} file(s) from ${{ github.event.inputs.project_repo }}" \
+            --body "## Blessing Request
+
+**Reason:** ${{ github.event.inputs.reason }}
+**Source:** ${{ github.event.inputs.project_repo }} @ ${{ github.event.inputs.branch }}
+**Files:** ${{ env.blessed_files }}
+**Triggered by:** ${{ github.actor }}
+
+Merge this PR to update the blessed copies." \
+            --base main \
+            --head "$branch_name"

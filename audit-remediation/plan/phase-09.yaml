@@ -1,0 +1,76 @@
+id: "phase-09"
+name: "Verify Operations"
+description: |
+  Verification-only phase. Validate operational readiness:
+  collector coverage, test coverage counts, unattended operation.
+
+dependencies: []
+
+track: "T2"
+
+estimated_sessions: 1
+
+tasks:
+  - id: "task-01"
+    name: "Verify collector coverage"
+    description: |
+      Original spec: CS-6.1 (tasks/TASK_P3_11_VERIFY_COLLECTOR_COVERAGE.md)
+      Audit all collectors in lib/collectors/ and collectors/:
+      - Which data sources are covered?
+      - Which are missing?
+      - What's the sync frequency for each?
+      - Are there error recovery mechanisms?
+    files:
+      create: []
+      modify: []
+      delete: []
+    verification:
+      - "All collectors listed with sync frequency"
+      - "Missing data sources identified"
+      - "Error recovery mechanisms documented"
+      - "Collector health check passes"
+    estimated_lines: 0
+    depends_on: []
+
+  - id: "task-02"
+    name: "Verify test coverage counts"
+    description: |
+      Original spec: AO-5.1 (tasks/TASK_P3_12_VERIFY_TEST_COVERAGE.md)
+      Run pytest with coverage. Document: total tests, pass rate,
+      coverage percentage by module, critical paths without coverage.
+    files:
+      create: []
+      modify: []
+      delete: []
+    verification:
+      - "pytest --cov output captured"
+      - "Coverage percentages per module documented"
+      - "Critical uncovered paths identified"
+    estimated_lines: 0
+    depends_on: []
+
+  - id: "task-03"
+    name: "Verify 24h unattended operation"
+    description: |
+      Original spec: AO-6.1 (tasks/TASK_P3_13_VERIFY_UNATTENDED.md)
+      Verify the autonomous loop can run 24h without intervention:
+      - Crash recovery (does it restart after errors?)
+      - Memory leaks (does memory grow unbounded?)
+      - Database locking (SQLite WAL mode, concurrent access)
+      - Log rotation (do logs grow unbounded?)
+    files:
+      create: []
+      modify: []
+      delete: []
+    verification:
+      - "Loop error recovery verified"
+      - "No obvious memory leak patterns"
+      - "SQLite WAL mode enabled"
+      - "Log rotation configured"
+    estimated_lines: 0
+    depends_on: []
+
+completion_criteria:
+  - "All 3 verification tasks produce DONE or GAP report"
+  - "Gaps filed as new tasks"
+  - "Results documented in session record"

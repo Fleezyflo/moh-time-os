@@ -1,0 +1,72 @@
+id: "phase-11"
+name: "Verify Infrastructure"
+description: |
+  Verification-only phase. Validates: performance (N+1 queries, load),
+  security (credential audit), compliance reporting.
+
+dependencies: []
+
+track: "T2"
+
+estimated_sessions: 1
+
+tasks:
+  - id: "task-01"
+    name: "Verify performance"
+    description: |
+      Original spec: PS-1.1, PS-5.1 (tasks/TASK_P3_20_VERIFY_PERFORMANCE.md)
+      Check for N+1 query patterns in collectors and intelligence phase.
+      Measure loop cycle time. Identify bottlenecks.
+      Basic load testing of API endpoints.
+    files:
+      create: []
+      modify: []
+      delete: []
+    verification:
+      - "N+1 query patterns identified and cataloged"
+      - "Loop cycle time measured"
+      - "API response times measured"
+      - "Critical bottlenecks documented"
+    estimated_lines: 0
+    depends_on: []
+
+  - id: "task-02"
+    name: "Verify security"
+    description: |
+      Original spec: SH-4.1, SH-5.1 (tasks/TASK_P3_21_VERIFY_SECURITY.md)
+      Credential audit: scan for hardcoded tokens, API keys, passwords.
+      Verify all secrets use environment variables.
+      Check OAuth token handling and refresh logic.
+    files:
+      create: []
+      modify: []
+      delete: []
+    verification:
+      - "No hardcoded credentials in codebase"
+      - "All secrets via environment variables"
+      - "OAuth token refresh works"
+      - "bandit scan clean"
+    estimated_lines: 0
+    depends_on: []
+
+  - id: "task-03"
+    name: "Verify compliance reporting"
+    description: |
+      Original spec: DG-5.1 (tasks/TASK_P3_22_VERIFY_COMPLIANCE.md)
+      Check: compliance reporting module generates valid reports,
+      data retention policies enforced, subject access requests handled.
+    files:
+      create: []
+      modify: []
+      delete: []
+    verification:
+      - "Compliance report generates without errors"
+      - "Retention policies documented"
+      - "Subject access request flow verified"
+    estimated_lines: 0
+    depends_on: []
+
+completion_criteria:
+  - "All 3 verification tasks produce DONE or GAP report"
+  - "Critical security gaps flagged immediately"
+  - "Results documented in session record"

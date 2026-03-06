@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Project repo CI workflow template for enforcement system integration
+# Template variables:
+#   {{ENFORCEMENT_REPO}} - enforcement repo name (e.g., enforcement)
+#   {{ENFORCEMENT_OWNER}} - enforcement repo owner (e.g., Fleezyflo)
+
+jobs:
+  restore-and-lint:
+    name: Restore & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Clone enforcement repo
+        env:
+          ENFORCEMENT_READ_TOKEN: ${{ secrets.ENFORCEMENT_READ_TOKEN }}
+        run: |
+          git clone \
+            --depth 1 \
+            https://${ENFORCEMENT_READ_TOKEN}@github.com/{{ENFORCEMENT_OWNER}}/{{ENFORCEMENT_REPO}}.git \
+            .enforcement-tmp
+
+      - name: Restore protected files from blessed copies
+        run: |
+          bash .enforcement-tmp/scripts/restore.sh .enforcement-tmp .
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Run linting
+        run: |
+          # Placeholder: Replace with actual lint commands
+          # Example: pip install ruff && ruff check .
+          echo "Lint step placeholder"
+
+  restore-and-test:
+    name: Restore & Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Clone enforcement repo
+        env:
+          ENFORCEMENT_READ_TOKEN: ${{ secrets.ENFORCEMENT_READ_TOKEN }}
+        run: |
+          git clone \
+            --depth 1 \
+            https://${ENFORCEMENT_READ_TOKEN}@github.com/{{ENFORCEMENT_OWNER}}/{{ENFORCEMENT_REPO}}.git \
+            .enforcement-tmp
+
+      - name: Restore protected files from blessed copies
+        run: |
+          bash .enforcement-tmp/scripts/restore.sh .enforcement-tmp .
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Run tests
+        run: |
+          # Placeholder: Replace with actual test commands
+          # Example: pip install pytest && pytest tests/
+          echo "Test step placeholder"
+
+  session-state-check:
+    name: Session State Consistency
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout project
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Check session state consistency
+        run: |
+          python scripts/check_state.py
+
+      - name: Validate HANDOFF.md freshness
+        run: |
+          python scripts/generate_handoff.py --check
+
+  dispatch-enforcement-gate:
+    name: Request Enforcement Gate Check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: Dispatch enforcement-check event
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.ENFORCEMENT_DISPATCH_TOKEN }}
+          repository: {{ENFORCEMENT_OWNER}}/{{ENFORCEMENT_REPO}}
+          event-type: enforcement-check
+          client-payload: |
+            {
+              "project_repo": "${{ github.repository }}",
+              "pr_number": ${{ github.event.pull_request.number }},
+              "branch": "${{ github.head_ref }}",
+              "commit_sha": "${{ github.event.pull_request.head.sha }}"
+            }

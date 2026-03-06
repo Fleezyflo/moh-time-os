@@ -1,0 +1,125 @@
+id: "phase-05"
+name: "Wire Scenario + Temporal + Routing"
+description: |
+  Wire remaining 5 intelligence modules: scenario_engine (API only),
+  trajectory (loop + API), temporal (normalizer + recency weighter),
+  correlation_confidence (after pattern detection), routing_engine (actions).
+
+dependencies:
+  - "phase-01"
+
+track: "T1"
+
+estimated_sessions: 2
+
+tasks:
+  - id: "task-01"
+    name: "Wire scenario engine and trajectory"
+    description: |
+      Two modules indexed in lib/intelligence/__init__.py but never called:
+
+      1. lib/intelligence/scenario_engine.py (1188 lines) -- ScenarioEngine,
+         ScenarioType(StrEnum), ScenarioResult, ScenarioComparison.
+         Models "what if" scenarios. EXPENSIVE -- do NOT run in loop.
+         Expose via API only:
+         - POST /api/v2/intelligence/scenarios/model
+         - POST /api/v2/intelligence/scenarios/compare
+
+      2. lib/intelligence/trajectory.py (713 lines) -- TrajectoryEngine,
+         TrendDirection, VelocityResult, AccelerationResult, TrendAnalysis,
+         SeasonalityResult, ProjectionResult, FullTrajectory.
+         Wire into _intelligence_phase() AFTER scoring.
+         Add API: GET /api/v2/intelligence/trajectory/{entity_type}/{entity_id}
+
+      PREREQUISITE: scenario_engine.py line 27 uses `from enum import StrEnum`.
+      Phase-01 task-02 must be complete, OR fix inline in this file.
+    files:
+      create: []
+      modify:
+        - "lib/autonomous_loop.py"
+        - "api/intelligence_router.py"
+      delete: []
+    verification:
+      - "TrajectoryEngine imported and called in _intelligence_phase()"
+      - "ScenarioEngine NOT in loop -- API only"
+      - "/api/v2/intelligence/trajectory/client/{id} returns trend data"
+      - "/api/v2/intelligence/scenarios/model accepts config, returns results"
+      - "StrEnum import fixed or phase-01 prerequisite met"
+      - "ruff check -- zero errors"
+      - "bandit -r -- zero findings"
+      - "python -m pytest tests/ -x -- passes"
+    estimated_lines: 50
+    depends_on: []
+
+  - id: "task-02"
+    name: "Wire temporal context and correlation confidence"
+    description: |
+      Two modules with minimal wiring (indexed but not called):
+
+      1. lib/intelligence/temporal.py (710 lines):
+         - BusinessCalendar (line 80) -- holiday/business-day awareness
+         - TemporalNormalizer (line 334) -- adjusts metrics for business days
+         - RecencyWeighter (line 524) -- weights recent data higher
+         Wire TemporalNormalizer BEFORE scoring in _intelligence_phase().
+         Wire RecencyWeighter into signal detection for recency bias.
+
+      2. lib/intelligence/correlation_confidence.py (220 lines):
+         CorrelationConfidenceCalculator, CorrelationSignalEvidence,
+         ConfidenceFactors. Adjusts pattern correlation confidence.
+         Wire AFTER detect_all_patterns() to refine confidence scores.
+
+      Read actual constructor signatures -- may take different args than db_path.
+    files:
+      create: []
+      modify:
+        - "lib/autonomous_loop.py"
+      delete: []
+    verification:
+      - "TemporalNormalizer runs BEFORE scoring"
+      - "RecencyWeighter applied to signal detection"
+      - "CorrelationConfidenceCalculator refines pattern confidence"
+      - "No regression in scoring or pattern detection"
+      - "ruff check -- zero errors"
+      - "bandit -r -- zero findings"
+      - "python -m pytest tests/ -x -- passes"
+    estimated_lines: 35
+    depends_on: []
+
+  - id: "task-03"
+    name: "Wire routing engine into action framework"
+    description: |
+      lib/routing_engine.py (291 lines) has real routing logic with zero
+      external imports. Functions: route_item(), batch_route(),
+      check_duplicates(), generate_dedupe_key(), determine_destination_list(),
+      format_task_title(), format_task_notes(), format_calendar_block().
+
+      Wire into lib/actions/action_framework.py:
+      When creating Asana tasks, route through routing_engine first:
+        from lib.routing_engine import route_item, check_duplicates
+        routed = route_item(task_data)
+        # routed has correct list, section, title format
+
+      Also wire into lib/integrations/chat_commands.py if chat commands
+      create tasks.
+
+      Read route_item() expected input dict shape and return format first.
+    files:
+      create: []
+      modify:
+        - "lib/actions/action_framework.py"
+      delete: []
+    verification:
+      - "route_item() called before Asana task creation"
+      - "check_duplicates() prevents duplicate task creation"
+      - "ruff check lib/actions/action_framework.py lib/routing_engine.py -- zero errors"
+      - "bandit -r lib/actions/action_framework.py lib/routing_engine.py -- zero findings"
+      - "python -m pytest tests/ -x -- passes"
+    estimated_lines: 20
+    depends_on: []
+
+completion_criteria:
+  - "All 5 modules wired into pipeline or API"
+  - "Temporal normalization applied before scoring"
+  - "Scenarios available via API (not in loop)"
+  - "Routing engine gates Asana task creation"
+  - "PR merged to main, CI green"

@@ -1,0 +1,71 @@
+# Pre-commit hooks for project repo with session state validation
+# This template integrates the enforcement system's session state checks
+
+repos:
+  # Session state and handoff consistency checks
+  - repo: local
+    hooks:
+      - id: session-state-check
+        name: Session State Consistency
+        entry: python scripts/check_state.py
+        language: python
+        additional_dependencies: ['pyyaml']
+        files: '(state\.json|plan/.*\.yaml|sessions/.*\.yaml|docs/adr/.*\.md)$'
+        pass_filenames: false
+        stages: [commit]
+
+      - id: handoff-freshness
+        name: HANDOFF.md Freshness Check
+        entry: python scripts/generate_handoff.py --check
+        language: python
+        additional_dependencies: ['pyyaml']
+        files: '(state\.json|plan/.*\.yaml|sessions/.*\.yaml|SESSION_LOG\.md)$'
+        pass_filenames: false
+        stages: [commit]
+
+  # Linting (ruff check)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.1  # Keep in sync with project's pinned version
+    hooks:
+      - id: ruff
+        name: Lint with ruff
+        entry: ruff check
+        # Configure files based on your maintained scope
+        files: '^(lib/|api/|tests/).*\.py$'
+        language: python
+        stages: [commit]
+
+  # Code formatting (ruff format)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.1  # Keep in sync with project's pinned version
+    hooks:
+      - id: ruff-format
+        name: Format with ruff
+        entry: ruff format
+        # Configure files based on your maintained scope
+        files: '^(lib/|api/|tests/).*\.py$'
+        language: python
+        stages: [commit]
+
+  # Security scanning (bandit)
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.5  # Adjust version as needed
+    hooks:
+      - id: bandit
+        name: Security check with bandit
+        entry: bandit -r
+        # Configure files based on your maintained scope
+        files: '^(lib/|api/|tests/).*\.py$'
+        language: python
+        stages: [commit]
+        additional_dependencies: ['bandit']
+
+# Placeholder: Add language-specific hooks (e.g., prettier for UI, mypy for type checking)
+# Example for TypeScript/React:
+# - repo: https://github.com/pre-commit/mirrors-prettier
+#   rev: v3.0.0
+#   hooks:
+#     - id: prettier
+#       files: '^(time-os-ui/src/).*\.(ts|tsx|css)$'
+#       stages: [commit]
+#       additional_dependencies: ['prettier']

@@ -1,0 +1,170 @@
+name: Enforcement Gate
+
+on:
+  repository_dispatch:
+    types: [enforcement-check]
+
+env:
+  PROJECT_REPO: ${{ github.event.client_payload.project_repo }}
+  PR_NUMBER: ${{ github.event.client_payload.pr_number }}
+  BRANCH: ${{ github.event.client_payload.branch }}
+  COMMIT_SHA: ${{ github.event.client_payload.commit_sha }}
+
+jobs:
+  enforce-protected-files:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout enforcement repo
+        uses: actions/checkout@v4
+        with:
+          path: enforcement-repo
+
+      - name: Validate dispatch payload
+        id: validate
+        run: |
+          set -e
+
+          if [[ -z "$PROJECT_REPO" ]]; then
+            echo "❌ Missing project_repo in dispatch payload"
+            exit 1
+          fi
+
+          if [[ -z "$PR_NUMBER" ]] || [[ -z "$BRANCH" ]] || [[ -z "$COMMIT_SHA" ]]; then
+            echo "❌ Missing pr_number, branch, or commit_sha in dispatch payload"
+            exit 1
+          fi
+
+          echo "✓ Dispatch payload valid"
+          echo "project_repo=$PROJECT_REPO"
+          echo "pr_number=$PR_NUMBER"
+          echo "branch=$BRANCH"
+          echo "commit_sha=$COMMIT_SHA"
+
+      - name: Check protected-files.txt exists
+        id: check-config
+        run: |
+          if [[ ! -f enforcement-repo/protected-files.txt ]]; then
+            echo "❌ protected-files.txt not found in enforcement repo"
+            exit 1
+          fi
+
+          file_count=$(wc -l < enforcement-repo/protected-files.txt)
+          echo "✓ Found protected-files.txt with $file_count entries"
+          echo "file_count=$file_count" >> "$GITHUB_OUTPUT"
+
+      - name: Clone project repo at specified commit
+        id: clone
+        run: |
+          set -e
+
+          # Extract owner/repo from PROJECT_REPO (format: owner/repo)
+          IFS='/' read -r OWNER REPO <<< "$PROJECT_REPO"
+
+          if [[ -z "$OWNER" ]] || [[ -z "$REPO" ]]; then
+            echo "❌ Invalid PROJECT_REPO format. Expected owner/repo, got: $PROJECT_REPO"
+            exit 1
+          fi
+
+          echo "Cloning $PROJECT_REPO at commit $COMMIT_SHA..."
+          git clone --depth 1 "https://x-access-token:${{ secrets.PROJECT_STATUS_TOKEN }}@github.com/$PROJECT_REPO.git" project-repo
+
+          cd project-repo
+          git fetch origin "$COMMIT_SHA"
+          git checkout "$COMMIT_SHA"
+
+          echo "✓ Successfully cloned and checked out $COMMIT_SHA"
+          cd ..
+
+      - name: Compare protected files against blessed copies
+        id: compare
+        run: |
+          cd enforcement-repo
+          result=0
+          bash scripts/compare.sh ../project-repo ./blessed ./protected-files.txt > /tmp/compare-output.txt 2>&1 || result=$?
+          cat /tmp/compare-output.txt
+          cd ..
+
+          if [[ $result -ne 0 ]]; then
+            echo "DIFFS_FOUND=1" >> "$GITHUB_OUTPUT"
+          else
+            echo "DIFFS_FOUND=0" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Post commit status -- FAILED
+        if: steps.compare.outputs.DIFFS_FOUND != '0'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PROJECT_STATUS_TOKEN }}
+          script: |
+            const [owner, repo] = process.env.PROJECT_REPO.split('/');
+
+            github.rest.repos.createCommitStatus({
+              owner: owner,
+              repo: repo,
+              sha: process.env.COMMIT_SHA,
+              state: 'failure',
+              context: 'enforcement-gate',
+              description: 'Protected files differ from blessed copies',
+              target_url: `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
+            });
+
+      - name: Post commit status -- SUCCESS
+        if: steps.compare.outputs.DIFFS_FOUND == '0'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PROJECT_STATUS_TOKEN }}
+          script: |
+            const [owner, repo] = process.env.PROJECT_REPO.split('/');
+
+            github.rest.repos.createCommitStatus({
+              owner: owner,
+              repo: repo,
+              sha: process.env.COMMIT_SHA,
+              state: 'success',
+              context: 'enforcement-gate',
+              description: 'All protected files match blessed copies',
+              target_url: `${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`
+            });
+
+      - name: Post PR comment on failure
+        if: failure() || steps.compare.outputs.DIFFS_FOUND != '0'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PROJECT_STATUS_TOKEN }}
+          script: |
+            const [owner, repo] = process.env.PROJECT_REPO.split('/');
+            const diffsFound = parseInt('${{ steps.compare.outputs.DIFFS_FOUND }}') || 0;
+
+            if (diffsFound === 0) {
+              return;
+            }
+
+            let body = '## ⚠️ Enforcement Gate Failed\n\n';
+            body += 'Protected files in this PR differ from blessed copies.\n\n';
+            body += '### Next Steps\n';
+            body += 'Protected files cannot be modified in pull requests. ';
+            body += 'Contact the maintainer to approve and bless these changes separately.\n\n';
+            body += `[View enforcement gate run details](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})`;
+
+            github.rest.issues.createComment({
+              owner: owner,
+              repo: repo,
+              issue_number: parseInt(process.env.PR_NUMBER),
+              body: body
+            });
+
+      - name: Final enforcement status
+        if: always()
+        run: |
+          diffs=${{ steps.compare.outputs.DIFFS_FOUND }}
+
+          if [[ "$diffs" != "0" ]]; then
+            echo "❌ ENFORCEMENT GATE FAILED"
+            echo "Diffs found: $diffs"
+            exit 1
+          else
+            echo "✓ ENFORCEMENT GATE PASSED"
+          fi

@@ -1,0 +1,106 @@
+id: "phase-02"
+name: "Wire Data Quality + Intelligence Deepening"
+description: |
+  Wire 7 unwired intelligence modules into _intelligence_phase() and API.
+  These modules have real code (200-436 lines each) but zero external imports.
+  Task 1: data_freshness, completeness_scorer, quality_confidence.
+  Task 2: cost_proxies, entity_profile, outcome_tracker, pattern_trending.
+
+dependencies:
+  - "phase-01"
+
+track: "T1"
+
+estimated_sessions: 2
+
+tasks:
+  - id: "task-01"
+    name: "Wire data quality modules into intelligence pipeline"
+    description: |
+      Wire three data quality modules into _intelligence_phase() in
+      lib/autonomous_loop.py. Insert AFTER step 1 (scoring), BEFORE
+      step 2 (signals). Data quality informs signal confidence.
+
+      Modules:
+      1. lib/intelligence/data_freshness.py (330 lines) -- DataFreshnessTracker
+         Tracks staleness of each data source.
+      2. lib/intelligence/completeness_scorer.py (271 lines) -- CompletenessScorer
+         Scores field completeness per entity.
+      3. lib/intelligence/quality_confidence.py (214 lines) -- QualityConfidenceAdjuster
+         Adjusts confidence scores based on data quality.
+
+      Read each module's actual constructor and method signatures before wiring.
+      Template wiring pattern per module:
+        try:
+            from lib.intelligence.MODULE import MainClass
+            instance = MainClass(db_path)
+            result = instance.METHOD()
+            results["key"] = len(result) if result else 0
+        except (sqlite3.Error, ValueError, OSError) as e:
+            logger.error(f"Intelligence: MODULE failed: {e}")
+
+      Add /api/v2/intelligence/data-quality GET endpoint in
+      api/intelligence_router.py returning freshness + completeness + confidence.
+    files:
+      create: []
+      modify:
+        - "lib/autonomous_loop.py"
+        - "api/intelligence_router.py"
+      delete: []
+    verification:
+      - "grep -rn 'data_freshness\\|completeness_scorer\\|quality_confidence' lib/autonomous_loop.py shows imports"
+      - "grep -rn 'data.quality\\|data-quality' api/intelligence_router.py shows endpoint"
+      - "python -c 'from lib.intelligence.data_freshness import DataFreshnessTracker' succeeds"
+      - "python -c 'from lib.intelligence.completeness_scorer import CompletenessScorer' succeeds"
+      - "python -c 'from lib.intelligence.quality_confidence import QualityConfidenceAdjuster' succeeds"
+      - "ruff check lib/autonomous_loop.py api/intelligence_router.py -- zero errors"
+      - "bandit -r lib/autonomous_loop.py api/intelligence_router.py -- zero findings"
+      - "python -m pytest tests/ -x -- passes"
+    estimated_lines: 40
+    depends_on: []
+
+  - id: "task-02"
+    name: "Wire intelligence deepening modules"
+    description: |
+      Wire four intelligence deepening modules into _intelligence_phase()
+      and API:
+
+      1. lib/intelligence/cost_proxies.py (199 lines) -- ImprovedCostCalculator
+         Wire AFTER cost_to_serve (step 4). Enhances base cost calculation.
+      2. lib/intelligence/entity_profile.py (436 lines) -- build_entity_profile()
+         Wire AFTER scoring (step 1). Aggregates scores, signals, patterns.
+      3. lib/intelligence/outcome_tracker.py (393 lines) -- OutcomeTracker
+         Wire AFTER signals (step 2). Records signal prediction accuracy.
+      4. lib/intelligence/pattern_trending.py (327 lines) -- PatternTrendAnalyzer
+         Wire AFTER patterns (step 3). Tracks pattern evolution over cycles.
+
+      Read each module's constructor and method signatures before wiring.
+
+      Add API endpoint:
+      /api/v2/intelligence/entity/{entity_type}/{entity_id}/profile
+      Calls build_entity_profile() and returns the full profile.
+    files:
+      create: []
+      modify:
+        - "lib/autonomous_loop.py"
+        - "api/intelligence_router.py"
+      delete: []
+    verification:
+      - "grep -rn 'cost_proxies\\|entity_profile\\|outcome_tracker\\|pattern_trending' lib/autonomous_loop.py shows imports"
+      - "python -c 'from lib.intelligence.cost_proxies import ImprovedCostCalculator' succeeds"
+      - "python -c 'from lib.intelligence.entity_profile import build_entity_profile' succeeds"
+      - "python -c 'from lib.intelligence.outcome_tracker import OutcomeTracker' succeeds"
+      - "python -c 'from lib.intelligence.pattern_trending import PatternTrendAnalyzer' succeeds"
+      - "ruff check lib/autonomous_loop.py api/intelligence_router.py -- zero errors"
+      - "bandit -r lib/autonomous_loop.py api/intelligence_router.py -- zero findings"
+      - "python -m pytest tests/ -x -- passes"
+    estimated_lines: 50
+    depends_on: ["task-01"]
+
+completion_criteria:
+  - "All 7 modules imported and called in _intelligence_phase()"
+  - "/api/v2/intelligence/data-quality endpoint returns JSON"
+  - "/api/v2/intelligence/entity/{type}/{id}/profile endpoint returns JSON"
+  - "Loop logs show data quality + deepening results"
+  - "PR merged to main, CI green"
+  - "ruff, bandit clean on all touched files"

@@ -1,0 +1,148 @@
+id: "phase-01"
+name: "Python Compatibility + Bug Fixes"
+description: |
+  Fix all Python 3.10 compatibility issues and two production bugs.
+  datetime.UTC (Python 3.11+) used in 29 files causes ImportError.
+  StrEnum (Python 3.11+) used in 15 files causes ImportError.
+  lane_assigner.py references non-existent column.
+  chat.py has hardcoded email address.
+
+dependencies: []
+
+track: "T1"
+
+estimated_sessions: 1
+
+tasks:
+  - id: "task-01"
+    name: "Fix datetime.UTC imports for Python 3.10"
+    description: |
+      datetime.UTC was introduced in Python 3.11. Environment runs 3.10.12.
+      29 source files use `from datetime import UTC`, causing ImportError.
+      Create lib/compat.py with `UTC = timezone.utc` shim.
+      Replace all `from datetime import UTC` with compat import or inline
+      `timezone.utc` across all 29 files.
+      Files: lib/status_engine.py, lib/scheduling_engine.py, lib/state_tracker.py,
+      lib/priority_engine.py, lib/projects.py, lib/heartbeat_processor.py,
+      lib/delegation_engine.py, lib/entity_linker.py, lib/config_store.py,
+      lib/conflicts.py, lib/change_bundles.py, lib/safety/utils.py,
+      lib/observability/logging.py, lib/observability/health.py,
+      lib/collectors/calendar.py, lib/collectors/all_users_runner.py,
+      lib/delegation_graph.py, collectors/scheduled_collect.py,
+      collectors/gmail_multi_user.py, engine/tasks_discovery.py,
+      engine/financial_pulse.py, engine/heartbeat_pulse.py,
+      engine/knowledge_base.py, engine/chat_discovery.py,
+      engine/discovery.py, cli/tasks_reset.py, plus 3 more from grep.
+    files:
+      create:
+        - "lib/compat.py"
+      modify:
+        - "lib/status_engine.py"
+        - "lib/scheduling_engine.py"
+        - "lib/state_tracker.py"
+        - "lib/priority_engine.py"
+        - "lib/projects.py"
+        - "lib/heartbeat_processor.py"
+        - "lib/delegation_engine.py"
+        - "lib/entity_linker.py"
+        - "lib/config_store.py"
+        - "lib/conflicts.py"
+        - "lib/change_bundles.py"
+        - "lib/safety/utils.py"
+        - "lib/observability/logging.py"
+        - "lib/observability/health.py"
+        - "lib/collectors/calendar.py"
+        - "lib/collectors/all_users_runner.py"
+        - "lib/delegation_graph.py"
+        - "collectors/scheduled_collect.py"
+        - "collectors/gmail_multi_user.py"
+        - "engine/tasks_discovery.py"
+        - "engine/financial_pulse.py"
+        - "engine/heartbeat_pulse.py"
+        - "engine/knowledge_base.py"
+        - "engine/chat_discovery.py"
+        - "engine/discovery.py"
+        - "cli/tasks_reset.py"
+      delete: []
+    verification:
+      - "grep -r 'from datetime import UTC' lib/ engine/ collectors/ cli/ api/ returns empty"
+      - "python -c 'import lib.observability' succeeds"
+      - "python -c 'import lib.safety' succeeds"
+      - "python -c 'import lib.collectors.calendar' succeeds"
+      - "pytest tests/ -q --co -- collection errors reduced by 8+"
+      - "ruff check lib/compat.py -- zero errors"
+    estimated_lines: 35
+    depends_on: []
+
+  - id: "task-02"
+    name: "Fix StrEnum imports for Python 3.10"
+    description: |
+      StrEnum was introduced in Python 3.11. 15 files use `from enum import StrEnum`.
+      Add StrEnum backport to lib/compat.py:
+        try:
+            from enum import StrEnum
+        except ImportError:
+            class StrEnum(str, Enum): pass
+      Replace all `from enum import StrEnum` with `from lib.compat import StrEnum`.
+      Files include: lib/intelligence/scenario_engine.py,
+      lib/intelligence/signals/*.py, lib/actions/*.py, and others.
+    files:
+      create: []
+      modify:
+        - "lib/compat.py"
+      delete: []
+    verification:
+      - "grep -r 'from enum import StrEnum' lib/ engine/ collectors/ cli/ api/ returns empty"
+      - "python -c 'from lib.compat import StrEnum' succeeds"
+      - "pytest tests/ -q --co -- collection errors reduced further"
+      - "ruff check lib/compat.py -- zero errors"
+    estimated_lines: 15
+    depends_on: ["task-01"]
+
+  - id: "task-03"
+    name: "Fix lane column reference bug"
+    description: |
+      lane_assigner.py line 190 references `t.lane` but the column
+      is `lane_id` in schema.py. This causes a runtime error when
+      lane assignment runs.
+      Fix: change `t.lane` to `t.lane_id` at line 190.
+    files:
+      create: []
+      modify:
+        - "lib/lane_assigner.py"
+      delete: []
+    verification:
+      - "grep -n 't.lane' lib/lane_assigner.py shows only 't.lane_id'"
+      - "ruff check lib/lane_assigner.py -- zero errors"
+      - "bandit -r lib/lane_assigner.py -- zero findings"
+    estimated_lines: 1
+    depends_on: []
+
+  - id: "task-04"
+    name: "Fix hardcoded email in chat.py"
+    description: |
+      lib/integrations/chat.py line 31 has:
+        DEFAULT_USER = "molham@hrmny.co"
+      This should use environment variable:
+        DEFAULT_USER = os.environ.get("DEFAULT_USER_EMAIL", "molham@hrmny.co")
+      Add `import os` if not already present.
+    files:
+      create: []
+      modify:
+        - "lib/integrations/chat.py"
+      delete: []
+    verification:
+      - "grep -n 'os.environ' lib/integrations/chat.py shows the env var wrapper"
+      - "ruff check lib/integrations/chat.py -- zero errors"
+      - "bandit -r lib/integrations/chat.py -- zero findings"
+    estimated_lines: 2
+    depends_on: []
+
+completion_criteria:
+  - "All 4 tasks marked complete in state.json"
+  - "PR merged to main, CI green"
+  - "Zero files contain from datetime import UTC"
+  - "Zero files contain from enum import StrEnum"
+  - "lane_assigner.py uses lane_id not lane"
+  - "chat.py uses os.environ.get for email"
+  - "Test collection errors reduced significantly"

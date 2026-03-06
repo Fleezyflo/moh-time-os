@@ -1,0 +1,177 @@
+# Phase 02: Authentication
+# Scope: User model, password hashing, login/register API, JWT tokens, middleware, rate limiting.
+
+id: "phase-02"
+name: "Authentication"
+description: |
+  Build the authentication layer: user model, secure password handling,
+  login/register endpoints, JWT token generation and validation, auth middleware,
+  and rate limiting on sensitive endpoints.
+
+dependencies:
+  - "phase-01"
+
+track: "T1"
+
+estimated_sessions: 2
+
+# Tasks within this phase
+# Each task is a discrete unit of work that can be verified independently.
+# A session should complete 1-3 tasks depending on complexity.
+tasks:
+  - id: "T1"
+    name: "Add user model and database migration"
+    description: |
+      Create User SQLAlchemy model with fields: id (pk), username (unique), email (unique),
+      password_hash, created_at, updated_at.
+      Write Alembic migration to create users table with unique constraints on username and email.
+      Migration must be idempotent and support rollback.
+    files:
+      create:
+        - backend/models/user.py
+        - backend/migrations/versions/001_create_users_table.py
+      modify: []
+      delete: []
+    verification:
+      - "alembic upgrade head completes without error"
+      - "alembic downgrade -1 completes without error"
+      - "users table has correct schema: id, username, email, password_hash, created_at, updated_at"
+      - "unique constraints exist on username and email"
+    estimated_lines: 50
+
+  - id: "T2"
+    name: "Implement password hashing with argon2"
+    description: |
+      Create a password utility module (backend/lib/auth.py) with hash_password() and verify_password()
+      functions using the argon2-cffi library.
+      Use Argon2id variant with OWASP recommended parameters (time_cost=2, memory_cost=65536).
+      Write unit tests for both functions with edge cases (empty string, None, long password).
+    files:
+      create:
+        - backend/lib/auth.py
+        - backend/tests/unit/test_auth.py
+      modify: []
+      delete: []
+    verification:
+      - "hash_password() returns a valid Argon2 hash"
+      - "verify_password() correctly validates matching passwords"
+      - "verify_password() rejects non-matching passwords"
+      - "verify_password() handles None and empty string gracefully"
+      - "pytest backend/tests/unit/test_auth.py passes with 100% coverage"
+      - "bandit finds no security issues in auth.py"
+    estimated_lines: 150
+
+  - id: "T3"
+    name: "Create login and register API endpoints"
+    description: |
+      Add POST /api/auth/register (accepts username, email, password; returns user_id and access_token).
+      Add POST /api/auth/login (accepts username and password; returns user_id and access_token).
+      Both endpoints must validate input (non-empty, email format for email).
+      Both must return typed error responses (400 for invalid input, 409 for existing user, 401 for wrong password).
+      No bare except blocks. All errors must be logged with context.
+    files:
+      create:
+        - backend/routes/auth.py
+        - backend/tests/integration/test_auth_endpoints.py
+      modify:
+        - backend/main.py
+      delete: []
+    verification:
+      - "POST /api/auth/register with valid input returns 200 with user_id and access_token"
+      - "POST /api/auth/register rejects duplicate username (409)"
+      - "POST /api/auth/register rejects invalid email (400)"
+      - "POST /api/auth/login with correct credentials returns 200 with access_token"
+      - "POST /api/auth/login with wrong password returns 401"
+      - "POST /api/auth/login rejects non-existent user (401)"
+      - "All endpoints log errors with context (no silent failures)"
+      - "Integration tests pass: pytest backend/tests/integration/test_auth_endpoints.py"
+      - "ruff check and ruff format both pass"
+    estimated_lines: 300
+
+  - id: "T4"
+    name: "Add JWT token generation and validation"
+    description: |
+      Create backend/lib/tokens.py with generate_jwt() and decode_jwt() functions.
+      Use PyJWT library with HS256 algorithm.
+      Tokens must include: user_id, issued_at, exp (expiry).
+      Decide on token expiry strategy: short-lived access tokens (15 min) or long-lived (24 hr)?
+      Decision affects T5 (middleware) and later frontend storage strategy.
+      Write unit tests covering valid tokens, expired tokens, tampered tokens.
+    files:
+      create:
+        - backend/lib/tokens.py
+        - backend/tests/unit/test_tokens.py
+      modify: []
+      delete: []
+    verification:
+      - "generate_jwt(user_id, expiry_seconds) returns a valid JWT string"
+      - "decode_jwt(token) returns {'user_id': X, 'iat': Y, 'exp': Z}"
+      - "decode_jwt() raises JWTExpired for expired tokens"
+      - "decode_jwt() raises JWTInvalid for tampered tokens"
+      - "Unit tests pass with 100% coverage"
+      - "Decision on token expiry is documented in a comment with rationale"
+    estimated_lines: 50
+    depends_on: ["T1", "T2"]
+    blocked_by:
+      - issue: "JWT token expiry and refresh strategy"
+        description: "Need to decide: short-lived + refresh, or long-lived. Affects middleware design."
+
+  - id: "T5"
+    name: "Implement auth middleware"
+    description: |
+      Create backend/middleware/auth.py with a @require_auth decorator for protecting endpoints.
+      Extract JWT from Authorization header (Bearer <token>).
+      Validate token signature and expiry.
+      Inject user_id into request context.
+      Return 401 Unauthorized if token missing, invalid, or expired.
+      Apply to all /api/tasks/* endpoints (existing, from phase-01).
+      Write integration tests verifying protected endpoints reject unauthenticated requests.
+    files:
+      create:
+        - backend/middleware/auth.py
+        - backend/tests/integration/test_auth_middleware.py
+      modify:
+        - backend/routes/tasks.py
+      delete: []
+    verification:
+      - "GET /api/tasks without token returns 401"
+      - "GET /api/tasks with invalid token returns 401"
+      - "GET /api/tasks with expired token returns 401"
+      - "GET /api/tasks with valid token returns 200 and user's tasks only"
+      - "Task creation (POST /api/tasks) associates task with authenticated user"
+      - "Integration tests pass"
+    estimated_lines: 150
+    depends_on: ["T3", "T4"]
+
+  - id: "T6"
+    name: "Add rate limiting to auth endpoints"
+    description: |
+      Add rate limiting middleware using slowapi library.
+      Limit POST /api/auth/login to 5 attempts per minute per IP.
+      Limit POST /api/auth/register to 3 per minute per IP.
+      Return 429 Too Many Requests with Retry-After header when exceeded.
+      Write tests verifying rate limits are enforced.
+      Document rate limits in API documentation.
+    files:
+      create:
+        - backend/middleware/rate_limit.py
+        - backend/tests/integration/test_rate_limit.py
+      modify:
+        - backend/main.py
+      delete: []
+    verification:
+      - "5 login attempts per minute per IP are allowed; 6th returns 429"
+      - "3 register attempts per minute per IP are allowed; 4th returns 429"
+      - "Rate limit headers (X-RateLimit-*) are present in responses"
+      - "Integration tests confirm rate limits work correctly"
+    estimated_lines: 50
+    depends_on: ["T3"]
+
+# Phase-level verification
+# These checks must pass before the phase can be marked complete.
+completion_criteria:
+  - "All tasks marked complete in state.json"
+  - "All PRs merged to main"
+  - "CI green on main after merge"
+  - "No outstanding security issues (bandit, mypy pass)"
+  - "All integration tests pass"

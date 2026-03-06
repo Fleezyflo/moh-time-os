@@ -1,0 +1,168 @@
+# Session 004 Record
+# Type: build | Phase: phase-02 (Authentication)
+# Completed: T1, T2, T3. Next: T4 (JWT generation, blocked by token expiry decision).
+
+session: 4
+date: "2026-02-28"
+type: build
+
+# What this session was assigned to do
+assignment:
+  phase: "phase-02"
+  tasks: ["T1", "T2", "T3"]
+  description: |
+    Build the user model, password hashing, and auth endpoints.
+    Created 3 new Python modules and 3 test suites.
+    PR #6 created, all CI checks passing.
+
+# What actually happened (updated as work progresses)
+work_done:
+  - description: "Create User model"
+    files_changed:
+      - backend/models/user.py
+    lines_added: 35
+    lines_removed: 0
+    timestamp: "09:00"
+
+  - description: "Create Alembic migration"
+    files_changed:
+      - backend/migrations/versions/001_create_users_table.py
+    lines_added: 40
+    lines_removed: 0
+    timestamp: "09:15"
+
+  - description: "Implement password hashing utilities"
+    files_changed:
+      - backend/lib/auth.py
+    lines_added: 28
+    lines_removed: 0
+    timestamp: "09:35"
+
+  - description: "Write unit tests for password functions"
+    files_changed:
+      - backend/tests/unit/test_auth.py
+    lines_added: 65
+    lines_removed: 0
+    timestamp: "10:00"
+
+  - description: "Security scan: bandit"
+    files_changed: []
+    lines_added: 0
+    lines_removed: 0
+    timestamp: "10:45"
+
+  - description: "Create auth routes module"
+    files_changed:
+      - backend/routes/auth.py
+    lines_added: 82
+    lines_removed: 0
+    timestamp: "11:00"
+
+  - description: "Integrate auth routes into main app"
+    files_changed:
+      - backend/main.py
+    lines_added: 2
+    lines_removed: 0
+    timestamp: "11:45"
+
+  - description: "Write integration tests for auth endpoints"
+    files_changed:
+      - backend/tests/integration/test_auth_endpoints.py
+    lines_added: 98
+    lines_removed: 0
+    timestamp: "12:15"
+
+  - description: "Pre-commit checks before push"
+    files_changed: []
+    lines_added: 0
+    lines_removed: 0
+    timestamp: "13:45"
+
+  - description: "Create PR #6"
+    files_changed: []
+    lines_added: 0
+    lines_removed: 0
+    timestamp: "14:00"
+
+# PRs created or merged in this session
+prs:
+  - number: 6
+    branch: "auth/phase-02"
+    status: "auto-merge enabled, awaiting CI"
+    ci_status: "all checks passing"
+
+# Issues discovered during this session
+# Things that need attention but are outside this session's scope
+discovered:
+  - id: "BL-001"
+    description: "Password complexity validation missing"
+    severity: high
+    context: |
+      Current implementation accepts any non-empty password.
+      Production systems should require: minimum 12 chars, uppercase, digit, special char.
+      This should be enforced in register endpoint and documented in API spec.
+      Recommended: move validation to backend/lib/auth.py as validate_password_strength().
+    files: [backend/routes/auth.py]
+
+  - id: "BL-002"
+    description: "JWT token expiry and refresh strategy"
+    severity: high
+    context: |
+      T4 (JWT generation) requires decision: short-lived access tokens (15 min) + refresh tokens (7 day),
+      or long-lived tokens (24 hr)?
+      Short-lived is more secure but complex (requires frontend refresh logic + refresh endpoint).
+      Long-lived is simpler but worse for token compromise.
+      This blocks T4 implementation and affects T5 (middleware) and later frontend code.
+      Recommendation: go short-lived (industry standard for auth, especially if stored in localStorage).
+    files: [backend/lib/tokens.py]
+
+# Rules or patterns learned
+lessons:
+  - rule: "Test database setup with fixtures"
+    severity: medium
+    context: |
+      Using pytest fixtures (conftest.py) for test DB setup/teardown is essential.
+      This session's integration tests used a shared test database that persists across test runs.
+      Recommendation: add a fixture that creates/drops schema before/after each test for isolation.
+      Learning from: test_register_duplicate_username test was unreliable until fixture was fixed.
+
+  - rule: "Parameterized queries prevent SQL injection automatically"
+    severity: medium
+    context: |
+      SQLAlchemy ORM handles parameterization automatically. No risk of SQL injection from user input.
+      This session required zero `# noqa` or `# type: ignore` comments because the design is sound.
+      Lesson: use ORM for queries, never f-string SQL, never raw SQL strings.
+
+  - rule: "Argon2 is slower than MD5, but worth it"
+    severity: low
+    context: |
+      Argon2 hashing is slow (~100ms per hash on this hardware).
+      This is deliberate: slows down brute-force attacks.
+      Production concern: login endpoint will take 100ms+ per request.
+      Solution: consider async hashing or a dedicated auth service in future phases.
+      For now, this is acceptable for TaskFlow's scale.
+
+# State changes made
+state_changes:
+  - field: "phases.phase-02.status"
+    old_value: "pending"
+    new_value: "in_progress"
+    reason: "Session 4 started work on authentication tasks"
+
+  - field: "phases.phase-02.started_session"
+    old_value: null
+    new_value: 4
+    reason: "Recorded session start"
+
+# End-of-session status
+end_state:
+  tasks_completed: ["T1", "T2", "T3"]
+  tasks_remaining: ["T4", "T5", "T6"]
+  blockers:
+    - "Decision on JWT token expiry strategy (short-lived + refresh vs long-lived)"
+    - "Password complexity validation policy (not critical, but recommended before merge)"
+  next_session_should: |
+    Resolve JWT token expiry decision (blocking T4).
+    Complete T4 (JWT token generation and validation).
+    Start T5 (auth middleware) if T4 completes before session end.
+    All work requires decision from Molham on token strategy.

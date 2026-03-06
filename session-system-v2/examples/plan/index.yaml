@@ -1,0 +1,62 @@
+# TaskFlow Phase Index
+# Master index of all project phases. Each phase has a corresponding phase-NN.yaml file.
+
+project: TaskFlow
+phases:
+  - id: phase-00
+    name: "Project Scaffolding"
+    status: complete
+    file: phase-00.yaml
+    description: |
+      Repository structure, tooling setup (FastAPI, React, PostgreSQL),
+      GitHub Actions CI/CD, pre-commit hooks, Docker for local dev.
+    dependencies: []
+
+  - id: phase-01
+    name: "API Core"
+    status: complete
+    file: phase-01.yaml
+    description: |
+      Task CRUD endpoints (POST, GET, PUT, DELETE).
+      SQLAlchemy models, Alembic migrations.
+      Basic error handling and validation.
+    dependencies:
+      - phase-00
+
+  - id: phase-02
+    name: "Authentication"
+    status: in_progress
+    file: phase-02.yaml
+    description: |
+      User model and registration.
+      Password hashing with argon2.
+      Login and JWT token generation.
+      Auth middleware for protecting endpoints.
+      Rate limiting on auth endpoints.
+    dependencies:
+      - phase-01
+
+  - id: phase-03
+    name: "Frontend Shell"
+    status: blocked
+    file: phase-03.yaml
+    description: |
+      React Router setup with layout.
+      Login and register pages.
+      Task list and detail views.
+      Client-side auth state management.
+    dependencies:
+      - phase-02
+
+  - id: phase-04
+    name: "Integration Tests"
+    status: pending
+    file: phase-04.yaml
+    description: |
+      End-to-end tests for auth flows.
+      API integration tests.
+      Frontend component tests with React Testing Library.
+      Performance and load testing baselines.
+    dependencies:
+      - phase-02
+      - phase-03

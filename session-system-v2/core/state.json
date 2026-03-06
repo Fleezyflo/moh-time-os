@@ -1,0 +1,16 @@
+{
+  "$schema": "./state.schema.json",
+  "project": "{{PROJECT_NAME}}",
+  "owner": "{{OWNER}}",
+  "current_phase": null,
+  "current_session": 0,
+  "phases": {},
+  "last_pr": 0,
+  "last_verified": "2026-02-28T12:48:49.615387+00:00",
+  "enforcement": {
+    "repo": "{{ORG}}/enforcement",
+    "read_token_secret": "ENFORCEMENT_READ_TOKEN",
+    "dispatch_token_secret": "ENFORCEMENT_DISPATCH_TOKEN",
+    "protected_files": []
+  }
+}
