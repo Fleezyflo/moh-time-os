@@ -8,7 +8,7 @@ Provides three agency management views:
 
 All views use StateStore for database access and implement defensive querying
 against the canonical tables (tasks, clients, projects, team_members, events,
-calendar_events, commitments, signals, communications, sync_state).
+calendar_attendees, commitments, signals, communications, sync_state).
 """
 
 import logging
@@ -22,8 +22,9 @@ logger = logging.getLogger(__name__)
 class ClientHealthView:
     """
     Client-centric health monitoring.
-    Computes health indicators for each client based on task status,
-    meeting frequency, and commitment management.
+    Provides raw health indicators for each client based on task status,
+    meeting frequency, and commitment management. No scoring -- consumers
+    interpret the raw data.
     """
 
     def __init__(self, store: StateStore | None = None):
@@ -40,20 +41,12 @@ class ClientHealthView:
         - last_meeting: most recent calendar event mentioning client
         - days_since_last_meeting: computed from last_meeting
         - open_commitments: count of non-closed commitments for client
-        - health_status: "critical" / "warning" / "healthy"
-        - health_reason: brief explanation of status
-
-        Health scoring:
-        - critical: >5 overdue tasks OR >30 days since last meeting
-        - warning: >2 overdue tasks OR >14 days since last meeting
-        - healthy: everything else
 
         Args:
             days_lookback: Filter out tasks older than this (default 90 days)
 
         Returns:
-            List of client dicts sorted by health_status (critical first),
-            then by overdue_tasks (descending).
+            List of client dicts sorted by overdue_tasks (descending).
         """
         cutoff_date = (datetime.now() - timedelta(days=days_lookback)).isoformat()
         today = datetime.now().isoformat()[:10]
@@ -142,23 +135,6 @@ class ClientHealthView:
                 )
                 open_commitments = len(commitments)
 
-                # Compute health status
-                health_status = "healthy"
-                health_reason = "On track"
-
-                if overdue_tasks > 5:
-                    health_status = "critical"
-                    health_reason = f"{overdue_tasks} overdue tasks"
-                elif days_since_last_meeting and days_since_last_meeting > 30:
-                    health_status = "critical"
-                    health_reason = f"No contact for {days_since_last_meeting} days"
-                elif overdue_tasks > 2:
-                    health_status = "warning"
-                    health_reason = f"{overdue_tasks} overdue tasks"
-                elif days_since_last_meeting and days_since_last_meeting > 14:
-                    health_status = "warning"
-                    health_reason = f"Last contact {days_since_last_meeting} days ago"
-
                 health_data.append(
                     {
                         "client_id": client_id,
@@ -169,8 +145,6 @@ class ClientHealthView:
                         "last_meeting": last_meeting,
                         "days_since_last_meeting": days_since_last_meeting,
                         "open_commitments": open_commitments,
-                        "health_status": health_status,
-                        "health_reason": health_reason,
                     }
                 )
 
@@ -178,11 +152,8 @@ class ClientHealthView:
                 logger.error(f"Error computing health for client {client_id} ({client_name}): {e}")
                 continue
 
-        # Sort: critical first, then by overdue_tasks descending
-        status_order = {"critical": 0, "warning": 1, "healthy": 2}
-        health_data.sort(
-            key=lambda x: (status_order.get(x["health_status"], 3), -x["overdue_tasks"])
-        )
+        # Sort by overdue_tasks descending
+        health_data.sort(key=lambda x: -x["overdue_tasks"])
 
         return health_data
 
@@ -278,7 +249,8 @@ class ClientHealthView:
 class TeamLoadView:
     """
     Team capacity and workload analysis.
-    Monitors individual team member load, overdue items, and meeting load.
+    Provides raw workload indicators per team member. No scoring -- consumers
+    interpret the raw data.
     """
 
     def __init__(self, store: StateStore | None = None):
@@ -293,14 +265,6 @@ class TeamLoadView:
         - active_tasks: count of tasks with status='active' or 'in_progress'
         - overdue_tasks: count of active tasks past due_date
         - meetings_this_week: count of calendar events this week
-        - load_status: "overloaded" / "heavy" / "normal" / "light"
-        - load_reason: brief explanation
-
-        Load scoring:
-        - overloaded: >50 active tasks OR >10 overdue
-        - heavy: >30 active tasks OR >5 overdue
-        - normal: 10-30 active tasks
-        - light: <10 active tasks
 
         Returns:
             List of team member dicts sorted by overdue_tasks (desc),
@@ -348,33 +312,14 @@ class TeamLoadView:
                 # Count meetings this week
                 meetings = self.store.query(
                     """
-                    SELECT id FROM calendar_events
-                    WHERE subject_email = ?
-                    AND start_time >= ? AND start_time <= ?
+                    SELECT e.id FROM events e
+                    JOIN calendar_attendees ca ON ca.event_id = e.id
+                    WHERE ca.email = ?
+                    AND date(e.start_time) >= ? AND date(e.start_time) <= ?
                     """,
                     [member_email, week_start, week_end],
                 )
                 meetings_this_week = len(meetings)
-
-                # Compute load status
-                load_status = "light"
-                load_reason = "Manageable workload"
-
-                if active_count > 50 or overdue_count > 10:
-                    load_status = "overloaded"
-                    if overdue_count > 10:
-                        load_reason = f"{overdue_count} overdue tasks"
-                    else:
-                        load_reason = f"{active_count} active tasks"
-                elif active_count > 30 or overdue_count > 5:
-                    load_status = "heavy"
-                    if overdue_count > 5:
-                        load_reason = f"{overdue_count} overdue tasks"
-                    else:
-                        load_reason = f"{active_count} active tasks"
-                elif active_count >= 10:
-                    load_status = "normal"
-                    load_reason = f"{active_count} active tasks"
 
                 load_data.append(
                     {
@@ -384,8 +329,6 @@ class TeamLoadView:
                         "active_tasks": active_count,
                         "overdue_tasks": overdue_count,
                         "meetings_this_week": meetings_this_week,
-                        "load_status": load_status,
-                        "load_reason": load_reason,
                     }
                 )
 
@@ -458,10 +401,11 @@ class TeamLoadView:
             if email:
                 calendar_events_rows = self.store.query(
                     """
-                    SELECT * FROM calendar_events
-                    WHERE subject_email = ?
-                    AND start_time >= ? AND start_time <= ?
-                    ORDER BY start_time
+                    SELECT e.* FROM events e
+                    JOIN calendar_attendees ca ON ca.event_id = e.id
+                    WHERE ca.email = ?
+                    AND date(e.start_time) >= ? AND date(e.start_time) <= ?
+                    ORDER BY e.start_time
                     """,
                     [email, week_start, week_end],
                 )
