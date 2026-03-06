@@ -5422,6 +5422,520 @@ async def command_decisions():
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
+# ==== Detection System ====
+
+
+@app.get("/api/command/week-strip", response_model=DetailResponse)
+async def command_week_strip():
+    """10-day week strip with available minutes, tasks due, and collision status."""
+    try:
+        from dataclasses import asdict
+
+        from lib.detectors.collision import CollisionDetector
+
+        store = get_store()
+        detector = CollisionDetector(store.db_path)
+        findings = detector.detect()
+
+        # Build lookup of collision findings by date (Molham only)
+        collision_map: dict[str, dict] = {}
+        for f in findings:
+            fd = asdict(f)
+            if fd["person"] == "Molham Homsi":
+                collision_map[fd["date"]] = fd
+
+        # Build 10-day strip for Molham
+        from datetime import date as date_type
+
+        today = date_type.today()
+        days = []
+        current = today
+        count = 0
+        while count < 10:
+            if current.weekday() < 5:
+                day_str = current.isoformat()
+                col = collision_map.get(day_str, {})
+                days.append(
+                    {
+                        "date": day_str,
+                        "available_minutes": col.get("available_minutes", 480),
+                        "tasks_due": col.get("tasks_due", 0),
+                        "weighted_ratio": col.get("weighted_ratio", 0.0),
+                        "has_collision": day_str in collision_map,
+                    }
+                )
+                count += 1
+            current += timedelta(days=1)
+
+        return {"success": True, "data": days}
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("command/week-strip error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@app.get("/api/command/findings", response_model=DetailResponse)
+async def command_findings():
+    """Active detection findings grouped by correlation."""
+    try:
+        store = get_store()
+        conn = sqlite3.connect(store.db_path)
+        conn.row_factory = sqlite3.Row
+        try:
+            now = datetime.now().isoformat()
+
+            # Active findings: not resolved, not acknowledged, not suppressed
+            active_rows = conn.execute(
+                """SELECT * FROM detection_findings
+                   WHERE resolved_at IS NULL
+                     AND acknowledged_at IS NULL
+                     AND (suppressed_until IS NULL OR suppressed_until < ?)
+                   ORDER BY last_detected_at DESC""",
+                (now,),
+            ).fetchall()
+
+            # Acknowledged findings
+            ack_rows = conn.execute(
+                """SELECT * FROM detection_findings
+                   WHERE resolved_at IS NULL
+                     AND acknowledged_at IS NOT NULL
+                   ORDER BY acknowledged_at DESC""",
+            ).fetchall()
+
+            # Suppressed findings (within suppression window)
+            sup_rows = conn.execute(
+                """SELECT * FROM detection_findings
+                   WHERE resolved_at IS NULL
+                     AND suppressed_until IS NOT NULL
+                     AND suppressed_until >= ?
+                   ORDER BY suppressed_until ASC""",
+                (now,),
+            ).fetchall()
+
+            # Team collisions (not Molham)
+            team_rows = conn.execute(
+                """SELECT * FROM detection_findings
+                   WHERE resolved_at IS NULL
+                     AND acknowledged_at IS NULL
+                     AND detector = 'collision'
+                     AND entity_name != 'Molham Homsi'
+                     AND (suppressed_until IS NULL OR suppressed_until < ?)
+                   ORDER BY last_detected_at DESC""",
+                (now,),
+            ).fetchall()
+
+            def row_to_dict(row: sqlite3.Row) -> dict:
+                d = dict(row)
+                for field in ("severity_data", "adjacent_data", "related_findings"):
+                    val = d.get(field)
+                    if val and isinstance(val, str):
+                        try:
+                            d[field] = json.loads(val)
+                        except (json.JSONDecodeError, ValueError):
+                            pass
+                return d
+
+            # Group active findings by shared entity
+            groups = _group_findings([row_to_dict(r) for r in active_rows])
+
+            # Last detection run time
+            last_run_row = conn.execute(
+                "SELECT last_sync FROM sync_state WHERE source = 'detection_last_run'",
+            ).fetchone()
+            last_detection = last_run_row["last_sync"] if last_run_row else None
+
+            # Staleness: >2 hours since last run
+            is_stale = True
+            if last_detection:
+                try:
+                    last_dt = datetime.fromisoformat(last_detection)
+                    is_stale = (datetime.now() - last_dt) > timedelta(hours=2)
+                except ValueError:
+                    pass
+
+            return {
+                "success": True,
+                "data": {
+                    "groups": groups,
+                    "acknowledged": [row_to_dict(r) for r in ack_rows],
+                    "suppressed": [row_to_dict(r) for r in sup_rows],
+                    "team_collisions": [row_to_dict(r) for r in team_rows],
+                    "count": len(active_rows),
+                    "last_detection": last_detection,
+                    "is_stale": is_stale,
+                },
+            }
+        finally:
+            conn.close()
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("command/findings error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+def _group_findings(findings: list[dict]) -> list[dict]:
+    """Group findings by shared entity_id for correlation display."""
+    if not findings:
+        return []
+
+    entity_findings: dict[str, list[dict]] = {}
+    for f in findings:
+        eid = f.get("entity_id", "")
+        entity_findings.setdefault(eid, []).append(f)
+
+    groups = []
+    seen_entities: set[str] = set()
+
+    for f in findings:
+        eid = f.get("entity_id", "")
+        if eid in seen_entities:
+            continue
+        seen_entities.add(eid)
+
+        related = entity_findings.get(eid, [f])
+        # Priority: bottleneck > drift > collision
+        priority = {"bottleneck": 0, "drift": 1, "collision": 2}
+        sorted_related = sorted(related, key=lambda x: priority.get(x.get("detector", ""), 99))
+
+        primary = sorted_related[0]
+        subordinates = sorted_related[1:]
+
+        groups.append(
+            {
+                "primary": primary,
+                "subordinates": subordinates,
+                "shared_entity": f.get("entity_name", eid),
+            }
+        )
+
+    return groups
+
+
+@app.get("/api/command/findings/{finding_id}", response_model=DetailResponse)
+async def command_finding_detail(finding_id: str, refresh: bool = False):
+    """Single finding detail with optional micro-sync refresh."""
+    try:
+        store = get_store()
+        conn = sqlite3.connect(store.db_path)
+        conn.row_factory = sqlite3.Row
+        try:
+            row = conn.execute(
+                "SELECT * FROM detection_findings WHERE id = ?",
+                (finding_id,),
+            ).fetchone()
+
+            if not row:
+                raise HTTPException(status_code=404, detail="Finding not found")
+
+            finding = dict(row)
+            for field in ("severity_data", "adjacent_data", "related_findings"):
+                val = finding.get(field)
+                if val and isinstance(val, str):
+                    try:
+                        finding[field] = json.loads(val)
+                    except (json.JSONDecodeError, ValueError):
+                        pass
+
+            # Optional micro-sync: refresh calendar + email for the entity
+            if refresh:
+                _micro_sync_for_finding(finding, store.db_path)
+
+            return {"success": True, "data": finding}
+        finally:
+            conn.close()
+    except HTTPException:
+        raise
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("command/findings/%s error: %s", finding_id, e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+def _micro_sync_for_finding(finding: dict, db_path: str) -> None:
+    """Trigger calendar + email micro-sync for a finding's entity."""
+    from pathlib import Path
+
+    from lib.collectors.all_users_runner import micro_sync_calendar, micro_sync_gmail
+
+    detector = finding.get("detector", "")
+    entity_id = finding.get("entity_id", "")
+
+    # Determine the email to sync for
+    email: str | None = None
+    if detector == "bottleneck":
+        # entity_id is the member name -- look up email
+        try:
+            conn = sqlite3.connect(db_path)
+            try:
+                row = conn.execute(
+                    "SELECT email FROM people WHERE name = ? AND type = 'internal'",
+                    (entity_id,),
+                ).fetchone()
+                if row:
+                    email = row[0]
+            finally:
+                conn.close()
+        except sqlite3.Error as e:
+            logger.debug("people lookup failed: %s", e)
+    elif detector == "collision":
+        # entity_id is "person_day" -- extract person name
+        parts = entity_id.rsplit("_", 1)
+        person_name = parts[0] if len(parts) > 1 else entity_id
+        try:
+            conn = sqlite3.connect(db_path)
+            try:
+                row = conn.execute(
+                    "SELECT email FROM people WHERE name = ? AND type = 'internal'",
+                    (person_name,),
+                ).fetchone()
+                if row:
+                    email = row[0]
+            finally:
+                conn.close()
+        except sqlite3.Error as e:
+            logger.debug("people lookup failed: %s", e)
+    elif detector == "drift":
+        # Sync calendar for first assigned member from adjacent_data
+        adjacent = finding.get("adjacent_data", {})
+        if isinstance(adjacent, dict):
+            assigned = adjacent.get("assigned_members", [])
+            if assigned and isinstance(assigned[0], dict):
+                email = assigned[0].get("email")
+
+    if not email:
+        logger.info("No email found for micro-sync on finding %s", finding.get("id"))
+        return
+
+    # Micro-sync calendar and email (NOT Asana)
+    today = datetime.now().strftime("%Y-%m-%d")
+    since = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+    db = Path(db_path)
+
+    try:
+        micro_sync_calendar(email, since, today, db)
+    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+        logger.warning("micro_sync_calendar failed for %s: %s", email, e)
+
+    try:
+        micro_sync_gmail(email, since, today, db)
+    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+        logger.warning("micro_sync_gmail failed for %s: %s", email, e)
+
+
+@app.post("/api/command/findings/{finding_id}/acknowledge", response_model=MutationResponse)
+async def command_finding_acknowledge(finding_id: str):
+    """Mark a finding as acknowledged ('Got it')."""
+    try:
+        store = get_store()
+        conn = sqlite3.connect(store.db_path)
+        try:
+            now = datetime.now().isoformat()
+            cursor = conn.execute(
+                """UPDATE detection_findings
+                   SET acknowledged_at = ?, updated_at = ?
+                   WHERE id = ? AND resolved_at IS NULL""",
+                (now, now, finding_id),
+            )
+            conn.commit()
+
+            if cursor.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Finding not found or already resolved")
+
+            return {"success": True, "acknowledged_at": now}
+        finally:
+            conn.close()
+    except HTTPException:
+        raise
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("command/findings/%s/acknowledge error: %s", finding_id, e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@app.post("/api/command/findings/{finding_id}/suppress", response_model=MutationResponse)
+async def command_finding_suppress(finding_id: str):
+    """Mark a finding as suppressed ('Expected') for 30 days."""
+    try:
+        store = get_store()
+        conn = sqlite3.connect(store.db_path)
+        try:
+            now = datetime.now()
+            suppressed_until = (now + timedelta(days=30)).strftime("%Y-%m-%d")
+            now_iso = now.isoformat()
+            cursor = conn.execute(
+                """UPDATE detection_findings
+                   SET suppressed_until = ?, suppressed_by = 'user',
+                       updated_at = ?
+                   WHERE id = ? AND resolved_at IS NULL""",
+                (suppressed_until, now_iso, finding_id),
+            )
+            conn.commit()
+
+            if cursor.rowcount == 0:
+                raise HTTPException(status_code=404, detail="Finding not found or already resolved")
+
+            return {"success": True, "suppressed_until": suppressed_until}
+        finally:
+            conn.close()
+    except HTTPException:
+        raise
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("command/findings/%s/suppress error: %s", finding_id, e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@app.get("/api/command/staleness", response_model=DetailResponse)
+async def command_staleness():
+    """Detection system staleness status."""
+    try:
+        store = get_store()
+        conn = sqlite3.connect(store.db_path)
+        conn.row_factory = sqlite3.Row
+        try:
+            row = conn.execute(
+                "SELECT last_sync, last_success FROM sync_state WHERE source = 'detection_last_run'",
+            ).fetchone()
+
+            if not row:
+                return {
+                    "success": True,
+                    "data": {
+                        "last_run": None,
+                        "is_stale": True,
+                        "stale_since": None,
+                    },
+                }
+
+            last_run = row["last_sync"]
+            is_stale = False
+            stale_since = None
+
+            try:
+                last_dt = datetime.fromisoformat(last_run)
+                age = datetime.now() - last_dt
+                if age > timedelta(hours=2):
+                    is_stale = True
+                    stale_since = (last_dt + timedelta(hours=2)).isoformat()
+            except ValueError:
+                is_stale = True
+
+            return {
+                "success": True,
+                "data": {
+                    "last_run": last_run,
+                    "is_stale": is_stale,
+                    "stale_since": stale_since,
+                },
+            }
+        finally:
+            conn.close()
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("command/staleness error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@app.get("/api/command/weight-review", response_model=DetailResponse)
+async def command_weight_review():
+    """Pending weight confirmations for the task weight learning loop."""
+    try:
+        store = get_store()
+        conn = sqlite3.connect(store.db_path)
+        conn.row_factory = sqlite3.Row
+        try:
+            rows = conn.execute(
+                """SELECT twr.id as rule_id, twr.pattern, twr.assigned_weight,
+                          twr.weight_value, twr.confidence,
+                          twr.corrections_count, twr.confirmations_count
+                   FROM task_weight_rules twr
+                   WHERE twr.confidence < 0.8
+                   ORDER BY twr.confidence ASC
+                   LIMIT 20""",
+            ).fetchall()
+
+            pending = [dict(r) for r in rows]
+
+            return {
+                "success": True,
+                "data": {
+                    "pending": pending,
+                    "count": len(pending),
+                },
+            }
+        finally:
+            conn.close()
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("command/weight-review error: %s", e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+class WeightReviewPayload(BaseModel):
+    """Payload for confirming or correcting a task weight."""
+
+    action: str  # "confirm" or "correct"
+    weight_class: str | None = None
+    weight_value: float | None = None
+
+
+@app.post("/api/command/weight-review/{task_id}", response_model=MutationResponse)
+async def command_weight_review_action(task_id: str, payload: WeightReviewPayload):
+    """Confirm or correct a task's derived weight."""
+    try:
+        import hashlib
+
+        store = get_store()
+        conn = sqlite3.connect(store.db_path)
+        try:
+            now = datetime.now().isoformat()
+
+            if payload.action == "confirm":
+                conn.execute(
+                    """UPDATE task_weight_rules
+                       SET confirmations_count = confirmations_count + 1,
+                           confidence = MIN(1.0, confidence + 0.1),
+                           updated_at = ?
+                       WHERE id = ?""",
+                    (now, task_id),
+                )
+                conn.commit()
+                return {"success": True, "action": "confirmed"}
+
+            elif payload.action == "correct":
+                if not payload.weight_class or payload.weight_value is None:
+                    raise HTTPException(
+                        status_code=400,
+                        detail="weight_class and weight_value required for corrections",
+                    )
+
+                override_id = hashlib.sha256(f"override:{task_id}:{now}".encode()).hexdigest()[:16]
+
+                conn.execute(
+                    """INSERT OR REPLACE INTO task_weight_overrides
+                       (id, task_id, weight_class, weight_value, set_by, created_at)
+                       VALUES (?, ?, ?, ?, 'user', ?)""",
+                    (override_id, task_id, payload.weight_class, payload.weight_value, now),
+                )
+
+                conn.execute(
+                    """UPDATE task_weight_rules
+                       SET corrections_count = corrections_count + 1,
+                           confidence = MAX(0.0, confidence - 0.15),
+                           updated_at = ?
+                       WHERE id = ?""",
+                    (now, task_id),
+                )
+                conn.commit()
+                return {"success": True, "action": "corrected", "override_id": override_id}
+
+            else:
+                raise HTTPException(
+                    status_code=400,
+                    detail="action must be 'confirm' or 'correct'",
+                )
+        finally:
+            conn.close()
+    except HTTPException:
+        raise
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("command/weight-review/%s error: %s", task_id, e)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
 # ==== SPA Fallback (MUST be last route) ====
 
 

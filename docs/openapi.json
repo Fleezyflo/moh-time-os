@@ -1876,6 +1876,42 @@
         },
         "title": "WatcherSnoozeRequest",
         "type": "object"
+      },
+      "WeightReviewPayload": {
+        "description": "Payload for confirming or correcting a task weight.",
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "weight_class": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight Class"
+          },
+          "weight_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight Value"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "WeightReviewPayload",
+        "type": "object"
       }
     },
     "securitySchemes": {
@@ -3674,6 +3710,174 @@
         "summary": "Command Decisions"
       }
     },
+    "/api/command/findings": {
+      "get": {
+        "description": "Active detection findings grouped by correlation.",
+        "operationId": "command_findings_api_command_findings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Command Findings"
+      }
+    },
+    "/api/command/findings/{finding_id}": {
+      "get": {
+        "description": "Single finding detail with optional micro-sync refresh.",
+        "operationId": "command_finding_detail_api_command_findings__finding_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "finding_id",
+            "required": true,
+            "schema": {
+              "title": "Finding Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "refresh",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Refresh",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Command Finding Detail"
+      }
+    },
+    "/api/command/findings/{finding_id}/acknowledge": {
+      "post": {
+        "description": "Mark a finding as acknowledged ('Got it').",
+        "operationId": "command_finding_acknowledge_api_command_findings__finding_id__acknowledge_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "finding_id",
+            "required": true,
+            "schema": {
+              "title": "Finding Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Command Finding Acknowledge"
+      }
+    },
+    "/api/command/findings/{finding_id}/suppress": {
+      "post": {
+        "description": "Mark a finding as suppressed ('Expected') for 30 days.",
+        "operationId": "command_finding_suppress_api_command_findings__finding_id__suppress_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "finding_id",
+            "required": true,
+            "schema": {
+              "title": "Finding Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Command Finding Suppress"
+      }
+    },
+    "/api/command/staleness": {
+      "get": {
+        "description": "Detection system staleness status.",
+        "operationId": "command_staleness_api_command_staleness_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Command Staleness"
+      }
+    },
     "/api/command/team-load": {
       "get": {
         "description": "Team load overview for agency command center.",
@@ -3731,6 +3935,94 @@
           }
         },
         "summary": "Command Member Detail"
+      }
+    },
+    "/api/command/week-strip": {
+      "get": {
+        "description": "10-day week strip with available minutes, tasks due, and collision status.",
+        "operationId": "command_week_strip_api_command_week_strip_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Command Week Strip"
+      }
+    },
+    "/api/command/weight-review": {
+      "get": {
+        "description": "Pending weight confirmations for the task weight learning loop.",
+        "operationId": "command_weight_review_api_command_weight_review_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Command Weight Review"
+      }
+    },
+    "/api/command/weight-review/{task_id}": {
+      "post": {
+        "description": "Confirm or correct a task's derived weight.",
+        "operationId": "command_weight_review_action_api_command_weight_review__task_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "task_id",
+            "required": true,
+            "schema": {
+              "title": "Task Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WeightReviewPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Command Weight Review Action"
       }
     },
     "/api/commitments": {

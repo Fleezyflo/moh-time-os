@@ -133,9 +133,9 @@ class TestEndpointCount:
         paths = openapi_schema.get("paths", {})
         count = len(paths)
 
-        # Current count is ~172, allow some flexibility
+        # Current count is ~252 after detection endpoints (Phase 15c)
         min_expected = 100
-        max_expected = 250
+        max_expected = 300
 
         assert min_expected <= count <= max_expected, (
             f"Endpoint count {count} outside expected range [{min_expected}, {max_expected}]"

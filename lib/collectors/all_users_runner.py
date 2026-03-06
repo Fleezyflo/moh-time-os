@@ -805,6 +805,94 @@ def collect_docs_for_user(
     return result
 
 
+def micro_sync_calendar(user_email: str, since: str, until: str, db_path: Path) -> dict[str, Any]:
+    """
+    Fetch + transform + store calendar events for one user.
+
+    Uses CalendarCollector.sync() which does the full
+    collect -> transform -> store pipeline, persisting events
+    to the events table. The collector is scoped to the target
+    user by pre-populating the API service.
+
+    Args:
+        user_email: Google Workspace email of the user
+        since: ISO date string (YYYY-MM-DD) for start of range
+        until: ISO date string (YYYY-MM-DD) for end of range
+        db_path: Path to the SQLite database
+
+    Returns:
+        Sync result dict from CalendarCollector.sync()
+    """
+    from datetime import date
+
+    from lib.collectors.calendar import CalendarCollector
+    from lib.state_store import StateStore
+
+    # Compute lookback/lookahead from since/until relative to today
+    today = date.today()
+    since_date = date.fromisoformat(since)
+    until_date = date.fromisoformat(until)
+    lookback_days = max(0, (today - since_date).days)
+    lookahead_days = max(0, (until_date - today).days)
+
+    config = {
+        "lookback_days": lookback_days,
+        "lookahead_days": lookahead_days,
+        "max_results": 100,
+    }
+
+    store = StateStore(str(db_path))
+    collector = CalendarCollector(config, store=store)
+
+    # Scope the API service to the target user
+    collector._service = get_calendar_service(user_email)
+
+    try:
+        return collector.sync()
+    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+        logger.error("micro_sync_calendar failed for %s: %s", user_email, e)
+        return {"source": "calendar", "success": False, "error": str(e)}
+
+
+def micro_sync_gmail(user_email: str, since: str, until: str, db_path: Path) -> dict[str, Any]:
+    """
+    Fetch + transform + store gmail messages for one user.
+
+    Uses GmailCollector.sync() which does the full
+    collect -> transform -> store pipeline, persisting messages
+    to the communications table. The collector is scoped to the
+    target user by pre-populating the API service.
+
+    Args:
+        user_email: Google Workspace email of the user
+        since: ISO date string (YYYY-MM-DD) for start of range
+        until: ISO date string (YYYY-MM-DD) for end of range
+        db_path: Path to the SQLite database
+
+    Returns:
+        Sync result dict from GmailCollector.sync()
+    """
+    from lib.collectors.gmail import GmailCollector
+    from lib.state_store import StateStore
+
+    config = {
+        "since": since,
+        "max_results": 100,
+    }
+
+    store = StateStore(str(db_path))
+    collector = GmailCollector(config, store=store)
+
+    # Scope the API service to the target user
+    collector._service = get_gmail_service(user_email)
+
+    try:
+        return collector.sync()
+    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+        logger.error("micro_sync_gmail failed for %s: %s", user_email, e)
+        return {"source": "gmail", "success": False, "error": str(e)}
+
+
 def run_all_users(
     since: str,
     until: str,
