@@ -11142,6 +11142,33 @@
         ]
       }
     },
+    "/api/v2/intelligence/data-quality": {
+      "get": {
+        "description": "Return data freshness, completeness, and quality confidence summary.\n\nAggregates output from DataFreshnessTracker, CompletenessScorer,\nand QualityConfidenceAdjuster for a portfolio-wide data quality view.",
+        "operationId": "data_quality_overview_api_v2_intelligence_data_quality_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Data Quality Overview",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
     "/api/v2/intelligence/entity/client/{client_id}": {
       "get": {
         "description": "Get complete intelligence for a client.\n\nReturns everything the system knows:\n- Scorecard\n- Active signals\n- Signal history\n- Trajectory\n- Related proposals",
@@ -11260,6 +11287,67 @@
           }
         ],
         "summary": "Portfolio Intelligence",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/entity/{entity_type}/{entity_id}/profile": {
+      "get": {
+        "description": "Build and return a full intelligence profile for an entity.\n\nAggregates scores, signals, patterns, cost profile, and trajectory\ninto a single EntityIntelligenceProfile via build_entity_profile().",
+        "operationId": "entity_profile_api_v2_intelligence_entity__entity_type___entity_id__profile_get",
+        "parameters": [
+          {
+            "description": "Entity type (client, project, person)",
+            "in": "path",
+            "name": "entity_type",
+            "required": true,
+            "schema": {
+              "description": "Entity type (client, project, person)",
+              "title": "Entity Type",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Entity identifier",
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "description": "Entity identifier",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Entity Profile",
         "tags": [
           "Intelligence"
         ]

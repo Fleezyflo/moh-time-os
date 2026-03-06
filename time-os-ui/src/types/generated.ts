@@ -4082,6 +4082,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/intelligence/data-quality": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Data Quality Overview
+         * @description Return data freshness, completeness, and quality confidence summary.
+         *
+         *     Aggregates output from DataFreshnessTracker, CompletenessScorer,
+         *     and QualityConfidenceAdjuster for a portfolio-wide data quality view.
+         */
+        get: operations["data_quality_overview_api_v2_intelligence_data_quality_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/intelligence/entity/client/{client_id}": {
         parameters: {
             query?: never;
@@ -4153,6 +4176,29 @@ export interface paths {
          *     - Top proposals
          */
         get: operations["portfolio_intelligence_api_v2_intelligence_entity_portfolio_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/entity/{entity_type}/{entity_id}/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Entity Profile
+         * @description Build and return a full intelligence profile for an entity.
+         *
+         *     Aggregates scores, signals, patterns, cost profile, and trajectory
+         *     into a single EntityIntelligenceProfile via build_entity_profile().
+         */
+        get: operations["entity_profile_api_v2_intelligence_entity__entity_type___entity_id__profile_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -12320,6 +12366,26 @@ export interface operations {
             };
         };
     };
+    data_quality_overview_api_v2_intelligence_data_quality_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntelligenceResponse"];
+                };
+            };
+        };
+    };
     client_intelligence_api_v2_intelligence_entity_client__client_id__get: {
         parameters: {
             query?: never;
@@ -12398,6 +12464,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["IntelligenceResponse"];
+                };
+            };
+        };
+    };
+    entity_profile_api_v2_intelligence_entity__entity_type___entity_id__profile_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Entity type (client, project, person) */
+                entity_type: string;
+                /** @description Entity identifier */
+                entity_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntelligenceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };
