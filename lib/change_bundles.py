@@ -14,11 +14,11 @@ import json
 import logging
 import sqlite3
 import uuid
-from datetime import UTC, datetime
-from enum import StrEnum
+from datetime import datetime
 from typing import Any
 
 from lib import paths
+from lib.compat import UTC, StrEnum
 
 logger = logging.getLogger(__name__)
 

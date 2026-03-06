@@ -24,9 +24,9 @@ Code rules enforced:
 import logging
 import sqlite3
 from dataclasses import dataclass, field
-from enum import StrEnum
 from pathlib import Path
 
+from lib.compat import StrEnum
 from lib.intelligence.cost_to_serve import CostToServeEngine
 from lib.query_engine import get_engine
 

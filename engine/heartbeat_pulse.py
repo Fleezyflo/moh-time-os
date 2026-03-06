@@ -7,7 +7,9 @@ to produce a prioritized list of items that need attention.
 
 import logging
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
+
+from lib.compat import UTC
 
 from .gogcli import run_gog
 

@@ -1,0 +1,139 @@
+{
+  "$schema": "../session-system-v2/core/state.schema.json",
+  "project": "MOH Time OS — Audit Remediation",
+  "owner": "Fleezyflo",
+  "current_phase": "phase-01",
+  "current_session": 1,
+  "phases": {
+    "phase-01": {
+      "status": "complete",
+      "started_session": 1,
+      "completed_session": 1,
+      "blocked_by": [],
+      "prs": [],
+      "tasks_total": 4,
+      "tasks_complete": 4
+    },
+    "phase-02": {
+      "status": "blocked",
+      "started_session": null,
+      "completed_session": null,
+      "blocked_by": ["phase-01"],
+      "prs": [],
+      "tasks_total": 2,
+      "tasks_complete": 0
+    },
+    "phase-03": {
+      "status": "blocked",
+      "started_session": null,
+      "completed_session": null,
+      "blocked_by": ["phase-01"],
+      "prs": [],
+      "tasks_total": 2,
+      "tasks_complete": 0
+    },
+    "phase-04": {
+      "status": "blocked",
+      "started_session": null,
+      "completed_session": null,
+      "blocked_by": ["phase-01"],
+      "prs": [],
+      "tasks_total": 2,
+      "tasks_complete": 0
+    },
+    "phase-05": {
+      "status": "blocked",
+      "started_session": null,
+      "completed_session": null,
+      "blocked_by": ["phase-01"],
+      "prs": [],
+      "tasks_total": 3,
+      "tasks_complete": 0
+    },
+    "phase-06": {
+      "status": "blocked",
+      "started_session": null,
+      "completed_session": null,
+      "blocked_by": ["phase-02", "phase-03", "phase-04", "phase-05"],
+      "prs": [],
+      "tasks_total": 1,
+      "tasks_complete": 0
+    },
+    "phase-07": {
+      "status": "pending",
+      "started_session": null,
+      "completed_session": null,
+      "blocked_by": [],
+      "prs": [],
+      "tasks_total": 6,
+      "tasks_complete": 0
+    },
+    "phase-08": {
+      "status": "pending",
+      "started_session": null,
+      "completed_session": null,
+      "blocked_by": [],
+      "prs": [],
+      "tasks_total": 4,
+      "tasks_complete": 0
+    },
+    "phase-09": {
+      "status": "pending",
+      "started_session": null,
+      "completed_session": null,
+      "blocked_by": [],
+      "prs": [],
+      "tasks_total": 3,
+      "tasks_complete": 0
+    },
+    "phase-10": {
+      "status": "blocked",
+      "started_session": null,
+      "completed_session": null,
+      "blocked_by": ["phase-05"],
+      "prs": [],
+      "tasks_total": 6,
+      "tasks_complete": 0
+    },
+    "phase-11": {
+      "status": "pending",
+      "started_session": null,
+      "completed_session": null,
+      "blocked_by": [],
+      "prs": [],
+      "tasks_total": 3,
+      "tasks_complete": 0
+    },
+    "phase-12": {
+      "status": "blocked",
+      "started_session": null,
+      "completed_session": null,
+      "blocked_by": ["phase-02"],
+      "prs": [],
+      "tasks_total": 5,
+      "tasks_complete": 0
+    },
+    "phase-13": {
+      "status": "pending",
+      "started_session": null,
+      "completed_session": null,
+      "blocked_by": [],
+      "prs": [],
+      "tasks_total": 2,
+      "tasks_complete": 0
+    }
+  },
+  "last_pr": 60,
+  "last_verified": null,
+  "enforcement": {
+    "repo": "Fleezyflo/enforcement",
+    "read_token_secret": "ENFORCEMENT_READ_TOKEN",
+    "dispatch_token_secret": "ENFORCEMENT_DISPATCH_TOKEN",
+    "protected_files": [
+      "pyproject.toml",
+      ".pre-commit-config.yaml",
+      ".github/workflows/ci.yml",
+      "scripts/check_mypy_baseline.py"
+    ]
+  }
+}

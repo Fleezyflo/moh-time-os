@@ -12,12 +12,7 @@ Covers:
 """
 
 import json
-from datetime import datetime, timedelta, timezone
-
-try:
-    from datetime import UTC
-except ImportError:
-    UTC = timezone.utc
+from datetime import datetime, timedelta
 
 import pytest
 
@@ -39,6 +34,7 @@ from lib.change_bundles import (
     mark_failed,
     rollback_bundle,
 )
+from lib.compat import UTC
 
 
 @pytest.fixture

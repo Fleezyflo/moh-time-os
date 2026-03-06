@@ -17,8 +17,9 @@ from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from enum import StrEnum
 from typing import Any
+
+from lib.compat import StrEnum
 
 logger = logging.getLogger(__name__)
 

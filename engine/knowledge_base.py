@@ -4,11 +4,12 @@ import json
 import os
 import re
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime
+from datetime import datetime
 
 from engine.asana_client import list_projects, list_workspaces
 from engine.gogcli import run_gog
 from lib import paths
+from lib.compat import UTC
 
 KB_PATH = str(paths.config_dir() / "knowledge_base.json")
 FORECAST_SHEET_ID = "1iTWOo77r1l-65AwDh2KAnhKg1ch7X1XLqxtWQQgorVI"

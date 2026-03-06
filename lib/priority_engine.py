@@ -11,7 +11,9 @@ Per MOH_TIME_OS_PRIORITY.md spec:
 
 import json
 import logging
-from datetime import UTC, date, datetime, timedelta
+from datetime import date, datetime, timedelta
+
+from lib.compat import UTC
 
 from .config_store import get
 

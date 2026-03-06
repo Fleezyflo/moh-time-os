@@ -15,9 +15,10 @@ import logging
 import sqlite3
 import traceback
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime
+from datetime import date, datetime
 
 from lib import paths
+from lib.compat import UTC
 
 logger = logging.getLogger(__name__)
 
