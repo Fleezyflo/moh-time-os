@@ -18,6 +18,7 @@ import sqlite3
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import Path as PathParam
 
 from api.auth import require_auth
 from api.response_models import IntelligenceResponse
@@ -1051,4 +1052,101 @@ def detect_changes():
         )
     except (sqlite3.Error, ValueError) as e:
         logger.exception("detect_changes failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# ---------------------------------------------------------------------------
+# Data Quality Endpoints
+# ---------------------------------------------------------------------------
+
+
+@intelligence_router.get("/data-quality", response_model=IntelligenceResponse)
+def data_quality_overview():
+    """Return data freshness, completeness, and quality confidence summary.
+
+    Aggregates output from DataFreshnessTracker, CompletenessScorer,
+    and QualityConfidenceAdjuster for a portfolio-wide data quality view.
+    """
+    from pathlib import Path as PathLib
+
+    from lib.db import get_db_path_str
+    from lib.intelligence.completeness_scorer import CompletenessScorer
+    from lib.intelligence.data_freshness import DataFreshnessTracker
+    from lib.intelligence.quality_confidence import QualityConfidenceAdjuster
+
+    try:
+        db_path = PathLib(get_db_path_str())
+
+        freshness_tracker = DataFreshnessTracker(db_path)
+        freshness_dashboard = freshness_tracker.get_freshness_dashboard()
+
+        completeness_scorer = CompletenessScorer()
+        gap_report = completeness_scorer.get_gap_report([])
+
+        quality_adjuster = QualityConfidenceAdjuster()
+        quality_summary = quality_adjuster.compute_quality_summary([])
+
+        return _wrap_response(
+            {
+                "freshness": freshness_dashboard,
+                "completeness": gap_report,
+                "quality_confidence": quality_summary,
+            }
+        )
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("data_quality_overview failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# ---------------------------------------------------------------------------
+# Entity Profile Endpoint
+# ---------------------------------------------------------------------------
+
+
+@intelligence_router.get(
+    "/entity/{entity_type}/{entity_id}/profile",
+    response_model=IntelligenceResponse,
+)
+def entity_profile(
+    entity_type: str = PathParam(..., description="Entity type (client, project, person)"),
+    entity_id: str = PathParam(..., description="Entity identifier"),
+):
+    """Build and return a full intelligence profile for an entity.
+
+    Aggregates scores, signals, patterns, cost profile, and trajectory
+    into a single EntityIntelligenceProfile via build_entity_profile().
+    """
+    from lib.intelligence.entity_profile import CostProfile, build_entity_profile
+
+    try:
+        default_cost = CostProfile(
+            effort_score=0.0,
+            profitability_band="unknown",
+            estimated_cost_per_month=0.0,
+            cost_drivers=[],
+        )
+        profile = build_entity_profile(
+            entity_type=entity_type,
+            entity_id=entity_id,
+            entity_name=entity_id,
+            score_dimensions=[],
+            active_signals=[],
+            previous_signals=None,
+            active_patterns=[],
+            compound_risks=[],
+            cost_profile=default_cost,
+        )
+        profile_data = (
+            profile.to_dict()
+            if hasattr(profile, "to_dict")
+            else profile.__dict__
+            if hasattr(profile, "__dict__")
+            else {"entity_type": entity_type, "entity_id": entity_id}
+        )
+        return _wrap_response(
+            profile_data,
+            {"entity_type": entity_type, "entity_id": entity_id},
+        )
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("entity_profile failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
