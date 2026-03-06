@@ -13,11 +13,12 @@ Usage:
 
 import logging
 import sqlite3
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import yaml
 
+from lib.compat import UTC
 from lib.paths import db_path as canonical_db_path
 from lib.paths import project_root
 

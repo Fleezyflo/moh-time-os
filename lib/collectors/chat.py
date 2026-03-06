@@ -11,6 +11,7 @@ Expanded API coverage (~85%):
 
 import json
 import logging
+import os
 import socket
 import sqlite3
 from datetime import datetime
@@ -28,7 +29,7 @@ SCOPES = [
     "https://www.googleapis.com/auth/chat.messages.readonly",
     "https://www.googleapis.com/auth/chat.memberships.readonly",
 ]
-DEFAULT_USER = "molham@hrmny.co"
+DEFAULT_USER = os.environ.get("DEFAULT_USER_EMAIL", "molham@hrmny.co")
 
 
 class ChatCollector(BaseCollector):

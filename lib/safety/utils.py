@@ -6,7 +6,9 @@ import os
 import shutil
 import subprocess
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
+
+from lib.compat import UTC
 
 
 def get_git_sha() -> str:

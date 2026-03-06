@@ -11,8 +11,9 @@ Usage:
 
 import logging
 import sqlite3
-from datetime import UTC, datetime
+from datetime import datetime
 
+from lib.compat import UTC
 from lib.paths import db_path as canonical_db_path
 
 logger = logging.getLogger(__name__)

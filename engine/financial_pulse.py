@@ -9,10 +9,11 @@ Just: call Xero, group by client, sort by age, flag problems.
 
 import json
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
 from engine.xero_client import list_invoices
+from lib.compat import UTC
 
 
 @dataclass

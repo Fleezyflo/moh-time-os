@@ -5,10 +5,11 @@ import re
 import uuid
 from collections import Counter
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 from lib import paths
+from lib.compat import UTC
 
 from .chat_discovery import run_chat_discovery
 from .gogcli import run_gog

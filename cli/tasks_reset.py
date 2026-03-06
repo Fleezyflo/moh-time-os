@@ -15,7 +15,9 @@ import json
 import os
 import subprocess
 import time
-from datetime import UTC, datetime
+from datetime import datetime
+
+from lib.compat import UTC
 
 
 def run(cmd: list[str], timeout: int = 180) -> dict:

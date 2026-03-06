@@ -29,10 +29,10 @@ import threading
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from enum import StrEnum
 
 from lib import paths
 from lib.collectors.resilience import CircuitBreaker
+from lib.compat import StrEnum
 from lib.observability.metrics import REGISTRY
 
 collect_all = None  # Lazy-loaded on first use

@@ -9,9 +9,11 @@ import json
 import logging
 import os
 import sqlite3
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
+
+from lib.compat import UTC
 
 from .base import BaseCollector
 

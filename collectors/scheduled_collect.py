@@ -8,10 +8,11 @@ It collects data from all sources and caches it for heartbeat use.
 
 import json
 import subprocess
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 
 from lib import paths
+from lib.compat import UTC
 from lib.state_tracker import mark_collected
 
 OUT_DIR = paths.out_dir()
