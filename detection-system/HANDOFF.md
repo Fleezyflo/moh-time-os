@@ -1,8 +1,8 @@
 # HANDOFF -- MOH Time OS Detection System
 
-**Generated:** 2026-03-03 19:16 UTC
-**Session:** 0
-**Current Phase:** phase-15a (pending)
+**Generated:** 2026-03-06 13:14 UTC
+**Session:** 3
+**Current Phase:** phase-15d (pending)
 
 ---
 
@@ -14,71 +14,85 @@ No previous session recorded. This is the first session.
 
 | Phase | Status | Tasks | PRs |
 |-------|--------|-------|-----|
-| phase-15a | READY | 0/3 |  |
-| phase-15b | BLOCKED | 0/7 |  |
-| phase-15c | BLOCKED | 0/4 |  |
-| phase-15d | BLOCKED | 0/3 |  |
-| phase-15e | BLOCKED | 0/3 |  |
+| phase-15a | DONE | 3/3 | #57 |
+| phase-15b | DONE | 7/7 | #58 |
+| phase-15c | DONE | 4/4 | #59 |
+| phase-15d | READY | 0/3 |  |
+| phase-15e | READY | 0/3 |  |
 | phase-15f | BLOCKED | 0/2 |  |
 
 ## What's Next
 
-**Phase:** phase-15a -- CalendarSync Horizon + Schema Formalization
+**Phase:** phase-15d -- Command Center UI Redesign
 
 **Progress:** 0/3 tasks complete
 
 **Next tasks:**
 
-### task-01: Extend block generation to 10 business days
+### task-01: Add fetch functions and hooks for detection endpoints
 
-In lib/time_truth/calendar_sync.py at line 235, change
-ensure_blocks_for_week() from timedelta(days=6) to timedelta(days=13)
-to cover 10 business days across 2 calendar weeks. Add weekend-skip
-logic in sync_events() to skip Saturday/Sunday dates.
-
-**Files:**
-- MODIFY `lib/time_truth/calendar_sync.py`
-
-**Verification:**
-- After truth cycle run, time_blocks has rows for the next 10 business days
-- Weekends are skipped — no rows for Saturday or Sunday dates
-- Idempotent: running twice doesn't create duplicate blocks (existing check at line 127-130)
-- ruff check lib/time_truth/calendar_sync.py — zero errors
-
-### task-02: Formalize time_blocks in schema.py
-
-Add TABLES["time_blocks"] to lib/schema.py with columns from
-SCHEMA_ATLAS: id, date, start_time, end_time, lane, task_id,
-is_protected, is_buffer, created_at, updated_at. This formalizes
-a table that already exists at runtime (created by BlockManager).
-Migration is safe because CREATE TABLE IF NOT EXISTS is idempotent.
+Add fetch functions to time-os-ui/src/lib/api.ts for all new endpoints:
+fetchWeekStrip, fetchFindings, fetchFinding, acknowledgeFinding,
+suppressFinding, fetchStaleness, fetchWeightReview, submitWeightReview.
+Add corresponding hooks to time-os-ui/src/lib/hooks.ts:
+useWeekStrip, useFindings, useFinding, useStaleness, useWeightReview.
+Replace the inline useFetchCommand() hook (lines 17-30 of current
+CommandCenter.tsx) with the shared hooks.
 
 **Files:**
-- MODIFY `lib/schema.py`
+- MODIFY `time-os-ui/src/lib/api.ts`
+- MODIFY `time-os-ui/src/lib/hooks.ts`
 
 **Verification:**
-- time_blocks appears in TABLES dict in schema.py
-- Columns match SCHEMA_ATLAS exactly
-- CREATE TABLE IF NOT EXISTS — safe for existing DBs
-- ruff check lib/schema.py — zero errors
+- All fetch functions typed with correct request/response shapes
+- All hooks use correct endpoints
+- No inline hooks remain in CommandCenter.tsx
+- npx tsc --noEmit -- zero type errors (run on Mac)
 
-### task-03: Revenue column verification at startup
+### task-02: Rewrite CommandCenter.tsx with new layout
 
-Add startup verification for revenue columns (prior_year_revenue,
-ytd_revenue, lifetime_revenue) on the clients table. Use ALTER TABLE
-ADD COLUMN IF NOT EXISTS pattern. The drift detector queries these
-columns with COALESCE fallback, but they must exist in the table for
-the query to parse at all.
+Full rewrite of time-os-ui/src/pages/CommandCenter.tsx to single-view
+layout. New components (all in CommandCenter.tsx):
+- StalenessBar: yellow warning when detection is stale
+- WeekStrip: 10-day horizontal cards with ratio coloring, clickable days
+- FindingCard: single finding with expandable adjacent data, "Got it"
+  and "Expected" buttons. On expand, calls ?refresh=true and shows
+  "Refreshing calendar & email..." state before rendering.
+- CorrelatedGroup: groups related findings, primary + subordinates
+- TeamCollisions: collapsible section for team member collisions
+
+Empty state: "Nothing requires attention" (only when not stale).
+Stale state: yellow warning, no "nothing requires attention".
+No scored lists or color-coded labels anywhere.
 
 **Files:**
-- MODIFY `lib/schema.py`
+- MODIFY `time-os-ui/src/pages/CommandCenter.tsx`
 
 **Verification:**
-- Revenue columns either exist or are added at startup
-- If columns already exist, no error (idempotent)
-- Drift detector can query COALESCE(clients.ytd_revenue, 0) without error
-- ruff check lib/schema.py — zero errors
-- bandit -r lib/schema.py — zero findings
+- Renders with staleness bar, week strip, findings, decision queue
+- Empty state shows 'Nothing requires attention' only when not stale
+- Stale state shows yellow warning
+- Finding cards expand on click with adjacent data
+- 'Got it' / 'Expected' buttons call correct API endpoints
+- Correlated findings render as grouped cards
+- Team collisions in collapsible section
+- Week strip days are clickable
+- No scored lists or color-coded labels anywhere
+- npx tsc --noEmit -- zero type errors (run on Mac)
+- prettier --check passes (run on Mac)
+
+### task-03: Update system map for UI route changes
+
+If CommandCenter.tsx adds new fetch() calls with literal /api/ URLs,
+regenerate docs/system-map.json. If only using fetchJson wrapper or
+hooks, system map may not need updating -- verify first.
+
+**Files:**
+- MODIFY `docs/system-map.json`
+
+**Verification:**
+- system-map.json reflects any new fetch('/api/...') calls
+- Drift Detection CI passes
 
 ## Key Rules
 
@@ -93,7 +107,7 @@ the query to parse at all.
 
 ## Documents to Read
 
-1. `detection-system/plan/phase-15a.yaml` -- Current phase spec
+1. `detection-system/plan/phase-15d.yaml` -- Current phase spec
 2. `detection-system/AGENT.md` -- Engineering rules and verification gates
 3. `detection-system/commit-workflow.md` -- Error recovery protocol
 4. `docs/design/DETECTION_SYSTEM_DESIGN.md` -- Full design document

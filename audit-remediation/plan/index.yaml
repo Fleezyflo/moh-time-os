@@ -1,0 +1,201 @@
+# Audit Remediation Phase Index
+# Master index of all phases for the workstream audit remediation build.
+# Must stay in sync with state.json.
+
+project: "MOH Time OS — Audit Remediation"
+
+phases:
+  - id: phase-01
+    name: "Python Compatibility + Bug Fixes"
+    status: pending
+    file: phase-01.yaml
+    description: |
+      Fix datetime.UTC imports (29 files) and StrEnum imports (15 files)
+      for Python 3.10 compatibility. Fix lane column reference bug and
+      hardcoded email in chat.py.
+    dependencies: []
+    estimated_sessions: 1
+    track: "T1"
+    tasks_total: 4
+    tasks_complete: 0
+
+  - id: phase-02
+    name: "Wire Data Quality + Intelligence Deepening"
+    status: blocked
+    file: phase-02.yaml
+    description: |
+      Wire 7 unwired modules into _intelligence_phase():
+      data_freshness, completeness_scorer, quality_confidence,
+      cost_proxies, entity_profile, outcome_tracker, pattern_trending.
+      Add API endpoints for data quality and entity profiles.
+    dependencies:
+      - phase-01
+    estimated_sessions: 2
+    track: "T1"
+    tasks_total: 2
+    tasks_complete: 0
+
+  - id: phase-03
+    name: "Wire System Memory + Observability"
+    status: blocked
+    file: phase-03.yaml
+    description: |
+      Wire 7 unwired modules into _intelligence_phase():
+      decision_journal, entity_memory, signal_lifecycle, behavioral_patterns,
+      audit_trail, explainability, drift_detection.
+      Add API endpoints for audit trail and explainability.
+    dependencies:
+      - phase-01
+    estimated_sessions: 2
+    track: "T1"
+    tasks_total: 2
+    tasks_complete: 0
+
+  - id: phase-04
+    name: "Wire Notifications + Governance"
+    status: blocked
+    file: phase-04.yaml
+    description: |
+      Wire 6 unwired modules:
+      digest, notification_intelligence, attention_tracking, signal_suppression
+      into notifier and intelligence phase.
+      Wire predictive_intelligence and data_governance ComplianceReporter.
+      Add API endpoints for attention debt, predictions, compliance.
+    dependencies:
+      - phase-01
+    estimated_sessions: 2
+    track: "T1"
+    tasks_total: 2
+    tasks_complete: 0
+
+  - id: phase-05
+    name: "Wire Scenario + Temporal + Routing"
+    status: blocked
+    file: phase-05.yaml
+    description: |
+      Wire remaining 5 intelligence modules:
+      scenario_engine (API only), trajectory (loop + API),
+      temporal (normalizer + recency weighter before scoring),
+      correlation_confidence (after pattern detection),
+      routing_engine (into action framework).
+    dependencies:
+      - phase-01
+    estimated_sessions: 2
+    track: "T1"
+    tasks_total: 3
+    tasks_complete: 0
+
+  - id: phase-06
+    name: "Error Masking Audit"
+    status: blocked
+    file: phase-06.yaml
+    description: |
+      Audit all 102 instances of return {}/return [] across the codebase.
+      Fix error-masking patterns in except blocks. Add logging where
+      errors are silently swallowed. Leave legitimate empty returns alone.
+    dependencies:
+      - phase-02
+      - phase-03
+      - phase-04
+      - phase-05
+    estimated_sessions: 1
+    track: "T1"
+    tasks_total: 1
+    tasks_complete: 0
+
+  - id: phase-07
+    name: "Verify Data Foundation"
+    status: pending
+    file: phase-07.yaml
+    description: |
+      Verification-only phase. Validate: brand_id population,
+      from_domain derivation, end-to-end pipeline, test suite pass rate,
+      engagements table, data foundation completeness.
+    dependencies: []
+    estimated_sessions: 2
+    track: "T2"
+    tasks_total: 6
+    tasks_complete: 0
+
+  - id: phase-08
+    name: "Verify Cleanup + API + Production"
+    status: pending
+    file: phase-08.yaml
+    description: |
+      Verification-only phase. Validate: old tier labels removed,
+      old morning brief removed, API route completeness,
+      production readiness checklist.
+    dependencies: []
+    estimated_sessions: 1
+    track: "T2"
+    tasks_total: 4
+    tasks_complete: 0
+
+  - id: phase-09
+    name: "Verify Operations"
+    status: pending
+    file: phase-09.yaml
+    description: |
+      Verification-only phase. Validate: collector coverage,
+      test coverage counts, 24h unattended operation.
+    dependencies: []
+    estimated_sessions: 1
+    track: "T2"
+    tasks_total: 3
+    tasks_complete: 0
+
+  - id: phase-10
+    name: "Verify Intelligence Systems"
+    status: blocked
+    file: phase-10.yaml
+    description: |
+      Verification-only phase (partially blocked on wiring phases).
+      Validate: adaptive thresholds, temporal validation,
+      notifications, bidirectional, conversational, proactive.
+    dependencies:
+      - phase-05
+    estimated_sessions: 2
+    track: "T2"
+    tasks_total: 6
+    tasks_complete: 0
+
+  - id: phase-11
+    name: "Verify Infrastructure"
+    status: pending
+    file: phase-11.yaml
+    description: |
+      Verification-only phase. Validate: performance (N+1 fix),
+      security (credential audit), compliance reporting.
+    dependencies: []
+    estimated_sessions: 1
+    track: "T2"
+    tasks_total: 3
+    tasks_complete: 0
+
+  - id: phase-12
+    name: "Verify UI + Architecture"
+    status: blocked
+    file: phase-12.yaml
+    description: |
+      Verification-only phase (partially blocked on wiring).
+      Validate: UI completeness, view reconciliation,
+      V4/V5 consolidation, synthesis validation, debug/observability.
+    dependencies:
+      - phase-02
+    estimated_sessions: 2
+    track: "T2"
+    tasks_total: 5
+    tasks_complete: 0
+
+  - id: phase-13
+    name: "Verify Integration"
+    status: pending
+    file: phase-13.yaml
+    description: |
+      Verification-only phase. Validate: intelligence event hooks,
+      API endpoint contracts and contract tests.
+    dependencies: []
+    estimated_sessions: 1
+    track: "T2"
+    tasks_total: 2
+    tasks_complete: 0

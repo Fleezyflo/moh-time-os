@@ -1,0 +1,32 @@
+# Plan Index
+# This file is the master registry of all phases.
+# It must stay in sync with state.json (enforced by check_state.py).
+#
+# To add a new phase:
+# 1. Add entry here with status: pending
+# 2. Create plan/phase-NN.yaml with detailed spec
+# 3. Add to state.json phases map
+# 4. Run check_state.py to verify consistency
+
+project: "{{PROJECT_NAME}}"
+
+# Phase registry
+# Each phase has: id, name, status, dependencies, estimated_sessions, track
+phases:
+  # - id: "phase-00"
+  #   name: "Foundation"
+  #   status: pending        # pending | blocked | in_progress | complete
+  #   dependencies: []       # list of phase IDs that must complete first
+  #   estimated_sessions: 2
+  #   track: "T1"           # logical grouping
+  #   tasks_total: 5
+  #   tasks_complete: 0
+
+  # - id: "phase-01"
+  #   name: "Core Feature"
+  #   status: blocked
+  #   dependencies: ["phase-00"]
+  #   estimated_sessions: 3
+  #   track: "T2"
+  #   tasks_total: 8
+  #   tasks_complete: 0

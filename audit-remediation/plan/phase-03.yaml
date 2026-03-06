@@ -1,0 +1,99 @@
+id: "phase-03"
+name: "Wire System Memory + Observability"
+description: |
+  Wire 7 unwired modules into _intelligence_phase() and API.
+  Task 1: decision_journal, entity_memory, signal_lifecycle, behavioral_patterns
+  (memory modules -- run at END of intelligence phase).
+  Task 2: audit_trail, explainability, drift_detection
+  (observability modules -- audit_trail wraps phase, others run at end).
+
+dependencies:
+  - "phase-01"
+
+track: "T1"
+
+estimated_sessions: 2
+
+tasks:
+  - id: "task-01"
+    name: "Wire system memory modules"
+    description: |
+      Wire four system memory modules into _intelligence_phase() at the END,
+      after all scoring, signals, patterns, and cost steps:
+
+      1. lib/intelligence/decision_journal.py (294 lines) -- DecisionJournal
+         Records what the reasoner decided this cycle and why.
+      2. lib/intelligence/entity_memory.py (397 lines) -- EntityMemory
+         Tracks interaction history and attention debt per entity.
+      3. lib/intelligence/signal_lifecycle.py (524 lines) -- SignalLifecycleTracker
+         Manages signal state transitions (new -> active -> resolved -> expired).
+         IMPORTANT: may conflict with existing update_signal_state() in step 2.
+         Read both carefully. If SignalLifecycleTracker is a superset, replace
+         the inline signal state logic. If complementary, run after.
+      4. lib/intelligence/behavioral_patterns.py (522 lines) -- BehavioralPatternAnalyzer
+         Detects user behavior patterns from accumulated data.
+
+      Read each module's actual constructor args and method signatures.
+    files:
+      create: []
+      modify:
+        - "lib/autonomous_loop.py"
+      delete: []
+    verification:
+      - "All four modules imported and called in _intelligence_phase()"
+      - "Decision journal table populated after loop cycle"
+      - "Entity memory updates reflected in DB"
+      - "No conflicts with existing signal state logic verified"
+      - "ruff check lib/autonomous_loop.py -- zero errors"
+      - "bandit -r lib/autonomous_loop.py -- zero findings"
+      - "python -m pytest tests/ -x -- passes"
+    estimated_lines: 40
+    depends_on: []
+
+  - id: "task-02"
+    name: "Wire intelligence observability modules"
+    description: |
+      Wire three intelligence observability modules:
+
+      1. lib/intelligence/audit_trail.py -- AuditTrail, AuditEntry
+         Wraps the ENTIRE intelligence phase. Create instance at START,
+         record inputs (entities, data freshness). At END, record outputs
+         (scores, signals, patterns detected).
+      2. lib/intelligence/explainability.py -- IntelligenceExplainer, Explanation
+         After signals and patterns, generate human-readable explanations
+         for the top N most significant findings.
+      3. lib/intelligence/drift_detection.py -- DriftDetector, DriftAlert
+         Runs at VERY END. Compares current score distributions against
+         historical baselines. Logs DriftAlert if significant shifts.
+
+      NOTE: lib/observability/ (general) IS wired. These are intelligence-
+      SPECIFIC observability modules in lib/intelligence/.
+
+      Add API endpoints in api/intelligence_router.py:
+      - /api/v2/intelligence/audit-trail -- returns recent audit entries
+      - /api/v2/intelligence/explain/{entity_type}/{entity_id} -- returns explanations
+    files:
+      create: []
+      modify:
+        - "lib/autonomous_loop.py"
+        - "api/intelligence_router.py"
+      delete: []
+    verification:
+      - "Audit trail table populated after loop cycle"
+      - "/api/v2/intelligence/explain/{type}/{id} returns explanations"
+      - "/api/v2/intelligence/audit-trail returns entries"
+      - "Drift alerts logged when thresholds shift"
+      - "ruff check lib/autonomous_loop.py api/intelligence_router.py -- zero errors"
+      - "bandit -r lib/autonomous_loop.py api/intelligence_router.py -- zero findings"
+      - "python -m pytest tests/ -x -- passes"
+    estimated_lines: 50
+    depends_on: ["task-01"]
+
+completion_criteria:
+  - "All 7 modules imported and called in _intelligence_phase()"
+  - "Memory modules accumulate data across cycles"
+  - "Audit trail records per-cycle inputs/outputs"
+  - "Explainability produces readable text"
+  - "Drift detection fires alerts on distribution shifts"
+  - "API endpoints return valid JSON"
+  - "PR merged to main, CI green"

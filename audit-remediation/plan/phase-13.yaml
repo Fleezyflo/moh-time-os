@@ -1,0 +1,56 @@
+id: "phase-13"
+name: "Verify Integration"
+description: |
+  Verification-only phase. Validates: intelligence event hooks,
+  API endpoint contracts and contract tests.
+
+dependencies: []
+
+track: "T2"
+
+estimated_sessions: 1
+
+tasks:
+  - id: "task-01"
+    name: "Verify intelligence event hooks"
+    description: |
+      Original spec: IW-4.1, IW-5.1 (tasks/TASK_P3_28_VERIFY_EVENT_HOOKS.md)
+      Check: intelligence events fire on significant findings,
+      event hooks registered and functional, event-driven actions
+      trigger correctly.
+    files:
+      create: []
+      modify: []
+      delete: []
+    verification:
+      - "Event hooks registered in the intelligence pipeline"
+      - "Events fire on significant findings"
+      - "Event-driven actions execute correctly"
+      - "Event log captures all firings"
+    estimated_lines: 0
+    depends_on: []
+
+  - id: "task-02"
+    name: "Verify API contracts"
+    description: |
+      Original spec: IA-4.1 to IA-6.1 (tasks/TASK_P3_29_VERIFY_API_CONTRACTS.md)
+      Check: all API endpoints have consistent response shapes,
+      error responses follow a standard format,
+      contract tests exist for critical endpoints.
+      Generate OpenAPI spec if not exists. Validate response shapes.
+    files:
+      create: []
+      modify: []
+      delete: []
+    verification:
+      - "All endpoints return consistent response shapes"
+      - "Error responses follow standard format"
+      - "Contract tests cover critical endpoints"
+      - "OpenAPI spec matches implementation"
+    estimated_lines: 0
+    depends_on: []
+
+completion_criteria:
+  - "Both verification tasks produce DONE or GAP report"
+  - "Gaps filed as new tasks"
+  - "Results documented in session record"

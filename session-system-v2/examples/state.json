@@ -1,0 +1,59 @@
+{
+  "project": "TaskFlow",
+  "owner": "TaskFlowOrg",
+  "current_phase": "phase-02",
+  "current_session": 4,
+  "phases": {
+    "phase-00": {
+      "status": "complete",
+      "started_session": 1,
+      "completed_session": 1,
+      "prs": [1, 2],
+      "tasks_total": 4,
+      "tasks_complete": 4
+    },
+    "phase-01": {
+      "status": "complete",
+      "started_session": 2,
+      "completed_session": 3,
+      "prs": [3, 4, 5],
+      "tasks_total": 6,
+      "tasks_complete": 6
+    },
+    "phase-02": {
+      "status": "in_progress",
+      "started_session": 4,
+      "completed_session": null,
+      "prs": [6],
+      "tasks_total": 6,
+      "tasks_complete": 3
+    },
+    "phase-03": {
+      "status": "blocked",
+      "started_session": null,
+      "completed_session": null,
+      "blocked_by": ["phase-02"],
+      "tasks_total": 5,
+      "tasks_complete": 0
+    },
+    "phase-04": {
+      "status": "pending",
+      "started_session": null,
+      "completed_session": null,
+      "tasks_total": 8,
+      "tasks_complete": 0
+    }
+  },
+  "last_pr": 6,
+  "last_verified": "2026-02-28T10:30:00Z",
+  "enforcement": {
+    "repo": "TaskFlowOrg/enforcement",
+    "read_token_secret": "ENFORCEMENT_READ_TOKEN",
+    "dispatch_token_secret": "ENFORCEMENT_DISPATCH_TOKEN",
+    "protected_files": [
+      "pyproject.toml",
+      ".pre-commit-config.yaml",
+      ".github/workflows/ci.yml"
+    ]
+  }
+}

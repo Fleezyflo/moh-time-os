@@ -1,0 +1,62 @@
+# Session Record Template
+# Copy this file as session-NNN.yaml at the START of each session.
+# Update it throughout the session, not just at the end.
+
+session: 0                    # Session number (must match state.json current_session)
+date: "YYYY-MM-DD"
+type: "build"                 # build | verify | plan | investigate
+
+# What this session was assigned to do
+assignment:
+  phase: "phase-NN"
+  tasks: ["task-01", "task-02"]
+  description: |
+    Brief description of the session's goal.
+
+# What actually happened (updated as work progresses)
+work_done:
+  # Add entries here as you complete work, not at the end
+  - description: "What was done"
+    files_changed:
+      - "path/to/file.ts"
+    lines_added: 50
+    lines_removed: 10
+    timestamp: "HH:MM"       # approximate
+
+# PRs created or merged in this session
+prs:
+  # - number: 42
+  #   branch: "feat/phase-3-task-01"
+  #   status: "merged"       # created | merged | failed
+  #   ci_status: "green"     # green | red | pending
+
+# Issues discovered during this session
+# Things that need attention but are outside this session's scope
+discovered:
+  # - description: "Found X in file Y"
+  #   severity: "medium"     # critical | high | medium | low
+  #   phase: "phase-NN"      # which phase should address this
+  #   files: ["path/to/file"]
+
+# Rules or patterns learned
+lessons:
+  # - rule: "Always do X before Y"
+  #   severity: "high"       # critical | high | medium | low
+  #   context: "What happened that taught this lesson"
+  #   added_to_agent: true   # Was this added to AGENT.md?
+
+# State changes made
+state_changes:
+  # - field: "phases.phase-01.status"
+  #   old_value: "in_progress"
+  #   new_value: "complete"
+  #   reason: "All tasks verified, PR merged"
+
+# End-of-session status
+end_state:
+  tasks_completed: []        # task IDs completed this session
+  tasks_remaining: []        # task IDs not completed
+  blockers: []               # anything blocking progress
+  next_session_should: |
+    Specific instructions for what the next session should do.
+    Include file paths, task IDs, and verification steps.

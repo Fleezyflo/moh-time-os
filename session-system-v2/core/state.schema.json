@@ -1,0 +1,99 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Session System State",
+  "description": "Machine-readable project state. Single source of truth for session persistence.",
+  "type": "object",
+  "required": ["project", "owner", "current_phase", "current_session", "phases", "last_pr", "enforcement"],
+  "properties": {
+    "project": {
+      "type": "string",
+      "description": "Project name"
+    },
+    "owner": {
+      "type": "string",
+      "description": "Project owner (human who makes decisions)"
+    },
+    "current_phase": {
+      "type": ["string", "null"],
+      "description": "ID of the currently active phase, or null if no work has started"
+    },
+    "current_session": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Current session number. Incremented at session start."
+    },
+    "phases": {
+      "type": "object",
+      "description": "Map of phase ID to phase status",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["status"],
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": ["pending", "blocked", "in_progress", "complete"],
+            "description": "Phase lifecycle status"
+          },
+          "blocked_by": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "Phase IDs that must complete before this phase can start"
+          },
+          "started_session": {
+            "type": "integer",
+            "description": "Session number when work began on this phase"
+          },
+          "completed_session": {
+            "type": "integer",
+            "description": "Session number when this phase was marked complete"
+          },
+          "prs": {
+            "type": "array",
+            "items": {"type": "integer"},
+            "description": "PR numbers associated with this phase"
+          },
+          "tasks_total": {
+            "type": "integer",
+            "description": "Total tasks in this phase"
+          },
+          "tasks_complete": {
+            "type": "integer",
+            "description": "Number of completed tasks"
+          }
+        }
+      }
+    },
+    "last_pr": {
+      "type": "integer",
+      "description": "Highest PR number created"
+    },
+    "last_verified": {
+      "type": ["string", "null"],
+      "format": "date-time",
+      "description": "ISO timestamp of last successful state verification"
+    },
+    "enforcement": {
+      "type": "object",
+      "required": ["repo", "read_token_secret", "dispatch_token_secret", "protected_files"],
+      "properties": {
+        "repo": {
+          "type": "string",
+          "description": "Enforcement repo in Org/repo format"
+        },
+        "read_token_secret": {
+          "type": "string",
+          "description": "GitHub secret name for enforcement repo read access"
+        },
+        "dispatch_token_secret": {
+          "type": "string",
+          "description": "GitHub secret name for dispatching enforcement gate"
+        },
+        "protected_files": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "List of protected file paths (synced from enforcement repo)"
+        }
+      }
+    }
+  }
+}
