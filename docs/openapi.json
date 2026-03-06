@@ -10634,6 +10634,111 @@
         ]
       }
     },
+    "/api/v2/intelligence/audit-trail": {
+      "get": {
+        "description": "Get recent intelligence audit trail entries.\n\nReturns a log of intelligence operations with inputs, outputs, and timing.",
+        "operationId": "audit_trail_entries_api_v2_intelligence_audit_trail_get",
+        "parameters": [
+          {
+            "description": "Filter by entity type",
+            "in": "query",
+            "name": "entity_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by entity type",
+              "title": "Entity Type"
+            }
+          },
+          {
+            "description": "Filter by entity ID",
+            "in": "query",
+            "name": "entity_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by entity ID",
+              "title": "Entity Id"
+            }
+          },
+          {
+            "description": "Filter by operation type",
+            "in": "query",
+            "name": "operation",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by operation type",
+              "title": "Operation"
+            }
+          },
+          {
+            "description": "Max entries to return",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "description": "Max entries to return",
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Audit Trail Entries",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
     "/api/v2/intelligence/briefing": {
       "get": {
         "description": "Get daily briefing summary.\n\nReturns structured briefing with:\n- Summary counts (immediate, this_week, monitor)\n- Critical items list\n- Attention items list\n- Watching items list\n- Portfolio health\n- Top proposal headline\n\nCached for 300 seconds (5 minutes).",
@@ -11348,6 +11453,67 @@
           }
         ],
         "summary": "Entity Profile",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/explain/{entity_type}/{entity_id}": {
+      "get": {
+        "description": "Get human-readable explanations for an entity's intelligence outputs.\n\nReturns explanations for health score, active signals, and attention level.",
+        "operationId": "explain_entity_api_v2_intelligence_explain__entity_type___entity_id__get",
+        "parameters": [
+          {
+            "description": "Entity type (client, project, person)",
+            "in": "path",
+            "name": "entity_type",
+            "required": true,
+            "schema": {
+              "description": "Entity type (client, project, person)",
+              "title": "Entity Type",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Entity identifier",
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "description": "Entity identifier",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Explain Entity",
         "tags": [
           "Intelligence"
         ]

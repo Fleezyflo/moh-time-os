@@ -1,0 +1,70 @@
+session: 3
+date: "2026-03-06"
+phase: "phase-03"
+branch: "feat/wire-system-memory"
+status: "complete"
+
+tasks_completed:
+  - id: "task-01"
+    name: "Wire system memory modules"
+    changes:
+      - file: "lib/autonomous_loop.py"
+        description: |
+          Wired 4 memory modules into _intelligence_phase() at END of pipeline:
+          - DecisionJournal (step 7): records cycle-level decisions with context
+          - EntityMemory (step 8): records system review interactions per cycle
+          - SignalLifecycleTracker (step 6): updates lifecycle metadata on detected
+            signals, auto-escalates chronic watch signals. Complementary to existing
+            update_signal_state() -- runs after it, adding persistence classification.
+          - BehavioralPatternAnalyzer (step 9): discovers recurring patterns from
+            decision journal data (90-day window, min 3 frequency)
+    verification:
+      - "All four modules imported and called in _intelligence_phase()"
+      - "Signal lifecycle is complementary to existing update_signal_state (runs after)"
+      - "Python syntax check: PASS"
+
+  - id: "task-02"
+    name: "Wire intelligence observability modules"
+    changes:
+      - file: "lib/autonomous_loop.py"
+        description: |
+          Wired 3 observability modules into _intelligence_phase():
+          - AuditTrail (step 0 + step 12): wraps entire phase with start/end records,
+            captures inputs at start and outputs+duration at end
+          - IntelligenceExplainer (step 10): generates explanations for top 5 signals
+            per cycle (stateless, no DB needed)
+          - DriftDetector (step 11): checks health score drift for all entity types
+            against baselines using HealthUnifier.get_all_latest_health()
+      - file: "api/intelligence_router.py"
+        description: |
+          Added 2 API endpoints:
+          - GET /api/v2/intelligence/audit-trail: returns recent audit entries with
+            filters (entity_type, entity_id, operation, limit)
+          - GET /api/v2/intelligence/explain/{entity_type}/{entity_id}: returns
+            human-readable explanations for health score and active signals
+    verification:
+      - "AuditTrail wraps phase with start/end entries"
+      - "Explainability generates signal explanations"
+      - "Drift detection checks against HealthUnifier baselines"
+      - "API endpoints follow existing router patterns (auth, response model)"
+      - "Python syntax check: PASS"
+
+notes: |
+  - Cannot run ruff/bandit/pytest from sandbox (Darwin ARM binaries in .venv).
+    Molham must run verification on Mac before committing.
+  - SignalLifecycleTracker analyzed as COMPLEMENTARY to update_signal_state():
+    update_signal_state handles basic new/escalated/cleared transitions;
+    SignalLifecycleTracker adds lifecycle metadata (persistence classification,
+    escalation history, auto-escalation of chronic signals). Both write to
+    signal_state table but different columns.
+  - DriftDetector uses HealthUnifier.get_all_latest_health() (returns list[HealthScore])
+    not a non-existent get_latest_scores method.
+  - Added 7 new result counters to _intelligence_phase() for the new modules.
+  - Audit trail uses time.monotonic() for accurate phase duration measurement.
+
+files_changed:
+  - "lib/autonomous_loop.py"
+  - "api/intelligence_router.py"
+  - "audit-remediation/state.json"
+  - "audit-remediation/sessions/session-003.yaml"
+  - "audit-remediation/HANDOFF.md"
