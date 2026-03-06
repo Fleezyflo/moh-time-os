@@ -8,10 +8,11 @@ import sqlite3
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from enum import Enum
 
 from lib import paths
+from lib.compat import UTC
 
 logger = logging.getLogger(__name__)
 

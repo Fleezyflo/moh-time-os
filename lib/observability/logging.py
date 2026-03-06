@@ -7,8 +7,10 @@ import logging
 import os
 import sqlite3
 import sys
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
+
+from lib.compat import UTC
 
 from .context import get_request_id
 

@@ -12,9 +12,10 @@ Maintains:
 import hashlib
 import json
 import logging
-from datetime import UTC, datetime
+from datetime import datetime
 
 from lib import paths
+from lib.compat import UTC
 
 logger = logging.getLogger(__name__)
 

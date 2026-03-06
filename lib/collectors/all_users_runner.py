@@ -14,11 +14,12 @@ import logging
 import os
 import sqlite3
 import sys
-from datetime import UTC, datetime
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from lib import paths
+from lib.compat import UTC
 
 logging.basicConfig(
     level=logging.INFO,

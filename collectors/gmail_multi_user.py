@@ -12,9 +12,10 @@ Collects Gmail from all team members incrementally.
 import json
 import logging
 import sqlite3
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 
 from lib import paths
+from lib.compat import UTC
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s")
 logger = logging.getLogger(__name__)

@@ -1,7 +1,9 @@
 import re
 from collections import Counter
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
+
+from lib.compat import UTC
 
 from .gogcli import run_gog
 from .store import insert_raw_event

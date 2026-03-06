@@ -15,10 +15,11 @@ Persistent configuration with all configurable fields from specs:
 
 import json
 import logging
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
 from lib import paths
+from lib.compat import UTC
 
 logger = logging.getLogger(__name__)
 
