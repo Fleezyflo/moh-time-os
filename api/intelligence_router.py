@@ -1260,3 +1260,107 @@ def explain_entity(
     except (sqlite3.Error, ValueError, OSError) as e:
         logger.exception("explain_entity failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@intelligence_router.get("/attention-debt", response_model=IntelligenceResponse)
+def attention_debt(
+    entity_type: str | None = Query(None, description="Filter by entity type"),
+    days_back: int = Query(7, description="Days to look back for attention events"),
+):
+    """
+    Get entities sorted by attention debt (most neglected first).
+
+    Returns attention summary with debt distribution and per-entity debt levels.
+    """
+    from pathlib import Path as PathLib
+
+    from lib.db import get_db_path_str
+    from lib.intelligence.attention_tracking import AttentionTracker
+
+    try:
+        db_path = PathLib(get_db_path_str())
+        tracker = AttentionTracker(db_path)
+        summary = tracker.get_attention_summary(
+            entity_type=entity_type,
+            days_back=days_back,
+        )
+        return _wrap_response(
+            summary.to_dict(),
+            {"entity_type": entity_type, "days_back": days_back},
+        )
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("attention_debt failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@intelligence_router.get(
+    "/predictions/early-warnings",
+    response_model=IntelligenceResponse,
+)
+def early_warnings(
+    entity_type: str | None = Query(None, description="Filter by entity type"),
+):
+    """
+    Get early warnings for entities with declining health or churn risk.
+
+    Returns list of early warnings with probability and recommended actions.
+    """
+    from pathlib import Path as PathLib
+
+    from lib.db import get_db_path_str
+    from lib.intelligence.health_unifier import HealthUnifier
+    from lib.intelligence.predictive_intelligence import PredictiveIntelligence
+
+    try:
+        db_path = PathLib(get_db_path_str())
+        predictor = PredictiveIntelligence()
+        unifier = HealthUnifier(db_path)
+        all_warnings = []
+
+        entity_types = [entity_type] if entity_type else ["client", "project", "person"]
+        for etype in entity_types:
+            try:
+                recent = unifier.get_all_latest_health(etype)
+                for hs in recent:
+                    if hs.composite_score is None or not hs.entity_id:
+                        continue
+                    try:
+                        trend = unifier.get_health_trend(etype, hs.entity_id, days=30)
+                        scores = [h.composite_score for h in trend if h.composite_score is not None]
+                        if scores:
+                            warnings = predictor.generate_early_warnings(
+                                entity_type=etype,
+                                entity_id=hs.entity_id,
+                                health_scores=scores,
+                            )
+                            all_warnings.extend(w.to_dict() for w in warnings)
+                    except (sqlite3.Error, ValueError, OSError) as e:
+                        logger.error(f"early_warnings: {etype}/{hs.entity_id} failed: {e}")
+            except (sqlite3.Error, ValueError, OSError) as e:
+                logger.error(f"early_warnings: {etype} query failed: {e}")
+
+        return _wrap_response(all_warnings, {"entity_type": entity_type})
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("early_warnings failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@intelligence_router.get(
+    "/governance/compliance-report",
+    response_model=IntelligenceResponse,
+)
+def compliance_report():
+    """
+    Generate a data governance compliance report.
+
+    Returns compliance status, PII inventory, retention policies, and violations.
+    """
+    from lib.intelligence.data_governance import ComplianceReporter
+
+    try:
+        reporter = ComplianceReporter()
+        report = reporter.generate_report()
+        return _wrap_response(report.to_dict())
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("compliance_report failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e

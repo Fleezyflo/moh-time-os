@@ -19,6 +19,11 @@ class NotificationEngine:
     """
     Processes pending notifications and delivers via channels.
     CRITICAL: Does NOT go through AI. Direct API calls only.
+
+    Integrates:
+    - DigestEngine: batches non-urgent notifications into digests
+    - NotificationIntelligence: gates sends with fatigue/timing/channel logic
+    - SignalSuppression: filters dismissed signals before notifying
     """
 
     def __init__(self, store, config: dict = None):
@@ -30,6 +35,28 @@ class NotificationEngine:
         self.store = store
         self.config = config or {}
         self._load_channels()
+        self._init_intelligence()
+
+    def _init_intelligence(self):
+        """Initialize notification intelligence and digest subsystems."""
+        self._notification_intel = None
+        self._digest_engine = None
+
+        try:
+            from lib.intelligence.notification_intelligence import NotificationIntelligence
+
+            self._notification_intel = NotificationIntelligence()
+            logger.info("NotificationEngine: notification intelligence enabled")
+        except (ImportError, ValueError, OSError) as e:
+            logger.error(f"NotificationEngine: notification intelligence init failed: {e}")
+
+        try:
+            from lib.notifier.digest import DigestEngine
+
+            self._digest_engine = DigestEngine()
+            logger.info("NotificationEngine: digest engine enabled")
+        except (ImportError, sqlite3.Error, ValueError, OSError) as e:
+            logger.error(f"NotificationEngine: digest engine init failed: {e}")
 
     def _load_channels(self):
         """Load configured notification channels."""
@@ -212,12 +239,65 @@ class NotificationEngine:
             LIMIT 20
         """)
 
+        # Collect deferred decisions for digest batching
+        deferred_decisions = []
+
         for row in pending:
             notif_id = row["id"]
             priority = row["priority"]
             title = row["title"]
             body = row["body"]
             channels_json = row["channels"]
+
+            # --- Intelligence gating: let NotificationIntelligence decide ---
+            if self._notification_intel is not None:
+                try:
+                    action_data = row.get("action_data", "")
+                    signal_id = ""
+                    entity_type = ""
+                    entity_id = ""
+                    if action_data:
+                        try:
+                            ad = json.loads(action_data)
+                            signal_id = ad.get("signal_id", "")
+                            entity_type = ad.get("entity_type", "")
+                            entity_id = ad.get("entity_id", "")
+                        except (json.JSONDecodeError, TypeError):
+                            pass
+
+                    decision = self._notification_intel.decide(
+                        entity_type=entity_type or "system",
+                        entity_id=entity_id or notif_id,
+                        signal_id=signal_id or notif_id,
+                        urgency=priority,
+                    )
+
+                    if not decision.should_send_now:
+                        deferred_decisions.append(decision)
+                        results.append(
+                            {
+                                "id": notif_id,
+                                "status": "deferred_by_intelligence",
+                                "reason": decision.reason,
+                            }
+                        )
+                        # Queue to digest if digest engine is available
+                        if self._digest_engine is not None and decision.batch_with:
+                            try:
+                                self._digest_engine.queue_notification(
+                                    user_id="molham",
+                                    notification_id=notif_id,
+                                    event_type=row.get("type", "alert"),
+                                    category=entity_type or "general",
+                                    severity=priority,
+                                    bucket=decision.batch_with,
+                                )
+                            except (sqlite3.Error, ValueError, OSError) as e:
+                                logger.error(f"NotificationEngine: digest queue failed: {e}")
+                        continue
+                except (ValueError, TypeError, OSError) as e:
+                    logger.error(f"NotificationEngine: intelligence decision failed: {e}")
+                    # Fall through to normal send on intelligence failure
 
             if not self._check_rate_limit(priority):
                 results.append({"id": notif_id, "status": "rate_limited"})

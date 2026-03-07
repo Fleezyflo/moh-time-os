@@ -4,6 +4,7 @@ Direct Google Contacts/People API access using service account.
 """
 
 import json
+import logging
 import socket
 from datetime import datetime
 from pathlib import Path
@@ -72,8 +73,8 @@ def list_contacts(max_results: int = 1000, user: str = DEFAULT_USER) -> list[dic
                 break
 
         return contacts
-    except Exception as e:
-        print(f"   Error listing contacts: {e}")
+    except (OSError, ValueError, KeyError) as e:
+        logging.getLogger(__name__).warning("Error listing contacts: %s", e)
         return []
 
 
@@ -93,8 +94,8 @@ def list_directory(max_results: int = 500, user: str = DEFAULT_USER) -> list[dic
         )
 
         return results.get("people", [])
-    except Exception as e:
-        print(f"   Error listing directory: {e}")
+    except (OSError, ValueError, KeyError) as e:
+        logging.getLogger(__name__).warning("Error listing directory: %s", e)
         return []
 
 

@@ -7,6 +7,7 @@ It collects data from all sources and caches it for heartbeat use.
 """
 
 import json
+import logging
 import subprocess
 from datetime import datetime
 from pathlib import Path
@@ -14,6 +15,8 @@ from pathlib import Path
 from lib import paths
 from lib.compat import UTC
 from lib.state_tracker import mark_collected
+
+logger = logging.getLogger(__name__)
 
 OUT_DIR = paths.out_dir()
 
@@ -24,17 +27,16 @@ def run_cmd(cmd: list, timeout: int = 60) -> dict:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
         if result.returncode == 0:
             return json.loads(result.stdout)
-        print(f"  Command failed: {' '.join(cmd)}")
-        print(f"  stderr: {result.stderr[:200]}")
+        logger.warning("Command failed: %s — stderr: %s", " ".join(cmd), result.stderr[:200])
         return {}
     except subprocess.TimeoutExpired:
-        print(f"  Timeout: {' '.join(cmd)}")
+        logger.warning("Command timed out: %s", " ".join(cmd))
         return {}
     except json.JSONDecodeError as e:
-        print(f"  JSON decode error: {e}")
+        logger.warning("JSON decode error for %s: %s", " ".join(cmd), e)
         return {}
-    except Exception as e:
-        print(f"  Error: {e}")
+    except OSError as e:
+        logger.warning("OS error running %s: %s", " ".join(cmd), e)
         return {}
 
 
@@ -93,11 +95,8 @@ def collect_gmail():
         )
 
         return status
-    except Exception as e:
-        import traceback
-
-        print(f"   → Gmail error: {e}")
-        traceback.print_exc()
+    except (OSError, ValueError, KeyError) as e:
+        logger.warning("Gmail collection error: %s", e, exc_info=True)
         return {}
 
 
@@ -119,11 +118,8 @@ def collect_tasks():
             print(f"   → Tasks sync failed: {sync_result.get('error', 'unknown')}")
 
         return sync_result
-    except Exception as e:
-        import traceback
-
-        print(f"   → Tasks error: {e}")
-        traceback.print_exc()
+    except (OSError, ValueError, KeyError) as e:
+        logger.warning("Tasks collection error: %s", e, exc_info=True)
         return {}
 
 
@@ -145,11 +141,8 @@ def collect_chat():
             f"   → {len(data.get('messages', []))} messages, {len(data.get('mentions', []))} mentions"
         )
         return data
-    except Exception as e:
-        import traceback
-
-        print(f"   → Chat error: {e}")
-        traceback.print_exc()
+    except (OSError, ValueError, KeyError) as e:
+        logger.warning("Chat collection error: %s", e, exc_info=True)
         return {}
 
 
@@ -175,11 +168,8 @@ def collect_asana():
             print(f"   → Asana sync failed: {sync_result.get('error', 'unknown')}")
 
         return sync_result
-    except Exception as e:
-        import traceback
-
-        print(f"   → Asana error: {e}")
-        traceback.print_exc()
+    except (OSError, ValueError, KeyError) as e:
+        logger.warning("Asana collection error: %s", e, exc_info=True)
         return {}
 
 
@@ -224,16 +214,13 @@ def collect_xero():
                 print(f"   → DB sync: {sync_result.get('stored', 0)} invoices")
             else:
                 print(f"   → DB sync warning: {sync_result.get('error', 'unknown')}")
-        except Exception as db_err:
+        except (OSError, ValueError, KeyError) as db_err:
             # Don't fail the whole collection if DB sync fails
-            print(f"   → DB sync skipped: {db_err}")
+            logger.debug("Xero DB sync skipped: %s", db_err)
 
         return data
-    except Exception as e:
-        import traceback
-
-        print(f"   → Xero error: {e}")
-        traceback.print_exc()
+    except (OSError, ValueError, KeyError) as e:
+        logger.warning("Xero collection error: %s", e, exc_info=True)
         return {}
 
 
@@ -253,11 +240,8 @@ def collect_drive():
         mark_collected("drive")
         print(f"   → {len(data.get('files', []))} files")
         return data
-    except Exception as e:
-        import traceback
-
-        print(f"   → Drive error: {e}")
-        traceback.print_exc()
+    except (OSError, ValueError, KeyError) as e:
+        logger.warning("Drive collection error: %s", e, exc_info=True)
         return {}
 
 
@@ -277,11 +261,8 @@ def collect_contacts():
         mark_collected("contacts")
         print(f"   → {len(data.get('people', []))} people")
         return data
-    except Exception as e:
-        import traceback
-
-        print(f"   → Contacts error: {e}")
-        traceback.print_exc()
+    except (OSError, ValueError, KeyError) as e:
+        logger.warning("Contacts collection error: %s", e, exc_info=True)
         return {}
 
 
@@ -334,8 +315,8 @@ def _collect_all_impl(sources: list = None, v4_ingest: bool = True):
             src = futures[future]
             try:
                 results[src] = future.result()
-            except Exception as e:
-                print(f"  {src} failed: {e}")
+            except (OSError, ValueError, KeyError) as e:
+                logger.warning("Collector %s failed: %s", src, e)
                 results[src] = {}
 
     print(f"\n{'=' * 50}")
@@ -352,8 +333,8 @@ def _collect_all_impl(sources: list = None, v4_ingest: bool = True):
             print(f"{'=' * 50}\n")
             v4_results = ingest_from_collectors()
             results["v4_ingest"] = v4_results
-        except Exception as e:
-            print(f"  V4 ingest failed: {e}")
+        except (OSError, ValueError, KeyError, ImportError) as e:
+            logger.warning("V4 ingest failed: %s", e)
             results["v4_ingest"] = {"error": str(e)}
 
     # Entity Linking: Keep client/brand/project relationships updated
@@ -365,8 +346,8 @@ def _collect_all_impl(sources: list = None, v4_ingest: bool = True):
         print(f"{'=' * 50}\n")
         linking_results = run_linking(dry_run=False)
         results["entity_linking"] = linking_results["stats"]
-    except Exception as e:
-        print(f"  Entity linking failed: {e}")
+    except (OSError, ValueError, KeyError, ImportError) as e:
+        logger.warning("Entity linking failed: %s", e)
         results["entity_linking"] = {"error": str(e)}
 
     # V5 Detection Pipeline: DEPRECATED — archived in Brief 29 (VR)
@@ -385,11 +366,8 @@ def _collect_all_impl(sources: list = None, v4_ingest: bool = True):
         print(f"  Enriched: {enrichment_stats.get('enriched', 0)}")
         print(f"  Skipped: {enrichment_stats.get('skipped', 0)}")
         results["inbox_enrichment"] = enrichment_stats
-    except Exception as e:
-        import traceback
-
-        print(f"  Inbox enrichment failed: {e}")
-        traceback.print_exc()
+    except (OSError, ValueError, KeyError, ImportError) as e:
+        logger.warning("Inbox enrichment failed: %s", e, exc_info=True)
         results["inbox_enrichment"] = {"error": str(e)}
 
     return results

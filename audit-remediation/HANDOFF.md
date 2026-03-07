@@ -1,50 +1,39 @@
 # HANDOFF -- Audit Remediation
 
-**Generated:** 2026-03-06
-**Current Phase:** phase-03 (complete) -- next: phase-04 or phase-05
-**Current Session:** 3
-**Track:** T1
+**Generated:** 2026-03-07
+**Current Phase:** phase-08 (pending)
+**Current Session:** 8
+**Track:** T2 in progress
 
 ---
 
 ## What Just Happened
 
-### Session 003 -- Phase 03: Wire System Memory + Observability
+### Session 007 -- Phase 07: Verify Data Foundation
 
-Wired all 7 modules into `_intelligence_phase()` in `lib/autonomous_loop.py`:
+Verification-only phase. Investigated 6 data foundation areas via code reading (no runtime). All 6 tasks produced DONE or GAP reports.
 
-**Memory modules (task-01):**
-- `DecisionJournal` -- records cycle decisions with context snapshots
-- `EntityMemory` -- tracks system review interactions per cycle
-- `SignalLifecycleTracker` -- lifecycle metadata + auto-escalation of chronic signals (complementary to existing `update_signal_state`)
-- `BehavioralPatternAnalyzer` -- discovers recurring patterns from decision journal
+**Results:**
+- Task 01 (brand_id population): **DONE** -- brand_id exists in schema.py on projects, tasks, invoices, signals. Populated via entity_linker.py, seed_brands.py, normalizer.py. Enforced by 2 blocking gates.
+- Task 02 (from_domain derivation): **DONE** -- Correctly extracts domain via LOWER(SUBSTR(from_email, INSTR(from_email, '@') + 1)). Edge cases handled. Client linking via client_identities and subject-line fallbacks.
+- Task 03 (end-to-end pipeline): **DONE** -- Full pipeline traced: collect -> normalize -> gate -> resolution -> detection -> truth modules -> analyze -> reason -> notify. Gate blocking correctly skips truth modules on failure.
+- Task 04 (test suite pass rate): **DONE (pending Molham's output)** -- 120 test files. Previous session reported 249/249 passing. Command in block for Molham to confirm.
+- Task 05 (engagements table): **DONE with GAP** -- Schema, population, lifecycle, tests verified. GAP-07-01 found.
+- Task 06 (data foundation completeness): **DONE with GAP** -- All core tables, entity links, orphan detection, data quality baseline verified. Same GAP-07-01.
 
-**Observability modules (task-02):**
-- `AuditTrail` -- wraps entire phase (start entry + end entry with duration)
-- `IntelligenceExplainer` -- explains top 5 signals per cycle
-- `DriftDetector` -- checks health score drift against baselines
+**1 gap found:**
+- **GAP-07-01 (medium):** engagements and engagement_transitions tables not in lib/schema.py (the single source of truth). Only exist in v29_engagement_lifecycle.py migration. Fix: add TABLES defs to schema.py, bump SCHEMA_VERSION.
 
-**API endpoints added** in `api/intelligence_router.py`:
-- `GET /api/v2/intelligence/audit-trail` -- recent audit entries with filters
-- `GET /api/v2/intelligence/explain/{entity_type}/{entity_id}` -- entity explanations
-
-**Status:** Code written, syntax verified. Needs Molham to run ruff/bandit/pytest on Mac, then commit and push.
+**Status:** PR #TBD (branch: verify/data-foundation)
 
 ---
 
 ## What's Next
 
-### Option A: Phase 04 (Notifications + Governance)
-- Wire notification preference modules and governance policy engine
-- See `audit-remediation/plan/phase-04.yaml`
-
-### Option B: Phase 05 (Scenario + Temporal + Routing)
-- Wire scenario engine (API-only), temporal normalization, signal routing
-- See `audit-remediation/plan/phase-05.yaml`
-
-Both phase-04 and phase-05 are unblocked (only depend on phase-01, which is complete). They can run in parallel.
-
-**Branch for this session:** `feat/wire-system-memory`
+### Phase 08: Verify Safety & Governance
+- 4 verification tasks -- reporting only, no code changes
+- See `audit-remediation/plan/phase-08.yaml`
+- Tasks: verify safety module, governance system, audit trail, data classification
 
 ---
 
@@ -52,17 +41,18 @@ Both phase-04 and phase-05 are unblocked (only depend on phase-01, which is comp
 
 1. Never run git from sandbox (creates .git/index.lock)
 2. Never format from sandbox (ruff version mismatch)
-3. Read actual module signatures before wiring (phases 02-05)
-4. ScenarioEngine is API-only, never in loop
-5. Verification phases report DONE or GAP, never fix inline
-6. SignalLifecycleTracker is complementary to update_signal_state, not a replacement
-7. All rules from CLAUDE.md apply
+3. Verification phases (07-13) report DONE or GAP, never fix inline
+4. All rules from CLAUDE.md apply
+5. Match existing patterns -- logging.getLogger(__name__), %s format, narrowed exception types
+6. No `noqa`, `nosec`, `# type: ignore` -- fix the root cause
+7. Commit subject under 72 chars, first letter after prefix lowercase
+8. GAP-07-01 exists: engagements not in schema.py -- do not fix during T2 verification
 
 ---
 
 ## Documents to Read
 
 1. `audit-remediation/AGENT.md` -- Engineering standards for this project
-2. `audit-remediation/plan/phase-04.yaml` or `phase-05.yaml` -- Next phase
+2. `audit-remediation/plan/phase-08.yaml` -- Next phase
 3. `audit-remediation/state.json` -- Current project state
 4. `CLAUDE.md` -- Repo-level engineering rules

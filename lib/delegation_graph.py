@@ -102,7 +102,8 @@ def load_graph() -> dict[str, Delegatee]:
     try:
         data = json.loads(GRAPH_FILE.read_text())
         return {did: Delegatee.from_dict(d) for did, d in data.items()}
-    except (json.JSONDecodeError, TypeError):
+    except (json.JSONDecodeError, TypeError) as e:
+        logger.warning("Could not load delegation graph: %s", e)
         return {}
 
 

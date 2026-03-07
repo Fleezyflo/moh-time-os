@@ -3871,6 +3871,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/intelligence/attention-debt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Attention Debt
+         * @description Get entities sorted by attention debt (most neglected first).
+         *
+         *     Returns attention summary with debt distribution and per-entity debt levels.
+         */
+        get: operations["attention_debt_api_v2_intelligence_attention_debt_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/intelligence/audit-trail": {
         parameters: {
             query?: never;
@@ -4274,6 +4296,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/intelligence/governance/compliance-report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Compliance Report
+         * @description Generate a data governance compliance report.
+         *
+         *     Returns compliance status, PII inventory, retention policies, and violations.
+         */
+        get: operations["compliance_report_api_v2_intelligence_governance_compliance_report_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/intelligence/patterns": {
         parameters: {
             query?: never;
@@ -4384,6 +4428,28 @@ export interface paths {
          *     based on rolling time windows.
          */
         get: operations["portfolio_trajectory_api_v2_intelligence_portfolio_trajectory_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/predictions/early-warnings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Early Warnings
+         * @description Get early warnings for entities with declining health or churn risk.
+         *
+         *     Returns list of early warnings with probability and recommended actions.
+         */
+        get: operations["early_warnings_api_v2_intelligence_predictions_early_warnings_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -12138,6 +12204,40 @@ export interface operations {
             };
         };
     };
+    attention_debt_api_v2_intelligence_attention_debt_get: {
+        parameters: {
+            query?: {
+                /** @description Filter by entity type */
+                entity_type?: string | null;
+                /** @description Days to look back for attention events */
+                days_back?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntelligenceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     audit_trail_entries_api_v2_intelligence_audit_trail_get: {
         parameters: {
             query?: {
@@ -12638,6 +12738,26 @@ export interface operations {
             };
         };
     };
+    compliance_report_api_v2_intelligence_governance_compliance_report_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntelligenceResponse"];
+                };
+            };
+        };
+    };
     list_patterns_api_v2_intelligence_patterns_get: {
         parameters: {
             query?: never;
@@ -12755,6 +12875,38 @@ export interface operations {
                 num_windows?: number;
                 /** @description Minimum activity to include client */
                 min_activity?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntelligenceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    early_warnings_api_v2_intelligence_predictions_early_warnings_get: {
+        parameters: {
+            query?: {
+                /** @description Filter by entity type */
+                entity_type?: string | null;
             };
             header?: never;
             path?: never;

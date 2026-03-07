@@ -10634,6 +10634,75 @@
         ]
       }
     },
+    "/api/v2/intelligence/attention-debt": {
+      "get": {
+        "description": "Get entities sorted by attention debt (most neglected first).\n\nReturns attention summary with debt distribution and per-entity debt levels.",
+        "operationId": "attention_debt_api_v2_intelligence_attention_debt_get",
+        "parameters": [
+          {
+            "description": "Filter by entity type",
+            "in": "query",
+            "name": "entity_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by entity type",
+              "title": "Entity Type"
+            }
+          },
+          {
+            "description": "Days to look back for attention events",
+            "in": "query",
+            "name": "days_back",
+            "required": false,
+            "schema": {
+              "default": 7,
+              "description": "Days to look back for attention events",
+              "title": "Days Back",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Attention Debt",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
     "/api/v2/intelligence/audit-trail": {
       "get": {
         "description": "Get recent intelligence audit trail entries.\n\nReturns a log of intelligence operations with inputs, outputs, and timing.",
@@ -11546,6 +11615,33 @@
         ]
       }
     },
+    "/api/v2/intelligence/governance/compliance-report": {
+      "get": {
+        "description": "Generate a data governance compliance report.\n\nReturns compliance status, PII inventory, retention policies, and violations.",
+        "operationId": "compliance_report_api_v2_intelligence_governance_compliance_report_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Compliance Report",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
     "/api/v2/intelligence/patterns": {
       "get": {
         "description": "Detect all active patterns.\n\nReturns structural patterns across entities:\n- Concentration (revenue, resource, communication)\n- Cascade (blast radius, dependency chains)\n- Degradation (quality, engagement erosion)\n- Drift (workload, ownership)\n- Correlation (load-quality, comm-payment)",
@@ -11796,6 +11892,63 @@
           }
         ],
         "summary": "Portfolio Trajectory",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/predictions/early-warnings": {
+      "get": {
+        "description": "Get early warnings for entities with declining health or churn risk.\n\nReturns list of early warnings with probability and recommended actions.",
+        "operationId": "early_warnings_api_v2_intelligence_predictions_early_warnings_get",
+        "parameters": [
+          {
+            "description": "Filter by entity type",
+            "in": "query",
+            "name": "entity_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by entity type",
+              "title": "Entity Type"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Early Warnings",
         "tags": [
           "Intelligence"
         ]

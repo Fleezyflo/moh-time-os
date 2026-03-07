@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from dataclasses import dataclass
 
@@ -20,7 +21,8 @@ def load_rules(path: str = DEFAULT_PATH) -> RuleOverrides:
         return RuleOverrides([], [], [])
     try:
         data = json.loads(open(path, encoding="utf-8").read())
-    except Exception:
+    except (json.JSONDecodeError, OSError) as e:
+        logging.getLogger(__name__).warning("Could not load rules overrides: %s", e)
         data = {}
     return RuleOverrides(
         archive_sender_substr=list(dict.fromkeys(data.get("archive_sender_substr") or [])),

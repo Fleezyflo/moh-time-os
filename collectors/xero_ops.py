@@ -60,14 +60,14 @@ def get_all_client_revenue() -> list:
                     elif inv_date.year == prior_year:
                         revenue_by_client[contact]["prior_year_revenue"] += total
                 except ValueError:
-                    pass  # Can't parse date
+                    logger.debug("Cannot parse invoice date: %s", inv_date_str[:10])
 
         # Sort by lifetime revenue
         result = sorted(revenue_by_client.values(), key=lambda x: -x["lifetime_revenue"])
         return result
 
-    except Exception as e:
-        logger.error(f"Error fetching revenue data: {e}")
+    except (OSError, ValueError, KeyError) as e:
+        logger.error("Error fetching revenue data: %s", e)
         return []
 
 
@@ -101,7 +101,10 @@ def get_outstanding_invoices() -> list:
                 except ValueError as e:
                     # Can't parse date - may miss overdue invoice
                     logger.warning(
-                        f"Invoice {inv_number} has unparseable due_date '{due_date}': {e}"
+                        "Invoice %s has unparseable due_date '%s': %s",
+                        inv_number,
+                        due_date,
+                        e,
                     )
 
             outstanding.append(
@@ -120,8 +123,8 @@ def get_outstanding_invoices() -> list:
         outstanding.sort(key=lambda x: (-x["days_overdue"], -x["amount_due"]))
         return outstanding
 
-    except Exception as e:
-        print(f"Error fetching invoices: {e}")
+    except (OSError, ValueError, KeyError) as e:
+        logger.error("Error fetching invoices: %s", e)
         return []
 
 
