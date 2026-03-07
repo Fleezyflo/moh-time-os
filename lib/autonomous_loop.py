@@ -590,6 +590,10 @@ class AutonomousLoop:
             "audit_entries_recorded": 0,
             "explanations_generated": 0,
             "drift_alerts": 0,
+            "attention_debts_computed": 0,
+            "signals_suppressed": 0,
+            "early_warnings_generated": 0,
+            "compliance_report_generated": 0,
         }
 
         # --- 0. Audit trail START (wraps entire intelligence phase) ---
@@ -701,6 +705,66 @@ class AutonomousLoop:
             )
         except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Intelligence: outcome tracking failed: {e}")
+
+        # --- 2b. Signal suppression (expire old suppressions, count active) ---
+        try:
+            from lib.intelligence.signal_suppression import SignalSuppression
+
+            signal_suppression = SignalSuppression(db_path)
+            expired_count = signal_suppression.expire_suppressions()
+            if expired_count > 0:
+                logger.info("Intelligence: expired %d signal suppressions", expired_count)
+
+            # Count currently suppressed signals for reporting
+            active_suppressions = signal_suppression.get_active_suppressions()
+            results["signals_suppressed"] = len(active_suppressions)
+        except (sqlite3.Error, ValueError, OSError) as e:
+            logger.error(f"Intelligence: signal suppression failed: {e}")
+
+        # --- 2c. Predictive intelligence (early warnings after scoring + signals) ---
+        try:
+            from lib.intelligence.predictive_intelligence import PredictiveIntelligence
+
+            predictor = PredictiveIntelligence()
+            # Generate early warnings for entities with declining health
+            try:
+                from lib.intelligence.health_unifier import HealthUnifier as PredHU
+
+                pred_unifier = PredHU(db_path)
+                for etype in ("client", "project", "person"):
+                    try:
+                        recent = pred_unifier.get_all_latest_health(etype)
+                        for hs in recent:
+                            if hs.composite_score is not None and hs.entity_id:
+                                try:
+                                    trend = pred_unifier.get_health_trend(
+                                        etype, hs.entity_id, days=30
+                                    )
+                                    scores = [
+                                        h.composite_score
+                                        for h in trend
+                                        if h.composite_score is not None
+                                    ]
+                                    if scores:
+                                        warnings = predictor.generate_early_warnings(
+                                            entity_type=etype,
+                                            entity_id=hs.entity_id,
+                                            health_scores=scores,
+                                        )
+                                        results["early_warnings_generated"] += len(warnings)
+                                except (sqlite3.Error, ValueError, OSError) as e:
+                                    logger.error(
+                                        f"Intelligence: early warning for "
+                                        f"{etype}/{hs.entity_id} failed: {e}"
+                                    )
+                    except (sqlite3.Error, ValueError, OSError) as e:
+                        logger.error(
+                            f"Intelligence: predictive intelligence for {etype} failed: {e}"
+                        )
+            except (sqlite3.Error, ValueError, OSError) as e:
+                logger.error(f"Intelligence: predictive intelligence init failed: {e}")
+        except (sqlite3.Error, ValueError, OSError) as e:
+            logger.error(f"Intelligence: predictive intelligence module failed: {e}")
 
         # --- 3. Detect patterns and persist snapshots ---
         pattern_persistence = PatternPersistence(db_path)
@@ -893,6 +957,30 @@ class AutonomousLoop:
         except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Intelligence: entity memory update failed: {e}")
 
+        # --- 8a. Attention tracking (records review, computes debt) ---
+        try:
+            from lib.intelligence.attention_tracking import AttentionTracker
+
+            attention_tracker = AttentionTracker(db_path)
+            # Record that the system reviewed entities this cycle
+            attention_tracker.record_attention(
+                entity_type="system",
+                entity_id="autonomous_loop",
+                event_type="review",
+                duration_minutes=0.0,
+                notes=f"Cycle {self.cycle_count}: scored {results['scores_recorded']} entities",
+            )
+
+            # Compute attention debt summary for all entity types
+            for etype in ("client", "project", "person"):
+                try:
+                    summary = attention_tracker.get_attention_summary(entity_type=etype)
+                    results["attention_debts_computed"] += summary.entities_with_debt
+                except (sqlite3.Error, ValueError, OSError) as e:
+                    logger.error(f"Intelligence: attention debt for {etype} failed: {e}")
+        except (sqlite3.Error, ValueError, OSError) as e:
+            logger.error(f"Intelligence: attention tracking failed: {e}")
+
         # --- 9. Behavioral pattern analysis (learns from decision journal) ---
         try:
             from lib.intelligence.behavioral_patterns import BehavioralPatternAnalyzer
@@ -928,6 +1016,22 @@ class AutonomousLoop:
                     logger.error(f"Intelligence: explanation generation failed: {e}")
         except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Intelligence: explainability module failed: {e}")
+
+        # --- 10a. Data governance compliance report (PERIODIC -- every 24 cycles) ---
+        if self.cycle_count % 24 == 0 or self.cycle_count == 1:
+            try:
+                from lib.intelligence.data_governance import ComplianceReporter
+
+                compliance_reporter = ComplianceReporter()
+                report = compliance_reporter.generate_report()
+                results["compliance_report_generated"] = 1
+                logger.info(
+                    "Intelligence: compliance report generated -- status: %s, violations: %d",
+                    report.overall_status,
+                    len(report.policy_violations),
+                )
+            except (sqlite3.Error, ValueError, OSError) as e:
+                logger.error(f"Intelligence: compliance report failed: {e}")
 
         # --- 11. Drift detection (VERY END -- compares against baselines) ---
         try:

@@ -49,6 +49,20 @@ Inherits from the repo-level `CLAUDE.md`. Key points:
 
 ---
 
+## Hard Rules — Violations Fail the Session
+
+**These are non-negotiable. Breaking any of these means the session output is rejected.**
+
+1. **Commit subject line MUST be under 72 characters.** Count them. `type: description` total. Session 6 failed at 87 chars. If your subject is too long, shorten it. No exceptions.
+
+2. **Never bypass a failing check.** No `noqa`, `nosec`, `# type: ignore`, `# pragma: no cover`, `continue-on-error: true`, `|| true`, `--no-verify`, `-x` to skip remaining tests, or any other suppression. If a test fails, fix the code. If a linter flags something, fix the code. If you cannot fix it, stop and tell Molham. Never make the tool shut up.
+
+3. **Never force tests to pass.** Do not modify test assertions to match wrong output. Do not delete failing tests. Do not mark tests as `@pytest.mark.skip`. Do not catch exceptions in tests to swallow failures. If a test fails, the code is wrong — fix the code, not the test.
+
+4. **Never add dead code to satisfy a check.** Do not add unused imports, empty functions, or dummy implementations just to make a linter or type checker happy.
+
+---
+
 ## Code Rules
 
 Inherits ALL rules from `CLAUDE.md`. Additionally:
@@ -151,8 +165,9 @@ Before giving Molham a commit command, verify ALL of the following locally:
 - Verification: `verify/data-foundation`, `verify/ui-completeness`
 
 **Commit format:**
-- Subject max 72 characters
-- First letter after prefix lowercase
+- **Subject MUST be under 72 characters.** Count before writing. `feat: wire 7 memory and observability modules` = 48 chars. Good. `feat: wire decision journal, entity memory, signal lifecycle, behavioral patterns, audit trail, explainability, and drift detection` = 130 chars. Rejected.
+- First letter after prefix lowercase: `feat: wire` not `feat: Wire`
+- Use `--` not `---` in messages (encoding issues)
 - Body includes what was wired/verified and why
 
 ---
