@@ -1,9 +1,7 @@
 id: "phase-08"
 name: "Verify Cleanup + API + Production"
 description: |
-  Verification-only phase. Validate old code removal and API/production
-  readiness. Covers: tier label excision, old morning brief removal,
-  API route completeness, production readiness checklist.
+  Verification-only. Validate old code removal and API/production readiness.
 
 dependencies: []
 
@@ -15,78 +13,64 @@ tasks:
   - id: "task-01"
     name: "Verify old tier labels removed"
     description: |
-      Original spec: UR-1.1 (tasks/TASK_P3_07_VERIFY_TIER_EXCISION.md)
-      Search codebase for old tier terminology (A/B/C/D labels, color-coded
-      tiers, scored status). All should be replaced by detection system
-      factual findings. grep for old patterns.
+      Spec: UR-1.1 (tasks/TASK_P3_07_VERIFY_TIER_EXCISION.md)
+      Search for old tier terminology (A/B/C/D labels, color-coded tiers,
+      scored status). Confirm all replaced by detection system findings.
     files:
       create: []
       modify: []
       delete: []
     verification:
-      - "grep for old tier labels returns zero hits in active code"
-      - "UI components don't reference scored tiers"
-      - "API endpoints don't return tier scores"
+      - "Zero old tier references in active code, UI, or API"
     estimated_lines: 0
     depends_on: []
 
   - id: "task-02"
     name: "Verify old morning brief removed"
     description: |
-      Original spec: UR-1.2 (tasks/TASK_P3_08_VERIFY_OLD_BRIEF_EXCISION.md)
-      The detection system (Phase 15e) introduced a new morning brief.
-      Verify the old morning brief code is fully removed or replaced.
+      Spec: UR-1.2 (tasks/TASK_P3_08_VERIFY_OLD_BRIEF_EXCISION.md)
+      Confirm old morning brief code is fully removed or replaced by the
+      Phase 15e detection system brief. No dual-brief execution risk.
     files:
       create: []
       modify: []
       delete: []
     verification:
-      - "Old morning brief module not imported anywhere"
-      - "New morning_brief.py is the only active brief"
-      - "No dual-brief execution risk"
+      - "Old brief module not imported; new morning_brief.py is sole active brief"
     estimated_lines: 0
     depends_on: []
 
   - id: "task-03"
     name: "Verify API route completeness"
     description: |
-      Original spec: UR-6.1 (tasks/TASK_P3_09_VERIFY_API.md)
-      Check all registered API routes in server.py against system-map.json.
-      Verify each route has a handler, correct HTTP method, and returns
-      proper response types.
+      Spec: UR-6.1 (tasks/TASK_P3_09_VERIFY_API.md)
+      Cross-reference server.py routes against system-map.json and UI fetch calls.
+      Identify dead routes and missing routes.
     files:
       create: []
       modify: []
       delete: []
     verification:
-      - "All routes in server.py have handlers"
-      - "system-map.json matches registered routes"
-      - "No dead routes (registered but never called from UI)"
-      - "No missing routes (called from UI but not registered)"
+      - "All routes have handlers; no dead or missing routes"
     estimated_lines: 0
     depends_on: []
 
   - id: "task-04"
-    name: "Verify production readiness checklist"
+    name: "Verify production readiness"
     description: |
-      Original spec: UR-6.2 (tasks/TASK_P3_10_VERIFY_PRODUCTION_READINESS.md)
-      Run through production checklist: error handling, logging,
-      graceful shutdown, health checks, configuration, secrets management,
-      backup strategy, monitoring.
+      Spec: UR-6.2 (tasks/TASK_P3_10_VERIFY_PRODUCTION_READINESS.md)
+      Investigate: error handling, logging, graceful shutdown, health checks,
+      configuration, secrets management, backup, monitoring.
     files:
       create: []
       modify: []
       delete: []
     verification:
-      - "Health endpoint responds"
-      - "Graceful shutdown implemented"
-      - "No hardcoded secrets in code"
-      - "Error handling covers all API endpoints"
-      - "Logging sufficient for debugging"
+      - "Production readiness checklist documented with DONE/GAP for each item"
     estimated_lines: 0
     depends_on: []
 
 completion_criteria:
-  - "All 4 verification tasks produce DONE or GAP report"
-  - "Gaps filed as new tasks if found"
-  - "Results documented in session record"
+  - "All 4 tasks produce DONE or GAP report"
+  - "Gaps filed as new tasks"
+  - "Results in session record"

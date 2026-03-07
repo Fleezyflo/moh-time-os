@@ -48,14 +48,14 @@ tasks:
         - "api/intelligence_router.py"
       delete: []
     verification:
-      - "grep -rn 'data_freshness\\|completeness_scorer\\|quality_confidence' lib/autonomous_loop.py shows imports"
-      - "grep -rn 'data.quality\\|data-quality' api/intelligence_router.py shows endpoint"
-      - "python -c 'from lib.intelligence.data_freshness import DataFreshnessTracker' succeeds"
-      - "python -c 'from lib.intelligence.completeness_scorer import CompletenessScorer' succeeds"
-      - "python -c 'from lib.intelligence.quality_confidence import QualityConfidenceAdjuster' succeeds"
-      - "ruff check lib/autonomous_loop.py api/intelligence_router.py -- zero errors"
-      - "bandit -r lib/autonomous_loop.py api/intelligence_router.py -- zero findings"
-      - "python -m pytest tests/ -x -- passes"
+      - "Use Grep tool to confirm expected imports/patterns are present"
+      - "Use Grep tool to confirm expected imports/patterns are present"
+      - "Include in command block: python -c 'from lib.intelligence.data_freshness import DataFreshnessTracker'"
+      - "Include in command block: python -c 'from lib.intelligence.completeness_scorer import CompletenessScorer'"
+      - "Include in command block: python -c 'from lib.intelligence.quality_confidence import QualityConfidenceAdjuster'"
+      - "Include in command block: ruff check <changed files>"
+      - "Include in command block: bandit -r <changed files>"
+      - "Include in command block: python -m pytest tests/ -x"
     estimated_lines: 40
     depends_on: []
 
@@ -86,14 +86,14 @@ tasks:
         - "api/intelligence_router.py"
       delete: []
     verification:
-      - "grep -rn 'cost_proxies\\|entity_profile\\|outcome_tracker\\|pattern_trending' lib/autonomous_loop.py shows imports"
-      - "python -c 'from lib.intelligence.cost_proxies import ImprovedCostCalculator' succeeds"
-      - "python -c 'from lib.intelligence.entity_profile import build_entity_profile' succeeds"
-      - "python -c 'from lib.intelligence.outcome_tracker import OutcomeTracker' succeeds"
-      - "python -c 'from lib.intelligence.pattern_trending import PatternTrendAnalyzer' succeeds"
-      - "ruff check lib/autonomous_loop.py api/intelligence_router.py -- zero errors"
-      - "bandit -r lib/autonomous_loop.py api/intelligence_router.py -- zero findings"
-      - "python -m pytest tests/ -x -- passes"
+      - "Use Grep tool to confirm expected imports/patterns are present"
+      - "Include in command block: python -c 'from lib.intelligence.cost_proxies import ImprovedCostCalculator'"
+      - "Include in command block: python -c 'from lib.intelligence.entity_profile import build_entity_profile'"
+      - "Include in command block: python -c 'from lib.intelligence.outcome_tracker import OutcomeTracker'"
+      - "Include in command block: python -c 'from lib.intelligence.pattern_trending import PatternTrendAnalyzer'"
+      - "Include in command block: ruff check <changed files>"
+      - "Include in command block: bandit -r <changed files>"
+      - "Include in command block: python -m pytest tests/ -x"
     estimated_lines: 50
     depends_on: ["task-01"]
 

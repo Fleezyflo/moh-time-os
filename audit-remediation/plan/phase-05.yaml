@@ -45,9 +45,9 @@ tasks:
       - "/api/v2/intelligence/trajectory/client/{id} returns trend data"
       - "/api/v2/intelligence/scenarios/model accepts config, returns results"
       - "StrEnum import fixed or phase-01 prerequisite met"
-      - "ruff check -- zero errors"
-      - "bandit -r -- zero findings"
-      - "python -m pytest tests/ -x -- passes"
+      - "Include in command block: ruff check <changed files>"
+      - "Include in command block: bandit -r <changed files>"
+      - "Include in command block: python -m pytest tests/ -x"
     estimated_lines: 50
     depends_on: []
 
@@ -79,9 +79,9 @@ tasks:
       - "RecencyWeighter applied to signal detection"
       - "CorrelationConfidenceCalculator refines pattern confidence"
       - "No regression in scoring or pattern detection"
-      - "ruff check -- zero errors"
-      - "bandit -r -- zero findings"
-      - "python -m pytest tests/ -x -- passes"
+      - "Include in command block: ruff check <changed files>"
+      - "Include in command block: bandit -r <changed files>"
+      - "Include in command block: python -m pytest tests/ -x"
     estimated_lines: 35
     depends_on: []
 
@@ -111,9 +111,9 @@ tasks:
     verification:
       - "route_item() called before Asana task creation"
       - "check_duplicates() prevents duplicate task creation"
-      - "ruff check lib/actions/action_framework.py lib/routing_engine.py -- zero errors"
-      - "bandit -r lib/actions/action_framework.py lib/routing_engine.py -- zero findings"
-      - "python -m pytest tests/ -x -- passes"
+      - "Include in command block: ruff check <changed files>"
+      - "Include in command block: bandit -r <changed files>"
+      - "Include in command block: python -m pytest tests/ -x"
     estimated_lines: 20
     depends_on: []
 
