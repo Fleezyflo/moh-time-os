@@ -1,44 +1,50 @@
 # HANDOFF -- Audit Remediation
 
-**Generated:** 2026-03-06
-**Current Phase:** phase-04 (complete) -- next: phase-05
-**Current Session:** 4
-**Track:** T1
+**Generated:** 2026-03-07
+**Current Phase:** phase-06 (complete) -- next: phase-07
+**Current Session:** 6
+**Track:** T1 complete, T2 starting
 
 ---
 
 ## What Just Happened
 
-### Session 004 -- Phase 04: Wire Notifications + Governance
+### Session 006 -- Phase 06: Error Masking Audit
 
-Wired all 6 modules across 3 files:
+Audited all `return {}/[]` and silent `except` patterns across `lib/`, `engine/`, and `collectors/`. Fixed 11 files:
 
-**Notification intelligence (task-01):**
-- `DigestEngine` -- initialized in NotificationEngine, queues deferred notifications for batched delivery
-- `NotificationIntelligence` -- gates every notification send in `process_pending_sync()` with fatigue/timing/channel logic
-- `SignalSuppression` -- expires old suppressions and counts active ones each intelligence cycle (step 2b)
-- `AttentionTracker` -- records system review events and computes attention debt per entity type (step 8a)
+**lib/ (3 files):**
+- `delegation_graph.py`, `projects.py`, `conflicts.py` -- added logger.warning to silent except blocks that returned {} without logging
 
-**Predictive intelligence + governance (task-02):**
-- `PredictiveIntelligence` -- generates early warnings for entities with declining health trends (step 2c)
-- `ComplianceReporter` -- runs periodically every 24 cycles, generates compliance report (step 10a)
+**engine/ (3 files):**
+- `knowledge_base.py` -- narrowed 3 bare `except Exception` to specific types, added logging
+- `rules_store.py` -- narrowed `except Exception` to `(json.JSONDecodeError, OSError)`, added logging
+- `tasks_discovery.py` -- narrowed `except Exception` to `(ValueError, TypeError, AttributeError)`, added debug logging
 
-**API endpoints added** in `api/intelligence_router.py`:
-- `GET /api/v2/intelligence/attention-debt` -- entities sorted by attention debt
-- `GET /api/v2/intelligence/predictions/early-warnings` -- early warnings with probability
-- `GET /api/v2/intelligence/governance/compliance-report` -- compliance status and violations
+**collectors/ (5 files):**
+- `chat_direct.py` -- narrowed 2 `except Exception`, replaced print() with logger
+- `scheduled_collect.py` -- replaced ~11 print()+traceback patterns with logger.warning(exc_info=True), narrowed all except blocks
+- `drive_direct.py` -- narrowed 3 `except Exception`, replaced print() with logger
+- `contacts_direct.py` -- narrowed 2 `except Exception`, replaced print() with logger
+- `xero_ops.py` -- narrowed 2 `except Exception`, fixed f-string logger, added debug log to silent pass
 
-**Status:** Code written, syntax verified, ruff clean, bandit clean, 103 tests pass. Needs Molham to format and commit.
+**Not changed (legitimate patterns):**
+- Guard clauses: `return {} if not path.exists()` -- correct behavior
+- No-data defaults: `return []` when empty list is expected -- correct behavior
+- Already-logged patterns: many `except` blocks already had logger calls -- left as-is
+
+**Status:** Code written. Needs Molham to run verification + commit command block.
 
 ---
 
 ## What's Next
 
-### Phase 05: Wire Scenario + Temporal + Routing
-- Wire scenario engine (API-only, never in loop), temporal normalization, signal routing
-- See `audit-remediation/plan/phase-05.yaml`
+### Phase 07: Verify Data Foundation (Track T2)
+- 6 verification tasks -- reporting only, no code changes
+- See `audit-remediation/plan/phase-07.yaml`
+- Tasks: verify brand_id, from_domain, pipeline, test suite, engagements, data foundation completeness
 
-**Branch:** `feat/wire-notification-intelligence` (current, needs commit first)
+**Branch:** `fix/error-masking-audit` (needs commit + PR first)
 
 ---
 
@@ -46,19 +52,17 @@ Wired all 6 modules across 3 files:
 
 1. Never run git from sandbox (creates .git/index.lock)
 2. Never format from sandbox (ruff version mismatch)
-3. Read actual module signatures before wiring (phases 02-05)
-4. ScenarioEngine is API-only, never in loop
-5. Verification phases report DONE or GAP, never fix inline
-6. SignalLifecycleTracker is complementary to update_signal_state, not a replacement
-7. HealthUnifier has get_health_trend() not get_health_history() for historical scores
-8. ComplianceReporter is expensive -- run periodically (every 24 cycles), not every cycle
-9. All rules from CLAUDE.md apply
+3. Verification phases (07-13) report DONE or GAP, never fix inline
+4. All rules from CLAUDE.md apply
+5. Match existing patterns -- logging.getLogger(__name__), %s format, narrowed exception types
+6. No `noqa`, `nosec`, `# type: ignore` -- fix the root cause
+7. Commit subject under 72 chars, first letter after prefix lowercase
 
 ---
 
 ## Documents to Read
 
 1. `audit-remediation/AGENT.md` -- Engineering standards for this project
-2. `audit-remediation/plan/phase-05.yaml` -- Next phase
+2. `audit-remediation/plan/phase-07.yaml` -- Next phase
 3. `audit-remediation/state.json` -- Current project state
 4. `CLAUDE.md` -- Repo-level engineering rules

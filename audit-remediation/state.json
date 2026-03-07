@@ -2,8 +2,8 @@
   "$schema": "../session-system-v2/core/state.schema.json",
   "project": "MOH Time OS — Audit Remediation",
   "owner": "Fleezyflo",
-  "current_phase": "phase-04",
-  "current_session": 4,
+  "current_phase": "phase-07",
+  "current_session": 6,
   "phases": {
     "phase-01": {
       "status": "complete",
@@ -42,22 +42,22 @@
       "tasks_complete": 2
     },
     "phase-05": {
-      "status": "blocked",
-      "started_session": null,
-      "completed_session": null,
-      "blocked_by": ["phase-01"],
+      "status": "complete",
+      "started_session": 5,
+      "completed_session": 5,
+      "blocked_by": [],
       "prs": [],
       "tasks_total": 3,
-      "tasks_complete": 0
+      "tasks_complete": 3
     },
     "phase-06": {
-      "status": "blocked",
-      "started_session": null,
-      "completed_session": null,
-      "blocked_by": ["phase-02", "phase-03", "phase-04", "phase-05"],
+      "status": "complete",
+      "started_session": 6,
+      "completed_session": 6,
+      "blocked_by": [],
       "prs": [],
       "tasks_total": 1,
-      "tasks_complete": 0
+      "tasks_complete": 1
     },
     "phase-07": {
       "status": "pending",
@@ -87,10 +87,10 @@
       "tasks_complete": 0
     },
     "phase-10": {
-      "status": "blocked",
+      "status": "pending",
       "started_session": null,
       "completed_session": null,
-      "blocked_by": ["phase-05"],
+      "blocked_by": [],
       "prs": [],
       "tasks_total": 6,
       "tasks_complete": 0
@@ -105,10 +105,10 @@
       "tasks_complete": 0
     },
     "phase-12": {
-      "status": "blocked",
+      "status": "pending",
       "started_session": null,
       "completed_session": null,
-      "blocked_by": ["phase-02"],
+      "blocked_by": [],
       "prs": [],
       "tasks_total": 5,
       "tasks_complete": 0

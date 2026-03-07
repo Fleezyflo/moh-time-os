@@ -1,6 +1,7 @@
 """Knowledge base: ingest clients, team, projects from source systems."""
 
 import json
+import logging
 import os
 import re
 from dataclasses import asdict, dataclass
@@ -73,7 +74,8 @@ def load_kb() -> KnowledgeBase | None:
     try:
         with open(KB_PATH) as f:
             return KnowledgeBase.from_dict(json.load(f))
-    except Exception:
+    except (json.JSONDecodeError, OSError, TypeError, KeyError) as e:
+        logging.getLogger(__name__).warning("Could not load knowledge base: %s", e)
         return None
 
 
@@ -263,8 +265,8 @@ def ingest_projects_from_asana() -> list[Project]:
 
     try:
         workspaces = list_workspaces()
-    except Exception as e:
-        print(f"Asana error: {e}")
+    except (OSError, ValueError, KeyError) as e:
+        logging.getLogger(__name__).warning("Asana error: %s", e)
         return []
 
     for ws in workspaces:
@@ -273,8 +275,10 @@ def ingest_projects_from_asana() -> list[Project]:
 
         try:
             asana_projects = list_projects(ws["gid"])
-        except Exception as e:
-            print(f"Error listing projects: {e}")
+        except (OSError, ValueError, KeyError) as e:
+            logging.getLogger(__name__).warning(
+                "Error listing projects for workspace %s: %s", ws.get("gid"), e
+            )
             continue
 
         for p in asana_projects:

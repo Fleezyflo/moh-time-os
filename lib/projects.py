@@ -101,7 +101,8 @@ def load_projects() -> dict[str, Project]:
     try:
         data = json.loads(PROJECTS_FILE.read_text())
         return {pid: Project.from_dict(p) for pid, p in data.items()}
-    except (json.JSONDecodeError, TypeError):
+    except (json.JSONDecodeError, TypeError) as e:
+        logger.warning("Could not load projects file: %s", e)
         return {}
 
 

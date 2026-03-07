@@ -57,8 +57,8 @@ def list_spaces(max_spaces: int = 50, user: str = DEFAULT_USER) -> list[dict]:
         service = get_chat_service(user)
         results = service.spaces().list(pageSize=max_spaces).execute()
         return results.get("spaces", [])
-    except Exception as e:
-        print(f"   Error listing spaces: {e}")
+    except (OSError, ValueError, KeyError) as e:
+        logging.getLogger(__name__).warning("Error listing spaces: %s", e)
         return []
     finally:
         socket.setdefaulttimeout(old_timeout)
@@ -72,8 +72,8 @@ def list_messages(space_name: str, max_messages: int = 20, user: str = DEFAULT_U
             service.spaces().messages().list(parent=space_name, pageSize=max_messages).execute()
         )
         return results.get("messages", [])
-    except Exception:
-        # Silently skip spaces we can't access
+    except (OSError, ValueError, KeyError) as e:
+        logging.getLogger(__name__).debug("Skipping inaccessible space %s: %s", space_name, e)
         return []
 
 
