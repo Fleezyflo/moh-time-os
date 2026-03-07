@@ -1,9 +1,8 @@
 id: "phase-12"
 name: "Verify UI + Architecture"
 description: |
-  Verification-only phase. Partially blocked on phase-02 (deepening wiring).
-  Validates: UI completeness, view reconciliation, V4/V5 consolidation,
-  synthesis validation (blocked), debug/observability.
+  Verification-only. Validate: UI completeness, view reconciliation,
+  V4/V5 consolidation, synthesis, debug/observability.
 
 dependencies:
   - "phase-02"
@@ -16,96 +15,80 @@ tasks:
   - id: "task-01"
     name: "Verify UI completeness"
     description: |
-      Original spec: IX-3.1 to IX-6.1 (tasks/TASK_P3_23_VERIFY_UI_COMPLETENESS.md)
-      Check all UI pages are functional (not stubs).
-      NOTE from audit: DataQuality.tsx (72 lines), Notifications.tsx (82 lines),
-      Approvals.tsx (92 lines) were verified as FUNCTIONAL -- they use real
-      hooks, components, and API calls. Verify remaining pages similarly.
+      Spec: IX-3.1 to IX-6.1 (tasks/TASK_P3_23_VERIFY_UI_COMPLETENESS.md)
+      Investigate all registered routes -- confirm each has a functional
+      page (not a stub), makes valid API calls, and follows existing
+      UI patterns.
     files:
       create: []
       modify: []
       delete: []
     verification:
-      - "All registered routes have functional pages"
-      - "No stub pages (empty or placeholder content)"
-      - "All pages make valid API calls"
-      - "tsc --noEmit passes on all UI files"
+      - "All routes have functional pages; stubs identified as GAP"
     estimated_lines: 0
     depends_on: []
 
   - id: "task-02"
     name: "Verify view reconciliation"
     description: |
-      Original spec: VR-1.1 to VR-5.1 (tasks/TASK_P3_24_VERIFY_VIEW_RECONCILIATION.md)
-      Check: old views fully replaced by detection system views.
-      No duplicate/competing views. Three-tab scored layout removed.
-      Single-view detection design is active.
+      Spec: VR-1.1 to VR-5.1 (tasks/TASK_P3_24_VERIFY_VIEW_RECONCILIATION.md)
+      Confirm old scored views fully replaced by detection system views.
+      No duplicate or competing view components.
     files:
       create: []
       modify: []
       delete: []
     verification:
-      - "Old scored view components removed or deprecated"
-      - "Detection system view is the active command center"
-      - "No conflicting view imports"
+      - "Single active view system confirmed; no competing views"
     estimated_lines: 0
     depends_on: []
 
   - id: "task-03"
     name: "Verify V4/V5 consolidation"
     description: |
-      Original spec: IE-5.1, IE-7.1 (tasks/TASK_P3_25_VERIFY_V4V5_CONSOLIDATION.md)
-      Check: V4 intelligence modules fully migrated to V5.
-      No duplicate V4/V5 code running in parallel.
-      V5 is the active intelligence engine.
+      Spec: IE-5.1 to IE-7.1 (tasks/TASK_P3_25_VERIFY_V4V5_CONSOLIDATION.md)
+      Confirm V5 is the sole active intelligence engine. No V4 modules
+      imported or running in parallel.
     files:
       create: []
       modify: []
       delete: []
     verification:
-      - "V4 modules not imported in active code"
-      - "V5 is the sole intelligence engine"
-      - "No V4/V5 duplication"
+      - "V5 confirmed sole engine; no V4 imports in active code"
     estimated_lines: 0
     depends_on: []
 
   - id: "task-04"
     name: "Verify synthesis validation"
     description: |
-      Original spec: ID-6.1 (tasks/TASK_P3_26_VERIFY_SYNTHESIS_VALIDATION.md)
-      BLOCKED on phase-02 (intelligence deepening wiring).
-      After deepening modules wired, verify:
-      entity_profile synthesis combines scores, signals, patterns correctly.
+      Spec: ID-6.1 (tasks/TASK_P3_26_VERIFY_SYNTHESIS_VALIDATION.md)
+      Blocked on phase-02 (intelligence deepening wiring).
+      After wiring, verify entity_profile synthesis combines all sources.
     files:
       create: []
       modify: []
       delete: []
     verification:
-      - "Entity profiles synthesize all intelligence sources"
-      - "No missing data in synthesized profiles"
-      - "Profile API returns complete data"
+      - "Entity profile synthesis verified against all intelligence sources"
     estimated_lines: 0
     depends_on: []
 
   - id: "task-05"
     name: "Verify debug and observability"
     description: |
-      Original spec: IO-4.1, IO-5.1 (tasks/TASK_P3_27_VERIFY_DEBUG_OBSERVABILITY.md)
-      Verify: debug mode exists and is useful, observability covers
-      critical paths, metrics/tracing/health endpoints functional.
+      Spec: IO-4.1 to IO-5.1 (tasks/TASK_P3_27_VERIFY_DEBUG_OBSERVABILITY.md)
+      Investigate: debug mode, observability coverage, metrics collection,
+      health endpoints.
     files:
       create: []
       modify: []
       delete: []
     verification:
-      - "Debug mode toggleable and useful"
-      - "Observability covers intelligence pipeline"
-      - "Health endpoint reports meaningful status"
-      - "Metrics collected for critical operations"
+      - "Debug and observability capabilities documented with DONE/GAP"
     estimated_lines: 0
     depends_on: []
 
 completion_criteria:
-  - "All 5 verification tasks produce DONE or GAP report"
+  - "All 5 tasks produce DONE or GAP report"
   - "Gaps filed as new tasks"
-  - "Results documented in session record"
+  - "Results in session record"

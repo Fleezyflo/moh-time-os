@@ -1364,3 +1364,223 @@ def compliance_report():
     except (sqlite3.Error, ValueError, OSError) as e:
         logger.exception("compliance_report failed")
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# =========================================================================
+# TRAJECTORY ENDPOINTS
+# =========================================================================
+
+
+@intelligence_router.get(
+    "/trajectory/{entity_type}/{entity_id}",
+    response_model=IntelligenceResponse,
+)
+def get_trajectory(
+    entity_type: str = PathParam(..., description="Entity type (client)"),
+    entity_id: str = PathParam(..., description="Entity ID"),
+    windows: int = Query(12, ge=2, le=52, description="Number of time windows"),
+):
+    """
+    Get full trajectory analysis for an entity.
+
+    Returns velocity, acceleration, trend, seasonality, and projections.
+    Currently supports entity_type='client'.
+    """
+    from pathlib import Path as FilePath
+
+    from lib import paths
+    from lib.intelligence.trajectory import TrajectoryEngine
+
+    try:
+        db_path = FilePath(paths.db_path())
+        engine = TrajectoryEngine(db_path)
+
+        if entity_type == "client":
+            result = engine.client_full_trajectory(entity_id, windows=windows)
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported entity_type: {entity_type}. Use 'client'.",
+            )
+
+        if result is None:
+            raise HTTPException(
+                status_code=404,
+                detail=f"{entity_type} '{entity_id}' not found or no data",
+            )
+
+        return _wrap_response(
+            result.to_dict(),
+            {"entity_type": entity_type, "entity_id": entity_id, "windows": windows},
+        )
+    except HTTPException:
+        raise
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("trajectory endpoint failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# =========================================================================
+# SCENARIO MODELING ENDPOINTS (API-only -- NOT in the loop)
+# =========================================================================
+
+
+@intelligence_router.post(
+    "/scenarios/model",
+    response_model=IntelligenceResponse,
+)
+def model_scenario(config: dict):
+    """
+    Model a what-if scenario.
+
+    Accepts a config dict with:
+    - scenario_type: CLIENT_LOSS | CLIENT_ADDITION | RESOURCE_CHANGE |
+                     PRICING_CHANGE | CAPACITY_SHIFT | WORKLOAD_REBALANCE
+    - Plus type-specific parameters (client_id, person_name, etc.)
+    """
+    from pathlib import Path as FilePath
+
+    from lib import paths
+    from lib.intelligence.scenario_engine import ScenarioEngine, ScenarioType
+
+    try:
+        db_path = FilePath(paths.db_path())
+        engine = ScenarioEngine(db_path)
+
+        scenario_type = config.get("scenario_type", "")
+        try:
+            stype = ScenarioType(scenario_type)
+        except ValueError as e:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid scenario_type: {scenario_type}. "
+                f"Valid: {[s.value for s in ScenarioType]}",
+            ) from e
+
+        result = None
+        if stype == ScenarioType.CLIENT_LOSS:
+            client_id = config.get("client_id")
+            if not client_id:
+                raise HTTPException(status_code=400, detail="client_id required")
+            result = engine.model_client_loss(client_id)
+
+        elif stype == ScenarioType.CLIENT_ADDITION:
+            result = engine.model_client_addition(
+                estimated_revenue=config.get("estimated_revenue", 0),
+                estimated_tasks=config.get("estimated_tasks", 0),
+                team_size=config.get("team_size", 1),
+            )
+
+        elif stype == ScenarioType.RESOURCE_CHANGE:
+            person_name = config.get("person_name")
+            change_type = config.get("change_type", "leaves")
+            if not person_name:
+                raise HTTPException(status_code=400, detail="person_name required")
+            result = engine.model_resource_change(person_name, change_type)
+
+        elif stype == ScenarioType.PRICING_CHANGE:
+            client_id = config.get("client_id")
+            pct_change = config.get("pct_change", 0)
+            if not client_id:
+                raise HTTPException(status_code=400, detail="client_id required")
+            result = engine.model_pricing_change(client_id, pct_change)
+
+        elif stype == ScenarioType.CAPACITY_SHIFT:
+            lane_id = config.get("lane_id")
+            delta_hours = config.get("delta_hours", 0)
+            if not lane_id:
+                raise HTTPException(status_code=400, detail="lane_id required")
+            result = engine.model_capacity_shift(lane_id, delta_hours)
+
+        elif stype == ScenarioType.WORKLOAD_REBALANCE:
+            result = engine.model_workload_rebalance()
+
+        if result is None:
+            raise HTTPException(status_code=404, detail="Scenario produced no result")
+
+        return _wrap_response(result.to_dict(), {"scenario_type": scenario_type})
+    except HTTPException:
+        raise
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("scenario model failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@intelligence_router.post(
+    "/scenarios/compare",
+    response_model=IntelligenceResponse,
+)
+def compare_scenarios(configs: list[dict]):
+    """
+    Compare multiple scenarios side-by-side.
+
+    Accepts a list of scenario config dicts (same format as /scenarios/model).
+    Returns comparison with best/worst case and tradeoff analysis.
+    """
+    from pathlib import Path as FilePath
+
+    from lib import paths
+    from lib.intelligence.scenario_engine import ScenarioEngine, ScenarioType
+
+    try:
+        db_path = FilePath(paths.db_path())
+        engine = ScenarioEngine(db_path)
+
+        # Model each scenario
+        results_list = []
+        for cfg in configs:
+            scenario_type = cfg.get("scenario_type", "")
+            try:
+                stype = ScenarioType(scenario_type)
+            except ValueError as e:
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Invalid scenario_type: {scenario_type}",
+                ) from e
+
+            result = None
+            if stype == ScenarioType.CLIENT_LOSS:
+                result = engine.model_client_loss(cfg.get("client_id", ""))
+            elif stype == ScenarioType.CLIENT_ADDITION:
+                result = engine.model_client_addition(
+                    estimated_revenue=cfg.get("estimated_revenue", 0),
+                    estimated_tasks=cfg.get("estimated_tasks", 0),
+                    team_size=cfg.get("team_size", 1),
+                )
+            elif stype == ScenarioType.RESOURCE_CHANGE:
+                result = engine.model_resource_change(
+                    cfg.get("person_name", ""),
+                    cfg.get("change_type", "leaves"),
+                )
+            elif stype == ScenarioType.PRICING_CHANGE:
+                result = engine.model_pricing_change(
+                    cfg.get("client_id", ""),
+                    cfg.get("pct_change", 0),
+                )
+            elif stype == ScenarioType.CAPACITY_SHIFT:
+                result = engine.model_capacity_shift(
+                    cfg.get("lane_id", ""),
+                    cfg.get("delta_hours", 0),
+                )
+            elif stype == ScenarioType.WORKLOAD_REBALANCE:
+                result = engine.model_workload_rebalance()
+
+            if result is not None:
+                results_list.append(result)
+
+        if len(results_list) < 2:
+            raise HTTPException(
+                status_code=400,
+                detail="Need at least 2 successful scenarios to compare",
+            )
+
+        comparison = engine.compare_scenarios(results_list)
+        if comparison is None:
+            raise HTTPException(status_code=500, detail="Comparison produced no result")
+
+        return _wrap_response(comparison.to_dict())
+    except HTTPException:
+        raise
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("scenario compare failed")
+        raise HTTPException(status_code=500, detail=str(e)) from e

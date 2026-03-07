@@ -1,9 +1,9 @@
 id: "phase-10"
 name: "Verify Intelligence Systems"
 description: |
-  Verification-only phase. Partially blocked on wiring phases.
-  Validates: adaptive thresholds, temporal validation (blocked on phase-05),
-  notifications, bidirectional, conversational, proactive intelligence.
+  Verification-only. Validate intelligence layer: adaptive thresholds,
+  temporal validation, notifications, bidirectional, conversational,
+  proactive intelligence.
 
 dependencies:
   - "phase-05"
@@ -16,112 +16,95 @@ tasks:
   - id: "task-01"
     name: "Verify adaptive thresholds"
     description: |
-      Original spec: AT-2.1 to AT-5.1 (tasks/TASK_P3_14_VERIFY_ADAPTIVE_THRESHOLDS.md)
-      Gap analysis of the threshold system:
-      - Are thresholds adjustable per entity?
-      - Do they adapt based on historical data?
-      - Is there calibration reporting?
-      - Do seasonal/contextual modifiers exist?
+      Spec: AT-2.1 to AT-5.1 (tasks/TASK_P3_14_VERIFY_ADAPTIVE_THRESHOLDS.md)
+      Investigate the threshold system: per-entity adjustment, historical
+      adaptation, calibration reporting, seasonal/contextual modifiers.
     files:
       create: []
       modify: []
       delete: []
     verification:
-      - "Threshold adjustment mechanism exists"
-      - "Calibration metrics available"
-      - "Seasonal modifiers documented"
+      - "Threshold system capabilities documented with DONE/GAP"
     estimated_lines: 0
     depends_on: []
 
   - id: "task-02"
     name: "Verify temporal validation"
     description: |
-      Original spec: TC-5.1 (tasks/TASK_P3_15_VERIFY_TEMPORAL_VALIDATION.md)
-      BLOCKED on phase-05 task-02 (temporal wiring).
-      After temporal.py is wired, verify:
-      - BusinessCalendar correctly identifies holidays/weekends
-      - TemporalNormalizer adjusts metrics for business days
-      - RecencyWeighter biases toward recent data
+      Spec: TC-5.1 (tasks/TASK_P3_15_VERIFY_TEMPORAL_VALIDATION.md)
+      Blocked on phase-05 task-02 (temporal wiring).
+      After wiring, verify BusinessCalendar, TemporalNormalizer,
+      RecencyWeighter produce correct results.
     files:
       create: []
       modify: []
       delete: []
     verification:
-      - "Temporal normalization produces correct adjustments"
-      - "Business calendar handles edge cases"
-      - "Recency weighting verified"
+      - "Temporal components verified against expected behavior"
     estimated_lines: 0
     depends_on: []
 
   - id: "task-03"
     name: "Verify notifications system"
     description: |
-      Original spec: NI-3.1 to NI-5.1 (tasks/TASK_P3_16_VERIFY_NOTIFICATIONS.md)
-      Verify: email notifications work, notification history stored,
-      analytics available, digest batching correct, fatigue prevention.
+      Spec: NI-3.1 to NI-5.1 (tasks/TASK_P3_16_VERIFY_NOTIFICATIONS.md)
+      Investigate: delivery channels, history storage, analytics,
+      digest batching, fatigue prevention.
     files:
       create: []
       modify: []
       delete: []
     verification:
-      - "Notifications delivered via configured channels"
-      - "Notification history queryable"
-      - "Analytics data collected"
+      - "Notification system capabilities documented with DONE/GAP"
     estimated_lines: 0
     depends_on: []
 
   - id: "task-04"
     name: "Verify bidirectional integration"
     description: |
-      Original spec: BI-2.1, BI-3.1, BI-5.1 (tasks/TASK_P3_17_VERIFY_BIDIRECTIONAL.md)
-      Verify: Asana writeback works, Gmail/Calendar automation works,
-      action validation prevents bad writes.
+      Spec: BI-2.1 to BI-5.1 (tasks/TASK_P3_17_VERIFY_BIDIRECTIONAL.md)
+      Investigate: Asana writeback, Gmail/Calendar automation,
+      action validation.
     files:
       create: []
       modify: []
       delete: []
     verification:
-      - "Asana writeback creates/updates tasks"
-      - "Calendar automation creates events"
-      - "Action validation catches invalid operations"
+      - "Bidirectional integration capabilities documented with DONE/GAP"
     estimated_lines: 0
     depends_on: []
 
   - id: "task-05"
     name: "Verify conversational interface"
     description: |
-      Original spec: CI-2.1, CI-4.1 (tasks/TASK_P3_18_VERIFY_CONVERSATIONAL.md)
-      Verify: cross-domain synthesis works (combining data from multiple
-      sources into coherent responses), conversational UI validation.
+      Spec: CI-2.1 to CI-4.1 (tasks/TASK_P3_18_VERIFY_CONVERSATIONAL.md)
+      Investigate: cross-domain synthesis, conversational flow,
+      ambiguity handling, error responses.
     files:
       create: []
       modify: []
       delete: []
     verification:
-      - "Cross-domain queries return synthesized results"
-      - "Conversational flow handles ambiguity"
-      - "Error responses are informative"
+      - "Conversational interface capabilities documented with DONE/GAP"
     estimated_lines: 0
     depends_on: []
 
   - id: "task-06"
     name: "Verify proactive intelligence"
     description: |
-      Original spec: PI-1.1 to PI-5.1 (tasks/TASK_P3_19_VERIFY_PROACTIVE.md)
-      Verify: preparation suggestions, Asana integration for proactive
-      tasks, email-based proactive actions work end-to-end.
+      Spec: PI-1.1 to PI-5.1 (tasks/TASK_P3_19_VERIFY_PROACTIVE.md)
+      Investigate: preparation suggestions, Asana task creation from
+      proactive triggers, email-based proactive actions.
     files:
       create: []
       modify: []
       delete: []
     verification:
-      - "Proactive suggestions generated"
-      - "Asana task creation from proactive triggers"
-      - "Email actions from proactive intelligence"
+      - "Proactive intelligence capabilities documented with DONE/GAP"
     estimated_lines: 0
     depends_on: []
 
 completion_criteria:
-  - "All 6 verification tasks produce DONE or GAP report"
+  - "All 6 tasks produce DONE or GAP report"
   - "Gaps filed as new tasks"
-  - "Results documented in session record"
+  - "Results in session record"

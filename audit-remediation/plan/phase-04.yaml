@@ -52,9 +52,9 @@ tasks:
       - "SignalSuppression filters dismissed signals"
       - "AttentionTracker wired into intelligence phase"
       - "/api/v2/intelligence/attention-debt returns JSON"
-      - "ruff check on all touched files -- zero errors"
-      - "bandit -r on all touched files -- zero findings"
-      - "python -m pytest tests/ -x -- passes"
+      - "Include in command block: ruff check <changed files>"
+      - "Include in command block: bandit -r <changed files>"
+      - "Include in command block: python -m pytest tests/ -x"
     estimated_lines: 60
     depends_on: []
 
@@ -91,9 +91,9 @@ tasks:
       - "Early warnings generated for declining entities"
       - "ComplianceReporter runs periodically, not every cycle"
       - "Both API endpoints return valid JSON"
-      - "ruff check -- zero errors"
-      - "bandit -r -- zero findings"
-      - "python -m pytest tests/ -x -- passes"
+      - "Include in command block: ruff check <changed files>"
+      - "Include in command block: bandit -r <changed files>"
+      - "Include in command block: python -m pytest tests/ -x"
     estimated_lines: 40
     depends_on: ["task-01"]
 

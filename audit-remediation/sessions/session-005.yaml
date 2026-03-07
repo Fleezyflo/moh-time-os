@@ -1,0 +1,66 @@
+session: 5
+date: "2026-03-07"
+phase: "phase-05"
+track: "T1"
+branch: "feat/wire-scenario-temporal-routing"
+
+tasks_completed:
+  - id: "task-01"
+    name: "Wire scenario engine and trajectory"
+    changes:
+      - file: "api/intelligence_router.py"
+        what: |
+          Added 3 new endpoints:
+          - GET /trajectory/{entity_type}/{entity_id} -- full trajectory analysis
+            with velocity, acceleration, trend, seasonality, projections.
+          - POST /scenarios/model -- what-if scenario modeling for all 6 types
+            (client_loss, client_addition, resource_change, pricing_change,
+            capacity_shift, workload_rebalance).
+          - POST /scenarios/compare -- side-by-side comparison of 2+ scenarios.
+          ScenarioEngine is API-only per spec -- not wired into loop.
+      - file: "lib/autonomous_loop.py"
+        what: |
+          Added step 1b: TrajectoryEngine -- runs portfolio_health_trajectory()
+          AFTER scoring. Stores result count in results["trajectory_analyses"].
+
+  - id: "task-02"
+    name: "Wire temporal context and correlation confidence"
+    changes:
+      - file: "lib/autonomous_loop.py"
+        what: |
+          Added step 0a: Temporal normalization -- initializes BusinessCalendar
+          and TemporalNormalizer BEFORE scoring. Stores normalizer on
+          intelligence_context for downstream use.
+          Added step 2a: RecencyWeighter -- applies decay weighting to each
+          signal's detected_at date AFTER signal detection. Stores
+          recency_weight on each signal dict.
+          Added step 3a: CorrelationConfidenceCalculator -- refines confidence
+          for patterns that have associated signals AFTER pattern detection.
+          Stores refined_confidence on pattern dicts.
+          Added 4 new result keys: temporal_normalization_done,
+          recency_weights_applied, correlation_confidence_refined,
+          trajectory_analyses.
+
+  - id: "task-03"
+    name: "Wire routing engine into action framework"
+    changes:
+      - file: "lib/actions/action_framework.py"
+        what: |
+          Added wire_routing_engine() method that registers a before_execute_hook
+          for task_create actions. Hook routes through routing_engine to determine
+          destination_list, title, notes, and dedupe_key. Calls check_duplicates()
+          and raises ValueError if duplicate detected. Auto-called in __init__.
+
+verification:
+  ruff_check: "pending -- included in command block for Molham"
+  ruff_format: "pending -- included in command block for Molham"
+  bandit: "pending -- included in command block for Molham"
+  pytest: "pending -- included in command block for Molham"
+
+notes:
+  - "ScenarioEngine is API-only per spec -- never wired into the loop"
+  - "TrajectoryEngine wired AFTER scoring per pipeline insertion order"
+  - "TemporalNormalizer wired BEFORE scoring per pipeline insertion order"
+  - "RecencyWeighter uses half_life_days=14 default from class constructor"
+  - "CorrelationConfidenceCalculator uses cycle_length_hours=24 default"
+  - "Sandbox cannot run ruff/bandit/pytest -- all verification in command block"
