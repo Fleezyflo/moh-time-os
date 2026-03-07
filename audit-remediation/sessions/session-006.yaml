@@ -1,0 +1,81 @@
+session: 6
+date: "2026-03-07"
+phase: "phase-06"
+track: "T1"
+branch: "fix/error-masking-audit"
+
+tasks_completed:
+  - id: "task-01"
+    name: "Audit and fix error-masking patterns"
+    changes:
+      - file: "lib/delegation_graph.py"
+        what: |
+          Added logger.warning to except (json.JSONDecodeError, TypeError)
+          block in load() that was silently returning {}.
+      - file: "lib/projects.py"
+        what: |
+          Added logger.warning to except (json.JSONDecodeError, TypeError)
+          block in load() that was silently returning {}.
+      - file: "lib/conflicts.py"
+        what: |
+          Added logger.warning to except (json.JSONDecodeError, TypeError)
+          block in load() that was silently returning {}.
+      - file: "engine/knowledge_base.py"
+        what: |
+          Added logging import. Narrowed 3 bare except Exception blocks
+          to specific types (json.JSONDecodeError, OSError, TypeError,
+          KeyError, ValueError). Added logger.warning in load_kb() and
+          ingest_projects_from_asana(). Replaced print() with proper
+          logging.
+      - file: "engine/rules_store.py"
+        what: |
+          Added logging import. Narrowed except Exception to
+          except (json.JSONDecodeError, OSError). Added logger.warning.
+      - file: "engine/tasks_discovery.py"
+        what: |
+          Added logging import. Narrowed except Exception to
+          except (ValueError, TypeError, AttributeError) in
+          _parse_rfc3339(). Added logger.debug for bad timestamps.
+      - file: "collectors/chat_direct.py"
+        what: |
+          Narrowed 2 except Exception blocks to
+          except (OSError, ValueError, KeyError). Replaced print()
+          with logger.warning/debug. Added logging to previously
+          silent return [] in list_messages().
+      - file: "collectors/scheduled_collect.py"
+        what: |
+          Added logging import and logger. Replaced ~11 print()+
+          traceback.print_exc() patterns with logger.warning(exc_info=True).
+          Narrowed all except Exception blocks in collect_* functions
+          and _collect_all_impl() to specific types
+          (OSError, ValueError, KeyError, ImportError).
+      - file: "collectors/drive_direct.py"
+        what: |
+          Added logging import. Narrowed 3 except Exception blocks to
+          except (OSError, ValueError, KeyError). Replaced print()
+          with logger.warning.
+      - file: "collectors/contacts_direct.py"
+        what: |
+          Added logging import. Narrowed 2 except Exception blocks to
+          except (OSError, ValueError, KeyError). Replaced print()
+          with logger.warning.
+      - file: "collectors/xero_ops.py"
+        what: |
+          Narrowed 2 except Exception blocks to
+          except (OSError, ValueError, KeyError). Fixed f-string in
+          logger call to %s format. Added logger.debug to previously
+          silent except ValueError: pass in date parsing.
+
+verification:
+  ruff_check: "pending -- included in command block for Molham"
+  ruff_format: "pending -- included in command block for Molham"
+  bandit: "pending -- included in command block for Molham"
+  pytest: "pending -- included in command block for Molham"
+
+notes:
+  - "Zero except: pass or except: continue patterns found in codebase -- clean"
+  - "~50 return {}/[] patterns audited -- only those in except blocks without logging were fixed"
+  - "Guard clauses (return {} if not path.exists()) left as-is -- legitimate"
+  - "No-data defaults (return [] when list is empty) left as-is -- legitimate"
+  - "All fixes follow existing patterns: logging.getLogger(__name__), %s format, narrowed exception types"
+  - "Sandbox cannot run ruff/bandit/pytest -- all verification in command block"

@@ -4,6 +4,7 @@ Direct Google Drive API access using service account.
 """
 
 import json
+import logging
 import socket
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -62,8 +63,8 @@ def list_recent_files(
         )
 
         return results.get("files", [])
-    except Exception as e:
-        print(f"   Error listing files: {e}")
+    except (OSError, ValueError, KeyError) as e:
+        logging.getLogger(__name__).warning("Error listing files: %s", e)
         return []
 
 
@@ -84,8 +85,8 @@ def list_shared_with_me(max_results: int = 100, user: str = DEFAULT_USER) -> lis
         )
 
         return results.get("files", [])
-    except Exception as e:
-        print(f"   Error listing shared files: {e}")
+    except (OSError, ValueError, KeyError) as e:
+        logging.getLogger(__name__).warning("Error listing shared files: %s", e)
         return []
 
 
@@ -106,8 +107,8 @@ def list_my_files(max_results: int = 100, user: str = DEFAULT_USER) -> list[dict
         )
 
         return results.get("files", [])
-    except Exception as e:
-        print(f"   Error listing my files: {e}")
+    except (OSError, ValueError, KeyError) as e:
+        logging.getLogger(__name__).warning("Error listing my files: %s", e)
         return []
 
 

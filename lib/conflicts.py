@@ -112,7 +112,8 @@ def load_conflicts() -> dict[str, Conflict]:
     try:
         data = json.loads(CONFLICTS_FILE.read_text())
         return {cid: Conflict.from_dict(c) for cid, c in data.items()}
-    except (json.JSONDecodeError, TypeError):
+    except (json.JSONDecodeError, TypeError) as e:
+        logger.warning("Could not load conflicts file: %s", e)
         return {}
 
 

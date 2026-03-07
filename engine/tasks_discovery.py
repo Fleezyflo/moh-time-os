@@ -1,3 +1,4 @@
+import logging
 import re
 from collections import Counter
 from datetime import datetime
@@ -16,7 +17,8 @@ def _parse_rfc3339(ts: str) -> float:
         if ts.endswith("Z"):
             ts = ts[:-1] + "+00:00"
         return datetime.fromisoformat(ts).timestamp()
-    except Exception:
+    except (ValueError, TypeError, AttributeError) as e:
+        logging.getLogger(__name__).debug("Bad RFC3339 timestamp %r: %s", ts, e)
         return 0.0
 
 

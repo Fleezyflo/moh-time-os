@@ -594,6 +594,10 @@ class AutonomousLoop:
             "signals_suppressed": 0,
             "early_warnings_generated": 0,
             "compliance_report_generated": 0,
+            "temporal_normalization_done": 0,
+            "recency_weights_applied": 0,
+            "correlation_confidence_refined": 0,
+            "trajectory_analyses": 0,
         }
 
         # --- 0. Audit trail START (wraps entire intelligence phase) ---
@@ -614,6 +618,19 @@ class AutonomousLoop:
             results["audit_entries_recorded"] += 1
         except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Intelligence: audit trail init failed: {e}")
+
+        # --- 0a. Temporal normalization (BEFORE scoring) ---
+        _temporal_normalizer = None
+        business_calendar = None
+        try:
+            from lib.intelligence.temporal import BusinessCalendar, TemporalNormalizer
+
+            business_calendar = BusinessCalendar()
+            _temporal_normalizer = TemporalNormalizer(business_calendar)
+            results["temporal_normalization_done"] = 1
+            logger.info("Intelligence: temporal normalizer initialized")
+        except (sqlite3.Error, ValueError, OSError) as e:
+            logger.error(f"Intelligence: temporal normalization init failed: {e}")
 
         # --- 1. Score all entities and persist to score_history ---
         try:
@@ -678,6 +695,21 @@ class AutonomousLoop:
         except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Intelligence: quality confidence adjustment failed: {e}")
 
+        # --- 1b. Trajectory analysis (AFTER scoring) ---
+        try:
+            from lib.intelligence.trajectory import TrajectoryEngine
+
+            trajectory_engine = TrajectoryEngine(db_path)
+            portfolio_traj = trajectory_engine.portfolio_health_trajectory()
+            results["trajectory_analyses"] = len(portfolio_traj)
+            if portfolio_traj:
+                logger.info(
+                    "Intelligence: computed trajectory for %d entities",
+                    len(portfolio_traj),
+                )
+        except (sqlite3.Error, ValueError, OSError) as e:
+            logger.error(f"Intelligence: trajectory analysis failed: {e}")
+
         # --- 2. Detect signals and update signal state ---
         try:
             signal_results = detect_all_signals(db_path)
@@ -694,7 +726,33 @@ class AutonomousLoop:
         except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Intelligence: signal detection failed: {e}")
 
-        # --- 2a. Outcome tracking (records signal prediction accuracy) ---
+        # --- 2a. Recency weighting (applies decay to signal severity) ---
+        if business_calendar is not None:
+            try:
+                from lib.intelligence.temporal import RecencyWeighter
+
+                recency_weighter = RecencyWeighter(business_calendar)
+                # Apply recency weights to detected signals for downstream consumers
+                for sig in signal_results.get("signals", []):
+                    detected_str = sig.get("detected_at") or sig.get("first_seen")
+                    if detected_str:
+                        try:
+                            from datetime import date as _date
+
+                            detected_date = _date.fromisoformat(detected_str[:10])
+                            weight = recency_weighter.compute_weight(detected_date)
+                            sig["recency_weight"] = round(weight, 4)
+                            results["recency_weights_applied"] += 1
+                        except (ValueError, TypeError) as e:
+                            logger.error(f"Intelligence: recency weight for signal failed: {e}")
+                logger.info(
+                    "Intelligence: applied recency weights to %d signals",
+                    results["recency_weights_applied"],
+                )
+            except (sqlite3.Error, ValueError, OSError) as e:
+                logger.error(f"Intelligence: recency weighting failed: {e}")
+
+        # --- 2b. Outcome tracking (records signal prediction accuracy) ---
         try:
             from lib.intelligence.outcome_tracker import OutcomeTracker
 
@@ -786,7 +844,48 @@ class AutonomousLoop:
         except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Intelligence: pattern detection failed: {e}")
 
-        # --- 3a. Pattern trend analysis (tracks pattern evolution) ---
+        # --- 3a. Correlation confidence refinement (AFTER pattern detection) ---
+        try:
+            from lib.intelligence.correlation_confidence import (
+                CorrelationConfidenceCalculator,
+                CorrelationSignalEvidence,
+            )
+
+            confidence_calc = CorrelationConfidenceCalculator()
+            # Refine confidence for patterns that have associated signals
+            for p_dict in pattern_list:
+                p_signals = p_dict.get("signals", [])
+                if p_signals:
+                    try:
+                        evidence = []
+                        for s in p_signals:
+                            evidence.append(
+                                CorrelationSignalEvidence(
+                                    signal_key=s.get("signal_id", s.get("id", "")),
+                                    signal_type=s.get("signal_type", ""),
+                                    severity=s.get("severity", "WATCH"),
+                                    detected_at=datetime.fromisoformat(
+                                        s.get("detected_at", datetime.now().isoformat())
+                                    ),
+                                    is_present=s.get("is_active", True),
+                                )
+                            )
+                        if evidence:
+                            factors = confidence_calc.calculate(
+                                signals=evidence,
+                                required_signals=len(p_signals),
+                            )
+                            p_dict["refined_confidence"] = factors.final_confidence
+                            results["correlation_confidence_refined"] += 1
+                    except (ValueError, TypeError) as e:
+                        logger.error(
+                            f"Intelligence: correlation confidence for "
+                            f"pattern {p_dict.get('pattern_id', '?')} failed: {e}"
+                        )
+        except (sqlite3.Error, ValueError, OSError) as e:
+            logger.error(f"Intelligence: correlation confidence module failed: {e}")
+
+        # --- 3b. Pattern trend analysis (tracks pattern evolution) ---
         try:
             from lib.intelligence.pattern_trending import PatternTrendAnalyzer
 
