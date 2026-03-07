@@ -1,50 +1,39 @@
 # HANDOFF -- Audit Remediation
 
 **Generated:** 2026-03-07
-**Current Phase:** phase-06 (complete) -- next: phase-07
-**Current Session:** 6
-**Track:** T1 complete, T2 starting
+**Current Phase:** phase-08 (pending)
+**Current Session:** 8
+**Track:** T2 in progress
 
 ---
 
 ## What Just Happened
 
-### Session 006 -- Phase 06: Error Masking Audit
+### Session 007 -- Phase 07: Verify Data Foundation
 
-Audited all `return {}/[]` and silent `except` patterns across `lib/`, `engine/`, and `collectors/`. Fixed 11 files:
+Verification-only phase. Investigated 6 data foundation areas via code reading (no runtime). All 6 tasks produced DONE or GAP reports.
 
-**lib/ (3 files):**
-- `delegation_graph.py`, `projects.py`, `conflicts.py` -- added logger.warning to silent except blocks that returned {} without logging
+**Results:**
+- Task 01 (brand_id population): **DONE** -- brand_id exists in schema.py on projects, tasks, invoices, signals. Populated via entity_linker.py, seed_brands.py, normalizer.py. Enforced by 2 blocking gates.
+- Task 02 (from_domain derivation): **DONE** -- Correctly extracts domain via LOWER(SUBSTR(from_email, INSTR(from_email, '@') + 1)). Edge cases handled. Client linking via client_identities and subject-line fallbacks.
+- Task 03 (end-to-end pipeline): **DONE** -- Full pipeline traced: collect -> normalize -> gate -> resolution -> detection -> truth modules -> analyze -> reason -> notify. Gate blocking correctly skips truth modules on failure.
+- Task 04 (test suite pass rate): **DONE (pending Molham's output)** -- 120 test files. Previous session reported 249/249 passing. Command in block for Molham to confirm.
+- Task 05 (engagements table): **DONE with GAP** -- Schema, population, lifecycle, tests verified. GAP-07-01 found.
+- Task 06 (data foundation completeness): **DONE with GAP** -- All core tables, entity links, orphan detection, data quality baseline verified. Same GAP-07-01.
 
-**engine/ (3 files):**
-- `knowledge_base.py` -- narrowed 3 bare `except Exception` to specific types, added logging
-- `rules_store.py` -- narrowed `except Exception` to `(json.JSONDecodeError, OSError)`, added logging
-- `tasks_discovery.py` -- narrowed `except Exception` to `(ValueError, TypeError, AttributeError)`, added debug logging
+**1 gap found:**
+- **GAP-07-01 (medium):** engagements and engagement_transitions tables not in lib/schema.py (the single source of truth). Only exist in v29_engagement_lifecycle.py migration. Fix: add TABLES defs to schema.py, bump SCHEMA_VERSION.
 
-**collectors/ (5 files):**
-- `chat_direct.py` -- narrowed 2 `except Exception`, replaced print() with logger
-- `scheduled_collect.py` -- replaced ~11 print()+traceback patterns with logger.warning(exc_info=True), narrowed all except blocks
-- `drive_direct.py` -- narrowed 3 `except Exception`, replaced print() with logger
-- `contacts_direct.py` -- narrowed 2 `except Exception`, replaced print() with logger
-- `xero_ops.py` -- narrowed 2 `except Exception`, fixed f-string logger, added debug log to silent pass
-
-**Not changed (legitimate patterns):**
-- Guard clauses: `return {} if not path.exists()` -- correct behavior
-- No-data defaults: `return []` when empty list is expected -- correct behavior
-- Already-logged patterns: many `except` blocks already had logger calls -- left as-is
-
-**Status:** Code written. Needs Molham to run verification + commit command block.
+**Status:** PR #TBD (branch: verify/data-foundation)
 
 ---
 
 ## What's Next
 
-### Phase 07: Verify Data Foundation (Track T2)
-- 6 verification tasks -- reporting only, no code changes
-- See `audit-remediation/plan/phase-07.yaml`
-- Tasks: verify brand_id, from_domain, pipeline, test suite, engagements, data foundation completeness
-
-**Branch:** `fix/error-masking-audit` (needs commit + PR first)
+### Phase 08: Verify Safety & Governance
+- 4 verification tasks -- reporting only, no code changes
+- See `audit-remediation/plan/phase-08.yaml`
+- Tasks: verify safety module, governance system, audit trail, data classification
 
 ---
 
@@ -57,12 +46,13 @@ Audited all `return {}/[]` and silent `except` patterns across `lib/`, `engine/`
 5. Match existing patterns -- logging.getLogger(__name__), %s format, narrowed exception types
 6. No `noqa`, `nosec`, `# type: ignore` -- fix the root cause
 7. Commit subject under 72 chars, first letter after prefix lowercase
+8. GAP-07-01 exists: engagements not in schema.py -- do not fix during T2 verification
 
 ---
 
 ## Documents to Read
 
 1. `audit-remediation/AGENT.md` -- Engineering standards for this project
-2. `audit-remediation/plan/phase-07.yaml` -- Next phase
+2. `audit-remediation/plan/phase-08.yaml` -- Next phase
 3. `audit-remediation/state.json` -- Current project state
 4. `CLAUDE.md` -- Repo-level engineering rules

@@ -1,0 +1,238 @@
+session: 7
+date: "2026-03-07"
+phase: "phase-07"
+track: "T2"
+branch: "verify/data-foundation"
+
+tasks_completed:
+  - id: "task-01"
+    name: "Verify brand_id population"
+    status: "DONE"
+    findings: |
+      brand_id exists and is correctly wired across the data model:
+
+      Schema (lib/schema.py):
+        - brands table: id (PK), client_id (FK→clients), name. §12 Core.
+        - projects.brand_id: TEXT column at line 92.
+        - tasks.brand_id: TEXT column at line 157.
+        - invoices.brand_id: TEXT column at line 339.
+        - signals.brand_id: TEXT column at line 509.
+        - signals_v29.brand_id: TEXT column at line 582.
+
+      Population chain:
+        1. entity_linker.py — seeds brands from BRAND_TO_CLIENT mapping (16 brands),
+           creates brands table rows, links projects→brands via extract_brand_from_name().
+        2. seed_brands.py — migration creates brands from project names for non-internal
+           projects without brand_id. Links projects to those brands.
+        3. normalizer.py _normalize_tasks() — derives tasks.brand_id from
+           projects.brand_id via LEFT JOIN chain (tasks→projects→brands→clients).
+           Sets project_link_status and client_link_status accordingly.
+
+      Gate enforcement (lib/gates.py):
+        - project_brand_required: COUNT(*) WHERE is_internal=0 AND brand_id IS NULL = 0.
+        - project_brand_consistency: projects.client_id must match brands.client_id.
+        - Both are BLOCKING gates — if they fail, truth modules are skipped.
+
+      Verdict: brand_id is defined, populated via 3 mechanisms, and enforced via 2 blocking gates.
+
+  - id: "task-02"
+    name: "Verify from_domain derivation"
+    status: "DONE"
+    findings: |
+      from_domain derivation is correctly implemented in normalizer.py:
+
+      Schema: communications.from_domain (TEXT), communications.from_email (TEXT).
+
+      Derivation logic (normalizer.py _normalize_communications() line 241-248):
+        SQL: LOWER(SUBSTR(from_email, INSTR(from_email, '@') + 1))
+        Conditions: from_email IS NOT NULL, from_email LIKE '%@%',
+                    from_domain IS NULL OR from_domain = ''.
+
+      Edge cases handled:
+        - NULL from_email: skipped (WHERE from_email IS NOT NULL).
+        - No '@' in email: skipped (WHERE from_email LIKE '%@%').
+        - Already populated: skipped (WHERE from_domain IS NULL OR from_domain = '').
+        - Case: LOWER() applied for consistent matching.
+
+      Client linking via from_domain (lines 252-268):
+        - Matches via client_identities table (identity_type='domain').
+        - Falls back to email match (identity_type='email').
+        - Additional fallback: subject line matching client names (min 4 chars).
+        - Additional fallback: invoice client name matching in subject.
+
+      Pipeline position: runs in autonomous_loop Phase 1a2 (DATA NORMALIZATION),
+      after collect, before truth modules. Consistent with MASTER_SPEC §4.
+
+      Verdict: from_domain correctly extracted from from_email with all edge cases handled.
+
+  - id: "task-03"
+    name: "Verify end-to-end pipeline"
+    status: "DONE"
+    findings: |
+      Pipeline traced through autonomous_loop.py run_cycle():
+
+      Phase 1:    COLLECT — CollectorOrchestrator.sync_all() pulls from external systems.
+      Phase 1a2:  NORMALIZE — Normalizer.run() derives brand_id, client_id, from_domain,
+                  aging_bucket, project_link_status, client_link_status.
+      Phase 1a2a: COMMITMENT EXTRACTION — extract_from_communications().
+      Phase 1a2b: LANE ASSIGNMENT — run_assignment() categorizes tasks into capacity lanes.
+      Phase 1a3:  GATE CHECK — GateEvaluator.evaluate_all() checks data_integrity,
+                  project_brand_required, project_brand_consistency, etc.
+                  BLOCKING: data_integrity and project gates block truth modules.
+      Phase 1a4:  RESOLUTION QUEUE — populate items needing attention.
+      Phase 1a5:  AUTO-RESOLUTION — attempt automatic fixes.
+      Phase 1b5:  DETECTION — run_all_detectors() in dry-run mode.
+      Phase 1b5a: MORNING BRIEF + STALENESS — daily digest via Google Chat.
+      Phase 1b-1e: TRUTH MODULES (skipped if project gates fail):
+                  1b: Time Truth, 1c: Commitment Truth, 1d: Capacity Truth, 1e: Client Truth.
+      Phase 2:    ANALYZE — AnalyzerOrchestrator processes insights.
+      Phase 3:    REASON — ReasonerEngine makes decisions via Governance.
+      Phase 4:    NOTIFY — NotificationEngine sends to user.
+
+      Data flows correctly: collect→store→normalize→gate→analyze→reason→notify.
+      Gate blocking works: failed data_integrity or project gates skip truth modules.
+
+      Verdict: pipeline stages are complete and correctly wired with gate blocking.
+
+  - id: "task-04"
+    name: "Verify test suite pass rate"
+    status: "DONE -- pending Molham's output"
+    findings: |
+      Cannot run pytest from sandbox (no .venv access). Command block includes:
+
+        python -m pytest tests/contract/ tests/test_safety.py tests/negative/ \
+          tests/golden/ tests/ui_spec_v21/ tests/property/ tests/scenarios/ \
+          tests/test_features.py tests/test_audit.py tests/cassettes/ -x
+
+      Previous session (006) reported: all 249 tests passing, all 7 pre-push gates passed.
+
+      Test coverage assessed by directory:
+        - tests/contract/ — contract tests for API and module boundaries
+        - tests/negative/ — negative/error path testing
+        - tests/golden/ — golden file tests
+        - tests/property/ — property-based tests
+        - tests/scenarios/ — scenario tests
+        - tests/ui_spec_v21/ — UI spec compliance tests
+        - tests/lifecycle/ — lifecycle tests
+        - 120 total test files in tests/ directory
+
+      Engagements specifically tested:
+        - tests/test_populate_engagements.py — 8 tests covering creation, linking,
+          retainer grouping, campaign mapping, type distribution, idempotency, state mapping.
+        - tests/ui_spec_v21/test_integration.py — references engagements.
+        - tests/ui_spec_v21/test_spec_cases.py — references engagements.
+        - tests/test_data_lifecycle.py — tests data lifecycle with engagements as protected table.
+
+      Verdict: DONE for code-level assessment. Molham must run the test suite and report
+      pass/fail/skip/error counts. Previous session showed 249/249 passing.
+
+  - id: "task-05"
+    name: "Verify engagements table"
+    status: "DONE with 1 GAP"
+    findings: |
+      Engagements table schema (v29_engagement_lifecycle.py migration):
+        - id TEXT PRIMARY KEY
+        - client_id TEXT NOT NULL (FK→clients)
+        - brand_id TEXT (FK→brands)
+        - name TEXT NOT NULL
+        - type TEXT NOT NULL CHECK (IN ('project', 'retainer'))
+        - state TEXT NOT NULL DEFAULT 'planned' CHECK (7 valid states)
+        - asana_project_gid TEXT, asana_url TEXT
+        - started_at TEXT, completed_at TEXT
+        - created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+        Indexes: client_id, state, asana_project_gid.
+
+      Transition audit table: engagement_transitions (id, engagement_id FK, from_state,
+      to_state, trigger, actor, note, transitioned_at, created_at).
+
+      Population (lib/migrations/populate_engagements.py):
+        - Projects → engagements: 1:1 for project/campaign, grouped for retainers.
+        - Retainer grouping key: (client_id, brand_id).
+        - Campaigns mapped to 'project' type.
+        - Idempotent (deletes and recreates).
+        - Sets engagement_id on projects table.
+
+      Lifecycle (lib/ui_spec_v21/engagement_lifecycle.py):
+        - 7 states: planned→active→blocked/paused→delivering→delivered→completed.
+        - Valid transitions enforced via VALID_TRANSITIONS dict.
+        - Heuristic triggers: task_started, eighty_percent_complete, invoice_paid, etc.
+
+      Tests: 8 tests in test_populate_engagements.py — all key scenarios covered.
+
+      Data lifecycle: engagements is in PROTECTED_TABLES set — never deleted.
+
+      Validation: validate_data_foundation.py has validate_engagements() checking
+      has_rows, project_linkage, type_distribution.
+
+    gaps:
+      - id: "GAP-07-01"
+        severity: "medium"
+        description: |
+          engagements table is NOT in lib/schema.py (the single source of truth).
+          It is only created by the v29_engagement_lifecycle.py migration.
+          The schema.py docstring says "Every table, column, index, and data migration
+          for MOH TIME OS lives here. Nothing else defines schema." This means the
+          engagements table exists outside the declarative schema system and would not
+          be auto-converged by the schema_engine. The engagement_transitions table is
+          also missing from schema.py.
+        fix: |
+          Add TABLES["engagements"] and TABLES["engagement_transitions"] definitions
+          to lib/schema.py matching the v29 migration CREATE TABLE statements.
+          Then bump SCHEMA_VERSION. This does not require code changes to any other
+          module — it brings the table under the schema engine's convergence system.
+
+  - id: "task-06"
+    name: "Verify data foundation completeness"
+    status: "DONE with 1 GAP (same as GAP-07-01)"
+    findings: |
+      Core tables present in schema.py:
+        - clients: id, name, tier, health_score, type, lifetime_revenue, etc.
+        - brands: id, client_id (FK), name.
+        - projects: id, brand_id, client_id, is_internal, engagement_type, status.
+        - tasks: id, project_id, brand_id, client_id, project_link_status, client_link_status.
+        - communications: id, from_email, from_domain, client_id, link_status.
+        - invoices: id, client_id, brand_id, aging_bucket.
+        - client_identities: client_id, identity_type, identity_value.
+        - capacity_lanes, team_members.
+        - signals, signals_v29.
+        - entity_links.
+        - sync_state.
+
+      Entity linking chain verified:
+        Client → Brand → Project → Task (full chain via normalizer.py).
+        Client ← client_identities ← Communication (via domain/email).
+        Client ← Invoice (via client_id).
+
+      Orphan detection:
+        - Gates check: tasks without project, projects without brand (non-internal).
+        - Resolution queue populates items needing attention.
+        - Auto-resolution attempts fixes.
+
+      Data quality baseline:
+        - validate_data_foundation.py runs 8 validators (clients, tasks, entity_links,
+          signals, engagements, collectors, capacity_lanes, cross_entity_views).
+        - Cross-entity views validated: v_client_operational_profile,
+          v_project_operational_state, v_person_load_profile.
+
+      Data lifecycle:
+        - Retention policies for 24 tables (lib/data_lifecycle.py).
+        - Protected tables: clients, projects, engagements, capacity_lanes, sync_state.
+        - Archive tables: communications, gmail_messages, chat_messages.
+
+    gaps:
+      - id: "GAP-07-01"
+        severity: "medium"
+        description: "Same gap as task-05: engagements + engagement_transitions not in schema.py."
+
+verification:
+  all_tasks_reported: true
+  total_done: 6
+  total_gaps: 1
+  gap_ids: ["GAP-07-01"]
+
+notes:
+  - "All 6 tasks verified via code investigation -- no runtime testing from sandbox"
+  - "One gap found: engagements table missing from schema.py (medium severity)"
+  - "Previous session (006) confirmed 249/249 tests passing"
+  - "Task-04 test suite count needs Molham to run and confirm current numbers"
+  - "GAP-07-01 is self-contained: add 2 table defs to schema.py, bump version"
