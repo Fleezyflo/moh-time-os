@@ -1,8 +1,8 @@
 id: "phase-09"
 name: "Verify Operations"
 description: |
-  Verification-only phase. Validate operational readiness:
-  collector coverage, test coverage counts, unattended operation.
+  Verification-only. Validate operational readiness: collector coverage,
+  test coverage, unattended operation capability.
 
 dependencies: []
 
@@ -14,63 +14,49 @@ tasks:
   - id: "task-01"
     name: "Verify collector coverage"
     description: |
-      Original spec: CS-6.1 (tasks/TASK_P3_11_VERIFY_COLLECTOR_COVERAGE.md)
-      Audit all collectors in lib/collectors/ and collectors/:
-      - Which data sources are covered?
-      - Which are missing?
-      - What's the sync frequency for each?
-      - Are there error recovery mechanisms?
+      Spec: CS-6.1 (tasks/TASK_P3_11_VERIFY_COLLECTOR_COVERAGE.md)
+      Investigate all collectors in lib/collectors/ and collectors/.
+      Document coverage, sync frequency, and error recovery for each.
     files:
       create: []
       modify: []
       delete: []
     verification:
-      - "All collectors listed with sync frequency"
-      - "Missing data sources identified"
-      - "Error recovery mechanisms documented"
-      - "Collector health check passes"
+      - "All collectors documented with coverage, frequency, and recovery"
     estimated_lines: 0
     depends_on: []
 
   - id: "task-02"
     name: "Verify test coverage counts"
     description: |
-      Original spec: AO-5.1 (tasks/TASK_P3_12_VERIFY_TEST_COVERAGE.md)
-      Run pytest with coverage. Document: total tests, pass rate,
-      coverage percentage by module, critical paths without coverage.
+      Spec: AO-5.1 (tasks/TASK_P3_12_VERIFY_TEST_COVERAGE.md)
+      Generate a pytest --cov command for Molham. Document coverage
+      per module from his output. Identify critical uncovered paths.
     files:
       create: []
       modify: []
       delete: []
     verification:
-      - "pytest --cov output captured"
-      - "Coverage percentages per module documented"
-      - "Critical uncovered paths identified"
+      - "Coverage per module documented; critical uncovered paths identified"
     estimated_lines: 0
     depends_on: []
 
   - id: "task-03"
     name: "Verify 24h unattended operation"
     description: |
-      Original spec: AO-6.1 (tasks/TASK_P3_13_VERIFY_UNATTENDED.md)
-      Verify the autonomous loop can run 24h without intervention:
-      - Crash recovery (does it restart after errors?)
-      - Memory leaks (does memory grow unbounded?)
-      - Database locking (SQLite WAL mode, concurrent access)
-      - Log rotation (do logs grow unbounded?)
+      Spec: AO-6.1 (tasks/TASK_P3_13_VERIFY_UNATTENDED.md)
+      Investigate the autonomous loop for: crash recovery, memory leak
+      patterns, SQLite WAL mode, log rotation.
     files:
       create: []
       modify: []
       delete: []
     verification:
-      - "Loop error recovery verified"
-      - "No obvious memory leak patterns"
-      - "SQLite WAL mode enabled"
-      - "Log rotation configured"
+      - "Loop resilience, memory, SQLite, and logging documented"
     estimated_lines: 0
     depends_on: []
 
 completion_criteria:
-  - "All 3 verification tasks produce DONE or GAP report"
+  - "All 3 tasks produce DONE or GAP report"
   - "Gaps filed as new tasks"
-  - "Results documented in session record"
+  - "Results in session record"

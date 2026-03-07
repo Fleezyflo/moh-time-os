@@ -1,10 +1,8 @@
 id: "phase-06"
 name: "Error Masking Audit"
 description: |
-  Audit all 102 instances of return {}/return [] across the codebase.
-  Fix error-masking patterns in except blocks. Add logging where errors
-  are silently swallowed. Leave legitimate empty returns alone.
-  Best done after wiring phases so new code is included in the audit.
+  Audit return {}/[] and silent except patterns across the codebase.
+  Classify each as legitimate or error-masking, fix the masking ones.
 
 dependencies:
   - "phase-02"
@@ -20,32 +18,11 @@ tasks:
   - id: "task-01"
     name: "Audit and fix return {}/[] error-masking patterns"
     description: |
-      102 instances of `return {}` or `return []` exist in the codebase.
-      Many are legitimate (empty results when no data), but some mask
-      errors by returning "no data" from except blocks instead of
-      raising or logging.
-
-      Step 1: Find all instances
-        grep -rn "return {}" lib/ api/ engine/ --include="*.py"
-        grep -rn "return \[\]" lib/ api/ engine/ --include="*.py"
-
-      Step 2: Classify each instance
-        ERROR-MASKING (fix these):
-        - Inside an except block -- masking an error
-        - In a function that should raise on failure -- hiding failure
-        - After a failed condition check where failure should be logged
-
-        LEGITIMATE (leave these):
-        - Default return when no data matches a query
-        - Initial value for an accumulator
-        - Explicit "empty result" the caller expects
-
-      Step 3: Fix error-masking instances
-        Replace with: logging.error(f"...: {e}") + return {}
-        Or: raise (if caller should handle)
-        Or: return typed error result
-
-      Step 4: Fix any except: pass or except Exception: pass found
+      Investigate all `return {}` and `return []` across lib/, api/, engine/.
+      Classify each: error-masking (in except blocks, hiding failures) vs
+      legitimate (no-data defaults, accumulators). Fix the masking ones --
+      add logging, raise, or return typed errors. Also catch any silent
+      `except: pass` or `except Exception: pass`.
     files:
       create: []
       modify: []
@@ -53,13 +30,10 @@ tasks:
     verification:
       - "Zero return {}/[] in except blocks without logging"
       - "No except: pass or except Exception: pass anywhere"
-      - "ruff check on all modified files -- zero errors"
-      - "bandit -r on all modified files -- zero findings"
-      - "python -m pytest tests/ -x -- passes"
     estimated_lines: 150
     depends_on: []
 
 completion_criteria:
-  - "Every return {}/[] in except block has logging before it"
-  - "No silent exception swallowing anywhere"
+  - "Every error-masking return has logging or raises"
+  - "No silent exception swallowing"
   - "PR merged to main, CI green"

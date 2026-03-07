@@ -1,11 +1,8 @@
 id: "phase-07"
 name: "Verify Data Foundation"
 description: |
-  Verification-only phase. No code changes unless gaps are found.
-  Reads original task specs, verifies against the live codebase,
-  reports DONE or GAP for each item.
-  Covers: brand_id population, from_domain derivation, pipeline validation,
-  test suite pass rate, engagements table, data foundation completeness.
+  Verification-only. Investigate the data foundation layer and report
+  DONE or GAP for each item. No code changes unless a gap requires a fix.
 
 dependencies: []
 
@@ -17,108 +14,93 @@ tasks:
   - id: "task-01"
     name: "Verify brand_id population"
     description: |
-      Original spec: PH-3.1 (tasks/TASK_P3_01_VERIFY_BRAND_IDS.md)
-      Check: brand_id column exists and is populated in relevant tables.
-      Query DB for null brand_id counts. Verify brand_id derivation logic.
+      Spec: PH-3.1 (tasks/TASK_P3_01_VERIFY_BRAND_IDS.md)
+      Investigate brand_id across the schema and data layer.
+      Confirm it exists, is populated, and has correct derivation logic.
     files:
       create: []
       modify: []
       delete: []
     verification:
-      - "brand_id column exists in schema"
-      - "brand_id population percentage documented"
-      - "Derivation logic identified and verified"
+      - "brand_id existence, population rate, and derivation documented"
     estimated_lines: 0
     depends_on: []
 
   - id: "task-02"
     name: "Verify from_domain derivation"
     description: |
-      Original spec: PH-3.2 (tasks/TASK_P3_02_VERIFY_COMM_DOMAINS.md)
-      Check: from_domain derived correctly in communications table.
-      Verify email domain extraction logic produces correct results.
+      Spec: PH-3.2 (tasks/TASK_P3_02_VERIFY_COMM_DOMAINS.md)
+      Investigate from_domain in the communications table.
+      Confirm extraction logic is correct including edge cases.
     files:
       create: []
       modify: []
       delete: []
     verification:
-      - "from_domain column populated in communications"
-      - "Domain extraction logic verified"
-      - "Edge cases (subdomains, aliases) handled"
+      - "from_domain derivation logic verified with edge cases"
     estimated_lines: 0
     depends_on: []
 
   - id: "task-03"
     name: "Verify end-to-end pipeline"
     description: |
-      Original spec: PH-5.1 (tasks/TASK_P3_03_VERIFY_PIPELINE_VALIDATION.md)
-      Run the full pipeline end-to-end: collect -> transform -> store -> score -> signal.
-      Verify data flows through all stages without errors.
+      Spec: PH-5.1 (tasks/TASK_P3_03_VERIFY_PIPELINE_VALIDATION.md)
+      Trace the full pipeline: collect -> transform -> store -> score -> signal.
+      Confirm data flows through all stages without loss or errors.
     files:
       create: []
       modify: []
       delete: []
     verification:
-      - "Pipeline runs end-to-end without errors"
-      - "Each stage produces expected output"
-      - "No data loss between stages"
+      - "Pipeline stages traced and data flow confirmed"
     estimated_lines: 0
     depends_on: []
 
   - id: "task-04"
     name: "Verify test suite pass rate"
     description: |
-      Original spec: TR-4.1 (tasks/TASK_P3_04_VERIFY_FULL_TEST_SUITE.md)
-      Run pytest on full test suite. Record pass/fail/skip/error counts.
-      Document collection errors (likely from UTC/StrEnum -- check if
-      phase-01 has been completed first).
+      Spec: TR-4.1 (tasks/TASK_P3_04_VERIFY_FULL_TEST_SUITE.md)
+      Generate a pytest command for Molham. Document pass/fail/skip/error
+      counts from his output. Catalog collection errors.
     files:
       create: []
       modify: []
       delete: []
     verification:
-      - "pytest tests/ -v output captured"
-      - "Pass/fail/skip/error counts documented"
-      - "Collection errors cataloged"
+      - "Pass/fail/skip/error counts documented from Molham's output"
     estimated_lines: 0
     depends_on: []
 
   - id: "task-05"
     name: "Verify engagements table"
     description: |
-      Original spec: DF-2.1 (tasks/TASK_P3_05_VERIFY_ENGAGEMENTS.md)
-      Check: engagements table exists in schema, is populated, and
-      has correct relationships to clients/projects.
+      Spec: DF-2.1 (tasks/TASK_P3_05_VERIFY_ENGAGEMENTS.md)
+      Investigate the engagements table -- schema, population, relationships.
     files:
       create: []
       modify: []
       delete: []
     verification:
-      - "engagements table exists in schema.py"
-      - "Table populated with data"
-      - "Foreign key relationships correct"
+      - "Engagements table schema, population, and relationships documented"
     estimated_lines: 0
     depends_on: []
 
   - id: "task-06"
     name: "Verify data foundation completeness"
     description: |
-      Original spec: DF-4.1 (tasks/TASK_P3_06_VERIFY_DATA_FOUNDATION.md)
-      End-to-end verification of data foundation: all tables populated,
-      entity links correct, orphan detection, data quality metrics.
+      Spec: DF-4.1 (tasks/TASK_P3_06_VERIFY_DATA_FOUNDATION.md)
+      End-to-end verification: all core tables, entity links, orphan
+      detection, data quality baseline.
     files:
       create: []
       modify: []
       delete: []
     verification:
-      - "All core tables populated"
-      - "Entity links verified"
-      - "Orphan records identified"
-      - "Data quality baseline established"
+      - "Core tables, entity links, and data quality baseline documented"
     estimated_lines: 0
     depends_on: []
 
 completion_criteria:
-  - "All 6 verification tasks produce DONE or GAP report"
-  - "Any gaps filed as new tasks for future phases"
-  - "Verification results documented in session record"
+  - "All 6 tasks produce DONE or GAP report"
+  - "Gaps filed as new tasks"
+  - "Results in session record"

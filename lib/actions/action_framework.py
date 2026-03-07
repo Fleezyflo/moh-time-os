@@ -140,6 +140,9 @@ class ActionFramework:
         # Idempotency: idempotency_key -> action_id
         self.idempotency_keys: dict[str, str] = {}
 
+        # Wire routing engine for task_create actions
+        self.wire_routing_engine()
+
     def register_handler(self, action_type: str, handler: Callable[[dict], ActionResult]):
         """Register a handler for an action type."""
         self.handlers[action_type] = handler
@@ -477,6 +480,63 @@ class ActionFramework:
     def _get_proposal(self, action_id: str) -> dict | None:
         """Get proposal from database."""
         return self.store.get("actions", action_id)
+
+    def wire_routing_engine(self):
+        """
+        Wire routing engine as a before-execute hook for task_create actions.
+
+        Routes items through routing_engine before Asana task creation:
+        - Determines correct destination list/section
+        - Formats title and notes per MOHOS spec
+        - Checks for duplicates to prevent double-creation
+        """
+
+        def routing_hook(proposal: dict):
+            action_type = proposal.get("type", "")
+            if action_type != "task_create":
+                return
+
+            payload = proposal.get("payload", {})
+            if isinstance(payload, str):
+                import json as _json
+
+                payload = _json.loads(payload)
+
+            try:
+                from lib.routing_engine import check_duplicates, route_item
+
+                # Route the item to determine destination and formatting
+                routed = route_item(payload)
+                payload["destination_list"] = routed["destination_list"]
+                payload["title"] = routed["title"]
+                payload["notes"] = routed["notes"]
+                payload["dedupe_key"] = routed["dedupe_key"]
+                payload["mirror_to_waiting"] = routed["mirror_to_waiting"]
+
+                # Check for duplicates
+                conflicts = check_duplicates([payload])
+                if conflicts:
+                    logger.warning(
+                        "Routing engine: duplicate detected for task '%s' "
+                        "(dedupe_key=%s), skipping",
+                        routed["title"],
+                        routed["dedupe_key"],
+                    )
+                    raise ValueError(f"Duplicate task detected: dedupe_key={routed['dedupe_key']}")
+
+                logger.info(
+                    "Routing engine: routed task to '%s' -- %s",
+                    routed["destination_list"],
+                    routed["reason"],
+                )
+
+            except ValueError:
+                raise
+            except (sqlite3.Error, OSError) as e:
+                logger.error(f"Routing engine hook failed: {e}")
+
+        self.register_before_execute_hook(routing_hook)
+        logger.info("Routing engine wired as before-execute hook for task_create")
 
     def _check_rate_limit(self, action_type: str) -> bool:
         """Check if action type is within rate limit."""
