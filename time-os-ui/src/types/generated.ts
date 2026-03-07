@@ -4530,6 +4530,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/intelligence/scenarios/compare": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Compare Scenarios
+         * @description Compare multiple scenarios side-by-side.
+         *
+         *     Accepts a list of scenario config dicts (same format as /scenarios/model).
+         *     Returns comparison with best/worst case and tradeoff analysis.
+         */
+        post: operations["compare_scenarios_api_v2_intelligence_scenarios_compare_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/scenarios/model": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Model Scenario
+         * @description Model a what-if scenario.
+         *
+         *     Accepts a config dict with:
+         *     - scenario_type: CLIENT_LOSS | CLIENT_ADDITION | RESOURCE_CHANGE |
+         *                      PRICING_CHANGE | CAPACITY_SHIFT | WORKLOAD_REBALANCE
+         *     - Plus type-specific parameters (client_id, person_name, etc.)
+         */
+        post: operations["model_scenario_api_v2_intelligence_scenarios_model_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/intelligence/scores/client/{client_id}": {
         parameters: {
             query?: never;
@@ -4950,6 +4998,29 @@ export interface paths {
          *     Shows load and activity over rolling time windows with trend analysis.
          */
         get: operations["team_person_trajectory_api_v2_intelligence_team__person_id__trajectory_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/trajectory/{entity_type}/{entity_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Trajectory
+         * @description Get full trajectory analysis for an entity.
+         *
+         *     Returns velocity, acceleration, trend, seasonality, and projections.
+         *     Currently supports entity_type='client'.
+         */
+        get: operations["get_trajectory_api_v2_intelligence_trajectory__entity_type___entity_id__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -13031,6 +13102,76 @@ export interface operations {
             };
         };
     };
+    compare_scenarios_api_v2_intelligence_scenarios_compare_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                }[];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntelligenceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    model_scenario_api_v2_intelligence_scenarios_model_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntelligenceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     client_score_api_v2_intelligence_scores_client__client_id__get: {
         parameters: {
             query?: never;
@@ -13483,6 +13624,43 @@ export interface operations {
             header?: never;
             path: {
                 person_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntelligenceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_trajectory_api_v2_intelligence_trajectory__entity_type___entity_id__get: {
+        parameters: {
+            query?: {
+                /** @description Number of time windows */
+                windows?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Entity type (client) */
+                entity_type: string;
+                /** @description Entity ID */
+                entity_id: string;
             };
             cookie?: never;
         };

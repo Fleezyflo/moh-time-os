@@ -12122,6 +12122,107 @@
         ]
       }
     },
+    "/api/v2/intelligence/scenarios/compare": {
+      "post": {
+        "description": "Compare multiple scenarios side-by-side.\n\nAccepts a list of scenario config dicts (same format as /scenarios/model).\nReturns comparison with best/worst case and tradeoff analysis.",
+        "operationId": "compare_scenarios_api_v2_intelligence_scenarios_compare_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "title": "Configs",
+                "type": "array"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Compare Scenarios",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/scenarios/model": {
+      "post": {
+        "description": "Model a what-if scenario.\n\nAccepts a config dict with:\n- scenario_type: CLIENT_LOSS | CLIENT_ADDITION | RESOURCE_CHANGE |\n                 PRICING_CHANGE | CAPACITY_SHIFT | WORKLOAD_REBALANCE\n- Plus type-specific parameters (client_id, person_name, etc.)",
+        "operationId": "model_scenario_api_v2_intelligence_scenarios_model_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Config",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Model Scenario",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
     "/api/v2/intelligence/scores/client/{client_id}": {
       "get": {
         "description": "Get scorecard for a client.\n\nReturns composite score and dimension scores:\n- Operational health\n- Financial health\n- Communication health\n- Engagement trajectory",
@@ -12890,6 +12991,81 @@
           }
         ],
         "summary": "Team Person Trajectory",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/trajectory/{entity_type}/{entity_id}": {
+      "get": {
+        "description": "Get full trajectory analysis for an entity.\n\nReturns velocity, acceleration, trend, seasonality, and projections.\nCurrently supports entity_type='client'.",
+        "operationId": "get_trajectory_api_v2_intelligence_trajectory__entity_type___entity_id__get",
+        "parameters": [
+          {
+            "description": "Entity type (client)",
+            "in": "path",
+            "name": "entity_type",
+            "required": true,
+            "schema": {
+              "description": "Entity type (client)",
+              "title": "Entity Type",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Entity ID",
+            "in": "path",
+            "name": "entity_id",
+            "required": true,
+            "schema": {
+              "description": "Entity ID",
+              "title": "Entity Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "Number of time windows",
+            "in": "query",
+            "name": "windows",
+            "required": false,
+            "schema": {
+              "default": 12,
+              "description": "Number of time windows",
+              "maximum": 52,
+              "minimum": 2,
+              "title": "Windows",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Trajectory",
         "tags": [
           "Intelligence"
         ]

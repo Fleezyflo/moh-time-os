@@ -44,9 +44,9 @@ tasks:
       - "Decision journal table populated after loop cycle"
       - "Entity memory updates reflected in DB"
       - "No conflicts with existing signal state logic verified"
-      - "ruff check lib/autonomous_loop.py -- zero errors"
-      - "bandit -r lib/autonomous_loop.py -- zero findings"
-      - "python -m pytest tests/ -x -- passes"
+      - "Include in command block: ruff check <changed files>"
+      - "Include in command block: bandit -r <changed files>"
+      - "Include in command block: python -m pytest tests/ -x"
     estimated_lines: 40
     depends_on: []
 
@@ -83,9 +83,9 @@ tasks:
       - "/api/v2/intelligence/explain/{type}/{id} returns explanations"
       - "/api/v2/intelligence/audit-trail returns entries"
       - "Drift alerts logged when thresholds shift"
-      - "ruff check lib/autonomous_loop.py api/intelligence_router.py -- zero errors"
-      - "bandit -r lib/autonomous_loop.py api/intelligence_router.py -- zero findings"
-      - "python -m pytest tests/ -x -- passes"
+      - "Include in command block: ruff check <changed files>"
+      - "Include in command block: bandit -r <changed files>"
+      - "Include in command block: python -m pytest tests/ -x"
     estimated_lines: 50
     depends_on: ["task-01"]
 

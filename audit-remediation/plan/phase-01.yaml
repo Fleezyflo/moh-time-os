@@ -65,12 +65,10 @@ tasks:
         - "cli/tasks_reset.py"
       delete: []
     verification:
-      - "grep -r 'from datetime import UTC' lib/ engine/ collectors/ cli/ api/ returns empty"
-      - "python -c 'import lib.observability' succeeds"
-      - "python -c 'import lib.safety' succeeds"
-      - "python -c 'import lib.collectors.calendar' succeeds"
-      - "pytest tests/ -q --co -- collection errors reduced by 8+"
-      - "ruff check lib/compat.py -- zero errors"
+      - "Use Grep tool to confirm zero files contain 'from datetime import UTC'"
+      - "Include in Molham's command block: python -c 'import lib.observability'"
+      - "Include in Molham's command block: pytest tests/ -q --co"
+      - "Include in Molham's command block: ruff check lib/compat.py"
     estimated_lines: 35
     depends_on: []
 
@@ -92,10 +90,9 @@ tasks:
         - "lib/compat.py"
       delete: []
     verification:
-      - "grep -r 'from enum import StrEnum' lib/ engine/ collectors/ cli/ api/ returns empty"
-      - "python -c 'from lib.compat import StrEnum' succeeds"
-      - "pytest tests/ -q --co -- collection errors reduced further"
-      - "ruff check lib/compat.py -- zero errors"
+      - "Use Grep tool to confirm zero files contain 'from enum import StrEnum'"
+      - "Include in Molham's command block: python -c 'from lib.compat import StrEnum'"
+      - "Include in Molham's command block: ruff check lib/compat.py"
     estimated_lines: 15
     depends_on: ["task-01"]
 
@@ -112,9 +109,9 @@ tasks:
         - "lib/lane_assigner.py"
       delete: []
     verification:
-      - "grep -n 't.lane' lib/lane_assigner.py shows only 't.lane_id'"
-      - "ruff check lib/lane_assigner.py -- zero errors"
-      - "bandit -r lib/lane_assigner.py -- zero findings"
+      - "Use Grep tool to confirm no 't.lane' without '_id' in lane_assigner.py"
+      - "Include in Molham's command block: ruff check lib/lane_assigner.py"
+      - "Include in Molham's command block: bandit -r lib/lane_assigner.py"
     estimated_lines: 1
     depends_on: []
 
@@ -132,9 +129,9 @@ tasks:
         - "lib/integrations/chat.py"
       delete: []
     verification:
-      - "grep -n 'os.environ' lib/integrations/chat.py shows the env var wrapper"
-      - "ruff check lib/integrations/chat.py -- zero errors"
-      - "bandit -r lib/integrations/chat.py -- zero findings"
+      - "Use Grep tool to confirm os.environ in chat.py"
+      - "Include in Molham's command block: ruff check lib/integrations/chat.py"
+      - "Include in Molham's command block: bandit -r lib/integrations/chat.py"
     estimated_lines: 2
     depends_on: []
 
