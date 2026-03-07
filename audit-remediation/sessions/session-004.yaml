@@ -1,0 +1,58 @@
+session: 4
+date: "2026-03-06"
+phase: "phase-04"
+track: "T1"
+branch: "feat/wire-notification-intelligence"
+
+tasks_completed:
+  - id: "task-01"
+    name: "Wire notification intelligence and suppression"
+    changes:
+      - file: "lib/notifier/engine.py"
+        what: |
+          Added _init_intelligence() to initialize NotificationIntelligence and
+          DigestEngine on engine construction. Integrated intelligence gating into
+          process_pending_sync() -- each notification is evaluated by
+          NotificationIntelligence.decide() before sending. Deferred notifications
+          are queued to DigestEngine for batched delivery.
+      - file: "lib/autonomous_loop.py"
+        what: |
+          Added step 2b: SignalSuppression -- expires old suppressions and counts
+          active suppressions each cycle.
+          Added step 8a: AttentionTracker -- records system review attention events
+          and computes attention debt summary per entity type.
+          Added 4 new result keys: attention_debts_computed, signals_suppressed,
+          early_warnings_generated, compliance_report_generated.
+      - file: "api/intelligence_router.py"
+        what: |
+          Added GET /api/v2/intelligence/attention-debt endpoint.
+          Returns attention summary with debt distribution sorted by most neglected.
+
+  - id: "task-02"
+    name: "Wire predictive intelligence and governance"
+    changes:
+      - file: "lib/autonomous_loop.py"
+        what: |
+          Added step 2c: PredictiveIntelligence -- generates early warnings for
+          entities with declining health using get_health_trend() from HealthUnifier.
+          Added step 10a: ComplianceReporter -- runs periodically (every 24 cycles
+          or on cycle 1) to generate data governance compliance reports.
+      - file: "api/intelligence_router.py"
+        what: |
+          Added GET /api/v2/intelligence/predictions/early-warnings endpoint.
+          Returns early warnings for declining entities with probability scores.
+          Added GET /api/v2/intelligence/governance/compliance-report endpoint.
+          Returns compliance status, PII inventory, retention policies, violations.
+
+verification:
+  ruff_check: "PASS -- zero errors on all 3 files"
+  ruff_format: "needs Molham to format on Mac (sandbox version mismatch)"
+  bandit: "PASS -- zero findings on all 3 files"
+  pytest: "PASS -- 34 tests (autonomous_loop + attention_tracking), 69 tests (notification_intelligence + signal_suppression + predictive_intelligence)"
+  syntax_check: "PASS -- py_compile on all 3 files"
+
+notes:
+  - "HealthUnifier has get_health_trend() not get_health_history() -- adapted accordingly"
+  - "ComplianceReporter runs every 24 cycles (periodic) per spec for expensive modules"
+  - "Pre-existing test failures in audit_trail (SQL syntax error) and pydantic-dependent tests are not caused by this session"
+  - "Sandbox cannot run pytest with full deps (pydantic, httpx, hypothesis missing) -- ran available tests"
