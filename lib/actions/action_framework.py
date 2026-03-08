@@ -143,6 +143,9 @@ class ActionFramework:
         # Wire routing engine for task_create actions
         self.wire_routing_engine()
 
+        # Wire integration handlers (GAP-10-12, GAP-10-13)
+        self._wire_integration_handlers()
+
     def register_handler(self, action_type: str, handler: Callable[[dict], ActionResult]):
         """Register a handler for an action type."""
         self.handlers[action_type] = handler
@@ -537,6 +540,43 @@ class ActionFramework:
 
         self.register_before_execute_hook(routing_hook)
         logger.info("Routing engine wired as before-execute hook for task_create")
+
+    def _wire_integration_handlers(self):
+        """
+        Wire Asana and email integration handlers into the framework.
+
+        GAP-10-12: Asana action handler for create_task, add_comment, update_status.
+        GAP-10-13: Email handler for proactive draft_email actions.
+        """
+        # Asana handler
+        try:
+            from lib.executor.handlers.asana import AsanaActionHandler
+
+            asana_handler = AsanaActionHandler(self.store, config={"dry_run": self.dry_run})
+
+            def _asana_execute(payload: dict) -> dict:
+                return asana_handler.execute(payload)
+
+            self.register_handler("asana_create_task", _asana_execute)
+            self.register_handler("asana_add_comment", _asana_execute)
+            self.register_handler("asana_update_status", _asana_execute)
+            logger.info("Asana action handlers wired (create_task, add_comment, update_status)")
+        except (ImportError, ValueError, OSError) as e:
+            logger.warning("Asana action handlers not available: %s", e)
+
+        # Email handler for proactive drafts
+        try:
+            from lib.executor.handlers.email import EmailHandler
+
+            email_handler = EmailHandler(self.store, config={"dry_run": self.dry_run})
+
+            def _email_execute(payload: dict) -> dict:
+                return email_handler.execute(payload)
+
+            self.register_handler("draft_email", _email_execute)
+            logger.info("Email draft_email handler wired")
+        except (ImportError, ValueError, OSError) as e:
+            logger.warning("Email handler not available: %s", e)
 
     def _check_rate_limit(self, action_type: str) -> bool:
         """Check if action type is within rate limit."""

@@ -1874,3 +1874,76 @@ def get_entity_profile(
             status_code=500,
             content=_error_response(str(e), "ENTITY_PROFILE_ERROR"),
         )
+
+
+# =============================================================================
+# CALIBRATION REPORTS (GAP-10-03)
+# =============================================================================
+
+
+@intelligence_router.get("/calibration/report", response_model=IntelligenceResponse)
+async def get_calibration_report(
+    report_type: str = "weekly",
+    signal_id: str | None = None,
+):
+    """
+    GET /api/v2/intelligence/calibration/report?report_type=weekly
+
+    Generate a calibration report for threshold tuning.
+
+    report_type: 'weekly' | 'effectiveness' | 'history'
+    signal_id: Required for 'history' report type.
+    """
+    try:
+        from lib.intelligence.calibration_reporter import CalibrationReporter
+
+        reporter = CalibrationReporter()
+
+        if report_type == "weekly":
+            report = reporter.weekly_report(feedback=[])
+        elif report_type == "effectiveness":
+            report = reporter.effectiveness_report(feedback=[])
+        elif report_type == "history":
+            if not signal_id:
+                raise HTTPException(
+                    status_code=400,
+                    detail="signal_id is required for history report",
+                )
+            report = reporter.history_report(signal_id=signal_id)
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown report_type: {report_type}. Use 'weekly', 'effectiveness', or 'history'.",
+            )
+
+        return _wrap_response(report.to_dict())
+    except HTTPException:
+        raise
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("get_calibration_report failed")
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "CALIBRATION_REPORT_ERROR"),
+        )
+
+
+@intelligence_router.get("/calibration/briefing", response_model=IntelligenceResponse)
+async def get_calibration_briefing():
+    """
+    GET /api/v2/intelligence/calibration/briefing
+
+    Generate a calibration briefing formatted for the morning brief.
+    """
+    try:
+        from lib.intelligence.calibration_reporter import CalibrationReporter
+
+        reporter = CalibrationReporter()
+        report = reporter.weekly_report(feedback=[])
+        briefing = reporter.format_for_briefing(report)
+        return _wrap_response(briefing)
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("get_calibration_briefing failed")
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "CALIBRATION_BRIEFING_ERROR"),
+        )

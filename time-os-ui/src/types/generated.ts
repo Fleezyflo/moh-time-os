@@ -3965,6 +3965,53 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/intelligence/calibration/briefing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Calibration Briefing
+         * @description GET /api/v2/intelligence/calibration/briefing
+         *
+         *     Generate a calibration briefing formatted for the morning brief.
+         */
+        get: operations["get_calibration_briefing_api_v2_intelligence_calibration_briefing_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/intelligence/calibration/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Calibration Report
+         * @description GET /api/v2/intelligence/calibration/report?report_type=weekly
+         *
+         *     Generate a calibration report for threshold tuning.
+         *
+         *     report_type: 'weekly' | 'effectiveness' | 'history'
+         *     signal_id: Required for 'history' report type.
+         */
+        get: operations["get_calibration_report_api_v2_intelligence_calibration_report_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/intelligence/changes": {
         parameters: {
             query?: never;
@@ -5281,6 +5328,94 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/notifications/analytics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Notification Analytics
+         * @description GET /api/v2/notifications/analytics?days=30
+         *
+         *     Get notification delivery analytics summary.
+         */
+        get: operations["get_notification_analytics_api_v2_notifications_analytics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/notifications/mute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mute Entity Notifications
+         * @description POST /api/v2/notifications/mute
+         *
+         *     Mute notifications for an entity until a given datetime.
+         */
+        post: operations["mute_entity_notifications_api_v2_notifications_mute_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/notifications/mutes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Active Mutes
+         * @description GET /api/v2/notifications/mutes
+         *
+         *     Return all currently active notification mutes.
+         */
+        get: operations["get_active_mutes_api_v2_notifications_mutes_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v2/notifications/unmute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unmute Entity Notifications
+         * @description POST /api/v2/notifications/unmute
+         *
+         *     Remove active mute for an entity.
+         */
+        post: operations["unmute_entity_notifications_api_v2_notifications_unmute_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/paginated/clients": {
         parameters: {
             query?: never;
@@ -6391,6 +6526,21 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /**
+         * MuteRequest
+         * @description Request body for muting an entity's notifications.
+         */
+        MuteRequest: {
+            /** Entity Id */
+            entity_id: string;
+            /** Mute Until */
+            mute_until: string;
+            /**
+             * Reason
+             * @default
+             */
+            reason: string;
+        };
         /** NoteAdd */
         NoteAdd: {
             /** Note */
@@ -6653,6 +6803,14 @@ export interface components {
         ThresholdUpdate: {
             /** Threshold */
             threshold: number;
+        };
+        /**
+         * UnmuteRequest
+         * @description Request body for unmuting an entity's notifications.
+         */
+        UnmuteRequest: {
+            /** Entity Id */
+            entity_id: string;
         };
         /** ValidationError */
         ValidationError: {
@@ -12467,6 +12625,58 @@ export interface operations {
             };
         };
     };
+    get_calibration_briefing_api_v2_intelligence_calibration_briefing_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntelligenceResponse"];
+                };
+            };
+        };
+    };
+    get_calibration_report_api_v2_intelligence_calibration_report_get: {
+        parameters: {
+            query?: {
+                report_type?: string;
+                signal_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntelligenceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     detect_changes_api_v2_intelligence_changes_get: {
         parameters: {
             query?: never;
@@ -14137,6 +14347,123 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MutationResponse"];
+                };
+            };
+        };
+    };
+    get_notification_analytics_api_v2_notifications_analytics_get: {
+        parameters: {
+            query?: {
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mute_entity_notifications_api_v2_notifications_mute_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MuteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MutationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_active_mutes_api_v2_notifications_mutes_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
+                };
+            };
+        };
+    };
+    unmute_entity_notifications_api_v2_notifications_unmute_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnmuteRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MutationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

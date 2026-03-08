@@ -1354,6 +1354,30 @@
         "title": "MutationResponse",
         "type": "object"
       },
+      "MuteRequest": {
+        "description": "Request body for muting an entity's notifications.",
+        "properties": {
+          "entity_id": {
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "mute_until": {
+            "title": "Mute Until",
+            "type": "string"
+          },
+          "reason": {
+            "default": "",
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_id",
+          "mute_until"
+        ],
+        "title": "MuteRequest",
+        "type": "object"
+      },
       "NoteAdd": {
         "properties": {
           "note": {
@@ -1845,6 +1869,20 @@
           "threshold"
         ],
         "title": "ThresholdUpdate",
+        "type": "object"
+      },
+      "UnmuteRequest": {
+        "description": "Request body for unmuting an entity's notifications.",
+        "properties": {
+          "entity_id": {
+            "title": "Entity Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_id"
+        ],
+        "title": "UnmuteRequest",
         "type": "object"
       },
       "ValidationError": {
@@ -10887,6 +10925,98 @@
         ]
       }
     },
+    "/api/v2/intelligence/calibration/briefing": {
+      "get": {
+        "description": "GET /api/v2/intelligence/calibration/briefing\n\nGenerate a calibration briefing formatted for the morning brief.",
+        "operationId": "get_calibration_briefing_api_v2_intelligence_calibration_briefing_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Calibration Briefing",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/calibration/report": {
+      "get": {
+        "description": "GET /api/v2/intelligence/calibration/report?report_type=weekly\n\nGenerate a calibration report for threshold tuning.\n\nreport_type: 'weekly' | 'effectiveness' | 'history'\nsignal_id: Required for 'history' report type.",
+        "operationId": "get_calibration_report_api_v2_intelligence_calibration_report_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "report_type",
+            "required": false,
+            "schema": {
+              "default": "weekly",
+              "title": "Report Type",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "signal_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Signal Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Get Calibration Report",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
     "/api/v2/intelligence/changes": {
       "get": {
         "description": "Run change detection and return delta report.\n\nCompares current state to last saved snapshot.\nReturns new/cleared signals, new proposals, score changes.",
@@ -13719,6 +13849,158 @@
           }
         },
         "summary": "Run Snooze Expiry Job",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
+    "/api/v2/notifications/analytics": {
+      "get": {
+        "description": "GET /api/v2/notifications/analytics?days=30\n\nGet notification delivery analytics summary.",
+        "operationId": "get_notification_analytics_api_v2_notifications_analytics_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 30,
+              "maximum": 365,
+              "minimum": 1,
+              "title": "Days",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Notification Analytics",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
+    "/api/v2/notifications/mute": {
+      "post": {
+        "description": "POST /api/v2/notifications/mute\n\nMute notifications for an entity until a given datetime.",
+        "operationId": "mute_entity_notifications_api_v2_notifications_mute_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MuteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mute Entity Notifications",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
+    "/api/v2/notifications/mutes": {
+      "get": {
+        "description": "GET /api/v2/notifications/mutes\n\nReturn all currently active notification mutes.",
+        "operationId": "get_active_mutes_api_v2_notifications_mutes_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Active Mutes",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
+    "/api/v2/notifications/unmute": {
+      "post": {
+        "description": "POST /api/v2/notifications/unmute\n\nRemove active mute for an entity.",
+        "operationId": "unmute_entity_notifications_api_v2_notifications_unmute_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnmuteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MutationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Unmute Entity Notifications",
         "tags": [
           "Spec v2.9"
         ]

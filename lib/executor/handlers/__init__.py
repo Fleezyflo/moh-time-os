@@ -2,9 +2,10 @@
 Executor Handlers - Action handlers for different domains.
 
 Each handler knows how to execute actions in its domain
-(tasks, calendar, email, delegation, notifications).
+(tasks, calendar, email, delegation, notifications, Asana).
 """
 
+from .asana import AsanaActionHandler
 from .calendar import CalendarHandler
 from .delegation import DelegationHandler
 from .email import EmailHandler
@@ -17,4 +18,5 @@ __all__ = [
     "NotificationHandler",
     "EmailHandler",
     "DelegationHandler",
+    "AsanaActionHandler",
 ]

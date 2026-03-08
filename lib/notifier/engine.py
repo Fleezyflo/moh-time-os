@@ -74,6 +74,24 @@ class NotificationEngine:
             dry_run = channel_config.get("google_chat", {}).get("dry_run", False)
             self.channels["google_chat"] = GoogleChatChannel(webhook_url=gchat_url, dry_run=dry_run)
 
+        # Email channel — for digest and email_urgent delivery
+        email_config = channel_config.get("email", {})
+        email_enabled = email_config.get("enabled", False) or os.environ.get("GMAIL_SA_FILE")
+        if email_enabled:
+            try:
+                from lib.notifier.channels.email import EmailChannel
+
+                self.channels["email"] = EmailChannel(
+                    credentials_path=email_config.get("credentials_path"),
+                    delegated_user=email_config.get("delegated_user"),
+                    default_recipient=email_config.get("default_recipient"),
+                    dry_run=email_config.get("dry_run", False),
+                )
+                self.channels["email_urgent"] = self.channels["email"]
+                logger.info("NotificationEngine: email channel enabled")
+            except (ImportError, ValueError, OSError) as e:
+                logger.error("NotificationEngine: email channel init failed: %s", e)
+
     async def process_pending(self) -> list[dict]:
         """
         Process all unsent notifications.
@@ -499,3 +517,176 @@ class NotificationEngine:
         )
 
         return {row["priority"]: row["cnt"] for row in results}
+
+    # --- Notification Muting (GAP-10-06) ---
+
+    def mute_entity(self, entity_id: str, mute_until: str, reason: str = "") -> str:
+        """
+        Mute notifications for an entity until a given datetime.
+
+        Args:
+            entity_id: Entity to mute (e.g., "client:acme")
+            mute_until: ISO datetime string for mute expiry
+            reason: Optional reason for muting
+
+        Returns:
+            mute_id
+        """
+        mute_id = str(uuid.uuid4())
+        now = datetime.now().isoformat()
+
+        self.store.insert(
+            "notification_mutes",
+            {
+                "id": mute_id,
+                "entity_id": entity_id,
+                "muted_at": now,
+                "mute_until": mute_until,
+                "mute_reason": reason,
+            },
+        )
+
+        logger.info("Muted entity %s until %s (reason: %s)", entity_id, mute_until, reason)
+        return mute_id
+
+    def unmute_entity(self, entity_id: str) -> bool:
+        """
+        Remove active mute for an entity by setting mute_until to now.
+
+        Returns:
+            True if a mute was found and cleared, False otherwise.
+        """
+        now = datetime.now().isoformat()
+        active = self.store.query(
+            """
+            SELECT id FROM notification_mutes
+            WHERE entity_id = ? AND mute_until > ?
+            ORDER BY mute_until DESC LIMIT 1
+        """,
+            [entity_id, now],
+        )
+
+        if not active:
+            return False
+
+        self.store.update(
+            "notification_mutes",
+            active[0]["id"],
+            {"mute_until": now},
+        )
+        logger.info("Unmuted entity %s", entity_id)
+        return True
+
+    def is_muted(self, entity_id: str) -> bool:
+        """Check if an entity is currently muted."""
+        now = datetime.now().isoformat()
+        count = self.store.count(
+            "notification_mutes",
+            where="entity_id = ? AND mute_until > ?",
+            params=[entity_id, now],
+        )
+        return count > 0
+
+    def get_active_mutes(self) -> list[dict]:
+        """Return all currently active mutes."""
+        now = datetime.now().isoformat()
+        return self.store.query(
+            """
+            SELECT id, entity_id, muted_at, mute_until, mute_reason
+            FROM notification_mutes
+            WHERE mute_until > ?
+            ORDER BY mute_until ASC
+        """,
+            [now],
+        )
+
+    # --- Notification Analytics (GAP-10-07) ---
+
+    def track_delivery(
+        self,
+        notification_id: str,
+        channel: str,
+        outcome: str,
+        metadata: dict = None,
+    ) -> str:
+        """
+        Track a notification delivery outcome.
+
+        Args:
+            notification_id: ID of the notification
+            channel: Delivery channel name
+            outcome: 'delivered' | 'failed' | 'opened' | 'acted_on'
+            metadata: Optional metadata dict
+
+        Returns:
+            analytics_id
+        """
+        analytics_id = str(uuid.uuid4())
+        now = datetime.now().isoformat()
+
+        self.store.insert(
+            "notification_analytics",
+            {
+                "id": analytics_id,
+                "notification_id": notification_id,
+                "channel": channel,
+                "outcome": outcome,
+                "metadata": json.dumps(metadata) if metadata else None,
+                "recorded_at": now,
+            },
+        )
+
+        return analytics_id
+
+    def get_analytics_summary(self, days: int = 30) -> dict:
+        """
+        Get notification analytics summary for the last N days.
+
+        Returns:
+            {
+                "total_sent": int,
+                "by_channel": {"google_chat": {"delivered": N, "failed": N, ...}},
+                "by_outcome": {"delivered": N, "failed": N, ...},
+                "action_rate": float
+            }
+        """
+        from datetime import timedelta
+
+        cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+
+        rows = self.store.query(
+            """
+            SELECT channel, outcome, COUNT(*) as cnt
+            FROM notification_analytics
+            WHERE recorded_at >= ?
+            GROUP BY channel, outcome
+        """,
+            [cutoff],
+        )
+
+        by_channel: dict[str, dict[str, int]] = {}
+        by_outcome: dict[str, int] = {}
+        total = 0
+
+        for row in rows:
+            ch = row["channel"]
+            oc = row["outcome"]
+            cnt = row["cnt"]
+            total += cnt
+
+            if ch not in by_channel:
+                by_channel[ch] = {}
+            by_channel[ch][oc] = cnt
+
+            by_outcome[oc] = by_outcome.get(oc, 0) + cnt
+
+        acted = by_outcome.get("acted_on", 0)
+        delivered = by_outcome.get("delivered", 0) + acted
+        action_rate = acted / delivered if delivered > 0 else 0.0
+
+        return {
+            "total_sent": total,
+            "by_channel": by_channel,
+            "by_outcome": by_outcome,
+            "action_rate": round(action_rate, 4),
+        }

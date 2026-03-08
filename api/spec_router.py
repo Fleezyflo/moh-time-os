@@ -2721,3 +2721,107 @@ async def get_asana_portfolio_context():
     except (sqlite3.Error, ValueError) as e:
         logger.error("get_asana_portfolio_context failed: %s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# =============================================================================
+# NOTIFICATION MUTING (GAP-10-06)
+# =============================================================================
+
+
+class MuteRequest(BaseModel):
+    """Request body for muting an entity's notifications."""
+
+    entity_id: str
+    mute_until: str  # ISO datetime
+    reason: str = ""
+
+
+@spec_router.post("/notifications/mute", response_model=MutationResponse)
+async def mute_entity_notifications(body: MuteRequest):
+    """
+    POST /api/v2/notifications/mute
+
+    Mute notifications for an entity until a given datetime.
+    """
+    try:
+        from lib.notifier.engine import NotificationEngine
+
+        engine = _get_query_engine()
+        notif_engine = NotificationEngine(engine.store)
+        mute_id = notif_engine.mute_entity(
+            entity_id=body.entity_id,
+            mute_until=body.mute_until,
+            reason=body.reason,
+        )
+        return {"success": True, "id": mute_id}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("mute_entity_notifications failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+class UnmuteRequest(BaseModel):
+    """Request body for unmuting an entity's notifications."""
+
+    entity_id: str
+
+
+@spec_router.post("/notifications/unmute", response_model=MutationResponse)
+async def unmute_entity_notifications(body: UnmuteRequest):
+    """
+    POST /api/v2/notifications/unmute
+
+    Remove active mute for an entity.
+    """
+    try:
+        from lib.notifier.engine import NotificationEngine
+
+        engine = _get_query_engine()
+        notif_engine = NotificationEngine(engine.store)
+        cleared = notif_engine.unmute_entity(entity_id=body.entity_id)
+        return {"success": cleared, "id": body.entity_id}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("unmute_entity_notifications failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+@spec_router.get("/notifications/mutes", response_model=DetailResponse)
+async def get_active_mutes():
+    """
+    GET /api/v2/notifications/mutes
+
+    Return all currently active notification mutes.
+    """
+    try:
+        from lib.notifier.engine import NotificationEngine
+
+        engine = _get_query_engine()
+        notif_engine = NotificationEngine(engine.store)
+        mutes = notif_engine.get_active_mutes()
+        return {"mutes": mutes, "total": len(mutes)}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("get_active_mutes failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
+# =============================================================================
+# NOTIFICATION ANALYTICS (GAP-10-07)
+# =============================================================================
+
+
+@spec_router.get("/notifications/analytics", response_model=DetailResponse)
+async def get_notification_analytics(days: int = Query(default=30, ge=1, le=365)):
+    """
+    GET /api/v2/notifications/analytics?days=30
+
+    Get notification delivery analytics summary.
+    """
+    try:
+        from lib.notifier.engine import NotificationEngine
+
+        engine = _get_query_engine()
+        notif_engine = NotificationEngine(engine.store)
+        summary = notif_engine.get_analytics_summary(days=days)
+        return summary
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("get_notification_analytics failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
