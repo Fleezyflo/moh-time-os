@@ -8,11 +8,14 @@ DO NOT define collectors anywhere else.
 """
 
 import fcntl
+import logging
 import os
 from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from lib import paths
+
+logger = logging.getLogger(__name__)
 
 # ============================================================================
 # LOCKFILE GUARD — Prevents double execution
@@ -22,7 +25,10 @@ LOCK_FILE = paths.data_dir() / ".collector.lock"
 
 class CollectorLock:
     """
-    Prevents concurrent collector runs.
+    Prevents concurrent collector runs with stale lock detection.
+
+    Stores PID + timestamp on acquire. On contention, checks if the
+    holding process is still alive. Breaks stale locks after TTL.
 
     Usage:
         with CollectorLock() as lock:
@@ -32,21 +38,89 @@ class CollectorLock:
             # do collection
     """
 
+    TTL_SECONDS = 1800  # 30 minutes
+
     def __init__(self):
         self.lock_file = LOCK_FILE
         self.lock_fd = None
         self.acquired = False
 
+    def _is_pid_alive(self, pid: int) -> bool:
+        """Check if a process with the given PID is alive."""
+        try:
+            os.kill(pid, 0)
+            return True
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True  # Process exists but we can't signal it
+
+    def _read_lock_info(self) -> tuple[int | None, float | None]:
+        """Read PID and timestamp from lock file."""
+        try:
+            if self.lock_file.exists():
+                content = self.lock_file.read_text().strip()
+                parts = content.split("\n")
+                pid = int(parts[0]) if parts else None
+                timestamp = float(parts[1]) if len(parts) > 1 else None
+                return pid, timestamp
+        except (ValueError, OSError):
+            pass
+        return None, None
+
+    def _break_stale_lock(self) -> bool:
+        """Break a stale lock if the holding process is dead or TTL expired."""
+        import time
+
+        pid, timestamp = self._read_lock_info()
+        if pid is None:
+            return True  # No valid lock info, safe to acquire
+
+        # Check if PID is alive
+        if not self._is_pid_alive(pid):
+            logger.warning("Breaking stale lock: PID %d is no longer alive", pid)
+            return True
+
+        # Check TTL
+        if timestamp is not None:
+            age = time.time() - timestamp
+            if age > self.TTL_SECONDS:
+                logger.warning(
+                    "Breaking stale lock: held by PID %d for %.0fs (TTL=%ds)",
+                    pid,
+                    age,
+                    self.TTL_SECONDS,
+                )
+                return True
+
+        return False  # Lock is valid
+
     def __enter__(self):
+        import time
+
         self.lock_file.parent.mkdir(parents=True, exist_ok=True)
         self.lock_fd = open(self.lock_file, "w")
         try:
             fcntl.flock(self.lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            self.lock_fd.write(f"{os.getpid()}\n")
+            self.lock_fd.write(f"{os.getpid()}\n{time.time()}\n")
             self.lock_fd.flush()
             self.acquired = True
         except BlockingIOError:
-            self.acquired = False
+            # Lock contention — check if stale
+            self.lock_fd.close()
+            if self._break_stale_lock():
+                # Try again after breaking stale lock
+                self.lock_fd = open(self.lock_file, "w")
+                try:
+                    fcntl.flock(self.lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    self.lock_fd.write(f"{os.getpid()}\n{time.time()}\n")
+                    self.lock_fd.flush()
+                    self.acquired = True
+                except BlockingIOError:
+                    self.acquired = False
+            else:
+                self.lock_fd = open(self.lock_file)
+                self.acquired = False
         return self
 
     def __exit__(self, *args):

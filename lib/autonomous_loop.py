@@ -59,6 +59,12 @@ class AutonomousLoop:
         self.notifier = NotificationEngine(self.store, self._load_notification_config())
         self.bundle_manager = BundleManager()
 
+        # Performance monitoring
+        from lib.intelligence.performance_scale import PerformanceMonitor
+
+        self.perf_monitor = PerformanceMonitor()
+        self.perf_monitor.set_baseline("cycle_total", 120_000)  # 2 minutes target
+
         self.cycle_count = 0
         self.running = False
 
@@ -450,6 +456,9 @@ class AutonomousLoop:
         # Calculate duration
         results["completed_at"] = datetime.now().isoformat()
         results["duration_ms"] = (datetime.now() - cycle_start).total_seconds() * 1000
+
+        # Record cycle timing in PerformanceMonitor
+        self.perf_monitor.record_timing("cycle_total", results["duration_ms"])
 
         # Store cycle log
         self.store.insert(

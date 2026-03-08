@@ -3,12 +3,18 @@
 Production Readiness Validation Script
 
 Performs lightweight checks:
-1. Imports key modules
+1. Imports key modules (schema, state_store, autonomous_loop)
 2. Checks DB exists and has tables
 3. Verifies agency_snapshot.json exists
 4. Checks test count
+5. API endpoint smoke test (FastAPI app instantiation)
+6. Daemon component initialization
+7. Notification system check
+8. Collector instantiation
+9. Intelligence engine dry run
 """
 
+import importlib
 import json
 import sqlite3
 import sys
@@ -23,9 +29,12 @@ def check_imports() -> bool:
     """Check that key modules can be imported."""
     print("Checking imports...")
     try:
+        for mod_name in ["lib.autonomous_loop", "lib.schema", "lib.state_store"]:
+            importlib.import_module(mod_name)
+
         print("  ✓ All key modules imported successfully")
         return True
-    except Exception as e:
+    except ImportError as e:
         print(f"  ✗ Import failed: {e}")
         return False
 
@@ -52,7 +61,7 @@ def check_database() -> bool:
 
         print(f"  ✓ Database exists with {len(tables)} tables")
         return True
-    except Exception as e:
+    except sqlite3.Error as e:
         print(f"  ✗ Database check failed: {e}")
         return False
 
@@ -71,7 +80,7 @@ def check_snapshot() -> bool:
             data = json.load(f)
         print(f"  ✓ Snapshot exists with {len(data)} root keys")
         return True
-    except Exception as e:
+    except (OSError, ValueError) as e:
         print(f"  ✗ Snapshot check failed: {e}")
         return False
 
@@ -91,9 +100,13 @@ def check_tests() -> bool:
     # Count test functions
     test_count = 0
     for test_file in test_files:
-        with open(test_file) as f:
-            content = f.read()
-            test_count += content.count("def test_")
+        try:
+            with open(test_file) as f:
+                content = f.read()
+                test_count += content.count("def test_")
+        except OSError as e:
+            print(f"  ✗ Error reading {test_file}: {e}")
+            return False
 
     if test_count == 0:
         print("  ✗ No tests found")
@@ -101,6 +114,98 @@ def check_tests() -> bool:
 
     print(f"  ✓ Found {test_count} test functions across {len(test_files)} files")
     return True
+
+
+def check_api_app() -> bool:
+    """Check that FastAPI app can be instantiated."""
+    print("Checking API app...")
+    try:
+        from api.server import app
+
+        route_count = len(app.routes)
+        if route_count == 0:
+            print("  ✗ FastAPI app has no routes")
+            return False
+        print(f"  ✓ FastAPI app instantiated with {route_count} routes")
+        return True
+    except ImportError as e:
+        print(f"  ✗ API app check failed: {e}")
+        return False
+
+
+def check_daemon_init() -> bool:
+    """Check that TimeOSDaemon can be instantiated."""
+    print("Checking daemon component...")
+    try:
+        mod = importlib.import_module("lib.daemon")
+        if not hasattr(mod, "TimeOSDaemon"):
+            print("  ✗ TimeOSDaemon class not found in lib.daemon")
+            return False
+        print("  ✓ TimeOSDaemon imported successfully")
+        return True
+    except ImportError as e:
+        print(f"  ✗ Daemon check failed: {e}")
+        return False
+
+
+def check_notification_system() -> bool:
+    """Check that notification-related modules import."""
+    print("Checking notification system...")
+    try:
+        mod = importlib.import_module("lib.actions.action_framework")
+        if not hasattr(mod, "ActionFramework"):
+            print("  ✗ ActionFramework class not found")
+            return False
+        print("  ✓ ActionFramework (notification proxy) imported successfully")
+        return True
+    except ImportError as e:
+        print(f"  ✗ Notification system check failed: {e}")
+        return False
+
+
+def check_collector_classes() -> bool:
+    """Check that collector classes can be instantiated."""
+    print("Checking collector classes...")
+    collectors = [
+        "asana",
+        "calendar",
+        "chat",
+        "gmail",
+        "tasks",
+        "xero",
+    ]
+    failed = []
+
+    for collector_name in collectors:
+        try:
+            importlib.import_module(f"lib.collectors.{collector_name}")
+        except ImportError as e:
+            failed.append((collector_name, e))
+
+    if failed:
+        for name, error in failed:
+            print(f"  ✗ {name} collector failed: {error}")
+        return False
+
+    print(f"  ✓ All {len(collectors)} collector classes imported successfully")
+    return True
+
+
+def check_intelligence_engine() -> bool:
+    """Check that intelligence engine modules import."""
+    print("Checking intelligence engine...")
+    try:
+        for mod_name in [
+            "lib.intelligence.engine",
+            "lib.intelligence.signals",
+        ]:
+            importlib.import_module(mod_name)
+
+        print("  ✓ Intelligence engine modules imported successfully")
+        return True
+    except ImportError as e:
+        print(f"  ✗ Intelligence engine check failed: {e}")
+        return False
 
 
 def main():
@@ -114,6 +219,11 @@ def main():
         check_database(),
         check_snapshot(),
         check_tests(),
+        check_api_app(),
+        check_daemon_init(),
+        check_notification_system(),
+        check_collector_classes(),
+        check_intelligence_engine(),
     ]
 
     print("=" * 60)

@@ -58,6 +58,12 @@ class XeroCollector:
         self.store = store or get_store()
         self.sync_interval = config.get("sync_interval", 3600)
 
+        # Resilience infrastructure
+        from lib.collectors.resilience import CircuitBreaker, RetryConfig
+
+        self.retry_config = RetryConfig(max_retries=2, base_delay=2.0)
+        self.circuit_breaker = CircuitBreaker(failure_threshold=3, cooldown_seconds=600)
+
     def should_sync(self) -> bool:
         """Always sync when called."""
         return True
@@ -242,6 +248,13 @@ class XeroCollector:
 
         Also updates client AR summary fields.
         """
+        # Check circuit breaker
+        if not self.circuit_breaker.can_execute():
+            logger.warning(
+                "XeroCollector circuit breaker is %s, skipping sync", self.circuit_breaker.state
+            )
+            return {"error": f"Circuit breaker {self.circuit_breaker.state}", "synced": 0}
+
         try:
             from engine.xero_client import (
                 list_bank_transactions,
@@ -512,6 +525,7 @@ class XeroCollector:
                 except (sqlite3.Error, ValueError, OSError, KeyError) as e:
                     logger.warning(f"Failed to store tax_rates: {e}")
 
+            self.circuit_breaker.record_success()
             return {
                 "invoices_stored": invoices_stored,
                 "paid_invoices": len(paid_invoices),
@@ -523,6 +537,7 @@ class XeroCollector:
             }
 
         except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+            self.circuit_breaker.record_failure()
             logger.exception(f"Xero sync failed: {e}")
             return {"error": str(e), "synced": 0}
 

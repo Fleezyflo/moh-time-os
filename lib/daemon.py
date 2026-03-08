@@ -66,11 +66,18 @@ LOG_FILE = paths.data_dir() / "daemon.log"
 
 # Configure logging
 def setup_logging(to_file: bool = False):
-    """Configure daemon logging."""
+    """Configure daemon logging with rotation when writing to file."""
     handlers = [logging.StreamHandler()]
     if to_file:
         LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
-        handlers.append(logging.FileHandler(LOG_FILE))
+        from logging.handlers import RotatingFileHandler
+
+        file_handler = RotatingFileHandler(
+            LOG_FILE,
+            maxBytes=50 * 1024 * 1024,  # 50 MB
+            backupCount=5,
+        )
+        handlers.append(file_handler)
 
     logging.basicConfig(
         level=logging.INFO,
@@ -132,6 +139,7 @@ class TimeOSDaemon:
         self.job_states: dict[str, JobState] = {}
         self._shutdown_event = threading.Event()
         self._last_tick = datetime.now()
+        self._tick_count = 0
 
         # Register default jobs
         self._register_default_jobs()
@@ -264,6 +272,19 @@ class TimeOSDaemon:
                 "degraded": 0.5,
                 "unhealthy": 0,
             }.get(state.health_status.value, 0)
+        )
+
+    def _log_memory_usage(self):
+        """Log current memory usage via resource.getrusage()."""
+        import resource
+
+        usage = resource.getrusage(resource.RUSAGE_SELF)
+        rss_mb = usage.ru_maxrss / (1024 * 1024)  # macOS reports bytes
+        self.logger.info(
+            "Memory usage: RSS=%.1f MB, user_time=%.1f s, sys_time=%.1f s",
+            rss_mb,
+            usage.ru_utime,
+            usage.ru_stime,
         )
 
     def get_job_health(self, job_name: str | None = None) -> dict:
@@ -531,6 +552,11 @@ class TimeOSDaemon:
                     if self._should_run(job_name):
                         self._run_job(job_name)
                         self._save_state()
+
+                # Log memory every 10 cycles (~5 minutes)
+                self._tick_count += 1
+                if self._tick_count % 10 == 0:
+                    self._log_memory_usage()
 
                 # Sleep until next check (30 seconds)
                 self._shutdown_event.wait(timeout=30)
