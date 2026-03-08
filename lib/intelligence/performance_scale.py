@@ -12,6 +12,7 @@ Addresses performance bottlenecks for production readiness.
 import hashlib
 import logging
 import time
+from collections import OrderedDict
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Any
@@ -87,8 +88,7 @@ class InMemoryCache:
     def __init__(self, max_entries: int = 1000, default_ttl_s: float = 300) -> None:
         self.max_entries = max_entries
         self.default_ttl_s = default_ttl_s
-        self._cache: dict[str, CacheEntry] = {}
-        self._access_order: list[str] = []  # Most recent at end
+        self._cache: OrderedDict[str, CacheEntry] = OrderedDict()
         self.stats = CacheStats()
 
     def get(self, key: str) -> Any | None:
@@ -126,7 +126,6 @@ class InMemoryCache:
             ttl_s=ttl,
         )
         self._cache[key] = entry
-        self._access_order.append(key)
         self.stats.total_entries = len(self._cache)
 
     def invalidate(self, key: str) -> bool:
@@ -146,7 +145,6 @@ class InMemoryCache:
     def clear(self) -> None:
         """Clear entire cache."""
         self._cache.clear()
-        self._access_order.clear()
         self.stats.total_entries = 0
 
     def get_stats(self) -> CacheStats:
@@ -155,23 +153,19 @@ class InMemoryCache:
         return self.stats
 
     def _touch(self, key: str) -> None:
-        """Move key to end of access order (most recently used)."""
-        if key in self._access_order:
-            self._access_order.remove(key)
-        self._access_order.append(key)
+        """Move key to end of access order (most recently used). O(1) via OrderedDict."""
+        self._cache.move_to_end(key)
 
     def _remove(self, key: str) -> None:
-        """Remove a key from cache and access order."""
+        """Remove a key from cache. O(1) via OrderedDict."""
         self._cache.pop(key, None)
-        if key in self._access_order:
-            self._access_order.remove(key)
         self.stats.total_entries = len(self._cache)
 
     def _evict_lru(self) -> None:
-        """Evict the least recently used entry."""
-        if not self._access_order:
+        """Evict the least recently used entry. O(1) via OrderedDict."""
+        if not self._cache:
             return
-        lru_key = self._access_order[0]
+        lru_key = next(iter(self._cache))
         self._remove(lru_key)
         self.stats.evictions += 1
 

@@ -277,3 +277,17 @@ conn.execute("""
 ### Schema violations in CI
 
 Run `make migrate` to apply safety migrations, then commit the changes.
+
+## Manual Security Audits
+
+Bandit is configured in `pyproject.toml` and runs automatically in CI via pre-commit.
+To run a standalone security scan outside of CI:
+
+```bash
+bandit -r lib/ api/ -c pyproject.toml
+```
+
+This scans all maintained-scope Python code for security issues including
+hardcoded passwords, unsafe deserialization, shell injection, weak hashing,
+and insecure temporary file usage. The configuration in `pyproject.toml`
+sets the severity and confidence thresholds.

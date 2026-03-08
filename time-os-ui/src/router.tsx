@@ -36,6 +36,7 @@ const GovernancePage = lazy(() => import('./pages/Governance'));
 const ApprovalsPage = lazy(() => import('./pages/Approvals'));
 const DataQualityPage = lazy(() => import('./pages/DataQuality'));
 const CommandCenter = lazy(() => import('./pages/CommandCenter'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 // Intelligence pages (kept: signals, patterns, client/person/project intel)
 const Signals = lazy(() => import('./intelligence/pages/Signals'));
@@ -649,6 +650,23 @@ const dataQualityRoute = createRoute({
   ),
 });
 
+// 404 catch-all route (Phase D)
+const notFoundRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '*',
+  component: () => (
+    <Suspense
+      fallback={
+        <PageSuspense>
+          <div />
+        </PageSuspense>
+      }
+    >
+      <NotFound />
+    </Suspense>
+  ),
+});
+
 // Route tree — Phase 4 consolidated
 const routeTree = rootRoute.addChildren([
   commandCenterRoute, // Command Center (/command)
@@ -684,6 +702,8 @@ const routeTree = rootRoute.addChildren([
   intelRedirectRoute, // /intel → /portfolio
   intelBriefingRedirectRoute, // /intel/briefing → /portfolio
   intelProposalsRedirectRoute, // /intel/proposals → /
+  // 404 catch-all (must be last)
+  notFoundRoute,
 ]);
 
 // Router instance

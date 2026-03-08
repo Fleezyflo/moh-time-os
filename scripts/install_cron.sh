@@ -1,5 +1,5 @@
 #!/bin/bash
-# Install Time OS cron jobs (runs WITHOUT Clawdbot heartbeat)
+# Install Time OS cron jobs (autonomous system scheduler)
 
 set -e
 
@@ -23,7 +23,7 @@ crontab -l 2>/dev/null | grep -v "moh_time_os" > /tmp/crontab_backup || true
 cat >> /tmp/crontab_backup << EOF
 
 # ═══════════════════════════════════════════════════════════════
-# MOH TIME OS - Autonomous System (runs independently of Clawdbot)
+# MOH TIME OS - Autonomous System
 # ═══════════════════════════════════════════════════════════════
 
 # Autonomous Loop - every 15 minutes

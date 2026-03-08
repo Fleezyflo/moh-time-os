@@ -257,6 +257,11 @@
     },
     {
       "method": "GET",
+      "path": "/api/debug/config",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
       "path": "/api/debug/db",
       "source": "api/server.py"
     },
@@ -859,6 +864,11 @@
       "method": "GET",
       "path": "/pending",
       "source": "api/action_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/performance",
+      "source": "api/intelligence_router.py"
     },
     {
       "method": "GET",
@@ -1681,10 +1691,10 @@
   ],
   "generated_by": "scripts/generate_system_map.py",
   "summary": {
-    "api_routes_count": 302,
+    "api_routes_count": 304,
     "collectors_count": 10,
     "db_tables_count": 31,
-    "ui_routes_count": 31
+    "ui_routes_count": 32
   },
   "ui_api_calls": [
     {
@@ -1865,6 +1875,10 @@
     }
   ],
   "ui_routes": [
+    {
+      "path": "*",
+      "source": "router.tsx"
+    },
     {
       "path": "/",
       "source": "router.tsx"
