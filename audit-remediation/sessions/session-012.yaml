@@ -1,0 +1,284 @@
+session: 12
+date: "2026-03-08"
+phase: "phase-12"
+track: "T2"
+branch: "verify/ui-architecture"
+
+tasks_completed:
+  - id: "task-01"
+    name: "Verify UI completeness"
+    status: "DONE with 1 GAP"
+    findings: |
+      Spec: IX-3.1 to IX-6.1 -- All registered routes must have functional
+      pages, valid API calls, and follow existing UI patterns.
+
+      Route inventory (router.tsx):
+        21 functional routes registered in routeTree (excluding 4 redirects).
+
+        Functional pages (20 pages verified):
+        - / (Inbox): useInboxCounts, fetchInboxRecent, fetchInbox, executeInboxAction -- DONE
+        - /command (CommandCenter): useWeekStrip, useFindings, useStaleness -- DONE
+        - /portfolio (Portfolio): usePortfolioScore, useCriticalItems,
+          usePortfolioIntelligence, usePortfolioOverview, usePortfolioRisks,
+          useFinancialDetail, useAsanaPortfolioContext -- DONE
+        - /issues (Issues): functional page with hooks -- DONE
+        - /clients (ClientIndex): functional page -- DONE
+        - /clients/$clientId (ClientDetailSpec): functional page -- DONE
+        - /team (Team): functional page -- DONE
+        - /team/$id (TeamDetail): functional page -- DONE
+        - /ops (Operations): functional page -- DONE
+        - /tasks (TaskList): functional page -- DONE
+        - /tasks/$taskId (TaskDetail): functional page -- DONE
+        - /priorities (Priorities): functional page -- DONE
+        - /schedule (Schedule): useTimeBlocks, useTimeSummary, useWeekView,
+          useEvents, scheduleTask, unscheduleTask -- DONE
+        - /capacity (Capacity): functional page -- DONE
+        - /commitments (Commitments): functional page -- DONE
+        - /notifications (Notifications): functional page -- DONE
+        - /digest (Digest): functional page -- DONE
+        - /projects/enrollment (ProjectEnrollment): useProjectCandidates,
+          useProjectsEnrolled, useDetectedProjects, useLinkingStats,
+          processEnrollment, syncXero, proposeProject -- DONE
+        - /admin/governance (Governance): useGovernance, useGovernanceHistory,
+          useCalibration, useBundles, useRollbackable, useBundleSummary,
+          runCalibration -- DONE
+        - /admin/approvals (Approvals): useApprovals, usePendingActions -- DONE
+        - /admin/data-quality (DataQuality): useDataQuality,
+          recalculatePriorities -- DONE
+
+        Intelligence pages (5 routes verified):
+        - /intel/signals (Signals): useSignals with filtering by severity/entityType -- DONE
+        - /intel/patterns (Patterns): usePatterns with severity grouping -- DONE
+        - /intel/client/$clientId (ClientIntel): functional page -- DONE
+        - /intel/person/$personId (PersonIntel): functional page -- DONE
+        - /intel/project/$projectId (ProjectIntel): functional page -- DONE
+
+        Redirects (4 properly configured):
+        - /snapshot → /portfolio
+        - /fix-data → /ops
+        - /intel → /portfolio
+        - /intel/briefing → /portfolio
+        - /intel/proposals → /
+
+      UI patterns verified:
+        - All pages use PageLayout wrapper
+        - Error handling: ErrorState component with onRetry + hasData pattern
+        - Loading: SkeletonCardList/SkeletonPanel/PageSuspense
+        - Data hooks: consistent useXxx() pattern from lib/hooks or intelligence/hooks
+        - Lazy loading: all page components use React.lazy() + Suspense
+        - Responsive: RootLayout has mobile menu toggle, desktop/mobile nav
+        - Accessibility: skip-to-content link, ARIA labels on nav, mobile menu
+
+      GAP-12-01 (low): No 404/catch-all route exists. Unregistered paths
+        silently show blank content. A NotFound route should be added to
+        routeTree to handle unmatched URLs.
+
+  - id: "task-02"
+    name: "Verify view reconciliation"
+    status: "DONE"
+    findings: |
+      Spec: VR-1.1 to VR-5.1 -- Confirm old scored views fully replaced by
+      detection system. No duplicate or competing view components.
+
+      Investigation:
+        - Grepped for "scored_view", "ScoredView", "scored.view", "old_view",
+          "legacy_view" in time-os-ui/src/: zero matches.
+        - Detection-based system (CommandCenter.tsx) uses useFindings,
+          useStaleness, useWeekStrip hooks backed by DetectorRunner.
+        - DetectionFinding/FindingGroup types exist in lib/api.ts.
+        - DetectorRunner in lib/ui_spec_v21/detectors runs at server startup
+          to populate inbox_items table.
+        - No scored views remain anywhere in the UI.
+        - Portfolio page uses usePortfolioScore (intelligence-based), not the
+          old scored views.
+
+      Conclusion: Single active view system confirmed. Detection-based system
+        is the sole view architecture. No competing or duplicate views found.
+
+  - id: "task-03"
+    name: "Verify V4/V5 consolidation"
+    status: "DONE with 2 GAPs"
+    findings: |
+      Spec: IE-5.1 to IE-7.1 -- Confirm V5 is the sole active intelligence
+      engine. No V4 modules imported or running in parallel.
+
+      Architecture:
+        - lib/v4/ directory (V4) contains: ArtifactService, IdentityService,
+          EntityLinkService, SignalService, ProposalService, IssueService,
+          CouplingService, ReportService, PolicyService, detectors/, etc.
+        - lib/intelligence/ directory (V5) contains: engine.py (main entry),
+          unified_intelligence.py (facade), entity_profile.py, patterns.py,
+          signals.py, scorecard.py, trajectory.py, correlation_engine.py,
+          cost_to_serve.py, scenario_engine.py, and 35+ more modules.
+
+      V5 independence:
+        - lib/intelligence/ has ZERO imports from lib/v4/. Verified by grepping
+          "from lib.v4" and "import.*lib.v4" across all intelligence modules.
+        - unified_intelligence.py docstring mentions consolidating V4/V5 but
+          in practice only imports from lib.intelligence modules (patterns,
+          correlation_engine, cost_to_serve, trajectory, scenario_engine).
+        - V5 engine.py imports only from lib.intelligence.* submodules.
+
+      V4 still imported in API layer:
+        - api/server.py imports: CouplingService, IssueService, ProposalService
+          (top-level), SignalService (inline in 3 endpoints), seed_identities
+          (inline in 1 endpoint).
+        - api/spec_router.py imports: ProposalService, SignalService (inline
+          in 1 endpoint).
+        - These V4 services are used for CRUD operations on entities (issues,
+          signals, proposals, couplings) -- they are the data layer, not the
+          intelligence engine.
+
+      lib/v4 imports in lib/:
+        - lib/v4/collector_hooks.py self-references only.
+        - No other lib/ module outside lib/v4/ imports from lib/v4/.
+
+      Conclusion: V5 (lib/intelligence/) is the sole intelligence engine. It
+        has no V4 dependencies. V4 services are still used as the CRUD/data
+        layer in API endpoints, which is architectural -- they serve a
+        different purpose (entity management vs intelligence analysis).
+
+      GAP-12-02 (medium): V4 services (IssueService, SignalService,
+        ProposalService, CouplingService) are still directly imported in
+        api/server.py and api/spec_router.py. These should eventually be
+        wrapped behind a unified service facade to complete the
+        consolidation. Currently they work correctly but represent two
+        separate architectural layers.
+
+      GAP-12-03 (low): unified_intelligence.py docstring still references
+        "parallel V4 and V5 architectures" but in practice V5 is fully
+        independent. The docstring should be updated to reflect the actual
+        state: V5 is the sole engine, V4 is the CRUD data layer.
+
+  - id: "task-04"
+    name: "Verify synthesis validation"
+    status: "DONE with 1 GAP"
+    findings: |
+      Spec: ID-6.1 -- Entity profile synthesis combines all intelligence
+      sources.
+
+      EntityIntelligenceProfile (entity_profile.py):
+        - Full dataclass with: identity, health (score + classification +
+          score_dimensions), signals (active + trend), patterns (active +
+          direction), trajectory (direction + projected_score_30d +
+          confidence_band), costs (CostProfile), compound_risks,
+          cross_domain_issues, narrative, attention_level, recommended_actions.
+        - build_entity_profile() function assembles all dimensions:
+          1. compute_health_score() from ScoreDimension list
+          2. classify_health() from score
+          3. compute_signal_trend() from active vs previous signals
+          4. compute_pattern_direction() from active patterns
+          5. determine_attention_level() from signals + risks + health
+          6. NarrativeBuilder.build_narrative() combining all dimensions
+          7. NarrativeBuilder.build_action_recommendations()
+        - All intelligence sources are wired in.
+
+      IntelligenceAggregator (intelligence_aggregator.py):
+        - EntityIntelligenceSummary dataclass with: health_score,
+          health_classification, signal counts, trend, trajectory_velocity,
+          cost_efficiency, data_quality, top_risks, top_opportunities.
+        - CascadingRisk analysis for cross-entity risk.
+        - Portfolio-level roll-ups.
+
+      API surface:
+        - /api/v2/intelligence/ router serves intelligence data.
+        - Intelligence engine (engine.py) generates snapshots with scoring,
+          signal detection, pattern detection, and proposal generation.
+
+      Conclusion: Entity profile synthesis is fully implemented. The
+        build_entity_profile function combines all 7 intelligence dimensions
+        (health, signals, patterns, trajectory, costs, risks, narrative)
+        into a single EntityIntelligenceProfile.
+
+      GAP-12-04 (medium): No direct API endpoint exposes
+        build_entity_profile() for a single entity. The intelligence router
+        has portfolio-level endpoints but the per-entity synthesis function
+        is not exposed as a standalone REST endpoint. Client detail pages
+        may need to compose this from multiple API calls.
+
+  - id: "task-05"
+    name: "Verify debug and observability"
+    status: "DONE with 2 GAPs"
+    findings: |
+      Spec: IO-4.1 to IO-5.1 -- Debug mode, observability coverage, metrics,
+      health endpoints.
+
+      Health endpoints:
+        - /api/health (server.py): Simple health check returning status +
+          timestamp. No component-level checks.
+        - /api/v2/health (spec_router.py): Spec-compliant health check with
+          DB connectivity verification (SELECT 1). Returns 503 on failure.
+          Includes spec_version field.
+        - /api/control-room/health (server.py): Control room specific health.
+        - /api/clients/health and /api/clients/{id}/health: Client-level
+          health endpoints.
+        - /api/v2/intelligence/projects/health: Project health intel.
+
+      Metrics endpoint:
+        - /api/metrics (server.py): Prometheus-format text endpoint.
+        - Exports counters, gauges, histograms from MetricsRegistry.
+        - Includes process info.
+
+      Debug endpoint:
+        - /api/debug/db (server.py): Returns DB path, file info, schema
+          version, column lists for key tables.
+
+      Observability modules (lib/observability/):
+        - metrics.py: Counter, Gauge, Histogram classes with thread safety.
+          MetricsRegistry singleton. Pre-defined: request_count counter,
+          active_requests gauge, request_duration_histogram histogram.
+        - middleware.py: RequestMetricsMiddleware tracks request duration and
+          active requests. CorrelationIdMiddleware adds request IDs.
+        - tracing.py: W3C traceparent parsing/generation, span creation,
+          trace ID in logs, collector execution spans.
+        - context.py: Request ID context management via contextvars.
+        - health.py: HealthStatus enum, HealthCheckResult, HealthReport with
+          component-level checks and Prometheus export.
+        - logging.py: JSONFormatter for structured logging with request ID
+          propagation.
+        - log_schema.py: Log schema definitions.
+
+      Middleware wiring (server.py):
+        - SecurityHeadersMiddleware: CSP, HSTS, etc.
+        - RequestMetricsMiddleware: Duration + active request tracking.
+        - CorrelationIdMiddleware: Request ID propagation.
+        All three are wired in server.py via app.add_middleware().
+
+      GAP-12-05 (medium): lib/observability/health.py has a full
+        component-level HealthReport system (HealthCheckResult per component,
+        aggregate HealthStatus, Prometheus export) but the /api/health
+        endpoint only returns a simple {"status": "healthy", "timestamp": ...}
+        without using it. The component-level health system exists but is not
+        wired to the API.
+
+      GAP-12-06 (low): /api/debug/db endpoint exists but there is no
+        /api/debug/config or /api/debug/env endpoint to inspect runtime
+        configuration (CORS origins, middleware stack, feature flags).
+        Debug capabilities are limited to database inspection.
+
+gaps_found:
+  - id: "GAP-12-01"
+    severity: "low"
+    description: "No 404/catch-all route in router.tsx for unmatched URLs"
+  - id: "GAP-12-02"
+    severity: "medium"
+    description: "V4 services still directly imported in API layer without unified facade"
+  - id: "GAP-12-03"
+    severity: "low"
+    description: "unified_intelligence.py docstring references parallel V4/V5 but V5 is independent"
+  - id: "GAP-12-04"
+    severity: "medium"
+    description: "No REST endpoint exposes per-entity build_entity_profile() synthesis"
+  - id: "GAP-12-05"
+    severity: "medium"
+    description: "Component-level HealthReport system exists but not wired to /api/health"
+  - id: "GAP-12-06"
+    severity: "low"
+    description: "No /api/debug/config endpoint for runtime configuration inspection"
+
+files_changed: []
+files_created:
+  - "audit-remediation/sessions/session-012.yaml"
+files_modified:
+  - "audit-remediation/state.json"
+  - "audit-remediation/HANDOFF.md"
