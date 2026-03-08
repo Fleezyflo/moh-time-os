@@ -2,8 +2,8 @@
   "$schema": "../session-system-v2/core/state.schema.json",
   "project": "MOH Time OS — Audit Remediation",
   "owner": "Fleezyflo",
-  "current_phase": "phase-13",
-  "current_session": 13,
+  "current_phase": "phase-a",
+  "current_session": 15,
   "phases": {
     "phase-01": {
       "status": "complete",
@@ -114,13 +114,49 @@
       "tasks_complete": 5
     },
     "phase-13": {
+      "status": "complete",
+      "started_session": 13,
+      "completed_session": 13,
+      "blocked_by": [],
+      "prs": [],
+      "tasks_total": 2,
+      "tasks_complete": 2
+    },
+    "phase-a": {
       "status": "pending",
       "started_session": null,
       "completed_session": null,
       "blocked_by": [],
       "prs": [],
-      "tasks_total": 2,
-      "tasks_complete": 0
+      "task_file": "tasks/PHASE-A-PRODUCTION-HARDENING.md",
+      "description": "Production Hardening"
+    },
+    "phase-b": {
+      "status": "pending",
+      "started_session": null,
+      "completed_session": null,
+      "blocked_by": ["phase-a"],
+      "prs": [],
+      "task_file": "tasks/PHASE-B-SYSTEM-COMPLETENESS.md",
+      "description": "System Completeness"
+    },
+    "phase-c": {
+      "status": "pending",
+      "started_session": null,
+      "completed_session": null,
+      "blocked_by": ["phase-b"],
+      "prs": [],
+      "task_file": "tasks/PHASE-C-INTELLIGENCE-EXPANSION.md",
+      "description": "Intelligence Expansion"
+    },
+    "phase-d": {
+      "status": "pending",
+      "started_session": null,
+      "completed_session": null,
+      "blocked_by": ["phase-c"],
+      "prs": [],
+      "task_file": "tasks/PHASE-D-POLISH.md",
+      "description": "Polish"
     }
   },
   "last_pr": 70,

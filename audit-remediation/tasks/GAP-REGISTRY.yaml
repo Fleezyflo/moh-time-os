@@ -1,0 +1,72 @@
+# Gap Registry — Audit Remediation
+# Maps all 44 gaps + 5 PR fresh items to 4 implementation phases.
+#
+# Generated: 2026-03-08  Session: 14
+# Total: 49 items across 4 phases
+#
+# Severity: 1 high, 21 medium, 22 low, 5 PR-fresh (4 medium, 1 low)
+
+phase_a_production_hardening:
+  # Make the running system reliable for 24/7 operation
+  items:
+    - { id: GAP-08-05, severity: medium, summary: "validate_production.py minimal" }
+    - { id: GAP-08-06, severity: low,    summary: "/api/health unconditional", combined_with: "GAP-12-05, PR-FRESH-01" }
+    - { id: GAP-08-07, severity: low,    summary: "CORS wildcard no warning" }
+    - { id: GAP-09-01, severity: low,    summary: "orchestrator missing drive/contacts" }
+    - { id: GAP-09-02, severity: medium, summary: "XeroCollector no resilience" }
+    - { id: GAP-09-03, severity: low,    summary: "all_users_runner.py orphaned" }
+    - { id: GAP-09-05, severity: medium, summary: "daemon uses plain FileHandler" }
+    - { id: GAP-09-06, severity: low,    summary: "no memory monitoring" }
+    - { id: GAP-09-07, severity: low,    summary: "no service definition" }
+    - { id: GAP-11-01, severity: medium, summary: "cycle time not tracked" }
+    - { id: GAP-11-04, severity: medium, summary: "no OAuth token refresh" }
+    - { id: GAP-12-05, severity: medium, summary: "HealthReport not wired", combined_with: "GAP-08-06, PR-FRESH-01" }
+    - { id: PR-FRESH-01, severity: medium, summary: "/api/ready probe", combined_with: "GAP-08-06, GAP-12-05" }
+    - { id: PR-FRESH-02, severity: medium, summary: "path traversal prevention" }
+    - { id: PR-FRESH-04, severity: medium, summary: "WatchdogTimer" }
+    - { id: PR-FRESH-05, severity: medium, summary: "stale lock detection" }
+
+phase_b_system_completeness:
+  # Wire existing code to its consumers
+  items:
+    - { id: GAP-07-01, severity: medium, summary: "engagements not in schema.py" }
+    - { id: GAP-08-02, severity: medium, summary: "system map misses 6 sub-routers" }
+    - { id: GAP-08-03, severity: medium, summary: "ui_api_calls empty" }
+    - { id: GAP-08-04, severity: low,    summary: "/api/v2/search missing" }
+    - { id: GAP-10-10, severity: high,   summary: "ConversationalIntelligence unwired" }
+    - { id: GAP-11-06, severity: medium, summary: "ComplianceReporter empty defaults" }
+    - { id: GAP-12-02, severity: medium, summary: "V4 services no facade" }
+    - { id: GAP-12-04, severity: medium, summary: "no entity profile endpoint" }
+    - { id: GAP-13-01, severity: medium, summary: "error format mismatch" }
+    - { id: PR-FRESH-03, severity: low,  summary: "INSUFFICIENT_DATA_SCORE sentinel" }
+
+phase_c_intelligence_expansion:
+  # New intelligence features
+  items:
+    - { id: GAP-10-01, severity: medium, summary: "no threshold adjustment engine" }
+    - { id: GAP-10-02, severity: medium, summary: "no seasonal modifiers" }
+    - { id: GAP-10-03, severity: low,    summary: "no calibration reporting", blocked_by: "GAP-10-01, GAP-10-02" }
+    - { id: GAP-10-04, severity: low,    summary: "no threshold tests", blocked_by: "GAP-10-01 through GAP-10-03" }
+    - { id: GAP-10-05, severity: medium, summary: "no email notification channel" }
+    - { id: GAP-10-06, severity: low,    summary: "no notification muting" }
+    - { id: GAP-10-07, severity: low,    summary: "no notification analytics" }
+    - { id: GAP-10-08, severity: medium, summary: "no Calendar writeback" }
+    - { id: GAP-10-09, severity: low,    summary: "no action validation test" }
+    - { id: GAP-10-11, severity: medium, summary: "CI-4.1 blocked on GAP-10-10", blocked_by: "GAP-10-10" }
+    - { id: GAP-10-12, severity: medium, summary: "no proposal-to-Asana pipeline" }
+    - { id: GAP-10-13, severity: medium, summary: "no proactive email drafts" }
+    - { id: GAP-10-14, severity: low,    summary: "PI-5.1 blocked", blocked_by: "GAP-10-12, GAP-10-13" }
+
+phase_d_polish:
+  # Low-severity cleanup, tests, docs, observability
+  items:
+    - { id: GAP-08-01, severity: low,    summary: "stale Clawdbot comments" }
+    - { id: GAP-09-04, severity: medium, summary: "missing collector tests" }
+    - { id: GAP-11-02, severity: low,    summary: "no performance API endpoint" }
+    - { id: GAP-11-03, severity: low,    summary: "cache O(n) touch" }
+    - { id: GAP-11-05, severity: low,    summary: "bandit command not documented" }
+    - { id: GAP-11-07, severity: low,    summary: "no scheduled compliance reports" }
+    - { id: GAP-12-01, severity: low,    summary: "no 404 route" }
+    - { id: GAP-12-03, severity: low,    summary: "stale docstring" }
+    - { id: GAP-12-06, severity: low,    summary: "no config debug endpoint" }
+    - { id: GAP-13-02, severity: low,    summary: "pagination variance undocumented" }

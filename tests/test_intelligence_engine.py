@@ -107,7 +107,7 @@ class TestPipelineStages:
         # Stage functions return StageResult (success, data, errors, partial)
         result = _run_scoring_stage(db_path)
 
-        assert hasattr(result, 'data'), "Expected StageResult with .data"
+        assert hasattr(result, "data"), "Expected StageResult with .data"
         assert isinstance(result.data, dict)
         assert "clients" in result.data
         assert "projects" in result.data
@@ -118,7 +118,7 @@ class TestPipelineStages:
         """Signal stage should return StageResult with data dict."""
         result = _run_signal_stage(db_path)
 
-        assert hasattr(result, 'data'), "Expected StageResult with .data"
+        assert hasattr(result, "data"), "Expected StageResult with .data"
         assert isinstance(result.data, dict)
         assert "total_active" in result.data
         assert "by_severity" in result.data
@@ -127,7 +127,7 @@ class TestPipelineStages:
         """Pattern stage should return StageResult with data dict."""
         result = _run_pattern_stage(db_path)
 
-        assert hasattr(result, 'data'), "Expected StageResult with .data"
+        assert hasattr(result, "data"), "Expected StageResult with .data"
         assert isinstance(result.data, dict)
         assert "total_detected" in result.data
         assert "structural" in result.data
@@ -147,25 +147,25 @@ class TestErrorIsolation:
         result = _run_scoring_stage(Path("/nonexistent/path.db"))
 
         # Should return StageResult (not raise), may have errors captured
-        assert hasattr(result, 'success'), "Expected StageResult"
-        assert hasattr(result, 'data')
-        assert hasattr(result, 'errors')
+        assert hasattr(result, "success"), "Expected StageResult"
+        assert hasattr(result, "data")
+        assert hasattr(result, "errors")
 
     def test_signal_stage_doesnt_crash_on_missing_db(self):
         """Signal stage should return StageResult with errors, not crash."""
         result = _run_signal_stage(Path("/nonexistent/path.db"))
 
-        assert hasattr(result, 'success'), "Expected StageResult"
-        assert hasattr(result, 'data')
-        assert hasattr(result, 'errors')
+        assert hasattr(result, "success"), "Expected StageResult"
+        assert hasattr(result, "data")
+        assert hasattr(result, "errors")
 
     def test_pattern_stage_doesnt_crash_on_missing_db(self):
         """Pattern stage should return StageResult with errors, not crash."""
         result = _run_pattern_stage(Path("/nonexistent/path.db"))
 
-        assert hasattr(result, 'success'), "Expected StageResult"
-        assert hasattr(result, 'data')
-        assert hasattr(result, 'errors')
+        assert hasattr(result, "success"), "Expected StageResult"
+        assert hasattr(result, "data")
+        assert hasattr(result, "errors")
 
 
 # =============================================================================
