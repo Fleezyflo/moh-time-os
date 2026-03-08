@@ -90,19 +90,33 @@ def get_db_tables() -> list[dict]:
 
 
 def get_api_routes() -> list[dict]:
-    """Extract API routes from api/server.py and api/spec_router.py."""
+    """Extract API routes from all router files including sub-routers."""
     routes = []
 
-    for api_file in ["api/server.py", "api/spec_router.py"]:
+    # Find all router files referenced in server.py
+    router_files = {"api/server.py", "api/spec_router.py"}
+    server_path = Path("api/server.py")
+    if server_path.exists():
+        content = server_path.read_text()
+        # Find include_router() calls to discover sub-routers
+        for match in re.finditer(
+            r"from\s+api\.(\w+)\s+import\s+(\w+)",
+            content,
+        ):
+            module = match.group(1)
+            router_files.add(f"api/{module}.py")
+
+    # Process all discovered router files
+    for api_file in router_files:
         path = Path(api_file)
         if not path.exists():
             continue
 
         content = path.read_text()
 
-        # Match @app.get/post/put/delete/patch decorators
+        # Match @app.get/post/put/delete/patch decorators and @router/spec_router decorators
         for match in re.finditer(
-            r'@(?:app|router|spec_router)\.(get|post|put|delete|patch)\s*\(\s*["\']([^"\']+)["\']',
+            r'@(?:app|router|spec_router|intelligence_router|sse_router|paginated_router|export_router|governance_router|action_router)\.(get|post|put|delete|patch)\s*\(\s*["\']([^"\']+)["\']',
             content,
         ):
             method = match.group(1).upper()
@@ -137,7 +151,11 @@ def get_ui_routes() -> list[dict]:
 
 
 def get_ui_api_calls() -> list[dict]:
-    """Extract API calls from UI source files."""
+    """Extract API calls from UI source files.
+
+    Supports both direct fetch() calls and fetchJson/postJson wrapper calls
+    with template literals like fetchJson(`${API_BASE}/api/...`).
+    """
     api_calls = []
 
     src_dir = Path("time-os-ui/src")
@@ -154,10 +172,33 @@ def get_ui_api_calls() -> list[dict]:
                     "source": str(ts_file.relative_to(src_dir)),
                 }
             )
+        # Match fetchJson/postJson with ${API_BASE} template literals
+        for match in re.finditer(
+            r"(?:fetchJson|postJson)\s*\(\s*`\$\{API_BASE\}([^`]+)`",
+            content,
+        ):
+            api_calls.append(
+                {
+                    "endpoint": match.group(1),
+                    "source": str(ts_file.relative_to(src_dir)),
+                }
+            )
 
     for tsx_file in src_dir.rglob("*.tsx"):
         content = tsx_file.read_text()
+        # Match fetch calls to /api/
         for match in re.finditer(r'fetch\s*\(\s*[`"\']([^`"\']*\/api\/[^`"\']+)[`"\']', content):
+            api_calls.append(
+                {
+                    "endpoint": match.group(1),
+                    "source": str(tsx_file.relative_to(src_dir)),
+                }
+            )
+        # Match fetchJson/postJson with ${API_BASE} template literals
+        for match in re.finditer(
+            r"(?:fetchJson|postJson)\s*\(\s*`\$\{API_BASE\}([^`]+)`",
+            content,
+        ):
             api_calls.append(
                 {
                     "endpoint": match.group(1),

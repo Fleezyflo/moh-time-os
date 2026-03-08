@@ -447,13 +447,48 @@
     },
     {
       "method": "GET",
+      "path": "/attention-debt",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/audit-log",
+      "source": "api/governance_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/audit-trail",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/briefing",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/changes",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
       "path": "/chat/analytics",
       "source": "api/spec_router.py"
     },
     {
       "method": "GET",
       "path": "/clients",
+      "source": "api/paginated_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/clients",
       "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/clients/compare",
+      "source": "api/intelligence_router.py"
     },
     {
       "method": "GET",
@@ -472,6 +507,16 @@
     },
     {
       "method": "GET",
+      "path": "/clients/{client_id}/communication",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/clients/{client_id}/compare",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
       "path": "/clients/{client_id}/email-participants",
       "source": "api/spec_router.py"
     },
@@ -487,6 +532,11 @@
     },
     {
       "method": "GET",
+      "path": "/clients/{client_id}/profile",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
       "path": "/clients/{client_id}/signals",
       "source": "api/spec_router.py"
     },
@@ -497,13 +547,38 @@
     },
     {
       "method": "GET",
+      "path": "/clients/{client_id}/tasks",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
       "path": "/clients/{client_id}/team",
       "source": "api/spec_router.py"
     },
     {
       "method": "GET",
+      "path": "/clients/{client_id}/trajectory",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
       "path": "/couplings",
       "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/critical",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/data-quality",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/endpoint",
+      "source": "api/response_models.py"
     },
     {
       "method": "GET",
@@ -517,13 +592,73 @@
     },
     {
       "method": "GET",
+      "path": "/entity/client/{client_id}",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/entity/person/{person_id}",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/entity/portfolio",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/entity/{entity_type}/{entity_id}/profile",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/entity/{entity_type}/{entity_id}/profile",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
       "path": "/events",
       "source": "api/spec_router.py"
     },
     {
       "method": "GET",
+      "path": "/events/history",
+      "source": "api/sse_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/events/stream",
+      "source": "api/sse_router.py"
+    },
+    {
+      "method": "GET",
       "path": "/evidence/{entity_type}/{entity_id}",
       "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/explain/{entity_type}/{entity_id}",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/export-schema/{table}",
+      "source": "api/export_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/export/{request_id}",
+      "source": "api/export_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/exportable-tables",
+      "source": "api/export_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/financial/aging",
+      "source": "api/intelligence_router.py"
     },
     {
       "method": "GET",
@@ -537,8 +672,18 @@
     },
     {
       "method": "GET",
+      "path": "/governance/compliance-report",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
       "path": "/health",
       "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/history",
+      "source": "api/action_router.py"
     },
     {
       "method": "GET",
@@ -663,6 +808,11 @@
     {
       "method": "GET",
       "path": "/invoices",
+      "source": "api/paginated_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/invoices",
       "source": "api/spec_router.py"
     },
     {
@@ -674,6 +824,41 @@
       "method": "GET",
       "path": "/issues/{issue_id}",
       "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/patterns",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/patterns/catalog",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/pending",
+      "source": "api/action_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/portfolio/overview",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/portfolio/risks",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/portfolio/trajectory",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/predictions/early-warnings",
+      "source": "api/intelligence_router.py"
     },
     {
       "method": "GET",
@@ -692,6 +877,21 @@
     },
     {
       "method": "GET",
+      "path": "/projects/health",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/projects/{project_id}/state",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/proposals",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
       "path": "/proposals",
       "source": "api/spec_router.py"
     },
@@ -699,6 +899,96 @@
       "method": "GET",
       "path": "/proposals/{proposal_id}",
       "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/sar",
+      "source": "api/governance_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/sar/{request_id}",
+      "source": "api/governance_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/scores/client/{client_id}",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/scores/history/summary",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/scores/person/{person_id}",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/scores/portfolio",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/scores/project/{project_id}",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/scores/{entity_type}/{entity_id}/history",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/search",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/signals",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/signals",
+      "source": "api/paginated_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/signals/active",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/signals/export",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/signals/history",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/signals/summary",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/signals/thresholds",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/snapshot",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/tasks",
+      "source": "api/paginated_router.py"
     },
     {
       "method": "GET",
@@ -712,8 +1002,33 @@
     },
     {
       "method": "GET",
+      "path": "/team/capacity",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/team/distribution",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
       "path": "/team/{person_id}/calendar-detail",
       "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/team/{person_id}/profile",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/team/{person_id}/trajectory",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/trajectory/{entity_type}/{entity_id}",
+      "source": "api/intelligence_router.py"
     },
     {
       "method": "GET",
@@ -1007,8 +1322,28 @@
     },
     {
       "method": "POST",
+      "path": "/batch",
+      "source": "api/action_router.py"
+    },
+    {
+      "method": "POST",
+      "path": "/conversation",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "POST",
       "path": "/engagements/{engagement_id}/transition",
       "source": "api/spec_router.py"
+    },
+    {
+      "method": "POST",
+      "path": "/events/publish",
+      "source": "api/sse_router.py"
+    },
+    {
+      "method": "POST",
+      "path": "/export",
+      "source": "api/export_router.py"
     },
     {
       "method": "POST",
@@ -1024,6 +1359,11 @@
       "method": "POST",
       "path": "/inbox/{item_id}/read",
       "source": "api/spec_router.py"
+    },
+    {
+      "method": "POST",
+      "path": "/interactive",
+      "source": "api/chat_webhook_router.py"
     },
     {
       "method": "POST",
@@ -1062,6 +1402,36 @@
     },
     {
       "method": "POST",
+      "path": "/propose",
+      "source": "api/action_router.py"
+    },
+    {
+      "method": "POST",
+      "path": "/sar",
+      "source": "api/governance_router.py"
+    },
+    {
+      "method": "POST",
+      "path": "/sar/{request_id}/fulfill",
+      "source": "api/governance_router.py"
+    },
+    {
+      "method": "POST",
+      "path": "/scenarios/compare",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "POST",
+      "path": "/scenarios/model",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "POST",
+      "path": "/scores/record",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "POST",
       "path": "/watchers/{watcher_id}/dismiss",
       "source": "api/spec_router.py"
     },
@@ -1069,6 +1439,26 @@
       "method": "POST",
       "path": "/watchers/{watcher_id}/snooze",
       "source": "api/spec_router.py"
+    },
+    {
+      "method": "POST",
+      "path": "/webhook",
+      "source": "api/chat_webhook_router.py"
+    },
+    {
+      "method": "POST",
+      "path": "/{action_id}/approve",
+      "source": "api/action_router.py"
+    },
+    {
+      "method": "POST",
+      "path": "/{action_id}/execute",
+      "source": "api/action_router.py"
+    },
+    {
+      "method": "POST",
+      "path": "/{action_id}/reject",
+      "source": "api/action_router.py"
     },
     {
       "method": "PUT",
@@ -1261,12 +1651,189 @@
   ],
   "generated_by": "scripts/generate_system_map.py",
   "summary": {
-    "api_routes_count": 218,
+    "api_routes_count": 296,
     "collectors_count": 10,
     "db_tables_count": 31,
     "ui_routes_count": 31
   },
-  "ui_api_calls": [],
+  "ui_api_calls": [
+    {
+      "endpoint": "/briefing",
+      "source": "intelligence/api.ts"
+    },
+    {
+      "endpoint": "/clients",
+      "source": "lib/api.ts"
+    },
+    {
+      "endpoint": "/clients/${clientId}",
+      "source": "lib/api.ts"
+    },
+    {
+      "endpoint": "/clients/${clientId}/ar-aging",
+      "source": "lib/api.ts"
+    },
+    {
+      "endpoint": "/clients/${clientId}/invoices",
+      "source": "lib/api.ts"
+    },
+    {
+      "endpoint": "/clients/${clientId}/profile",
+      "source": "intelligence/api.ts"
+    },
+    {
+      "endpoint": "/clients/${clientId}/team",
+      "source": "lib/api.ts"
+    },
+    {
+      "endpoint": "/clients/${clientId}/trajectory?window_days=${windowDays}&num_windows=${numWindows}",
+      "source": "intelligence/api.ts"
+    },
+    {
+      "endpoint": "/couplings",
+      "source": "lib/api.ts"
+    },
+    {
+      "endpoint": "/critical",
+      "source": "intelligence/api.ts"
+    },
+    {
+      "endpoint": "/entity/client/${clientId}",
+      "source": "intelligence/api.ts"
+    },
+    {
+      "endpoint": "/entity/client/${clientId}",
+      "source": "intelligence/api.ts"
+    },
+    {
+      "endpoint": "/entity/person/${personId}",
+      "source": "intelligence/api.ts"
+    },
+    {
+      "endpoint": "/entity/person/${personId}",
+      "source": "intelligence/api.ts"
+    },
+    {
+      "endpoint": "/entity/portfolio",
+      "source": "intelligence/api.ts"
+    },
+    {
+      "endpoint": "/evidence/${entityType}/${entityId}",
+      "source": "lib/api.ts"
+    },
+    {
+      "endpoint": "/fix-data",
+      "source": "lib/api.ts"
+    },
+    {
+      "endpoint": "/fix-data/${itemType}/${itemId}/resolve",
+      "source": "lib/api.ts"
+    },
+    {
+      "endpoint": "/health",
+      "source": "lib/api.ts"
+    },
+    {
+      "endpoint": "/inbox${qs ? ",
+      "source": "lib/api.ts"
+    },
+    {
+      "endpoint": "/inbox/${itemId}/action?actor=${encodeURIComponent(actor)}",
+      "source": "lib/api.ts"
+    },
+    {
+      "endpoint": "/inbox/counts",
+      "source": "lib/api.ts"
+    },
+    {
+      "endpoint": "/inbox/recent?${params.toString()}",
+      "source": "lib/api.ts"
+    },
+    {
+      "endpoint": "/issues/${issueId}/notes",
+      "source": "lib/api.ts"
+    },
+    {
+      "endpoint": "/patterns",
+      "source": "intelligence/api.ts"
+    },
+    {
+      "endpoint": "/patterns/catalog",
+      "source": "intelligence/api.ts"
+    },
+    {
+      "endpoint": "/priorities?limit=${limit}",
+      "source": "lib/api.ts"
+    },
+    {
+      "endpoint": "/projects/${projectId}/state",
+      "source": "intelligence/api.ts"
+    },
+    {
+      "endpoint": "/proposals/${proposalId}",
+      "source": "lib/api.ts"
+    },
+    {
+      "endpoint": "/proposals?${params}",
+      "source": "intelligence/api.ts"
+    },
+    {
+      "endpoint": "/scores/client/${clientId}",
+      "source": "intelligence/api.ts"
+    },
+    {
+      "endpoint": "/scores/person/${personId}",
+      "source": "intelligence/api.ts"
+    },
+    {
+      "endpoint": "/scores/portfolio",
+      "source": "intelligence/api.ts"
+    },
+    {
+      "endpoint": "/scores/project/${projectId}",
+      "source": "intelligence/api.ts"
+    },
+    {
+      "endpoint": "/signals/active${query}",
+      "source": "intelligence/api.ts"
+    },
+    {
+      "endpoint": "/signals/history?entity_type=${entityType}&entity_id=${entityId}&limit=${limit}",
+      "source": "intelligence/api.ts"
+    },
+    {
+      "endpoint": "/signals/summary",
+      "source": "intelligence/api.ts"
+    },
+    {
+      "endpoint": "/signals?quick=${quick}",
+      "source": "intelligence/api.ts"
+    },
+    {
+      "endpoint": "/team",
+      "source": "lib/api.ts"
+    },
+    {
+      "endpoint": "/team/${personId}/profile",
+      "source": "intelligence/api.ts"
+    },
+    {
+      "endpoint": "/team/${personId}/trajectory?window_days=${windowDays}&num_windows=${numWindows}",
+      "source": "intelligence/api.ts"
+    },
+    {
+      "endpoint": "/watchers/${watcherId}/dismiss",
+      "source": "lib/api.ts"
+    },
+    {
+      "endpoint": "/watchers/${watcherId}/snooze",
+      "source": "lib/api.ts"
+    },
+    {
+      "endpoint": "/watchers?hours=${hours}",
+      "source": "lib/api.ts"
+    }
+  ],
   "ui_routes": [
     {
       "path": "/",

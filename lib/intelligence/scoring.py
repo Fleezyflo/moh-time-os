@@ -12,6 +12,9 @@ Reference: data/scoring_model_20260213.md
 from dataclasses import dataclass, field
 from enum import Enum
 
+# Sentinel value indicating insufficient data to compute a score
+INSUFFICIENT_DATA_SCORE = -1.0
+
 
 class EntityType(Enum):
     """Entity types that can be scored."""

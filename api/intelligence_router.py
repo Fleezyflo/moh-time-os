@@ -19,6 +19,8 @@ from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi import Path as PathParam
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 
 from api.auth import require_auth
 from api.response_models import IntelligenceResponse
@@ -91,7 +93,10 @@ def portfolio_overview(
         return _wrap_response(data, {"order_by": order_by, "desc": desc})
     except (sqlite3.Error, ValueError) as e:
         logger.exception("portfolio_overview failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "PORTFOLIO_OVERVIEW_ERROR"),
+        )
 
 
 @intelligence_router.get("/portfolio/risks", response_model=IntelligenceResponse)
@@ -117,7 +122,10 @@ def portfolio_risks(
         )
     except (sqlite3.Error, ValueError) as e:
         logger.exception("portfolio_risks failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get("/portfolio/trajectory", response_model=IntelligenceResponse)
@@ -149,7 +157,10 @@ def portfolio_trajectory(
         )
     except (sqlite3.Error, ValueError) as e:
         logger.exception("portfolio_trajectory failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 # =============================================================================
@@ -175,7 +186,10 @@ def client_profile(client_id: str):
         raise
     except (sqlite3.Error, ValueError) as e:
         logger.exception("client_profile failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get("/clients/{client_id}/tasks", response_model=IntelligenceResponse)
@@ -192,7 +206,10 @@ def client_tasks(client_id: str):
         return _wrap_response(data, {"client_id": client_id})
     except (sqlite3.Error, ValueError) as e:
         logger.exception("client_tasks failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get("/clients/{client_id}/communication", response_model=IntelligenceResponse)
@@ -212,7 +229,10 @@ def client_communication(
         return _wrap_response(data, {"client_id": client_id, "since": since, "until": until})
     except (sqlite3.Error, ValueError) as e:
         logger.exception("client_communication failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get("/clients/{client_id}/trajectory", response_model=IntelligenceResponse)
@@ -240,7 +260,10 @@ def client_trajectory(
         )
     except (sqlite3.Error, ValueError) as e:
         logger.exception("client_trajectory failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get("/clients/{client_id}/compare", response_model=IntelligenceResponse)
@@ -273,7 +296,10 @@ def client_compare(
         )
     except (sqlite3.Error, ValueError) as e:
         logger.exception("client_compare failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get("/clients/compare", response_model=IntelligenceResponse)
@@ -303,7 +329,10 @@ def clients_compare(
         )
     except (sqlite3.Error, ValueError) as e:
         logger.exception("clients_compare failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 # =============================================================================
@@ -325,7 +354,10 @@ def team_distribution():
         return _wrap_response(data)
     except (sqlite3.Error, ValueError) as e:
         logger.exception("team_distribution failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get("/team/capacity", response_model=IntelligenceResponse)
@@ -342,7 +374,10 @@ def team_capacity():
         return _wrap_response(data)
     except (sqlite3.Error, ValueError) as e:
         logger.exception("team_capacity failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get("/team/{person_id}/profile", response_model=IntelligenceResponse)
@@ -363,7 +398,10 @@ def team_person_profile(person_id: str):
         raise
     except (sqlite3.Error, ValueError) as e:
         logger.exception("team_person_profile failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get("/team/{person_id}/trajectory", response_model=IntelligenceResponse)
@@ -390,7 +428,10 @@ def team_person_trajectory(
         )
     except (sqlite3.Error, ValueError) as e:
         logger.exception("team_person_trajectory failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 # =============================================================================
@@ -416,7 +457,10 @@ def project_state(project_id: str):
         raise
     except (sqlite3.Error, ValueError) as e:
         logger.exception("project_state failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get("/projects/health", response_model=IntelligenceResponse)
@@ -435,7 +479,10 @@ def projects_health(
         return _wrap_response(data, {"min_tasks": min_tasks})
     except (sqlite3.Error, ValueError) as e:
         logger.exception("projects_health failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 # =============================================================================
@@ -457,7 +504,10 @@ def financial_aging():
         return _wrap_response(data)
     except (sqlite3.Error, ValueError) as e:
         logger.exception("financial_aging failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 # =============================================================================
@@ -488,7 +538,10 @@ def intelligence_snapshot():
         return _wrap_response(data)
     except (sqlite3.Error, ValueError) as e:
         logger.exception("intelligence_snapshot failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get("/critical", response_model=IntelligenceResponse)
@@ -506,7 +559,10 @@ def critical_items():
         return _wrap_response(data)
     except (sqlite3.Error, ValueError) as e:
         logger.exception("critical_items failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get("/briefing", response_model=IntelligenceResponse)
@@ -545,7 +601,10 @@ def daily_briefing():
         return _wrap_response(briefing)
     except (sqlite3.Error, ValueError) as e:
         logger.exception("daily_briefing failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 # =============================================================================
@@ -569,7 +628,10 @@ def list_signals(
         return _wrap_response(data, {"quick": quick})
     except (sqlite3.Error, ValueError) as e:
         logger.exception("list_signals failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get("/signals/summary", response_model=IntelligenceResponse)
@@ -587,7 +649,10 @@ def signals_summary():
         return _wrap_response(data)
     except (sqlite3.Error, ValueError) as e:
         logger.exception("signals_summary failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get("/signals/active", response_model=IntelligenceResponse)
@@ -605,7 +670,10 @@ def active_signals(
         return _wrap_response(data, {"entity_type": entity_type, "entity_id": entity_id})
     except (sqlite3.Error, ValueError) as e:
         logger.exception("active_signals failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get("/signals/history", response_model=IntelligenceResponse)
@@ -626,7 +694,10 @@ def signal_history(
         )
     except (sqlite3.Error, ValueError) as e:
         logger.exception("signal_history failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get("/signals/export")
@@ -650,7 +721,10 @@ def export_signals():
         )
     except (sqlite3.Error, ValueError) as e:
         logger.exception("export_signals failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get("/signals/thresholds", response_model=IntelligenceResponse)
@@ -665,7 +739,10 @@ def get_thresholds():
         return _wrap_response(data)
     except (sqlite3.Error, ValueError) as e:
         logger.exception("get_thresholds failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 # =============================================================================
@@ -692,7 +769,10 @@ def list_patterns():
         return _wrap_response(data)
     except (sqlite3.Error, ValueError) as e:
         logger.exception("list_patterns failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get("/patterns/catalog", response_model=IntelligenceResponse)
@@ -720,7 +800,10 @@ def pattern_catalog():
         return _wrap_response(catalog)
     except (sqlite3.Error, ValueError) as e:
         logger.exception("pattern_catalog failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 # =============================================================================
@@ -779,7 +862,10 @@ def list_proposals(
         raise
     except (sqlite3.Error, ValueError) as e:
         logger.exception("list_proposals failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 # =============================================================================
@@ -805,7 +891,10 @@ def client_score(client_id: str):
         return _wrap_response(data, {"client_id": client_id})
     except (sqlite3.Error, ValueError) as e:
         logger.exception("client_score failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get("/scores/project/{project_id}", response_model=IntelligenceResponse)
@@ -826,7 +915,10 @@ def project_score(project_id: str):
         return _wrap_response(data, {"project_id": project_id})
     except (sqlite3.Error, ValueError) as e:
         logger.exception("project_score failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get("/scores/person/{person_id}", response_model=IntelligenceResponse)
@@ -847,7 +939,10 @@ def person_score(person_id: str):
         return _wrap_response(data, {"person_id": person_id})
     except (sqlite3.Error, ValueError) as e:
         logger.exception("person_score failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get("/scores/portfolio", response_model=IntelligenceResponse)
@@ -868,7 +963,10 @@ def portfolio_score():
         return _wrap_response(data)
     except (sqlite3.Error, ValueError) as e:
         logger.exception("portfolio_score failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 # =============================================================================
@@ -908,7 +1006,10 @@ def score_history(
         )
     except (sqlite3.Error, ValueError) as e:
         logger.exception("score_history failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get("/scores/history/summary", response_model=IntelligenceResponse)
@@ -926,7 +1027,10 @@ def score_history_summary():
         return _wrap_response(data)
     except (sqlite3.Error, ValueError) as e:
         logger.exception("score_history_summary failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.post("/scores/record", response_model=IntelligenceResponse)
@@ -949,7 +1053,10 @@ def record_scores():
         return _wrap_response(data)
     except (sqlite3.Error, ValueError) as e:
         logger.exception("record_scores failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 # =============================================================================
@@ -976,7 +1083,10 @@ def client_intelligence(client_id: str):
         return _wrap_response(data, {"client_id": client_id})
     except (sqlite3.Error, ValueError) as e:
         logger.exception("client_intelligence failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get("/entity/person/{person_id}", response_model=IntelligenceResponse)
@@ -997,7 +1107,10 @@ def person_intelligence(person_id: str):
         return _wrap_response(data, {"person_id": person_id})
     except (sqlite3.Error, ValueError) as e:
         logger.exception("person_intelligence failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get("/entity/portfolio", response_model=IntelligenceResponse)
@@ -1018,7 +1131,10 @@ def portfolio_intelligence():
         return _wrap_response(data)
     except (sqlite3.Error, ValueError) as e:
         logger.exception("portfolio_intelligence failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 # =============================================================================
@@ -1052,7 +1168,10 @@ def detect_changes():
         )
     except (sqlite3.Error, ValueError) as e:
         logger.exception("detect_changes failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1095,7 +1214,10 @@ def data_quality_overview():
         )
     except (sqlite3.Error, ValueError, OSError) as e:
         logger.exception("data_quality_overview failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -1149,7 +1271,10 @@ def entity_profile(
         )
     except (sqlite3.Error, ValueError, OSError) as e:
         logger.exception("entity_profile failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 # =============================================================================
@@ -1194,7 +1319,10 @@ def audit_trail_entries(
         )
     except (sqlite3.Error, ValueError, OSError) as e:
         logger.exception("audit_trail_entries failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get(
@@ -1259,7 +1387,10 @@ def explain_entity(
         )
     except (sqlite3.Error, ValueError, OSError) as e:
         logger.exception("explain_entity failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get("/attention-debt", response_model=IntelligenceResponse)
@@ -1290,7 +1421,10 @@ def attention_debt(
         )
     except (sqlite3.Error, ValueError, OSError) as e:
         logger.exception("attention_debt failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get(
@@ -1342,7 +1476,10 @@ def early_warnings(
         return _wrap_response(all_warnings, {"entity_type": entity_type})
     except (sqlite3.Error, ValueError, OSError) as e:
         logger.exception("early_warnings failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.get(
@@ -1354,16 +1491,56 @@ def compliance_report():
     Generate a data governance compliance report.
 
     Returns compliance status, PII inventory, retention policies, and violations.
+    Uses real DataClassifier, RetentionEngine, and SubjectAccessManager from lib.governance.
     """
-    from lib.intelligence.data_governance import ComplianceReporter
+    from lib import paths
+    from lib.governance import RetentionEngine, SubjectAccessManager
+    from lib.governance.data_classification import DataClassifier
 
     try:
-        reporter = ComplianceReporter()
-        report = reporter.generate_report()
-        return _wrap_response(report.to_dict())
+        db_path = str(paths.db_path())
+
+        classifier = DataClassifier(db_path)
+        catalog = classifier.classify_database()
+        retention = RetentionEngine(db_path)
+        subject_access = SubjectAccessManager(db_path)
+
+        pii_tables = catalog.get_pii_tables()
+        retention_policies = retention.get_policies()
+        deletion_requests = subject_access.list_requests(status="completed")
+
+        violations = []
+        policy_table_names = {p.table for p in retention_policies}
+        for table_name in pii_tables:
+            if table_name not in policy_table_names:
+                violations.append(f"PII table '{table_name}' has no retention policy")
+
+        if len(violations) > 3:
+            overall_status = "non_compliant"
+        elif violations:
+            overall_status = "warning"
+        else:
+            overall_status = "compliant"
+
+        report_data = {
+            "data_inventory": catalog.get_compliance_summary(),
+            "retention_status": {
+                "total_policies": len(retention_policies),
+                "tables_covered": list(policy_table_names),
+            },
+            "deletion_requests_processed": len(deletion_requests),
+            "pii_tables_count": len(pii_tables),
+            "policy_violations": violations,
+            "overall_status": overall_status,
+        }
+
+        return _wrap_response(report_data)
     except (sqlite3.Error, ValueError, OSError) as e:
         logger.exception("compliance_report failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "COMPLIANCE_REPORT_ERROR"),
+        )
 
 
 # =========================================================================
@@ -1417,7 +1594,10 @@ def get_trajectory(
         raise
     except (sqlite3.Error, ValueError, OSError) as e:
         logger.exception("trajectory endpoint failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 # =========================================================================
@@ -1503,7 +1683,10 @@ def model_scenario(config: dict):
         raise
     except (sqlite3.Error, ValueError, OSError) as e:
         logger.exception("scenario model failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
 
 
 @intelligence_router.post(
@@ -1576,11 +1759,118 @@ def compare_scenarios(configs: list[dict]):
 
         comparison = engine.compare_scenarios(results_list)
         if comparison is None:
-            raise HTTPException(status_code=500, detail="Comparison produced no result")
+            return JSONResponse(
+                status_code=500,
+                content=_error_response("Comparison produced no result", "COMPARISON_EMPTY"),
+            )
 
         return _wrap_response(comparison.to_dict())
     except HTTPException:
         raise
     except (sqlite3.Error, ValueError, OSError) as e:
         logger.exception("scenario compare failed")
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "QUERY_ERROR"),
+        )
+
+
+# =============================================================================
+# CONVERSATIONAL INTELLIGENCE ENDPOINTS
+# =============================================================================
+
+
+class ConversationRequest(BaseModel):
+    """Request model for conversational intelligence."""
+
+    query: str
+    session_id: str | None = None
+    context: dict | None = None
+
+
+_sessions: dict[str, object] = {}
+
+
+@intelligence_router.post("/conversation", response_model=IntelligenceResponse)
+def conversation(request: ConversationRequest):
+    """
+    Process natural language query using conversational intelligence.
+
+    Maintains session state per session_id. If session_id is None, generates a new UUID.
+    Returns intent, entities, response, and conversation state.
+    """
+    import uuid
+
+    from lib.intelligence.conversational_intelligence import ConversationalIntelligence
+
+    try:
+        session_id = request.session_id or str(uuid.uuid4())
+
+        if session_id not in _sessions:
+            _sessions[session_id] = ConversationalIntelligence()
+
+        ci = _sessions[session_id]
+        result = ci.process_query(request.query, context=request.context)
+
+        return _wrap_response(
+            result,
+            {"query": request.query, "session_id": session_id},
+        )
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("conversation failed")
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "CONVERSATION_ERROR"),
+        )
+
+
+# =============================================================================
+# ENTITY INTELLIGENCE ENDPOINTS
+# =============================================================================
+
+
+@intelligence_router.get(
+    "/entity/{entity_type}/{entity_id}/profile",
+    response_model=IntelligenceResponse,
+)
+def get_entity_profile(
+    entity_type: str = PathParam(..., description="Entity type (client, project, person)"),
+    entity_id: str = PathParam(..., description="Entity ID"),
+):
+    """
+    Get complete intelligence profile for a single entity.
+
+    Returns all 7 intelligence dimensions: health, signals, patterns,
+    trajectory, costs, narrative, and recommended actions.
+    """
+    from lib.intelligence.entity_profile import (
+        CostProfile,
+        build_entity_profile,
+    )
+
+    try:
+        get_engine()
+        cost_profile = CostProfile(
+            effort_score=0.0,
+            profitability_band="unknown",
+            estimated_cost_per_month=0.0,
+            cost_drivers=[],
+        )
+        profile = build_entity_profile(
+            entity_type=entity_type,
+            entity_id=entity_id,
+            entity_name="",
+            score_dimensions=[],
+            active_signals=[],
+            previous_signals=None,
+            active_patterns=[],
+            compound_risks=[],
+            cost_profile=cost_profile,
+        )
+        return _wrap_response(profile.to_dict())
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("get_entity_profile failed")
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "ENTITY_PROFILE_ERROR"),
+        )

@@ -531,6 +531,43 @@
         "title": "ClientUpdate",
         "type": "object"
       },
+      "ConversationRequest": {
+        "description": "Request model for conversational intelligence.",
+        "properties": {
+          "context": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Session Id"
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "title": "ConversationRequest",
+        "type": "object"
+      },
       "CreateIssueRequest": {
         "properties": {
           "actor": {
@@ -11304,6 +11341,53 @@
         ]
       }
     },
+    "/api/v2/intelligence/conversation": {
+      "post": {
+        "description": "Process natural language query using conversational intelligence.\n\nMaintains session state per session_id. If session_id is None, generates a new UUID.\nReturns intent, entities, response, and conversation state.",
+        "operationId": "conversation_api_v2_intelligence_conversation_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConversationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Conversation",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
     "/api/v2/intelligence/critical": {
       "get": {
         "description": "Get critical items only (IMMEDIATE urgency proposals).\n\nThe \"30-second scan\" view \u2014 what needs attention right now.\nFaster than full snapshot.",
@@ -11483,8 +11567,8 @@
     },
     "/api/v2/intelligence/entity/{entity_type}/{entity_id}/profile": {
       "get": {
-        "description": "Build and return a full intelligence profile for an entity.\n\nAggregates scores, signals, patterns, cost profile, and trajectory\ninto a single EntityIntelligenceProfile via build_entity_profile().",
-        "operationId": "entity_profile_api_v2_intelligence_entity__entity_type___entity_id__profile_get",
+        "description": "Get complete intelligence profile for a single entity.\n\nReturns all 7 intelligence dimensions: health, signals, patterns,\ntrajectory, costs, narrative, and recommended actions.",
+        "operationId": "get_entity_profile_api_v2_intelligence_entity__entity_type___entity_id__profile_get",
         "parameters": [
           {
             "description": "Entity type (client, project, person)",
@@ -11498,12 +11582,12 @@
             }
           },
           {
-            "description": "Entity identifier",
+            "description": "Entity ID",
             "in": "path",
             "name": "entity_id",
             "required": true,
             "schema": {
-              "description": "Entity identifier",
+              "description": "Entity ID",
               "title": "Entity Id",
               "type": "string"
             }
@@ -11536,7 +11620,7 @@
             "HTTPBearer": []
           }
         ],
-        "summary": "Entity Profile",
+        "summary": "Get Entity Profile",
         "tags": [
           "Intelligence"
         ]
@@ -11632,7 +11716,7 @@
     },
     "/api/v2/intelligence/governance/compliance-report": {
       "get": {
-        "description": "Generate a data governance compliance report.\n\nReturns compliance status, PII inventory, retention policies, and violations.",
+        "description": "Generate a data governance compliance report.\n\nReturns compliance status, PII inventory, retention policies, and violations.\nUses real DataClassifier, RetentionEngine, and SubjectAccessManager from lib.governance.",
         "operationId": "compliance_report_api_v2_intelligence_governance_compliance_report_get",
         "responses": {
           "200": {
@@ -14262,6 +14346,51 @@
           }
         },
         "summary": "Snooze Proposal",
+        "tags": [
+          "Spec v2.9"
+        ]
+      }
+    },
+    "/api/v2/search": {
+      "get": {
+        "description": "GET /api/v2/search\n\nSearch across tasks, projects, and clients.",
+        "operationId": "search_api_v2_search_get",
+        "parameters": [
+          {
+            "description": "Search query",
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "description": "Search query",
+              "title": "Q",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DetailResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Search",
         "tags": [
           "Spec v2.9"
         ]

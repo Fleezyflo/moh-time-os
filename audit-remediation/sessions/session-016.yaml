@@ -1,0 +1,133 @@
+session: 16
+date: "2026-03-08"
+phase: "phase-b"
+track: "remediation"
+branch: "phase-b/system-completeness"
+
+tasks_completed:
+  - id: "GAP-10-10"
+    name: "Wire ConversationalIntelligence to API"
+    status: "DONE"
+    files:
+      - api/intelligence_router.py
+    summary: |
+      Added POST /api/v2/intelligence/conversation endpoint. ConversationRequest
+      Pydantic model (query, session_id, context). Module-level _sessions dict
+      keyed by session_id. UUID generated for new sessions. Calls process_query().
+
+  - id: "GAP-11-06"
+    name: "Wire ComplianceReporter to real data"
+    status: "DONE"
+    files:
+      - api/intelligence_router.py
+    summary: |
+      Rewired compliance_report endpoint to use real governance classes:
+      DataClassifier(db_path).classify_database() -> DataCatalog,
+      RetentionEngine(db_path).get_policies() -> list[RetentionPolicy],
+      SubjectAccessManager(db_path).list_requests(status="completed").
+      Previous implementation used toy in-memory classes returning zeros.
+
+  - id: "GAP-12-02"
+    name: "V4 services unified facade"
+    status: "DONE"
+    files:
+      - lib/services/__init__.py (new)
+      - lib/services/entity_service.py (new)
+    summary: |
+      Created EntityServiceFacade with lazy-singleton properties for
+      IssueService, SignalService, ProposalService, CouplingService.
+      Global singleton via get_entity_service().
+
+  - id: "GAP-12-04"
+    name: "Entity profile endpoint"
+    status: "DONE"
+    files:
+      - api/intelligence_router.py
+    summary: |
+      Added GET /api/v2/intelligence/entity/{entity_type}/{entity_id}/profile.
+      Calls build_entity_profile() with placeholder cost profile.
+      Returns all 7 intelligence dimensions.
+
+  - id: "GAP-07-01"
+    name: "Engagements tables in schema.py"
+    status: "DONE"
+    files:
+      - lib/schema.py
+    summary: |
+      Added engagements and engagement_transitions table definitions to TABLES
+      OrderedDict. Columns match v29_engagement_lifecycle.py migration exactly.
+      Bumped SCHEMA_VERSION from 14 to 15.
+
+  - id: "GAP-13-01"
+    name: "Fix intelligence error format"
+    status: "DONE"
+    files:
+      - api/intelligence_router.py
+    summary: |
+      Replaced all 500-level HTTPException raises with JSONResponse +
+      _error_response() for consistent {"error", "error_code"} format.
+      Left 400/404 HTTPException for input validation (correct behavior).
+      Removed redundant inline JSONResponse imports (already at module level).
+
+  - id: "GAP-08-04"
+    name: "Fix /api/v2/search version mismatch"
+    status: "DONE"
+    files:
+      - api/spec_router.py
+    summary: |
+      Added GET /search to spec_router. Searches tasks, projects, clients
+      using LIKE queries with parameterized SQL. Returns first 20 results.
+
+  - id: "PR-FRESH-03"
+    name: "INSUFFICIENT_DATA_SCORE sentinel"
+    status: "DONE"
+    files:
+      - lib/intelligence/scoring.py
+      - lib/intelligence/entity_profile.py
+    summary: |
+      Added INSUFFICIENT_DATA_SCORE = -1.0 constant in scoring.py.
+      Used in entity_profile.py _compute_overall_health() to distinguish
+      "no data" from "low score" when dimensions list is empty or
+      total weight is zero.
+
+  - id: "GAP-08-02"
+    name: "Scan all sub-routers in system map"
+    status: "DONE"
+    files:
+      - scripts/generate_system_map.py
+    summary: |
+      Updated get_api_routes() to discover all router files by parsing
+      "from api.\w+ import" statements in server.py. Regex matches all
+      known router variable names including bare "router".
+
+  - id: "GAP-08-03"
+    name: "Parse fetchJson wrapper in system map"
+    status: "DONE"
+    files:
+      - scripts/generate_system_map.py
+    summary: |
+      Updated get_ui_api_calls() to parse fetchJson/postJson template
+      literals with ${API_BASE} prefix, matching the actual UI pattern.
+
+verification:
+  all_tasks_reported: true
+  total_done: 10
+  total_gaps_closed: 10
+  gap_ids:
+    - "GAP-07-01"
+    - "GAP-08-02"
+    - "GAP-08-03"
+    - "GAP-08-04"
+    - "GAP-10-10"
+    - "GAP-11-06"
+    - "GAP-12-02"
+    - "GAP-12-04"
+    - "GAP-13-01"
+    - "PR-FRESH-03"
+
+notes:
+  - "All 10 Phase B items completed"
+  - "lib/governance/ has real production classes; lib/intelligence/data_governance.py has toy in-memory versions"
+  - "DataCatalog takes tables dict, not db_path -- use DataClassifier.classify_database()"
+  - "Sub-agent used wrong DataCatalog constructor -- caught and fixed during verification"
+  - "Inline JSONResponse imports were redundant -- module-level import exists at line 22"

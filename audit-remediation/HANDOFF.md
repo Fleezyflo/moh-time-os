@@ -1,67 +1,70 @@
 # HANDOFF -- Audit Remediation
 
 **Generated:** 2026-03-08
-**Current Phase:** phase-b (pending) -- System Completeness
-**Current Session:** 16
+**Current Phase:** phase-c (pending) -- Intelligence Expansion
+**Current Session:** 17
 **Track:** Gap remediation (phases A-D)
 
 ---
 
 ## What Just Happened
 
-### Session 015 -- Phase A: Production Hardening
-Implemented all 16 Phase A work items across API hardening, daemon reliability, and collector hardening. PR #TBD (branch: phase-a/production-hardening).
+### Session 016 -- Phase B: System Completeness
 
-**API Hardening:**
-- GAP-08-06/GAP-12-05/PR-FRESH-01: Wired HealthChecker into /api/health (returns component-level status, 503 on critical). Added /api/ready lightweight probe.
-- PR-FRESH-02: Path traversal prevention in SPA fallback using Path.resolve() + is_relative_to().
-- GAP-08-07: CORS wildcard warning at startup when CORS_ORIGINS=* in production environment.
-- GAP-08-05: Expanded validate_production.py from 4 to 9 checks (API app, daemon, notifications, collectors, intelligence engine).
+All 10 work items completed. PR #TBD (branch: phase-b/system-completeness).
 
-**Daemon Reliability:**
-- GAP-09-05: Replaced plain FileHandler with RotatingFileHandler (50MB, 5 backups).
-- GAP-09-06: Added periodic memory monitoring via resource.getrusage() every 10 ticks.
-- GAP-11-01: Wired per-cycle duration into PerformanceMonitor.record_timing().
-- GAP-09-07: Created macOS launchd plist at ops/com.mohtime.daemon.plist.
+**Intelligence Wiring:**
+- GAP-10-10 (HIGH): Added `POST /api/v2/intelligence/conversation` endpoint calling ConversationalIntelligence.process_query(). Session state keyed by session_id with UUID generation for new sessions.
+- GAP-11-06: Rewired ComplianceReporter to use real `DataClassifier.classify_database()`, `RetentionEngine.get_policies()`, and `SubjectAccessManager.list_requests()` from `lib/governance/`. Previous implementation used toy in-memory classes that always returned zeros.
+- GAP-12-02: Created `lib/services/entity_service.py` -- EntityServiceFacade with lazy-singleton properties for IssueService, SignalService, ProposalService, CouplingService.
+- GAP-12-04: Added `GET /api/v2/intelligence/entity/{entity_type}/{entity_id}/profile` endpoint calling `build_entity_profile()`.
 
-**Collector Hardening:**
-- GAP-09-02/GAP-11-04: Added CircuitBreaker + RetryConfig to XeroCollector.
-- PR-FRESH-04: Created WatchdogTimer (lib/collectors/watchdog.py) using SIGALRM, wired per-future timeouts (300s) into scheduled_collect.py.
-- PR-FRESH-05: Enhanced CollectorLock with PID + timestamp storage, stale lock detection (30-min TTL), dead-PID breaking.
-- GAP-09-01: Documented that drive/contacts use scheduled_collect.py functions, not class-based collectors.
-- GAP-09-03: Investigated all_users_runner.py -- confirmed legitimate multi-service CLI tool, not orphaned. No changes needed.
+**Schema & Contract Fixes:**
+- GAP-07-01: Added `engagements` and `engagement_transitions` tables to `lib/schema.py`, bumped SCHEMA_VERSION 14->15. Columns match v29_engagement_lifecycle.py migration exactly.
+- GAP-13-01: Replaced all 500-level HTTPException raises in intelligence_router.py with JSONResponse + `_error_response()` for consistent `{"error", "error_code"}` format. Left 400/404 HTTPException for input validation.
+- GAP-08-04: Added `GET /search` to spec_router.py resolving the /api/v2/search version mismatch.
+- PR-FRESH-03: Added `INSUFFICIENT_DATA_SCORE = -1.0` sentinel in scoring.py, used in entity_profile.py's `_compute_overall_health()`.
 
-**Files changed:** api/server.py, lib/daemon.py, lib/autonomous_loop.py, lib/collectors/orchestrator.py, lib/collectors/watchdog.py (new), lib/collector_registry.py, lib/collectors/xero.py, collectors/scheduled_collect.py, scripts/validate_production.py, ops/com.mohtime.daemon.plist (new).
+**System Map Accuracy:**
+- GAP-08-02: Updated `scripts/generate_system_map.py` to discover all sub-routers by parsing `from api.\w+ import` in server.py.
+- GAP-08-03: Updated UI API call scanner to parse `fetchJson/postJson(\`${API_BASE}/...\`)` template literals.
+
+**Files changed:** `api/intelligence_router.py`, `api/spec_router.py`, `lib/schema.py`, `lib/services/__init__.py` (new), `lib/services/entity_service.py` (new), `lib/intelligence/scoring.py`, `lib/intelligence/entity_profile.py`, `scripts/generate_system_map.py`
+
+**Key fix during verification:** Sub-agent initially used `DataCatalog(db_path)` but the real `lib.governance.DataCatalog` takes `tables: dict[str, TableClassification]`. Fixed to use `DataClassifier(db_path).classify_database()` which returns a properly initialized DataCatalog.
 
 ---
 
 ## What's Next
 
-### Phase B: System Completeness
-- 10 work items: wire existing code to its consumers
-- See `audit-remediation/tasks/PHASE-B-SYSTEM-COMPLETENESS.md`
-- Key items: ConversationalIntelligence endpoint (GAP-10-10, the only HIGH severity gap), V4 services facade (GAP-12-02), entity profile endpoint (GAP-12-04), error format fix (GAP-13-01)
-- Scope: do NOT rewrite module internals, just connect them
+### Phase C: Intelligence Expansion
+- 13 work items across 4 groups: adaptive thresholds (4), notifications (3), bidirectional integration (4), manual validation (2)
+- See `audit-remediation/tasks/PHASE-C-INTELLIGENCE-EXPANSION.md`
+- This is the largest phase -- new feature work building modules that don't exist yet
+- Split into 3-4 PRs: thresholds, notifications, bidirectional, (optional) validation docs
+- Read at least 3 existing modules in each directory before writing new ones
+- Every new class needs tests
 
 ---
 
 ## Key Rules
 
-1. You write code. You never run anything. Tools: Read, Write, Edit, Glob, Grep only.
-2. Commit subject under 72 chars, valid types only (feat, fix, etc.)
+1. You write code. You never run anything.
+2. Commit subject under 72 chars, valid types only
 3. "HANDOFF.md removed and rewritten" required in commit body
 4. If 20+ deletions, include "Deletion rationale:" in body
-5. Match existing patterns obsessively -- read 3 neighboring modules before writing
-6. No noqa, nosec, or type: ignore -- fix the root cause
-7. SIGALRM doesn't work in threads -- use future.result(timeout=) for ThreadPoolExecutor
-8. drive/contacts collectors have no class-based implementation -- they're functions in scheduled_collect.py
-9. No comments in the command block
+5. Match existing patterns obsessively
+6. No comments in command blocks
+7. `lib/governance/` has REAL production classes -- `lib/intelligence/data_governance.py` has toy in-memory versions. Always use the real ones.
+8. `DataCatalog` takes `tables: dict[str, TableClassification]`, NOT `db_path`. Use `DataClassifier(db_path).classify_database()` to get a DataCatalog.
+9. Intelligence error responses must use `JSONResponse(content=_error_response(...))`, NOT `raise HTTPException(detail=...)` for 500 errors.
+10. Inline `from fastapi.responses import JSONResponse` is redundant -- it's imported at module level (line 22 of intelligence_router.py).
 
 ---
 
 ## Documents to Read
 
-1. `audit-remediation/AGENT.md` -- Unified agent brief (covers all phases)
-2. `audit-remediation/tasks/PHASE-B-SYSTEM-COMPLETENESS.md` -- Phase B work items
+1. `audit-remediation/AGENT.md` -- This brief
+2. `audit-remediation/tasks/PHASE-C-INTELLIGENCE-EXPANSION.md` -- Next phase task file
 3. `audit-remediation/state.json` -- Current project state
 4. `CLAUDE.md` -- Repo-level engineering rules
