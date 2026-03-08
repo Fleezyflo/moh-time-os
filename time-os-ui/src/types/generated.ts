@@ -2301,7 +2301,7 @@ export interface paths {
         };
         /**
          * Health Check
-         * @description Health check endpoint.
+         * @description Health check endpoint with real subsystem checks.
          */
         get: operations["health_check_api_health_get"];
         put?: never;
@@ -2788,6 +2788,26 @@ export interface paths {
          * @description Process project enrollment action.
          */
         post: operations["process_enrollment_api_projects__project_id__enrollment_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Readiness Probe
+         * @description Lightweight readiness probe for load balancer health checks.
+         */
+        get: operations["readiness_probe_api_ready_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4103,6 +4123,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/intelligence/conversation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Conversation
+         * @description Process natural language query using conversational intelligence.
+         *
+         *     Maintains session state per session_id. If session_id is None, generates a new UUID.
+         *     Returns intent, entities, response, and conversation state.
+         */
+        post: operations["conversation_api_v2_intelligence_conversation_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/intelligence/critical": {
         parameters: {
             query?: never;
@@ -4236,13 +4279,13 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Entity Profile
-         * @description Build and return a full intelligence profile for an entity.
+         * Get Entity Profile
+         * @description Get complete intelligence profile for a single entity.
          *
-         *     Aggregates scores, signals, patterns, cost profile, and trajectory
-         *     into a single EntityIntelligenceProfile via build_entity_profile().
+         *     Returns all 7 intelligence dimensions: health, signals, patterns,
+         *     trajectory, costs, narrative, and recommended actions.
          */
-        get: operations["entity_profile_api_v2_intelligence_entity__entity_type___entity_id__profile_get"];
+        get: operations["get_entity_profile_api_v2_intelligence_entity__entity_type___entity_id__profile_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -4308,6 +4351,7 @@ export interface paths {
          * @description Generate a data governance compliance report.
          *
          *     Returns compliance status, PII inventory, retention policies, and violations.
+         *     Uses real DataClassifier, RetentionEngine, and SubjectAccessManager from lib.governance.
          */
         get: operations["compliance_report_api_v2_intelligence_governance_compliance_report_get"];
         put?: never;
@@ -5498,6 +5542,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search
+         * @description GET /api/v2/search
+         *
+         *     Search across tasks, projects, and clients.
+         */
+        get: operations["search_api_v2_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/tasks/{task_id}/asana-detail": {
         parameters: {
             query?: never;
@@ -5894,6 +5960,20 @@ export interface components {
             tier?: string | null;
             /** Trend */
             trend?: string | null;
+        };
+        /**
+         * ConversationRequest
+         * @description Request model for conversational intelligence.
+         */
+        ConversationRequest: {
+            /** Context */
+            context?: {
+                [key: string]: unknown;
+            } | null;
+            /** Query */
+            query: string;
+            /** Session Id */
+            session_id?: string | null;
         };
         /** CreateIssueRequest */
         CreateIssueRequest: {
@@ -9935,7 +10015,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DetailResponse"];
+                    "application/json": unknown;
                 };
             };
         };
@@ -10647,6 +10727,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readiness_probe_api_ready_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
         };
@@ -12599,6 +12699,39 @@ export interface operations {
             };
         };
     };
+    conversation_api_v2_intelligence_conversation_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConversationRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntelligenceResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     critical_items_api_v2_intelligence_critical_get: {
         parameters: {
             query?: never;
@@ -12721,14 +12854,14 @@ export interface operations {
             };
         };
     };
-    entity_profile_api_v2_intelligence_entity__entity_type___entity_id__profile_get: {
+    get_entity_profile_api_v2_intelligence_entity__entity_type___entity_id__profile_get: {
         parameters: {
             query?: never;
             header?: never;
             path: {
                 /** @description Entity type (client, project, person) */
                 entity_type: string;
-                /** @description Entity identifier */
+                /** @description Entity ID */
                 entity_id: string;
             };
             cookie?: never;
@@ -14352,6 +14485,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MutationResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    search_api_v2_search_get: {
+        parameters: {
+            query: {
+                /** @description Search query */
+                q: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DetailResponse"];
                 };
             };
             /** @description Validation Error */

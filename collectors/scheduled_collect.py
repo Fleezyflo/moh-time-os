@@ -20,6 +20,9 @@ logger = logging.getLogger(__name__)
 
 OUT_DIR = paths.out_dir()
 
+# Per-collector timeout in seconds (5 minutes)
+COLLECTOR_TIMEOUT_SECONDS = 300
+
 
 def run_cmd(cmd: list, timeout: int = 60) -> dict:
     """Run command and return JSON output."""
@@ -314,7 +317,10 @@ def _collect_all_impl(sources: list = None, v4_ingest: bool = True):
         for future in as_completed(futures):
             src = futures[future]
             try:
-                results[src] = future.result()
+                results[src] = future.result(timeout=COLLECTOR_TIMEOUT_SECONDS)
+            except TimeoutError:
+                logger.error("Collector %s timed out after %ds", src, COLLECTOR_TIMEOUT_SECONDS)
+                results[src] = {"error": f"timeout after {COLLECTOR_TIMEOUT_SECONDS}s"}
             except (OSError, ValueError, KeyError) as e:
                 logger.warning("Collector %s failed: %s", src, e)
                 results[src] = {}

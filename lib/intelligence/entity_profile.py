@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 from enum import Enum
 
 from lib.intelligence.narrative import NarrativeBuilder
+from lib.intelligence.scoring import INSUFFICIENT_DATA_SCORE
 
 logger = logging.getLogger(__name__)
 
@@ -239,7 +240,13 @@ def compute_health_score(
     dimensions: list[ScoreDimension],
     entity_type: str,
 ) -> float:
-    """Weighted average of score dimensions."""
+    """Weighted average of score dimensions.
+
+    Returns INSUFFICIENT_DATA_SCORE if no dimensions provided.
+    """
+    if not dimensions:
+        return INSUFFICIENT_DATA_SCORE
+
     weights = DIMENSION_WEIGHTS.get(entity_type, DIMENSION_WEIGHTS["client"])
     total_weight = 0.0
     weighted_sum = 0.0
@@ -248,7 +255,7 @@ def compute_health_score(
         weighted_sum += dim.score * w
         total_weight += w
     if total_weight == 0:
-        return 0.0
+        return INSUFFICIENT_DATA_SCORE
     return weighted_sum / total_weight
 
 

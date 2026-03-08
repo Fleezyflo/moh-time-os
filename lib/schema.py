@@ -17,7 +17,7 @@ from collections import OrderedDict
 # =============================================================================
 # Schema version — bump when you change this file
 # =============================================================================
-SCHEMA_VERSION = 14
+SCHEMA_VERSION = 15
 
 # =============================================================================
 # Table Definitions
@@ -1571,6 +1571,43 @@ TABLES["task_weight_overrides"] = {
         ("weight_value", "REAL NOT NULL"),
         ("set_by", "TEXT NOT NULL DEFAULT 'user'"),
         ("created_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# V29: engagements
+# ---------------------------------------------------------------------------
+TABLES["engagements"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("client_id", "TEXT NOT NULL"),
+        ("brand_id", "TEXT"),
+        ("name", "TEXT NOT NULL"),
+        ("type", "TEXT NOT NULL"),
+        ("state", "TEXT NOT NULL DEFAULT 'planned'"),
+        ("asana_project_gid", "TEXT"),
+        ("asana_url", "TEXT"),
+        ("started_at", "TEXT"),
+        ("completed_at", "TEXT"),
+        ("created_at", "TEXT NOT NULL"),
+        ("updated_at", "TEXT NOT NULL"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# V29: engagement_transitions
+# ---------------------------------------------------------------------------
+TABLES["engagement_transitions"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("engagement_id", "TEXT NOT NULL"),
+        ("from_state", "TEXT NOT NULL"),
+        ("to_state", "TEXT NOT NULL"),
+        ("trigger", "TEXT"),
+        ("actor", "TEXT"),
+        ("note", "TEXT"),
+        ("transitioned_at", "TEXT NOT NULL"),
+        ("created_at", "TEXT NOT NULL"),
     ],
 }
 

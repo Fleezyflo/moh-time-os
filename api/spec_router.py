@@ -2656,6 +2656,56 @@ async def get_financial_detail():
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
+@spec_router.get("/search", response_model=DetailResponse)
+async def search(q: str = Query(..., description="Search query")):
+    """
+    GET /api/v2/search
+
+    Search across tasks, projects, and clients.
+    """
+    from lib.state_store import get_store
+
+    try:
+        store = get_store()
+        limit = 20
+        results = []
+
+        tasks = store.query(
+            """
+            SELECT 'task' as type, id, title, status, project FROM tasks
+            WHERE title LIKE ? OR description LIKE ?
+            LIMIT ?
+        """,
+            [f"%{q}%", f"%{q}%", limit],
+        )
+        results.extend([dict(t) for t in tasks])
+
+        projects = store.query(
+            """
+            SELECT 'project' as type, id, name as title, status FROM projects
+            WHERE name LIKE ?
+            LIMIT ?
+        """,
+            [f"%{q}%", limit],
+        )
+        results.extend([dict(p) for p in projects])
+
+        clients = store.query(
+            """
+            SELECT 'client' as type, id, name as title, tier FROM clients
+            WHERE name LIKE ?
+            LIMIT ?
+        """,
+            [f"%{q}%", limit],
+        )
+        results.extend([dict(c) for c in clients])
+
+        return {"results": results[:limit], "total": len(results)}
+    except (sqlite3.Error, ValueError) as e:
+        logger.error("search failed: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e)) from e
+
+
 @spec_router.get("/projects/asana-context", response_model=DetailResponse)
 async def get_asana_portfolio_context():
     """
