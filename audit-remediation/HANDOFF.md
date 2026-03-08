@@ -1,43 +1,52 @@
 # HANDOFF -- Audit Remediation
 
 **Generated:** 2026-03-08
-**Current Phase:** phase-10 (pending)
-**Current Session:** 10
+**Current Phase:** phase-11 (pending)
+**Current Session:** 11
 **Track:** T2 in progress
 
 ---
 
 ## What Just Happened
 
-### Session 009 -- Phase 09: Verify Operations
+### Session 010 -- Phase 10: Verify Intelligence Systems
 
-Verification-only phase. Investigated 3 areas via code reading: collector coverage, test coverage counts, and 24h unattended operation capability. All 3 tasks produced DONE or GAP reports.
+Verification-only phase. Investigated 6 areas via code reading: adaptive thresholds, temporal validation, notifications, bidirectional integration, conversational interface, proactive intelligence. All 6 tasks produced DONE or GAP reports.
 
 **Results:**
-- Task 01 (collector coverage): **DONE with 3 GAPs** -- 8 collectors in registry (calendar/gmail/tasks/chat/asana/xero/drive/contacts) with documented intervals and multi-table storage. All BaseCollector subclasses have circuit breaker + retry_with_backoff via resilience.py. GAP-09-01, GAP-09-02, GAP-09-03 found.
-- Task 02 (test coverage counts): **DONE with 1 GAP** -- 131 test files, 1182+ test functions. pytest --cov command generated for Molham. GAP-09-04 found.
-- Task 03 (24h unattended operation): **DONE with 3 GAPs** -- Daemon has signal handlers, circuit breakers, exponential backoff, state persistence, sleep/wake detection. SQLite WAL mode confirmed. GAP-09-05, GAP-09-06, GAP-09-07 found.
+- Task 01 (adaptive thresholds): **DONE with 4 GAPs** -- calibration.py exists (196 lines) with basic weekly calibration, but does NOT implement the AT spec's threshold adjustment engine, seasonal modifiers, calibration reporting, or validation tests. GAP-10-01 through GAP-10-04.
+- Task 02 (temporal validation): **DONE** -- lib/intelligence/temporal.py (711 lines) fully implements BusinessCalendar, TemporalNormalizer, RecencyWeighter. UAE/Dubai specific with Ramadan, Eid, seasons. Wired to autonomous_loop.py and signal_lifecycle.py.
+- Task 03 (notifications): **DONE with 4 GAPs** -- NotificationEngine + NotificationIntelligence + DigestEngine work well. Rate limiting, quiet hours, fatigue management, batching. Only Google Chat channel exists -- no email delivery channel. No notification-level muting or analytics. GAP-10-05 through GAP-10-07 plus existing delivery.
+- Task 04 (bidirectional): **DONE with 2 GAPs** -- AsanaWriter and GmailWriter exist with proper error handling and dry-run. Action framework has full lifecycle with risk classification and approval policies. Missing CalendarWriter (GAP-10-08) and end-to-end validation test (GAP-10-09).
+- Task 05 (conversational): **DONE with 2 GAPs** -- ConversationalIntelligence (971 lines) fully implements intent classification, entity resolution, cross-domain synthesis. Tests exist. BUT not wired to any API endpoint or chat interface (GAP-10-10, high severity). Manual validation blocked (GAP-10-11).
+- Task 06 (proactive): **DONE with 3 GAPs** -- proposals.py generates actionable proposals. Missing: proposal-to-Asana pipeline (GAP-10-12), proactive email drafting (GAP-10-13), contextual surfaces validation (GAP-10-14).
 
-**7 gaps found:**
-- **GAP-09-01 (low):** Orchestrator._init_collectors() maps only 6 of 8 collectors (missing drive, contacts). force_sync() still covers all 8 via scheduled_collect.collect_all().
-- **GAP-09-02 (medium):** XeroCollector does not extend BaseCollector -- no circuit breaker, no retry_with_backoff, no resilience.py integration.
-- **GAP-09-03 (low):** all_users_runner.py exists for multi-user collection but is not referenced by orchestrator or scheduled_collect -- unclear if actively used.
-- **GAP-09-04 (medium):** No dedicated test files for xero, gmail, tasks, drive, or contacts collectors. Only asana, calendar, and chat have collector-specific test files. Actual coverage numbers require Molham to run pytest --cov.
-- **GAP-09-05 (medium):** daemon.py uses plain FileHandler, not RotatingFileHandler. configure_log_rotation() exists in lib/observability/logging.py but is never called. Daemon log grows unbounded.
-- **GAP-09-06 (low):** No memory monitoring in daemon loop -- no gc.collect(), no psutil, no memory usage tracking.
-- **GAP-09-07 (low):** No systemd/launchd service definition for auto-restart on crash.
+**14 gaps found (1 high, 8 medium, 5 low):**
+- **GAP-10-10 (high):** ConversationalIntelligence not wired to any user-facing surface
+- **GAP-10-01 (medium):** No threshold adjustment engine (AT-2.1)
+- **GAP-10-02 (medium):** No seasonal/contextual modifiers (AT-3.1)
+- **GAP-10-05 (medium):** No email notification channel
+- **GAP-10-08 (medium):** No Calendar write-back integration
+- **GAP-10-11 (medium):** CI-4.1 manual validation blocked on GAP-10-10
+- **GAP-10-12 (medium):** No proposal-to-Asana-task pipeline
+- **GAP-10-13 (medium):** No proactive email draft generation
+- **GAP-10-03 (low):** No calibration reporting (AT-4.1)
+- **GAP-10-04 (low):** No adaptive threshold validation tests (AT-5.1)
+- **GAP-10-06 (low):** No notification-level muting API
+- **GAP-10-07 (low):** No notification analytics
+- **GAP-10-09 (low):** No end-to-end action validation test
+- **GAP-10-14 (low):** PI-5.1 contextual surfaces manual validation blocked
 
-**Status:** PR #TBD (branch: verify/operations)
+**Status:** PR #TBD (branch: verify/intelligence-systems)
 
 ---
 
 ## What's Next
 
-### Phase 10: Verify Intelligence Systems
-- 6 verification tasks -- reporting only, no code changes
-- See `audit-remediation/plan/phase-10.yaml`
-- Tasks: verify adaptive thresholds, temporal validation, notifications, bidirectional integration, conversational interface, proactive intelligence
-- Estimated 2 sessions
+### Phase 11: Verify Analytics & Reporting
+- 3 verification tasks -- reporting only, no code changes
+- See `audit-remediation/plan/phase-11.yaml`
+- Scope: verify dashboard data, reporting pipeline, analytics accuracy
 
 ---
 
@@ -53,12 +62,13 @@ Verification-only phase. Investigated 3 areas via code reading: collector covera
 8. GAP-07-01 exists: engagements not in schema.py -- do not fix during T2 verification
 9. GAP-08-01 through GAP-08-07 exist -- do not fix during T2 verification
 10. GAP-09-01 through GAP-09-07 exist -- do not fix during T2 verification
+11. GAP-10-01 through GAP-10-14 exist -- do not fix during T2 verification
 
 ---
 
 ## Documents to Read
 
 1. `audit-remediation/AGENT.md` -- Engineering standards for this project
-2. `audit-remediation/plan/phase-10.yaml` -- Next phase
+2. `audit-remediation/plan/phase-11.yaml` -- Next phase
 3. `audit-remediation/state.json` -- Current project state
 4. `CLAUDE.md` -- Repo-level engineering rules

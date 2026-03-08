@@ -1,0 +1,303 @@
+session: 10
+date: "2026-03-08"
+phase: "phase-10"
+track: "T2"
+branch: "verify/intelligence-systems"
+
+tasks_completed:
+  - id: "task-01"
+    name: "Verify adaptive thresholds"
+    status: "DONE with 4 GAPs"
+    findings: |
+      Spec: AT-2.1 through AT-5.1 describe a four-component adaptive threshold system:
+        1. AT-2.1: Threshold adjustment engine -- automated calibration based on effectiveness scores
+        2. AT-3.1: Seasonal/contextual modifiers -- Ramadan, Q4 close, summer slowdown adjustments
+        3. AT-4.1: Calibration reporting -- weekly reports, effectiveness dashboards, calibration history
+        4. AT-5.1: Adaptive threshold validation -- comprehensive test suite for the pipeline
+
+      What exists:
+        - lib/calibration.py (196 lines): CalibrationEngine with run_weekly_calibration().
+          Analyzes feedback patterns, priority accuracy, completion patterns. Generates
+          recommendations and stores calibration reports in insights table.
+          This is a BASIC calibration system -- weekly report on feedback/priority accuracy.
+          It does NOT implement the AT spec's threshold adjustment engine.
+
+        - lib/intelligence/thresholds.yaml: Static signal threshold configuration.
+          Lists per-signal thresholds (overdue tasks >5, invoice aging >45 days, etc.)
+          with severity rules and priority weights. No adaptive adjustment mechanism.
+
+        - lib/contracts/thresholds.py: Quality gate thresholds (commitment resolution rate,
+          thread client linkage, etc.) with justifications. Static dataclass, no adaptation.
+
+      What's missing:
+        - GAP-10-01 (medium): No threshold adjustment engine (AT-2.1). calibration.py analyzes
+          feedback/priority but does NOT adjust thresholds.yaml values. No effectiveness scoring,
+          no propose/apply cycle, no ±30% cap, no cooldown, no oscillation detection.
+
+        - GAP-10-02 (medium): No seasonal/contextual modifiers (AT-3.1). BusinessCalendar in
+          temporal.py knows about Ramadan/seasons but this knowledge is NOT used to modify
+          thresholds. Thresholds are identical during Ramadan and normal periods.
+
+        - GAP-10-03 (low): No calibration reporting (AT-4.1). calibration.py stores a basic
+          weekly report but doesn't implement CalibrationReporter with weekly/effectiveness/history
+          reports, format_for_briefing, or the /api/v3/intelligence/calibration/report endpoint.
+
+        - GAP-10-04 (low): No adaptive threshold validation tests (AT-5.1). Since AT-2.1
+          through AT-4.1 don't exist, the validation test suite doesn't exist either.
+
+  - id: "task-02"
+    name: "Verify temporal validation"
+    status: "DONE"
+    findings: |
+      Spec: TC-5.1 -- Verify BusinessCalendar, TemporalNormalizer, RecencyWeighter produce
+      correct results.
+
+      What exists:
+        - lib/intelligence/temporal.py (711 lines): Full implementation of all three components.
+
+        - BusinessCalendar: UAE/Dubai specific. Loads config from config/business_calendar.yaml.
+          Handles weekends (Fri/Sat), public holidays, Ramadan dates (year-specific lookup),
+          Eid al-Fitr and Eid al-Adha periods, seasons (q4_close, summer_slowdown).
+          Methods: get_day_context(), is_working_day(), is_weekend(), is_public_holiday(),
+          is_ramadan(), is_eid(), get_working_hours(), get_working_minutes(),
+          business_days_between(), add_business_days(), get_season().
+
+        - TemporalNormalizer: Converts wall-clock to business-time. Methods:
+          business_days_late(), business_hours_elapsed(), normalize_aging(),
+          expected_response_time(), task_age_weighted(). Ramadan-aware (9-14 hours
+          vs normal 10-20 hours).
+
+        - RecencyWeighter: Exponential decay using business days (not calendar days).
+          Half-life 14 business days, min_weight 0.05. Methods: compute_weight(),
+          weighted_average(), weighted_trend() (with weighted linear regression, R²),
+          weighted_percentile().
+
+        Wiring confirmed:
+          - lib/autonomous_loop.py imports BusinessCalendar and TemporalNormalizer (line 626)
+            and RecencyWeighter (line 732).
+          - lib/intelligence/signal_lifecycle.py imports BusinessCalendar (line 22).
+
+      Verdict: DONE. All three TC components are implemented and wired. Implementation
+      matches spec requirements for business calendar, normalization, and recency weighting.
+
+  - id: "task-03"
+    name: "Verify notifications system"
+    status: "DONE with 4 GAPs"
+    findings: |
+      Spec: NI-3.1 (email digest), NI-4.1 (history/muting), NI-5.1 (analytics).
+
+      NI-3.1 -- Email Digest:
+        - lib/notifier/digest.py: DigestEngine exists. Handles queue_notification(),
+          compile_digest(), get_pending_count(). Uses digest_queue and digest_history tables.
+          Groups by category, sorts by severity.
+        - HOWEVER: Only one delivery channel exists -- Google Chat (lib/notifier/channels/google_chat.py).
+          No email channel exists (no EmailChannel class, no SMTP/Gmail integration for
+          notification delivery).
+        - lib/integrations/gmail_writer.py exists for bidirectional email (drafts/sends) but
+          is NOT wired as a notification delivery channel.
+        - GAP-10-05 (medium): No email notification channel. DigestEngine can batch
+          notifications but can only deliver via Google Chat. No email digest delivery.
+
+      NI-4.1 -- History/Muting:
+        - notifications table has sent_at, delivery_channel, delivery_id columns --
+          notification history IS tracked in the database.
+        - Signal suppression exists in lib/intelligence/signal_suppression.py with
+          dismiss/suppress functionality.
+        - HOWEVER: No notification-specific muting (mute entity, mute signal type,
+          mute time-based). Suppression is at signal level, not notification level.
+        - GAP-10-06 (low): No notification-level muting API. Signal suppression exists
+          but no "mute notifications for Client X for 24 hours" capability.
+
+      NI-5.1 -- Analytics:
+        - NotificationEngine tracks sent counts per priority (get_sent_today(),
+          get_pending_count()).
+        - NotificationIntelligence tracks fatigue state (sent_count_hour, sent_count_day).
+        - HOWEVER: No persistent notification analytics -- delivery success rates,
+          channel effectiveness, notification-to-action correlation.
+        - GAP-10-07 (low): No notification analytics dashboard or stored metrics.
+          Basic counts exist but no trend analysis or effectiveness measurement.
+
+      What works well:
+        - NotificationEngine (lib/notifier/engine.py, 502 lines): Full create/process/deliver
+          pipeline with rate limiting (3 critical/day, 5 high, 10 normal), quiet hours
+          (23:00-08:00), priority-ordered delivery.
+        - NotificationIntelligence (lib/intelligence/notification_intelligence.py, 259 lines):
+          Smart routing -- channel selection based on urgency and work hours, fatigue
+          management (5/hour, 20/day caps with 30-min cooldown), batching for digest.
+        - DigestEngine with queue/compile/history tables.
+        - Google Chat channel with webhook delivery and dry-run mode.
+
+  - id: "task-04"
+    name: "Verify bidirectional integration"
+    status: "DONE with 2 GAPs"
+    findings: |
+      Spec: BI-2.1 (Asana writeback), BI-3.1 (Gmail/Calendar automation), BI-5.1 (action validation).
+
+      BI-2.1 -- Asana Writeback:
+        - lib/integrations/asana_writer.py: AsanaWriter class exists. Uses httpx for REST API
+          calls. Supports create_task(), update_task(), add_comment(). Has dry_run mode,
+          rate limiting (1s delay on 429), and proper error handling. Returns AsanaWriteResult
+          with success/gid/error/http_status.
+
+      BI-3.1 -- Gmail/Calendar Automation:
+        - lib/integrations/gmail_writer.py: GmailWriter class exists. Creates drafts, sends
+          emails, manages labels via Google API with service account delegation.
+          Returns GmailWriteResult with success/message_id/draft_id.
+        - lib/executor/handlers/email.py: EmailHandler with create_draft (stores in decisions
+          table requiring approval), mark_processed, flag_email actions.
+        - HOWEVER: No CalendarWriter found. No calendar write-back integration.
+        - GAP-10-08 (medium): No Calendar write-back integration. Gmail and Asana have
+          writers but Calendar events cannot be created/updated programmatically.
+
+      BI-5.1 -- Action Validation:
+        - lib/actions/action_framework.py: Full action lifecycle -- ActionProposal with risk
+          classification (low/medium/high/critical), ActionStatus (proposed/approved/rejected/
+          executing/success/failed), handler registration, approval flow.
+        - lib/actions/action_router.py: Routes actions to handlers with middleware hooks
+          (before/after/error), dry-run mode, rate limiting, idempotency.
+        - lib/actions/approval_policies.py: Policy-based auto-approval with risk thresholds.
+        - HOWEVER: No end-to-end integration test or validation suite exists.
+        - GAP-10-09 (low): No end-to-end action validation test that exercises
+          propose -> approve -> execute -> verify cycle across Asana/Gmail/Calendar.
+
+      What works well:
+        - Action framework is well-designed with risk classification, approval policies,
+          middleware hooks, dry-run mode, and rate limiting.
+        - AsanaWriter and GmailWriter both have proper error handling and dry-run support.
+
+  - id: "task-05"
+    name: "Verify conversational interface"
+    status: "DONE with 2 GAPs"
+    findings: |
+      Spec: CI-2.1 (cross-domain synthesis), CI-4.1 (conversational UI validation).
+
+      CI-2.1 -- Cross-domain Synthesis:
+        - lib/intelligence/conversational_intelligence.py (971 lines): Full implementation.
+        - classify_intent(): Rule-based with regex patterns for 7 intent types (entity_lookup,
+          metric_query, comparison, prediction, action_request, history_lookup, ranked_summary).
+          Falls back to Claude Haiku LLM classification when regex doesn't match.
+        - EntityResolver: Exact match, partial/fuzzy match with confidence scoring.
+          Supports pronoun resolution from ConversationState context.
+        - CrossDomainSynthesizer: Synthesizes responses from health, revenue, signals,
+          trajectory, and communication data. Methods for entity_lookup, metric_query,
+          ranked_summary, comparison.
+        - ConversationalIntelligence.process_query(): End-to-end pipeline --
+          classify -> resolve entities -> update state -> route -> synthesize.
+        - ConversationState: Session state with query history (last 20), pending actions,
+          current entity context.
+
+      Wiring:
+        - NOT wired to API. grep of api/ returns no imports of conversational_intelligence.
+        - NOT wired to chat_commands.py. lib/integrations/chat_commands.py is a
+          SlashCommandHandler for Google Chat but does not import or use
+          ConversationalIntelligence.
+        - Tests exist: tests/test_conversational_intelligence.py with TestConversationalIntelligence
+          class exercising classify_intent, EntityResolver, and full process_query.
+        - GAP-10-10 (high): ConversationalIntelligence is implemented but NOT wired to any
+          API endpoint or chat interface. The 971-line module is tested but unreachable from
+          any user-facing surface.
+
+      CI-4.1 -- Conversational UI Validation:
+        - This is a manual validation task. Cannot be completed via code inspection.
+        - GAP-10-11 (medium): CI-4.1 requires manual testing of conversational flows
+          (ambiguity handling, error responses, multi-turn context). Blocked until CI-2.1
+          is wired to a user-facing surface (GAP-10-10).
+
+  - id: "task-06"
+    name: "Verify proactive intelligence"
+    status: "DONE with 3 GAPs"
+    findings: |
+      Spec: PI-1.1 (preparation engine), PI-2.1 (Asana intelligence), PI-3.1 (email
+      communication drafting), PI-5.1 (contextual surfaces validation).
+
+      PI-1.1 -- Preparation Engine:
+        - lib/intelligence/proposals.py (1123+ lines): Full proposal generation system.
+        - ProposalType: client_risk, resource_risk, project_risk, portfolio_risk,
+          financial_alert, opportunity.
+        - ProposalUrgency: immediate, this_week, monitor.
+        - Proposal dataclass with headline, entity, summary, evidence, implied_action,
+          related_entities, scores, active_signals, active_patterns, trend, confidence.
+        - generate_proposals(): Takes signals and patterns, produces actionable proposals.
+        - generate_proposals_from_live_data(): Full pipeline from DB to proposals.
+        - This covers the "preparation engine" concept -- turning raw signals into
+          actionable intelligence with implied actions.
+
+      PI-2.1 -- Asana Intelligence:
+        - AsanaWriter exists for writeback (task creation, updates, comments).
+        - Proposal system generates proposals that could trigger Asana task creation.
+        - HOWEVER: No automatic Asana task creation from proposals. The action_framework
+          has handler registration but no registered handler that creates Asana tasks
+          from proposals.
+        - GAP-10-12 (medium): No automatic proposal-to-Asana-task pipeline. AsanaWriter
+          and action_framework exist separately but are not connected. A proposal with
+          implied_action="create follow-up task" does not automatically create an Asana task.
+
+      PI-3.1 -- Email Communication Drafting:
+        - GmailWriter can create drafts.
+        - ConversationalIntelligence has ActionCard with action_type="email".
+        - EmailHandler in executor can create_draft.
+        - HOWEVER: No proactive email drafting -- no system that notices "you haven't
+          emailed Client X in 2 weeks" and prepares a draft.
+        - GAP-10-13 (medium): No proactive email draft generation. Components exist
+          (GmailWriter, ActionCard, EmailHandler) but no intelligence trigger that
+          automatically prepares email drafts based on communication patterns.
+
+      PI-5.1 -- Contextual Surfaces Validation:
+        - This is a manual validation task requiring UI inspection.
+        - GAP-10-14 (low): PI-5.1 requires manual validation of contextual surfaces.
+          Blocked until PI-2.1 and PI-3.1 pipelines are complete.
+
+gaps_found:
+  - id: "GAP-10-01"
+    severity: "medium"
+    description: "No threshold adjustment engine (AT-2.1). calibration.py does not adjust thresholds.yaml values."
+  - id: "GAP-10-02"
+    severity: "medium"
+    description: "No seasonal/contextual modifiers (AT-3.1). BusinessCalendar knowledge not used to modify thresholds."
+  - id: "GAP-10-03"
+    severity: "low"
+    description: "No calibration reporting (AT-4.1). No CalibrationReporter, no effectiveness reports, no API endpoint."
+  - id: "GAP-10-04"
+    severity: "low"
+    description: "No adaptive threshold validation tests (AT-5.1). Blocked on AT-2.1 through AT-4.1."
+  - id: "GAP-10-05"
+    severity: "medium"
+    description: "No email notification channel. DigestEngine can batch but only Google Chat delivery exists."
+  - id: "GAP-10-06"
+    severity: "low"
+    description: "No notification-level muting API. Signal suppression exists but not notification muting."
+  - id: "GAP-10-07"
+    severity: "low"
+    description: "No notification analytics. Basic counts exist but no trend analysis or effectiveness measurement."
+  - id: "GAP-10-08"
+    severity: "medium"
+    description: "No Calendar write-back integration. Gmail and Asana have writers but not Calendar."
+  - id: "GAP-10-09"
+    severity: "low"
+    description: "No end-to-end action validation test for propose -> approve -> execute -> verify cycle."
+  - id: "GAP-10-10"
+    severity: "high"
+    description: "ConversationalIntelligence (971 lines) not wired to any API endpoint or chat interface."
+  - id: "GAP-10-11"
+    severity: "medium"
+    description: "CI-4.1 manual validation blocked until ConversationalIntelligence is wired (GAP-10-10)."
+  - id: "GAP-10-12"
+    severity: "medium"
+    description: "No proposal-to-Asana-task pipeline. AsanaWriter and action_framework not connected."
+  - id: "GAP-10-13"
+    severity: "medium"
+    description: "No proactive email draft generation. Components exist but no intelligence trigger."
+  - id: "GAP-10-14"
+    severity: "low"
+    description: "PI-5.1 contextual surfaces manual validation. Blocked on PI-2.1 and PI-3.1."
+
+files_changed: []
+
+verification_results:
+  total_tasks: 6
+  done: 6
+  gaps_found: 14
+  severity_breakdown:
+    high: 1
+    medium: 8
+    low: 5
