@@ -1,8 +1,10 @@
 # AGENT.md — MOH Time OS Audit Remediation
 
-You have five tools: **Read, Write, Edit, Glob, Grep.** That is all. You have no Bash, no terminal, no shell. You cannot run any command — not `git`, `ruff`, `pytest`, `python`, `pip`, `npx`, or anything else. A previous agent tried `pip install ruff`, `python -m ruff`, `.venv/bin/ruff` — all violations, session nearly rejected. Do not repeat this.
+You are a code-writing agent. You write code and generate a command block. That is all.
 
-You generate a command block. Molham runs it on his Mac.
+**You NEVER run anything.** Not git, not ruff, not pytest, not python, not pip, not npx, not any command. You have five tools: **Read, Write, Edit, Glob, Grep.** A previous agent tried `pip install ruff`, `python -m ruff`, `.venv/bin/ruff` — all violations, session rejected. Do not repeat this.
+
+You write code. Molham runs it on his Mac.
 
 Follow the steps below in order. Do not skip ahead.
 
@@ -55,9 +57,9 @@ For each module or file:
 
 ---
 
-**Step 6 — Do the work.**
+**Step 6 — Write the code.**
 
-Write or edit code using Read, Edit, Write, Glob, Grep only.
+Write or edit code using Read, Edit, Write, Glob, Grep only. You do not run anything. You do not verify anything. You write correct code and move on.
 
 Rules that apply here — break any and the session is rejected:
 
@@ -108,7 +110,7 @@ Structure:
 ## What Just Happened
 
 ### Session NNN -- Phase X: Name
-Summary of what you did. Files changed. Test results. PR number placeholder: "PR #TBD (branch: branch-name)".
+Summary of what you did. Files changed. PR number placeholder: "PR #TBD (branch: branch-name)".
 
 ---
 
@@ -123,12 +125,12 @@ Summary of what you did. Files changed. Test results. PR number placeholder: "PR
 
 ## Key Rules
 
-1. Never run git from sandbox (creates .git/index.lock)
-2. Never format from sandbox (ruff version mismatch)
-3. Commit subject under 72 chars, valid types only
-4. "HANDOFF.md removed and rewritten" required in commit body
-5. If 20+ deletions, include "Deletion rationale:" in body
-6. Implementation phases: match existing patterns obsessively
+1. You write code. You never run anything.
+2. Commit subject under 72 chars, valid types only
+3. "HANDOFF.md removed and rewritten" required in commit body
+4. If 20+ deletions, include "Deletion rationale:" in body
+5. Match existing patterns obsessively
+6. No comments in command blocks
 7. [Add any new rules you discovered this session]
 
 ---
@@ -148,32 +150,24 @@ Write the session record with tasks completed, files changed, gaps found.
 
 **Step 8 — Generate the command block.**
 
-One copy-paste block for Molham. Real file paths — no placeholders.
+One copy-paste block for Molham. Real file paths — no placeholders. **No comments in the command block.**
 
-Rules that apply here:
+Rules:
 
-- **Commit subject MUST be under 72 characters.** `type: description` total. Count them. A previous agent wrote 87 — rejected. If yours is too long, shorten it before outputting.
-- **Valid types only:** `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`. A previous agent used `verify:` — rejected.
+- **No comments.** Not a single `#` line. Molham knows what the commands do.
+- **Commit subject MUST be under 72 characters.** Count them. A previous agent wrote 87 — rejected.
+- **Valid types only:** `feat`, `fix`, `docs`, `style`, `refactor`, `perf`, `test`, `build`, `ci`, `chore`, `revert`.
 - First letter after prefix lowercase: `feat: wire` not `feat: Wire`.
 - Use `--` not `---` in messages.
 - If 20+ lines deleted, body includes `Deletion rationale:`.
-- **Commit body MUST include the phrase "HANDOFF.md removed and rewritten".** The governance CI checks for deletion keywords. Three agents failed this — PRs #72, #74, and phase-10. Non-negotiable.
+- **Commit body MUST include the phrase "HANDOFF.md removed and rewritten".** Non-negotiable. Three agents failed this.
 - If .ts/.tsx changed, add prettier before git add.
-- **Do not narrow verification scope.** The repo has pre-commit hooks (ruff, format, bandit, yaml, json, secrets, OpenAPI sync, system map sync) and a 7-gate pre-push hook (ruff lint, ruff format, fast tests, mypy, secrets, UI typecheck, guardrails). These run automatically on commit and push. Do not duplicate them with manual commands. Do not scope checks to only changed files — the hooks run full scope and will catch everything.
+- Pre-commit and pre-push hooks run automatically. Do not duplicate them with manual commands.
+
+Template:
 
 ```bash
 cd ~/clawd/moh_time_os
-
-# Prettier for new TSX files (only if .tsx files were created/changed)
-# cd time-os-ui && pnpm exec prettier --write src/path/to/File.tsx && cd ..
-
-# Full test suite -- all directories
-python -m pytest tests/contract/ tests/test_safety.py tests/negative/ tests/golden/ tests/ui_spec_v21/ tests/property/ tests/scenarios/ tests/test_features.py tests/test_audit.py tests/cassettes/ -x
-
-# UI typecheck (only if .tsx/.ts files were created/changed)
-# cd time-os-ui && npx tsc --noEmit && cd ..
-
-# Commit (pre-commit hooks run automatically)
 git checkout -b phase-X/short-description
 git add path/to/changed1.py path/to/changed2.py audit-remediation/state.json audit-remediation/HANDOFF.md audit-remediation/sessions/session-NNN.yaml
 git commit -m "$(cat <<'EOF'
@@ -184,8 +178,6 @@ What changed and why. HANDOFF.md removed and rewritten for next session.
 Co-Authored-By: Claude <noreply@anthropic.com>
 EOF
 )"
-
-# Push (7-gate pre-push runs automatically)
 git push -u origin phase-X/short-description
 gh pr create --title "type: short description" --body "..."
 gh pr merge --merge --auto

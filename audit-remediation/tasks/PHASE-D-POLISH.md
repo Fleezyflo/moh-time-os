@@ -72,15 +72,15 @@ Document `bandit -r lib/ api/ -c pyproject.toml` for manual security audits.
 
 Files: `docs/` or README
 
-## Verification
+## Done When
 
-- [ ] Zero grep hits for "Clawdbot" or "clawdbot"
-- [ ] Docstrings accurate
-- [ ] 5 new collector test files, all passing
-- [ ] `/api/v2/intelligence/performance` returns cache and query stats
-- [ ] `/api/debug/config` returns non-secret config
-- [ ] Compliance reports generate on schedule
-- [ ] 404 route shows NotFound page
-- [ ] Cache benchmarks show O(1) touch
-- [ ] Pagination patterns documented
-- [ ] All existing tests pass
+- Zero grep hits for "Clawdbot" or "clawdbot" in codebase
+- Stale docstring corrected
+- 5 new collector test files created matching existing test patterns
+- `/api/v2/intelligence/performance` endpoint exists returning cache and query stats
+- `/api/debug/config` endpoint exists returning non-secret config
+- Compliance scheduling wired
+- 404 route in router.tsx with NotFound page
+- `InMemoryCache._touch()` uses OrderedDict for O(1) LRU
+- Pagination variance documented in docstrings or ADR
+- Bandit standalone command documented

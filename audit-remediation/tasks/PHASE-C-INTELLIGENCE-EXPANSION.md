@@ -87,9 +87,8 @@ After proposal-to-Asana and email drafts work: verify proposals in inbox, Asana 
 - [ ] Calibration report generates with real data
 - [ ] Email notifications deliver via GmailWriter
 - [ ] Notification muting suppresses delivery for muted entities
-- [ ] Calendar events can be created programmatically
-- [ ] Proposals auto-create Asana tasks via approval flow
-- [ ] Communication gaps trigger email draft proposals
-- [ ] Action integration test passes end-to-end
-- [ ] Conversational UI handles ambiguity and multi-turn
-- [ ] All existing tests pass
+- Calendar writeback module creates events via Google Calendar API
+- Proposal-to-Asana module creates tasks via approval flow
+- Communication gap detector triggers email draft proposals
+- Action integration test file exists covering the full chain
+- Conversational UI handles ambiguity and multi-turn

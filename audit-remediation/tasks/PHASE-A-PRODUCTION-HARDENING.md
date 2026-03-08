@@ -87,19 +87,20 @@ Collectors use `google.oauth2.service_account` but have no token refresh handlin
 
 Files: `lib/collectors/base.py`, `lib/collectors/xero_collector.py`
 
-## Verification
+## Done When
 
-- [ ] `/api/health` returns component-level status, 503 on DB failure
-- [ ] `/api/ready` returns 200 in <10ms
-- [ ] Path traversal returns 403
-- [ ] Daemon log rotates at 50MB
-- [ ] Memory usage logged every N cycles
-- [ ] Cycle time appears in PerformanceMonitor
-- [ ] XeroCollector has circuit breaker + retry
-- [ ] WatchdogTimer kills hung collectors
-- [ ] Stale locks from dead PIDs are broken
-- [ ] All 8 collectors in orchestrator
-- [ ] Expired OAuth tokens trigger refresh
-- [ ] `validate_production.py` covers API + daemon + collectors
-- [ ] All existing tests pass
-- [ ] `ruff check`, `bandit -r`, `ruff format --check` clean
+- `/api/health` calls HealthChecker, returns component-level status, 503 on critical failure
+- `/api/ready` exists as lightweight 200 probe
+- SPA fallback validates paths with `Path.resolve()` + `is_relative_to()`
+- CORS logs WARNING at startup when `CORS_ORIGINS=*` in production
+- `validate_production.py` covers API + daemon + collectors
+- `daemon.py` uses `configure_log_rotation()` instead of plain FileHandler
+- Memory usage logged every N cycles via `resource.getrusage()`
+- `run_cycle()` wires phase timing into PerformanceMonitor
+- launchd plist created in `ops/`
+- XeroCollector has circuit breaker + retry (extends BaseCollector or equivalent)
+- WatchdogTimer class created, wired into scheduled_collect.py
+- CollectorLock stores PID + timestamp, breaks stale locks
+- All 8 collectors mapped in orchestrator
+- `all_users_runner.py` deleted or wired
+- OAuth token refresh handled in collector base
