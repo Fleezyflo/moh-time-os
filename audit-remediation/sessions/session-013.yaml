@@ -1,0 +1,150 @@
+session: 13
+date: "2026-03-08"
+phase: "phase-13"
+track: "T2"
+branch: "verify/integration-contracts"
+
+tasks_completed:
+  - id: "task-01"
+    name: "Verify intelligence event hooks"
+    status: "DONE"
+    findings: |
+      Spec: IW-4.1 to IW-5.1 -- Event system, hook registration, firing conditions,
+      event-driven actions, event logging.
+
+      Event Framework (lib/intelligence/persistence.py):
+        - IntelligenceEvent dataclass (lines 93-120): id, event_type, severity,
+          entity_type, entity_id, event_data (JSON), source_module, created_at,
+          consumed_at, consumer.
+        - IntelligenceEventStore (lines 433-622): publish(), publish_batch(),
+          get_unconsumed(), mark_consumed(), get_entity_events(),
+          archive_old_events(). Full pub/sub with consumption tracking.
+
+      Hook Registration (lib/actions/action_framework.py):
+        - Three hook types (lines 131-134): before_execute_hooks,
+          after_execute_hooks, on_error_hooks (all list[Callable]).
+        - Registration methods (lines 151-161): register_before_execute_hook(),
+          register_after_execute_hook(), register_on_error_hook().
+        - Execution in execute_action() at lines 323-328, 384-387, 403-406.
+
+      Action Router Hooks (lib/actions/action_router.py):
+        - before_dispatch_hooks, after_dispatch_hooks, on_dispatch_error_hooks
+          (lines 32-39). Registration at lines 59-69. Firing in dispatch()
+          at lines 97-134.
+
+      Collector Hooks (lib/v4/collector_hooks.py):
+        - Post-sync hooks: on_asana_task_synced (line 236),
+          on_asana_project_synced (357), on_xero_invoice_synced (454),
+          on_xero_payment_synced (517), on_gmail_message_fetched (537),
+          on_calendar_event_synced (687).
+        - Singleton pattern via get_hooks() (lines 1345-1363).
+        - Invoked from lib/v4/orchestrator.py (line 64, 216, 810-873).
+
+      Firing Conditions:
+        - Signal detection: evaluate_signal() at signals.py:1391.
+        - State transitions: update_signal_state() at signals.py:1732-1856.
+          NEW (insert), ONGOING (update count), ESCALATED (severity increase
+          after escalation_after_days), CLEARED (after cooldown_hours).
+        - Event creation: event_from_signal_change() at persistence.py:694-721
+          maps "new"→"signal_fired", "escalated"→"signal_escalated",
+          "cleared"→"signal_cleared".
+        - Pattern events: event_from_pattern() at persistence.py:724-752
+          maps "detected"→"pattern_detected", "resolved"→"pattern_resolved".
+
+      Event Publishing (autonomous_loop.py lines 950-980):
+        - Critical/warning signals → event_store.publish(event).
+        - Critical/warning/structural patterns → event_store.publish(event).
+
+      Event Logging:
+        - intelligence_events table in schema.py (lines 1230-1243):
+          id, event_type, severity, entity_type, entity_id, event_data,
+          source_module, created_at, consumed_at, consumer.
+        - intelligence_events_archive table (lines 1245-1259):
+          identical schema + archived_at for consumed events >30 days.
+        - Full audit trail via consumed_at + consumer fields.
+
+      Verdict: DONE. Complete event hook system: registration, firing, actions,
+      logging, archiving. Production-ready with traceability.
+
+  - id: "task-02"
+    name: "Verify API contracts"
+    status: "DONE with 2 GAPs"
+    findings: |
+      Spec: IA-4.1 to IA-6.1 -- Response shape consistency, error format
+      standardization, contract test coverage, OpenAPI spec.
+
+      Response Shapes (api/response_models.py, 173 lines):
+        - IntelligenceResponse: {status, data, computed_at, params, error?, error_code?}
+        - ListResponse: {items, total}
+        - MutationResponse: {success: bool, ...extra}
+        - 15+ domain-specific: ClientIndexResponse, InvoiceListResponse,
+          EngagementListResponse, SignalListResponse, InboxResponse, etc.
+        - All use Pydantic v2 BaseModel.
+
+      Design Contract Models (design/system/api_contracts.py, 700 lines):
+        - StandardEnvelope, ErrorEnvelope.
+        - 15+ domain models with json_schema_extra for OpenAPI docs.
+
+      Error Format:
+        - All routers use FastAPI HTTPException with status_code + detail.
+        - Intelligence router has _wrap_response() and _error_response() helpers
+          (intelligence_router.py lines 48-64).
+        - GAP-13-01: HTTPException returns {"detail": "..."} but
+          IntelligenceResponse model declares {"error": "...", "error_code": "..."}.
+          Error responses don't match declared model.
+
+      OpenAPI Spec:
+        - Auto-generated via scripts/export_openapi.py from FastAPI response_model.
+        - Output at docs/openapi.json.
+        - --check flag validates freshness.
+        - 283 endpoints have response_model declared.
+
+      Contract Tests (tests/contract/, 1487 lines across 11 files):
+        - test_openapi_contract.py: Required endpoints, response models, schema
+          strictness, endpoint count (~252), UI-critical endpoints.
+        - test_api_contracts.py: StandardEnvelope, ErrorEnvelope, all 15+ models.
+        - test_schema.py: AgencySnapshotContract strict validation.
+        - Plus: test_collector_paths.py, test_invariants.py, test_predicates.py,
+          test_state_store_cache.py, test_thresholds.py, test_collector_registry.py,
+          test_traceability.py.
+
+      Pagination (lib/api/pagination.py):
+        - PaginatedResponse: data, total, page, page_size, total_pages, has_next,
+          has_prev. paginate() helper.
+        - Used consistently in api/paginated_router.py.
+        - Domain-specific variants exist (InvoiceListResponse, EngagementListResponse).
+
+      SSE Events (api/sse_router.py):
+        - Event dataclass: id, event_type, data, timestamp.
+        - Types: signal_new, resolution_update, metric_refresh, system_status.
+        - Heartbeat every 30s. EventBus with 100-event history.
+
+      Type Safety:
+        - Input: Pydantic models for request bodies, type hints for query/path.
+        - Output: response_model Pydantic validation on 283 endpoints.
+        - FastAPI returns 422 on validation failure.
+        - 10 endpoints allowed without full schema (non-JSON responses).
+
+    gaps:
+      - id: "GAP-13-01"
+        severity: "medium"
+        description: "Intelligence endpoint error responses use FastAPI's default {'detail': '...'} format instead of declared IntelligenceResponse {'error': '...', 'error_code': '...'} model. Error contract broken."
+      - id: "GAP-13-02"
+        severity: "low"
+        description: "Pagination variance: PaginatedResponse is the standard but InvoiceListResponse, EngagementListResponse, SignalListResponse use domain-specific pagination fields without documentation explaining the divergence."
+
+verification:
+  all_tasks_reported: true
+  total_done: 2
+  total_gaps: 2
+  gap_ids:
+    - "GAP-13-01"
+    - "GAP-13-02"
+
+notes:
+  - "Both tasks verified via code investigation -- no runtime testing from sandbox"
+  - "Event hooks system is comprehensive and production-ready"
+  - "API contracts are well-structured with 283 typed endpoints, 11 contract test files"
+  - "GAP-13-01 is the only functional concern: error format mismatch in intelligence endpoints"
+  - "GAP-13-02 is documentation/consistency cleanup"
+  - "All gaps deferred per T2 verification rules -- no fixes during verification phases"
