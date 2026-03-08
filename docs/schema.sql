@@ -1144,3 +1144,25 @@ CREATE TABLE IF NOT EXISTS [engagement_transitions] (
     transitioned_at TEXT NOT NULL,
     created_at TEXT NOT NULL
 )
+
+CREATE TABLE IF NOT EXISTS [notification_mutes] (
+    id TEXT PRIMARY KEY,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    mute_until TEXT NOT NULL,
+    mute_reason TEXT,
+    muted_by TEXT DEFAULT 'system',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+)
+
+CREATE TABLE IF NOT EXISTS [notification_analytics] (
+    id TEXT PRIMARY KEY,
+    notification_id TEXT NOT NULL,
+    channel TEXT NOT NULL,
+    outcome TEXT NOT NULL DEFAULT 'delivered',
+    delivered_at TEXT,
+    opened_at TEXT,
+    acted_on_at TEXT,
+    failed_reason TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+)

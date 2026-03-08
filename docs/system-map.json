@@ -467,6 +467,16 @@
     },
     {
       "method": "GET",
+      "path": "/calibration/briefing",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/calibration/report",
+      "source": "api/intelligence_router.py"
+    },
+    {
+      "method": "GET",
       "path": "/changes",
       "source": "api/intelligence_router.py"
     },
@@ -823,6 +833,16 @@
     {
       "method": "GET",
       "path": "/issues/{issue_id}",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/notifications/analytics",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "GET",
+      "path": "/notifications/mutes",
       "source": "api/spec_router.py"
     },
     {
@@ -1392,6 +1412,16 @@
     },
     {
       "method": "POST",
+      "path": "/notifications/mute",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "POST",
+      "path": "/notifications/unmute",
+      "source": "api/spec_router.py"
+    },
+    {
+      "method": "POST",
       "path": "/proposals/{proposal_id}/dismiss",
       "source": "api/spec_router.py"
     },
@@ -1651,7 +1681,7 @@
   ],
   "generated_by": "scripts/generate_system_map.py",
   "summary": {
-    "api_routes_count": 296,
+    "api_routes_count": 302,
     "collectors_count": 10,
     "db_tables_count": 31,
     "ui_routes_count": 31

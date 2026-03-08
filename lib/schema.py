@@ -17,7 +17,7 @@ from collections import OrderedDict
 # =============================================================================
 # Schema version — bump when you change this file
 # =============================================================================
-SCHEMA_VERSION = 15
+SCHEMA_VERSION = 16
 
 # =============================================================================
 # Table Definitions
@@ -1608,6 +1608,38 @@ TABLES["engagement_transitions"] = {
         ("note", "TEXT"),
         ("transitioned_at", "TEXT NOT NULL"),
         ("created_at", "TEXT NOT NULL"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# V30: notification_mutes (GAP-10-06)
+# ---------------------------------------------------------------------------
+TABLES["notification_mutes"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("entity_type", "TEXT NOT NULL"),
+        ("entity_id", "TEXT NOT NULL"),
+        ("mute_until", "TEXT NOT NULL"),
+        ("mute_reason", "TEXT"),
+        ("muted_by", "TEXT DEFAULT 'system'"),
+        ("created_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# V30: notification_analytics (GAP-10-07)
+# ---------------------------------------------------------------------------
+TABLES["notification_analytics"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("notification_id", "TEXT NOT NULL"),
+        ("channel", "TEXT NOT NULL"),
+        ("outcome", "TEXT NOT NULL DEFAULT 'delivered'"),
+        ("delivered_at", "TEXT"),
+        ("opened_at", "TEXT"),
+        ("acted_on_at", "TEXT"),
+        ("failed_reason", "TEXT"),
+        ("created_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
     ],
 }
 

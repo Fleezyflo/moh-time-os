@@ -616,6 +616,34 @@ SIG_CLIENT_HIDDEN_COST = SignalDefinition(
 
 
 # =============================================================================
+# PROACTIVE COMMUNICATION GAP (GAP-10-13)
+# =============================================================================
+
+SIG_CLIENT_COMM_GAP = SignalDefinition(
+    id="sig_client_comm_gap",
+    name="Communication Gap — Draft Email",
+    description=(
+        "No outbound email to this client in 14+ days. "
+        "Triggers a proactive email draft proposal so Molham can re-engage."
+    ),
+    category=SignalCategory.THRESHOLD,
+    entity_type="client",
+    severity=SignalSeverity.WATCH,
+    conditions={
+        "type": "threshold",
+        "metric": "days_since_last_outbound_email",
+        "operator": "gt",
+        "value": 14,  # 2 weeks with no outbound email
+        "query_function": "entity_links_recency",
+    },
+    implied_action="draft_email",
+    evidence_template="No outbound email in {current_value} days (threshold: {threshold_value} days).",
+    cooldown_hours=168,  # Weekly at most
+    fast_eval=True,
+)
+
+
+# =============================================================================
 # SIGNAL CATALOG
 # =============================================================================
 
@@ -646,6 +674,8 @@ SIGNAL_CATALOG: dict[str, SignalDefinition] = {
     "sig_person_burnout_risk": SIG_PERSON_BURNOUT_RISK,
     "sig_project_cascade_risk": SIG_PROJECT_CASCADE_RISK,
     "sig_client_hidden_cost": SIG_CLIENT_HIDDEN_COST,
+    # Proactive communication gap (GAP-10-13)
+    "sig_client_comm_gap": SIG_CLIENT_COMM_GAP,
 }
 
 
