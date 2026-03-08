@@ -6618,15 +6618,13 @@
     },
     "/api/health": {
       "get": {
-        "description": "Health check endpoint.",
+        "description": "Health check endpoint with real subsystem checks.",
         "operationId": "health_check_api_health_get",
         "responses": {
           "200": {
             "content": {
               "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DetailResponse"
-                }
+                "schema": {}
               }
             },
             "description": "Successful Response"
@@ -7835,6 +7833,23 @@
           }
         },
         "summary": "Process Enrollment"
+      }
+    },
+    "/api/ready": {
+      "get": {
+        "description": "Lightweight readiness probe for load balancer health checks.",
+        "operationId": "readiness_probe_api_ready_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Readiness Probe"
       }
     },
     "/api/search": {

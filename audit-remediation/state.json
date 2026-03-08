@@ -2,8 +2,8 @@
   "$schema": "../session-system-v2/core/state.schema.json",
   "project": "MOH Time OS — Audit Remediation",
   "owner": "Fleezyflo",
-  "current_phase": "phase-a",
-  "current_session": 15,
+  "current_phase": "phase-b",
+  "current_session": 16,
   "phases": {
     "phase-01": {
       "status": "complete",
@@ -123,19 +123,21 @@
       "tasks_complete": 2
     },
     "phase-a": {
-      "status": "pending",
-      "started_session": null,
-      "completed_session": null,
+      "status": "complete",
+      "started_session": 15,
+      "completed_session": 15,
       "blocked_by": [],
       "prs": [],
       "task_file": "tasks/PHASE-A-PRODUCTION-HARDENING.md",
-      "description": "Production Hardening"
+      "description": "Production Hardening",
+      "tasks_total": 16,
+      "tasks_complete": 16
     },
     "phase-b": {
       "status": "pending",
       "started_session": null,
       "completed_session": null,
-      "blocked_by": ["phase-a"],
+      "blocked_by": [],
       "prs": [],
       "task_file": "tasks/PHASE-B-SYSTEM-COMPLETENESS.md",
       "description": "System Completeness"

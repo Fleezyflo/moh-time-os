@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>com.mohtime.daemon</string>
+
+	<key>ProgramArguments</key>
+	<array>
+		<string>/Users/molham/clawd/moh_time_os/.venv/bin/python</string>
+		<string>-m</string>
+		<string>lib.daemon</string>
+	</array>
+
+	<key>WorkingDirectory</key>
+	<string>/Users/molham/clawd/moh_time_os</string>
+
+	<key>KeepAlive</key>
+	<true/>
+
+	<key>RunAtLoad</key>
+	<true/>
+
+	<key>StandardOutPath</key>
+	<string>/Users/molham/Library/Logs/mohtime-daemon.log</string>
+
+	<key>StandardErrorPath</key>
+	<string>/Users/molham/Library/Logs/mohtime-daemon.log</string>
+
+	<key>ThrottleInterval</key>
+	<integer>10</integer>
+
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>PATH</key>
+		<string>/Users/molham/clawd/moh_time_os/.venv/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+	</dict>
+</dict>
+</plist>

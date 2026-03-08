@@ -2301,7 +2301,7 @@ export interface paths {
         };
         /**
          * Health Check
-         * @description Health check endpoint.
+         * @description Health check endpoint with real subsystem checks.
          */
         get: operations["health_check_api_health_get"];
         put?: never;
@@ -2788,6 +2788,26 @@ export interface paths {
          * @description Process project enrollment action.
          */
         post: operations["process_enrollment_api_projects__project_id__enrollment_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/ready": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Readiness Probe
+         * @description Lightweight readiness probe for load balancer health checks.
+         */
+        get: operations["readiness_probe_api_ready_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -9935,7 +9955,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DetailResponse"];
+                    "application/json": unknown;
                 };
             };
         };
@@ -10647,6 +10667,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    readiness_probe_api_ready_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
         };
