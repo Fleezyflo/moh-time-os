@@ -1,0 +1,160 @@
+session: 15
+date: "2026-03-08"
+phase: "phase-a"
+track: "remediation"
+branch: "phase-a/production-hardening"
+
+tasks_completed:
+  - id: "GAP-08-06+GAP-12-05+PR-FRESH-01"
+    name: "Health endpoint + readiness probe"
+    status: "DONE"
+    files:
+      - api/server.py
+      - lib/observability/health.py (read-only, already complete)
+    summary: |
+      Wired HealthChecker into /api/health. Returns component-level status
+      with 503 on critical failure. Added /api/ready as lightweight 200 probe.
+
+  - id: "PR-FRESH-02"
+    name: "Path traversal prevention"
+    status: "DONE"
+    files:
+      - api/server.py
+    summary: |
+      SPA fallback now validates paths with Path.resolve() + is_relative_to().
+      Returns 403 on traversal attempts.
+
+  - id: "GAP-08-07"
+    name: "CORS production warning"
+    status: "DONE"
+    files:
+      - api/server.py
+    summary: |
+      Logs WARNING at startup when CORS_ORIGINS=* and environment is not
+      development or test.
+
+  - id: "GAP-08-05"
+    name: "Production validator expansion"
+    status: "DONE"
+    files:
+      - scripts/validate_production.py
+    summary: |
+      Expanded from 4 to 9 checks: imports (now real), database, snapshot,
+      tests, API app, daemon init, notification system, collector classes,
+      intelligence engine. Fixed bare except Exception to specific types.
+
+  - id: "GAP-09-05"
+    name: "Log rotation"
+    status: "DONE"
+    files:
+      - lib/daemon.py
+    summary: |
+      Replaced plain FileHandler with RotatingFileHandler (50MB, 5 backups).
+
+  - id: "GAP-09-06"
+    name: "Memory monitoring"
+    status: "DONE"
+    files:
+      - lib/daemon.py
+    summary: |
+      Added _log_memory_usage() using resource.getrusage(). Called every
+      10 ticks in main loop. Logs RSS, user time, system time.
+
+  - id: "GAP-11-01"
+    name: "Cycle time tracking"
+    status: "DONE"
+    files:
+      - lib/autonomous_loop.py
+    summary: |
+      Initialized PerformanceMonitor in __init__ with 120s baseline.
+      Records cycle_total duration at end of run_cycle().
+
+  - id: "GAP-09-07"
+    name: "Service definition"
+    status: "DONE"
+    files:
+      - ops/com.mohtime.daemon.plist (new)
+    summary: |
+      Created macOS launchd plist with KeepAlive, RunAtLoad, ThrottleInterval=10.
+      Uses venv Python, logs to ~/Library/Logs/mohtime-daemon.log.
+
+  - id: "GAP-09-02+GAP-11-04"
+    name: "XeroCollector resilience + OAuth"
+    status: "DONE"
+    files:
+      - lib/collectors/xero.py
+    summary: |
+      Added CircuitBreaker (threshold=3, cooldown=600s) and RetryConfig
+      (max_retries=2, base_delay=2.0) from lib.collectors.resilience.
+      Circuit breaker checked at sync() entry, success/failure recorded.
+
+  - id: "PR-FRESH-04"
+    name: "WatchdogTimer"
+    status: "DONE"
+    files:
+      - lib/collectors/watchdog.py (new)
+      - collectors/scheduled_collect.py
+    summary: |
+      Created WatchdogTimer class using SIGALRM. Since SIGALRM doesn't work
+      with ThreadPoolExecutor, wired per-future timeouts (300s) using
+      future.result(timeout=COLLECTOR_TIMEOUT_SECONDS) in scheduled_collect.py.
+
+  - id: "PR-FRESH-05"
+    name: "Stale lock detection"
+    status: "DONE"
+    files:
+      - lib/collector_registry.py
+    summary: |
+      Enhanced CollectorLock: writes PID + timestamp on acquire.
+      _read_lock_info() parses lock file. _is_pid_alive() checks via
+      os.kill(pid, 0). _break_stale_lock() enforces 30-min TTL.
+      Retries acquire after breaking stale lock.
+
+  - id: "GAP-09-01"
+    name: "Orchestrator completeness"
+    status: "DONE"
+    files:
+      - lib/collectors/orchestrator.py
+    summary: |
+      Added comment documenting that drive and contacts are collected via
+      scheduled_collect.py functions, not class-based collectors.
+      No code change needed -- the 6 class-based collectors are correct.
+
+  - id: "GAP-09-03"
+    name: "all_users_runner.py investigation"
+    status: "DONE -- no changes"
+    files:
+      - lib/collectors/all_users_runner.py (read-only)
+    summary: |
+      Investigated: legitimate standalone CLI tool for multi-service collection
+      with argparse interface, proper error handling, JSON output.
+      Not orphaned. No changes needed.
+
+verification:
+  all_tasks_reported: true
+  total_done: 13
+  total_gaps_closed: 16
+  gap_ids:
+    - "GAP-08-05"
+    - "GAP-08-06"
+    - "GAP-08-07"
+    - "GAP-09-01"
+    - "GAP-09-02"
+    - "GAP-09-03"
+    - "GAP-09-05"
+    - "GAP-09-06"
+    - "GAP-09-07"
+    - "GAP-11-01"
+    - "GAP-11-04"
+    - "GAP-12-05"
+    - "PR-FRESH-01"
+    - "PR-FRESH-02"
+    - "PR-FRESH-04"
+    - "PR-FRESH-05"
+
+notes:
+  - "All 16 Phase A items addressed"
+  - "SIGALRM can't fire in ThreadPoolExecutor threads -- used future.result(timeout=) instead"
+  - "drive/contacts have no class-based collectors -- functions in scheduled_collect.py"
+  - "all_users_runner.py is legitimate, not orphaned"
+  - "Fixed bare 'except Exception' in validate_production.py to specific types"

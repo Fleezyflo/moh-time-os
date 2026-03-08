@@ -58,6 +58,8 @@ class CollectorOrchestrator:
             "gmail": GmailCollector,
             "asana": AsanaCollector,
             "xero": XeroCollector,
+            # drive and contacts: collected via scheduled_collect.py (no class-based collector)
+            # See collectors/scheduled_collect.py collect_drive() and collect_contacts()
         }
 
         sources = self.config.get("sources", {})

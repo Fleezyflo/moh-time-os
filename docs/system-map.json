@@ -387,6 +387,11 @@
     },
     {
       "method": "GET",
+      "path": "/api/ready",
+      "source": "api/server.py"
+    },
+    {
+      "method": "GET",
       "path": "/api/search",
       "source": "api/server.py"
     },
@@ -1120,6 +1125,10 @@
       "source": "collectors/tasks.py"
     },
     {
+      "name": "watchdog",
+      "source": "collectors/watchdog.py"
+    },
+    {
       "name": "xero",
       "source": "collectors/xero.py"
     }
@@ -1252,8 +1261,8 @@
   ],
   "generated_by": "scripts/generate_system_map.py",
   "summary": {
-    "api_routes_count": 217,
-    "collectors_count": 9,
+    "api_routes_count": 218,
+    "collectors_count": 10,
     "db_tables_count": 31,
     "ui_routes_count": 31
   },

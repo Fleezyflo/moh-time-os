@@ -72,6 +72,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Log CORS wildcard warning in production
+if cors_origins_env == "*":
+    env_name = os.getenv("MOH_TIME_OS_ENV", "development")
+    if env_name not in ("development", "test", "artifact_validation"):
+        logger.warning(
+            "CORS_ORIGINS=* in %s environment -- restrict for production",
+            env_name,
+        )
+
 # Security headers middleware (CSP, HSTS, etc.)
 app.add_middleware(SecurityHeadersMiddleware)
 
@@ -3211,10 +3220,22 @@ async def get_status():
     }
 
 
-@app.get("/api/health", response_model=DetailResponse)
+@app.get("/api/health")
 async def health_check():
-    """Health check endpoint."""
-    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+    """Health check endpoint with real subsystem checks."""
+    from lib.observability.health import HealthChecker, HealthStatus
+
+    checker = HealthChecker()
+    report = checker.run_all()
+
+    status_code = 200 if report.status != HealthStatus.UNHEALTHY else 503
+    return JSONResponse(content=report.to_dict(), status_code=status_code)
+
+
+@app.get("/api/ready")
+async def readiness_probe():
+    """Lightweight readiness probe for load balancer health checks."""
+    return JSONResponse(content={"status": "ready"}, status_code=200)
 
 
 @app.get("/api/metrics")
@@ -5958,7 +5979,11 @@ async def spa_fallback(path: str, request: Request):
         return JSONResponse(content={"error": "ui_build_missing", "hint": hint}, status_code=404)
 
     # Try to serve the actual file first (for assets, manifest, etc.)
-    file_path = UI_DIR / path
+    file_path = (UI_DIR / path).resolve()
+    if not file_path.is_relative_to(UI_DIR.resolve()):
+        logger.warning("Path traversal attempt blocked: %s", path)
+        raise HTTPException(status_code=403, detail="Forbidden")
+
     if file_path.exists() and file_path.is_file():
         # Set correct MIME type for common extensions
         import mimetypes
