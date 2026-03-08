@@ -3238,6 +3238,39 @@ async def readiness_probe():
     return JSONResponse(content={"status": "ready"}, status_code=200)
 
 
+@app.get("/api/debug/config")
+async def debug_config():
+    """
+    Config debug endpoint -- returns non-secret configuration.
+
+    Returns CORS origins (masked), middleware stack, collector intervals,
+    and rate limits. No secrets or tokens are exposed.
+    """
+    masked_origins = (
+        ["*"]
+        if cors_origins == ["*"]
+        else [o[:8] + "..." if len(o) > 8 else o for o in cors_origins]
+    )
+
+    middleware_stack = [type(m).__name__ for m in app.user_middleware]
+
+    collector_intervals = {}
+    for name, col in collectors.collectors.items():
+        collector_intervals[name] = getattr(col, "sync_interval", "unknown")
+
+    config_data = {
+        "cors_origins": masked_origins,
+        "middleware_stack": middleware_stack,
+        "collector_intervals": collector_intervals,
+        "rate_limits": {
+            "enabled": rate_limiter is not None,
+        },
+        "environment": os.getenv("MOH_TIME_OS_ENV", "development"),
+        "ui_dir": str(UI_DIR),
+    }
+    return JSONResponse(content=config_data, status_code=200)
+
+
 @app.get("/api/metrics")
 async def metrics():
     """

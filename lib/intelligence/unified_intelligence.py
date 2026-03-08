@@ -1,8 +1,7 @@
 """
 Unified Intelligence Layer for MOH TIME OS.
 
-Consolidates parallel V4 and V5 architectures into a single interface without
-modifying either system. Provides a facade that orchestrates all intelligence
+Provides a unified facade that orchestrates all intelligence
 capabilities from the intelligence layer modules:
 - Pattern detection (lib.intelligence.patterns)
 - Correlation analysis (lib.intelligence.correlation_engine)

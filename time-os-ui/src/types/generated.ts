@@ -1759,6 +1759,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/debug/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Debug Config
+         * @description Config debug endpoint -- returns non-secret configuration.
+         *
+         *     Returns CORS origins (masked), middleware stack, collector intervals,
+         *     and rate limits. No secrets or tokens are exposed.
+         */
+        get: operations["debug_config_api_debug_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/debug/db": {
         parameters: {
             query?: never;
@@ -4456,6 +4479,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v2/intelligence/performance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Performance Profile
+         * @description Get performance profiling data.
+         *
+         *     Returns cache stats, slow queries, N+1 detections, and baselines
+         *     from PerformanceMonitor and QueryOptimizer.
+         */
+        get: operations["performance_profile_api_v2_intelligence_performance_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v2/intelligence/portfolio/overview": {
         parameters: {
             query?: never;
@@ -6162,7 +6208,7 @@ export interface components {
         };
         /**
          * EngagementListResponse
-         * @description Engagement list (key is 'engagements', not 'items').
+         * @description Engagement list — uses 'engagements' key with offset/limit pagination.
          */
         EngagementListResponse: {
             /** Engagements */
@@ -6418,7 +6464,7 @@ export interface components {
         };
         /**
          * InvoiceListResponse
-         * @description Client invoices (key is 'invoices', not 'items').
+         * @description Client invoices — uses 'invoices' key with page/limit offset pagination.
          */
         InvoiceListResponse: {
             /** Invoices */
@@ -6678,7 +6724,7 @@ export interface components {
         };
         /**
          * SignalListResponse
-         * @description Client signals with summary breakdown.
+         * @description Client signals — uses 'signals' key with summary dict and page-only pagination.
          */
         SignalListResponse: {
             /**
@@ -6788,7 +6834,7 @@ export interface components {
         };
         /**
          * TeamInvolvementResponse
-         * @description Client team involvement (key is 'involvement', not 'items').
+         * @description Client team involvement — uses 'involvement' key with total-only (no pagination params).
          */
         TeamInvolvementResponse: {
             /** Involvement */
@@ -9362,6 +9408,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    debug_config_api_debug_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
         };
@@ -13193,6 +13259,26 @@ export interface operations {
         };
     };
     pattern_catalog_api_v2_intelligence_patterns_catalog_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IntelligenceResponse"];
+                };
+            };
+        };
+    };
+    performance_profile_api_v2_intelligence_performance_get: {
         parameters: {
             query?: never;
             header?: never;

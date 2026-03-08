@@ -41,7 +41,7 @@ class AutonomousLoop:
     1. COLLECT: External Systems → State Store
     2. ANALYZE: State Store → Insights → Cache
     3. REASON: Insights → Decisions (via Governance)
-    4. NOTIFY: Decisions → User (via Clawdbot)
+    4. NOTIFY: Decisions → User (via Notifier)
 
     User interacts via CLI/Dashboard, NOT via chat.
     """

@@ -1,0 +1,76 @@
+session: 18
+date: "2026-03-08"
+phase: phase-d
+description: "Polish -- cleanup, tests, observability, docs"
+status: complete
+branch: phase-d/polish
+
+tasks_completed:
+  - id: GAP-08-01
+    description: "Remove 6 stale Clawdbot references"
+    files_modified:
+      - lib/cron_tasks.py
+      - lib/autonomous_loop.py
+      - lib/notifier/__init__.py
+      - scripts/install_cron.sh
+
+  - id: GAP-12-03
+    description: "Fix stale V4/V5 docstring in unified_intelligence.py"
+    files_modified:
+      - lib/intelligence/unified_intelligence.py
+
+  - id: GAP-09-03
+    description: "Investigate all_users_runner.py -- confirmed NOT orphaned, no changes needed"
+    files_modified: []
+
+  - id: GAP-09-04
+    description: "Create collector tests for xero, gmail, tasks"
+    files_created:
+      - tests/test_xero_collector.py
+      - tests/test_tasks_collector.py
+    files_modified:
+      - tests/test_gmail_collector.py
+
+  - id: GAP-11-02
+    description: "Add /api/v2/intelligence/performance endpoint"
+    files_modified:
+      - api/intelligence_router.py
+
+  - id: GAP-12-06
+    description: "Add /api/debug/config endpoint"
+    files_modified:
+      - api/server.py
+
+  - id: GAP-11-07
+    description: "Add run_compliance_snapshot() to RetentionScheduler"
+    files_modified:
+      - lib/governance/retention_scheduler.py
+
+  - id: GAP-12-01
+    description: "Add 404 catch-all route with NotFound page"
+    files_created:
+      - time-os-ui/src/pages/NotFound.tsx
+    files_modified:
+      - time-os-ui/src/router.tsx
+
+  - id: GAP-11-03
+    description: "Replace O(n) list LRU with O(1) OrderedDict"
+    files_modified:
+      - lib/intelligence/performance_scale.py
+
+  - id: GAP-13-02
+    description: "Document pagination variance in response_models.py"
+    files_modified:
+      - api/response_models.py
+
+  - id: GAP-11-05
+    description: "Document standalone bandit command in SAFETY.md"
+    files_modified:
+      - docs/SAFETY.md
+
+gaps_found: []
+
+lessons:
+  - "drive.py and contacts.py collectors don't exist -- GAP-09-04 only needed 3 test files, not 5"
+  - "all_users_runner.py is a functional CLI runner with argparse, not orphaned code"
+  - "test_gmail_collector.py already existed from a previous session -- expanded rather than recreated"

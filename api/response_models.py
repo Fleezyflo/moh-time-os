@@ -99,11 +99,22 @@ class DetailResponse(BaseModel):
 
 
 # ==== Paginated Variants ====
-# Endpoints that return items under non-standard keys with pagination metadata.
+# Some domain-specific list endpoints use non-standard keys and pagination
+# patterns that diverge from ListResponse (which uses `items` + `total`).
+#
+# Variance from ListResponse:
+# - InvoiceListResponse: key='invoices', adds page/limit for offset pagination
+# - EngagementListResponse: key='engagements', uses offset/limit (not page)
+# - SignalListResponse: key='signals', adds summary dict and page (no limit)
+# - TeamInvolvementResponse: key='involvement', total-only (no pagination params)
+#
+# These divergences exist because each domain endpoint evolved with its own
+# consumer requirements. Consolidation was deferred to avoid breaking the UI.
+# See also: ListResponse above for the standard pattern.
 
 
 class InvoiceListResponse(BaseModel):
-    """Client invoices (key is 'invoices', not 'items')."""
+    """Client invoices — uses 'invoices' key with page/limit offset pagination."""
 
     invoices: list[Any] = Field(default_factory=list)
     total: int = Field(default=0)
@@ -112,7 +123,7 @@ class InvoiceListResponse(BaseModel):
 
 
 class EngagementListResponse(BaseModel):
-    """Engagement list (key is 'engagements', not 'items')."""
+    """Engagement list — uses 'engagements' key with offset/limit pagination."""
 
     engagements: list[Any] = Field(default_factory=list)
     total: int = Field(default=0)
@@ -121,7 +132,7 @@ class EngagementListResponse(BaseModel):
 
 
 class SignalListResponse(BaseModel):
-    """Client signals with summary breakdown."""
+    """Client signals — uses 'signals' key with summary dict and page-only pagination."""
 
     summary: dict[str, Any] = Field(default_factory=dict)
     signals: list[Any] = Field(default_factory=list)
@@ -130,7 +141,7 @@ class SignalListResponse(BaseModel):
 
 
 class TeamInvolvementResponse(BaseModel):
-    """Client team involvement (key is 'involvement', not 'items')."""
+    """Client team involvement — uses 'involvement' key with total-only (no pagination params)."""
 
     involvement: list[Any] = Field(default_factory=list)
     total: int = Field(default=0)

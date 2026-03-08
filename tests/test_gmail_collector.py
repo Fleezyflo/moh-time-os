@@ -1,4 +1,4 @@
-"""Tests for Gmail collector — backfill capability and transform logic."""
+"""Tests for Gmail collector — verifies email parsing, body extraction, and transformation."""
 
 import importlib
 import sys
@@ -143,3 +143,86 @@ class TestGmailTransform:
         """No-reply senders should not flag as needing response."""
         thread = {"from": "noreply@example.com", "subject": "Update", "snippet": "info"}
         assert not collector._needs_response(thread)
+
+
+class TestGmailInit:
+    """Tests for collector initialization."""
+
+    def test_source_name(self):
+        c = _GmailCollector(config={}, store=MagicMock())
+        assert c.source_name == "gmail"
+
+    def test_target_table(self):
+        c = _GmailCollector(config={}, store=MagicMock())
+        assert c.target_table == "communications"
+
+    def test_default_service_is_none(self):
+        c = _GmailCollector(config={}, store=MagicMock())
+        assert c._service is None
+
+    def test_custom_config(self):
+        c = _GmailCollector(config={"lookback_days": 30, "since": "2025-08-01"}, store=MagicMock())
+        assert c.config["lookback_days"] == 30
+        assert c.config["since"] == "2025-08-01"
+
+
+class TestExtractBody:
+    """Tests for email body extraction."""
+
+    @pytest.fixture
+    def collector(self):
+        return _GmailCollector(config={}, store=MagicMock())
+
+    def test_direct_body_data(self, collector):
+        import base64
+
+        body_text = "Hello world"
+        encoded = base64.urlsafe_b64encode(body_text.encode()).decode()
+        message = {"payload": {"body": {"data": encoded}}}
+        assert collector._extract_body(message) == "Hello world"
+
+    def test_body_from_parts(self, collector):
+        import base64
+
+        body_text = "Part body"
+        encoded = base64.urlsafe_b64encode(body_text.encode()).decode()
+        message = {
+            "payload": {
+                "body": {},
+                "parts": [{"mimeType": "text/plain", "body": {"data": encoded}}],
+            }
+        }
+        assert collector._extract_body(message) == "Part body"
+
+    def test_empty_body(self, collector):
+        message = {"payload": {"body": {}, "parts": []}}
+        assert collector._extract_body(message) == ""
+
+    def test_no_payload(self, collector):
+        assert collector._extract_body({}) == ""
+
+
+class TestGetHeader:
+    """Tests for header extraction."""
+
+    @pytest.fixture
+    def collector(self):
+        return _GmailCollector(config={}, store=MagicMock())
+
+    def test_found_header(self, collector):
+        headers = [
+            {"name": "Subject", "value": "Test Subject"},
+            {"name": "From", "value": "test@example.com"},
+        ]
+        assert collector._get_header(headers, "Subject") == "Test Subject"
+
+    def test_case_insensitive(self, collector):
+        headers = [{"name": "SUBJECT", "value": "Test"}]
+        assert collector._get_header(headers, "subject") == "Test"
+
+    def test_missing_header(self, collector):
+        headers = [{"name": "From", "value": "test@example.com"}]
+        assert collector._get_header(headers, "Subject") == ""
+
+    def test_empty_headers(self, collector):
+        assert collector._get_header([], "Subject") == ""

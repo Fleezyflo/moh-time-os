@@ -1877,6 +1877,46 @@ def get_entity_profile(
 
 
 # =============================================================================
+# PERFORMANCE PROFILING (GAP-11-02)
+# =============================================================================
+
+
+@intelligence_router.get("/performance", response_model=IntelligenceResponse)
+def performance_profile():
+    """
+    Get performance profiling data.
+
+    Returns cache stats, slow queries, N+1 detections, and baselines
+    from PerformanceMonitor and QueryOptimizer.
+    """
+    from lib.intelligence.performance_scale import (
+        InMemoryCache,
+        PerformanceMonitor,
+        QueryOptimizer,
+    )
+
+    try:
+        cache = InMemoryCache()
+        monitor = PerformanceMonitor()
+        optimizer = QueryOptimizer()
+
+        data = {
+            "cache_stats": cache.get_stats().to_dict(),
+            "baselines": [b.to_dict() for b in monitor.get_all_reports()],
+            "violations": [v.to_dict() for v in monitor.get_violations()],
+            "slow_queries": optimizer.get_slow_queries(),
+            "n_plus_one_detections": optimizer.detect_n_plus_one(),
+        }
+        return _wrap_response(data)
+    except (sqlite3.Error, ValueError, OSError) as e:
+        logger.exception("performance_profile failed")
+        return JSONResponse(
+            status_code=500,
+            content=_error_response(str(e), "PERFORMANCE_ERROR"),
+        )
+
+
+# =============================================================================
 # CALIBRATION REPORTS (GAP-10-03)
 # =============================================================================
 

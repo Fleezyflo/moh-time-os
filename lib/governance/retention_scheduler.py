@@ -346,3 +346,68 @@ class RetentionScheduler:
 
         finally:
             self._release_lock()
+
+    def run_compliance_snapshot(self) -> dict:
+        """Generate and store a compliance report snapshot for audit trail."""
+        from lib.governance.data_classification import DataClassifier
+
+        logger.info("Generating compliance snapshot")
+
+        try:
+            classifier = DataClassifier(str(self.db_path))
+            catalog = classifier.classify_database()
+            engine = RetentionEngine(self.db_path, catalog)
+
+            report = engine.enforce(dry_run=True)
+
+            snapshot = {
+                "timestamp": datetime.utcnow().isoformat(),
+                "schedule": self.schedule,
+                "tables_covered": len(report.table_reports),
+                "total_rows_pending_deletion": report.total_rows_deleted,
+                "total_rows_pending_archival": report.total_rows_archived,
+                "total_rows_pending_anonymization": report.total_rows_anonymized,
+                "warnings": len(report.warnings),
+                "errors": len(report.errors),
+            }
+
+            conn = self._get_connection()
+            try:
+                conn.execute(
+                    """
+                    INSERT INTO retention_runs
+                    (schedule, started_at, completed_at, status,
+                     total_rows_deleted, total_rows_archived, total_rows_anonymized,
+                     error_count, warning_count, duration_ms, dry_run)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        "compliance_snapshot",
+                        snapshot["timestamp"],
+                        snapshot["timestamp"],
+                        "compliance_report",
+                        report.total_rows_deleted,
+                        report.total_rows_archived,
+                        report.total_rows_anonymized,
+                        len(report.errors),
+                        len(report.warnings),
+                        report.duration_ms,
+                        1,
+                    ),
+                )
+                conn.commit()
+                logger.info(
+                    f"Compliance snapshot stored: "
+                    f"{report.total_rows_deleted} pending deletions, "
+                    f"{report.total_rows_archived} pending archivals"
+                )
+            except (sqlite3.Error, ValueError, OSError) as e:
+                logger.error(f"Error storing compliance snapshot: {e}")
+            finally:
+                conn.close()
+
+            return snapshot
+
+        except (sqlite3.Error, ValueError, OSError) as e:
+            logger.error(f"Compliance snapshot failed: {e}")
+            return {"error": str(e), "timestamp": datetime.utcnow().isoformat()}

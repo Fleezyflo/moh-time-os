@@ -662,7 +662,7 @@
         "type": "object"
       },
       "EngagementListResponse": {
-        "description": "Engagement list (key is 'engagements', not 'items').",
+        "description": "Engagement list \u2014 uses 'engagements' key with offset/limit pagination.",
         "properties": {
           "engagements": {
             "items": {},
@@ -1155,7 +1155,7 @@
         "type": "object"
       },
       "InvoiceListResponse": {
-        "description": "Client invoices (key is 'invoices', not 'items').",
+        "description": "Client invoices \u2014 uses 'invoices' key with page/limit offset pagination.",
         "properties": {
           "invoices": {
             "items": {},
@@ -1561,7 +1561,7 @@
         "type": "object"
       },
       "SignalListResponse": {
-        "description": "Client signals with summary breakdown.",
+        "description": "Client signals \u2014 uses 'signals' key with summary dict and page-only pagination.",
         "properties": {
           "page": {
             "default": 1,
@@ -1842,7 +1842,7 @@
         "type": "object"
       },
       "TeamInvolvementResponse": {
-        "description": "Client team involvement (key is 'involvement', not 'items').",
+        "description": "Client team involvement \u2014 uses 'involvement' key with total-only (no pagination params).",
         "properties": {
           "involvement": {
             "items": {},
@@ -5509,6 +5509,23 @@
           }
         },
         "summary": "Get Day Analysis"
+      }
+    },
+    "/api/debug/config": {
+      "get": {
+        "description": "Config debug endpoint -- returns non-secret configuration.\n\nReturns CORS origins (masked), middleware stack, collector intervals,\nand rate limits. No secrets or tokens are exposed.",
+        "operationId": "debug_config_api_debug_config_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Debug Config"
       }
     },
     "/api/debug/db": {
@@ -11920,6 +11937,33 @@
           }
         ],
         "summary": "Pattern Catalog",
+        "tags": [
+          "Intelligence"
+        ]
+      }
+    },
+    "/api/v2/intelligence/performance": {
+      "get": {
+        "description": "Get performance profiling data.\n\nReturns cache stats, slow queries, N+1 detections, and baselines\nfrom PerformanceMonitor and QueryOptimizer.",
+        "operationId": "performance_profile_api_v2_intelligence_performance_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntelligenceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Performance Profile",
         "tags": [
           "Intelligence"
         ]

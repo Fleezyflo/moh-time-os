@@ -1,51 +1,58 @@
 # HANDOFF -- Audit Remediation
 
 **Generated:** 2026-03-08
-**Current Phase:** phase-d (pending) -- Polish
-**Current Session:** 18
+**Current Phase:** all-complete
+**Current Session:** 19
 **Track:** Gap remediation (phases A-D)
 
 ---
 
 ## What Just Happened
 
-### Session 017 -- Phase C: Intelligence Expansion
+### Session 018 -- Phase D: Polish
 
-All 13 work items completed across 4 groups. PR #TBD (branch: phase-c/intelligence-expansion).
+All 10 work items completed in a single PR. PR #TBD (branch: phase-d/polish).
 
-**Adaptive Thresholds (GAP-10-01 through GAP-10-04):**
-- GAP-10-01: Created `lib/intelligence/threshold_adjuster.py` -- ThresholdAdjuster with effectiveness-based adjustment (TPR, action rate analysis), +-30% cap per cycle, cooldown, oscillation detection (freezes after 3 flip-flops). Reads/writes `thresholds.yaml`.
-- GAP-10-02: Seasonal modifiers in same file. `SEASONAL_MODIFIERS` dict with presets for ramadan (relax comm/workload), q4_close (tighten financials), summer_slowdown (relax activity). Driven by `BusinessCalendar.get_season()` and `day_context().is_ramadan`.
-- GAP-10-03: Created `lib/intelligence/calibration_reporter.py` -- CalibrationReporter combining CalibrationEngine + ThresholdAdjuster data. Three report types: weekly, effectiveness, history. `format_for_briefing()` for morning brief integration.
-- GAP-10-04: Created `tests/test_adaptive_thresholds.py` -- covers ThresholdAdjuster (load, effectiveness-based adjustment, cap enforcement, save), seasonal modifiers (Q4, Ramadan, summer, normal), oscillation detection, CalibrationReporter (all report types + briefing format), end-to-end cycle.
+**Cleanup (GAP-08-01, GAP-12-03, GAP-09-03):**
+- GAP-08-01: Removed all 6 stale Clawdbot references across `lib/cron_tasks.py` (2), `lib/autonomous_loop.py` (1), `lib/notifier/__init__.py` (1), `scripts/install_cron.sh` (2). Zero grep hits for Clawdbot in maintained scope.
+- GAP-12-03: Updated `lib/intelligence/unified_intelligence.py` docstring -- removed stale "parallel V4 and V5" reference, now reads "Provides a unified facade".
+- GAP-09-03: Investigated `lib/collectors/all_users_runner.py` -- NOT orphaned. It's a functional multi-service CLI runner with argparse for gmail, calendar, chat, drive, docs collection. No code change needed.
 
-**Notifications (GAP-10-05 through GAP-10-07):**
-- GAP-10-05: Created `lib/notifier/channels/email.py` -- EmailChannel using GmailWriter with async/sync send, HTML formatting, dry_run support. Wired into NotificationEngine._load_channels() and channels/__init__.py.
-- GAP-10-06: Added notification_mutes table to schema.py (SCHEMA_VERSION 15->16). Added mute_entity(), unmute_entity(), is_muted(), get_active_mutes() to NotificationEngine. API endpoints: POST /api/v2/notifications/mute, POST /api/v2/notifications/unmute, GET /api/v2/notifications/mutes in spec_router.py.
-- GAP-10-07: Added notification_analytics table to schema.py. Added track_delivery(), get_analytics_summary() to NotificationEngine. API endpoint: GET /api/v2/notifications/analytics?days=30 in spec_router.py.
+**Test Coverage (GAP-09-04):**
+- Created `tests/test_xero_collector.py` -- covers parse_xero_date, _determine_invoice_status, _transform_line_items, _transform_contacts, _transform_credit_notes, _find_client_id, circuit breaker blocking.
+- Expanded `tests/test_gmail_collector.py` -- added init, body extraction (direct + parts + empty), header extraction (found/case-insensitive/missing), config defaults.
+- Created `tests/test_tasks_collector.py` -- covers transform (completed skip, active include, source/id/project), _map_status, _extract_due_date, _compute_priority (overdue/today/capped).
+- Note: drive.py and contacts.py collectors do not exist -- only 3 test files needed.
 
-**Bidirectional Integration (GAP-10-08, GAP-10-09, GAP-10-12, GAP-10-13):**
-- GAP-10-08: CalendarWriter already existed. Updated CalendarHandler to lazy-init CalendarWriter and delegate create/update/delete/reschedule to Google Calendar API when credentials available, falling back to local-only storage.
-- GAP-10-12: Created `lib/executor/handlers/asana.py` -- AsanaActionHandler mapping proposal implied_actions (create_task, add_comment, update_status) to AsanaWriter calls. Wired into ActionFramework via _wire_integration_handlers().
-- GAP-10-13: Added `sig_client_comm_gap` signal to signals.py (14+ days no outbound email → draft_email implied action). Enhanced EmailHandler with _create_proactive_draft() using GmailWriter and entity context. Wired draft_email handler into ActionFramework.
-- GAP-10-09: Created `tests/test_action_integration.py` -- end-to-end propose → approve → execute → verify across Asana/email handlers in dry_run mode. Also covers rejection flow, cross-handler sequences, idempotency, notification muting, and analytics.
+**Observability (GAP-11-02, GAP-12-06, GAP-11-07):**
+- GAP-11-02: Added `GET /api/v2/intelligence/performance` endpoint to `api/intelligence_router.py` -- returns cache stats, baselines, violations, slow queries, N+1 detections.
+- GAP-12-06: Added `GET /api/debug/config` endpoint to `api/server.py` -- returns masked CORS origins, middleware stack, collector intervals, rate limits, environment. No secrets exposed.
+- GAP-11-07: Added `run_compliance_snapshot()` method to `lib/governance/retention_scheduler.py` -- generates dry-run enforcement report and stores as compliance_report record in retention_runs table.
 
-**Manual Validation (GAP-10-11, GAP-10-14):**
-- GAP-10-11: Created `audit-remediation/validation/CI-4.1-conversational-validation.md` -- test plan for ambiguous queries, error responses, multi-turn context, unknown entities, session isolation.
-- GAP-10-14: Created `audit-remediation/validation/PI-5.1-contextual-surfaces-validation.md` -- test plan for communication gap signals, Asana task creation, proactive email drafts, contextual relevance, end-to-end chain.
+**UI (GAP-12-01):**
+- Created `time-os-ui/src/pages/NotFound.tsx` -- 404 page with "Back to Inbox" link.
+- Updated `time-os-ui/src/router.tsx` -- added NotFound lazy import, catch-all `*` route (last in route tree).
 
-**Files created:** `lib/intelligence/threshold_adjuster.py`, `lib/intelligence/calibration_reporter.py`, `lib/notifier/channels/email.py`, `lib/executor/handlers/asana.py`, `tests/test_adaptive_thresholds.py`, `tests/test_action_integration.py`, `audit-remediation/validation/CI-4.1-conversational-validation.md`, `audit-remediation/validation/PI-5.1-contextual-surfaces-validation.md`
+**Performance (GAP-11-03):**
+- Replaced O(n) list-based LRU in `lib/intelligence/performance_scale.py` with O(1) `OrderedDict` -- `_touch()` uses `move_to_end()`, `_evict_lru()` uses `next(iter())`.
 
-**Files modified:** `lib/schema.py` (SCHEMA_VERSION 15->16, +2 tables), `lib/notifier/engine.py` (email channel loading, mute/analytics methods), `lib/notifier/channels/__init__.py`, `lib/executor/handlers/__init__.py`, `lib/executor/handlers/calendar.py` (CalendarWriter integration), `lib/executor/handlers/email.py` (proactive draft support), `lib/intelligence/signals.py` (+sig_client_comm_gap), `lib/actions/action_framework.py` (+_wire_integration_handlers), `api/intelligence_router.py` (+calibration endpoints), `api/spec_router.py` (+mute/unmute/analytics endpoints)
+**Documentation (GAP-13-02, GAP-11-05):**
+- GAP-13-02: Added pagination variance documentation to `api/response_models.py` -- block comment explaining divergence of InvoiceListResponse, EngagementListResponse, SignalListResponse, TeamInvolvementResponse from standard ListResponse, plus updated individual docstrings.
+- GAP-11-05: Added standalone bandit command documentation to `docs/SAFETY.md` -- `bandit -r lib/ api/ -c pyproject.toml`.
+
+**Files created:** `tests/test_xero_collector.py`, `tests/test_tasks_collector.py`, `time-os-ui/src/pages/NotFound.tsx`
+**Files modified:** `lib/cron_tasks.py`, `lib/autonomous_loop.py`, `lib/notifier/__init__.py`, `scripts/install_cron.sh`, `lib/intelligence/unified_intelligence.py`, `lib/intelligence/performance_scale.py`, `api/intelligence_router.py`, `api/server.py`, `lib/governance/retention_scheduler.py`, `time-os-ui/src/router.tsx`, `api/response_models.py`, `docs/SAFETY.md`, `tests/test_gmail_collector.py`
 
 ---
 
 ## What's Next
 
-### Phase D: Polish
-- See `audit-remediation/tasks/PHASE-D-POLISH.md`
-- Final polish pass: documentation, cleanup, edge cases
-- This is the last phase before the audit remediation is complete
+All four phases (A through D) are complete. The audit remediation track is finished. No further phases remain.
+
+Next steps for Molham:
+- Merge the Phase D PR
+- Run the full test suite and confirm green CI
+- Consider a final enforcement audit to verify all new files are covered
 
 ---
 
@@ -69,6 +76,5 @@ All 13 work items completed across 4 groups. PR #TBD (branch: phase-c/intelligen
 ## Documents to Read
 
 1. `audit-remediation/AGENT.md` -- This brief
-2. `audit-remediation/tasks/PHASE-D-POLISH.md` -- Next phase task file
-3. `audit-remediation/state.json` -- Current project state
-4. `CLAUDE.md` -- Repo-level engineering rules
+2. `audit-remediation/state.json` -- Current project state
+3. `CLAUDE.md` -- Repo-level engineering rules

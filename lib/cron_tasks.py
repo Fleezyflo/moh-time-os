@@ -1,7 +1,7 @@
 """
 Cron task handlers for MOH Time OS.
 
-These are called by Clawdbot cron jobs:
+These are called by system cron jobs:
 - daily_sync: Sync from Xero/Asana (06:00)
 - daily_backup: Create backup (03:00)
 - health_check: Run health check (every 6h)
@@ -245,7 +245,7 @@ def cron_weekly_archive() -> dict:
 
 def get_cron_config() -> dict:
     """
-    Get cron job configuration for Clawdbot.
+    Get cron job configuration for the system scheduler.
 
     These can be added via the cron tool.
     """
