@@ -1,0 +1,179 @@
+session: 9
+date: "2026-03-08"
+phase: "phase-09"
+track: "T2"
+branch: "verify/operations"
+
+tasks_completed:
+  - id: "task-01"
+    name: "Verify collector coverage"
+    status: "DONE with 3 GAPs"
+    findings: |
+      8 collectors registered in lib/collector_registry.py:
+        - calendar: 60s interval, JSON output, CalendarCollector (extends BaseCollector)
+        - gmail: 120s interval, JSON output, GmailCollector (extends BaseCollector)
+        - tasks: 300s interval, tasks table, TasksCollector (extends BaseCollector)
+        - chat: 300s interval, JSON output, ChatCollector (extends BaseCollector)
+        - asana: 300s interval, tasks table, AsanaCollector (extends BaseCollector)
+        - xero: 300s interval, invoices table + JSON, XeroCollector (standalone class)
+        - drive: 600s interval, JSON output, mapped in get_collector_map()
+        - contacts: 600s interval, JSON output, mapped in get_collector_map()
+
+      Multi-table storage:
+        - calendar: events + calendar_attendees + calendar_recurrence_rules
+        - gmail: communications + gmail_participants + gmail_attachments + gmail_labels
+        - chat: chat_messages + chat_reactions + chat_attachments + chat_space_metadata + chat_space_members
+        - asana: tasks + asana_custom_fields + asana_subtasks + asana_stories + asana_task_dependencies + asana_attachments + asana_portfolios + asana_goals
+        - xero: invoices + xero_line_items + xero_contacts + xero_credit_notes + xero_bank_transactions + xero_tax_rates
+        - tasks: tasks (single table)
+
+      Error recovery per collector:
+        - BaseCollector subclasses (calendar, gmail, tasks, chat, asana): circuit breaker via resilience.py
+          (failure_threshold=5, cooldown_seconds=300), retry_with_backoff (max_retries=3, base_delay=1.0,
+          max_delay=60.0, exponential_base=2.0, 10% jitter). sync() wraps collect/transform/store in
+          try/except with error logging.
+        - XeroCollector: custom try/except in sync(), no circuit breaker, no retry_with_backoff.
+        - CollectorLock (fcntl.flock) prevents concurrent collector runs.
+
+      Orchestrator (lib/collectors/orchestrator.py):
+        - _init_collectors() maps only 6 collectors: tasks, calendar, chat, gmail, asana, xero.
+        - drive and contacts are NOT in orchestrator (GAP-09-01).
+        - force_sync() delegates to collectors.scheduled_collect.collect_all().
+
+      scheduled_collect.py:
+        - Has all 8 collect functions: collect_calendar, collect_gmail, collect_tasks,
+          collect_chat, collect_asana, collect_xero, collect_drive, collect_contacts.
+        - collect_all() calls all 8 -- so force_sync pathway covers all collectors.
+        - Individual orchestrator._init_collectors() pathway misses drive/contacts.
+
+    gaps:
+      - id: "GAP-09-01"
+        severity: "low"
+        description: "Orchestrator._init_collectors() maps only 6 of 8 collectors (missing drive, contacts). force_sync() still covers all 8 via scheduled_collect.collect_all()."
+      - id: "GAP-09-02"
+        severity: "medium"
+        description: "XeroCollector does not extend BaseCollector -- no circuit breaker, no retry_with_backoff, no resilience.py integration"
+      - id: "GAP-09-03"
+        severity: "low"
+        description: "all_users_runner.py exists for multi-user gmail/calendar/chat/drive collection but is not referenced by orchestrator or scheduled_collect -- unclear if actively used"
+
+  - id: "task-02"
+    name: "Verify test coverage counts"
+    status: "DONE with 1 GAP"
+    findings: |
+      Test infrastructure:
+        - 131 test files across tests/ directory
+        - 1182+ test functions (def test_)
+        - Subdirectories: contract/ (10), golden/ (2), lifecycle/ (1), negative/ (4),
+          property/ (1), scenarios/ (1), ui_spec_v21/ (3), cassettes/ (1)
+        - conftest.py and fixtures/ directory for shared test infrastructure
+
+      Coverage command for Molham:
+        python -m pytest --cov=lib --cov=collectors --cov=api --cov=scripts \
+          --cov-report=term-missing --cov-report=html:htmlcov \
+          tests/ -x -q
+
+      Cannot run from sandbox (no .venv, no pytest). Molham must run on Mac.
+
+      Test files exist for key modules:
+        - Collectors: test_asana_collector.py, test_asana_collector_expansion.py,
+          test_calendar_collector_expansion.py (via calendar_writer), test_chat_collector_expansion.py,
+          test_collector_resilience.py
+        - Daemon: test_daemon_intelligence.py, test_daemon_resilience.py
+        - Autonomous loop: test_autonomous_loop.py, test_autonomous_operations.py
+        - API: test_api_contracts.py, test_sse_events.py
+        - Intelligence: test_intelligence_signals.py, test_intelligence_patterns.py,
+          test_intelligence_persistence.py, test_intelligence_proposals.py,
+          test_intelligence_scoring.py
+        - Safety: test_security_hardening.py, test_credential_audit.py,
+          test_data_governance.py, test_data_classification.py
+
+      Missing test coverage (observable gaps):
+        - No test_xero_collector.py (GAP-09-04)
+        - No test_gmail_collector.py (have test_gmail_writer.py but no collector-specific tests)
+        - No test_tasks_collector.py
+        - No test_drive_collector.py
+        - No test_contacts_collector.py
+
+    gaps:
+      - id: "GAP-09-04"
+        severity: "medium"
+        description: "No dedicated test files for xero, gmail, tasks, drive, or contacts collectors. Only asana, calendar, and chat have collector-specific test files. Actual coverage numbers require Molham to run pytest --cov."
+
+  - id: "task-03"
+    name: "Verify 24h unattended operation"
+    status: "DONE with 3 GAPs"
+    findings: |
+      Crash recovery (lib/daemon.py):
+        - SIGTERM/SIGINT handlers via signal.signal() → sets _shutdown_event (threading.Event)
+        - Cooperative shutdown: run_cycle() checks _shutdown_event before each job
+        - PID file management: write on start, remove on shutdown
+        - State persistence: daemon_state.json saves job states, last run times, failure counts
+        - On restart: loads state from JSON, resumes from where it left off
+        - Exponential backoff: per-job failure tracking, backs off on repeated failures (max_retries=3)
+        - Circuit breakers: per-job (failure_threshold=5, cooldown_seconds=600)
+
+      Sleep/wake detection:
+        - daemon.py checks elapsed time between cycles
+        - If gap > 2 minutes, treats as sleep/wake event
+        - Forces immediate collection cycle on wake
+
+      SQLite WAL mode:
+        - lib/store.py init_db(): PRAGMA journal_mode=WAL, foreign_keys=ON
+        - lib/health.py: check_wal_mode() verifies WAL is active, set_wal_mode() enforces it
+        - checkpoint_wal(): PRAGMA wal_checkpoint(TRUNCATE) available for WAL file cleanup
+        - Connection timeout: sqlite3.connect(timeout=30.0)
+
+      Log rotation:
+        - lib/observability/logging.py: configure_log_rotation() defined with RotatingFileHandler
+          (max_bytes=50MB, backup_count=5)
+        - BUT: daemon.py setup_logging() uses plain logging.FileHandler (line 73), NOT
+          RotatingFileHandler (GAP-09-05)
+        - configure_log_rotation() is defined but never called anywhere in codebase (GAP-09-05)
+        - Daemon log file (daemon.log) will grow unbounded in 24h+ operation
+
+      Memory leak patterns:
+        - No explicit memory management in daemon loop (no gc.collect(), no psutil, no resource monitoring)
+        - No memory usage tracking or alerting (GAP-09-06)
+        - SQLite connections created per-call via get_connection() -- not pooled, should be GC'd
+        - Collector objects created fresh each cycle -- no persistent state accumulation
+        - Risk: long-running daemon may accumulate memory from large collector responses
+          (especially gmail with 90-day lookback, asana with full workspace pull)
+
+      Watchdog / external monitoring:
+        - No systemd unit file or launchd plist for auto-restart on crash (GAP-09-07)
+        - /api/health exists but returns healthy unconditionally (already GAP-08-06)
+        - No external health check consumer (no cron checking /api/health)
+
+    gaps:
+      - id: "GAP-09-05"
+        severity: "medium"
+        description: "daemon.py uses plain FileHandler, not RotatingFileHandler. configure_log_rotation() exists in lib/observability/logging.py but is never called. Daemon log grows unbounded."
+      - id: "GAP-09-06"
+        severity: "low"
+        description: "No memory monitoring in daemon loop -- no gc.collect(), no psutil, no memory usage tracking. Long-running operation may accumulate memory from large collector responses."
+      - id: "GAP-09-07"
+        severity: "low"
+        description: "No systemd/launchd service definition for auto-restart on crash. Daemon relies on manual restart if process dies."
+
+verification:
+  all_tasks_reported: true
+  total_done: 3
+  total_gaps: 7
+  gap_ids:
+    - "GAP-09-01"
+    - "GAP-09-02"
+    - "GAP-09-03"
+    - "GAP-09-04"
+    - "GAP-09-05"
+    - "GAP-09-06"
+    - "GAP-09-07"
+
+notes:
+  - "All 3 tasks verified via code investigation -- no runtime testing from sandbox"
+  - "7 gaps found across 3 tasks (2 low + 1 medium, 1 medium, 1 medium + 2 low)"
+  - "GAP-09-01 is low because force_sync() still reaches all 8 collectors via scheduled_collect"
+  - "GAP-09-02 is medium because XeroCollector lacks resilience patterns that all other collectors have"
+  - "GAP-09-04 requires Molham to run pytest --cov for actual numbers"
+  - "GAP-09-05 is medium because unbounded log growth can fill disk in production"
+  - "All gaps deferred per T2 verification rules -- no fixes during verification phases"
