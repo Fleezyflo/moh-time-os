@@ -1,52 +1,42 @@
 # HANDOFF -- Audit Remediation
 
 **Generated:** 2026-03-08
-**Current Phase:** phase-11 (pending)
-**Current Session:** 11
+**Current Phase:** phase-12 (pending)
+**Current Session:** 12
 **Track:** T2 in progress
 
 ---
 
 ## What Just Happened
 
-### Session 010 -- Phase 10: Verify Intelligence Systems
+### Session 011 -- Phase 11: Verify Infrastructure
 
-Verification-only phase. Investigated 6 areas via code reading: adaptive thresholds, temporal validation, notifications, bidirectional integration, conversational interface, proactive intelligence. All 6 tasks produced DONE or GAP reports.
+Verification-only phase. Investigated 3 areas via code reading: performance (N+1 queries, caching, cycle time), security (credentials, OAuth, secrets), compliance reporting (retention, SAR, audit trail). All 3 tasks produced DONE or GAP reports.
 
 **Results:**
-- Task 01 (adaptive thresholds): **DONE with 4 GAPs** -- calibration.py exists (196 lines) with basic weekly calibration, but does NOT implement the AT spec's threshold adjustment engine, seasonal modifiers, calibration reporting, or validation tests. GAP-10-01 through GAP-10-04.
-- Task 02 (temporal validation): **DONE** -- lib/intelligence/temporal.py (711 lines) fully implements BusinessCalendar, TemporalNormalizer, RecencyWeighter. UAE/Dubai specific with Ramadan, Eid, seasons. Wired to autonomous_loop.py and signal_lifecycle.py.
-- Task 03 (notifications): **DONE with 4 GAPs** -- NotificationEngine + NotificationIntelligence + DigestEngine work well. Rate limiting, quiet hours, fatigue management, batching. Only Google Chat channel exists -- no email delivery channel. No notification-level muting or analytics. GAP-10-05 through GAP-10-07 plus existing delivery.
-- Task 04 (bidirectional): **DONE with 2 GAPs** -- AsanaWriter and GmailWriter exist with proper error handling and dry-run. Action framework has full lifecycle with risk classification and approval policies. Missing CalendarWriter (GAP-10-08) and end-to-end validation test (GAP-10-09).
-- Task 05 (conversational): **DONE with 2 GAPs** -- ConversationalIntelligence (971 lines) fully implements intent classification, entity resolution, cross-domain synthesis. Tests exist. BUT not wired to any API endpoint or chat interface (GAP-10-10, high severity). Manual validation blocked (GAP-10-11).
-- Task 06 (proactive): **DONE with 3 GAPs** -- proposals.py generates actionable proposals. Missing: proposal-to-Asana pipeline (GAP-10-12), proactive email drafting (GAP-10-13), contextual surfaces validation (GAP-10-14).
+- Task 01 (performance): **DONE with 3 GAPs** -- BatchLoader, InMemoryCache, QueryOptimizer, PerformanceMonitor, PaginatedResult all implemented with tests. N+1 patterns addressed via BatchLoader and prefetch_related. Main gaps: cycle time not wired to PerformanceMonitor (GAP-11-01 medium), no perf API endpoint (GAP-11-02 low), cache LRU O(n) touch (GAP-11-03 low).
+- Task 02 (security): **DONE with 2 GAPs** -- SHA-256 key hashing, RBAC (3 roles), rate limiting (sliding window), security headers (CORS/CSP/HSTS/X-Frame-Options). Secret redaction in cassettes. No hardcoded credentials. All secrets via env vars. Main gaps: no OAuth token refresh handling (GAP-11-04 medium), standalone bandit command informational (GAP-11-05 low).
+- Task 03 (compliance): **DONE with 2 GAPs** -- ComplianceReport/ComplianceReporter exist with API endpoint. RetentionEngine (584 lines) with archive-before-delete, protected tables, dry-run default. SubjectAccessManager (740 lines) with GDPR Articles 15/16/17/20. AuditLog immutable trail. Main gaps: API endpoint creates empty reporter not wired to real data (GAP-11-06 medium), no scheduled report generation (GAP-11-07 low).
 
-**14 gaps found (1 high, 8 medium, 5 low):**
-- **GAP-10-10 (high):** ConversationalIntelligence not wired to any user-facing surface
-- **GAP-10-01 (medium):** No threshold adjustment engine (AT-2.1)
-- **GAP-10-02 (medium):** No seasonal/contextual modifiers (AT-3.1)
-- **GAP-10-05 (medium):** No email notification channel
-- **GAP-10-08 (medium):** No Calendar write-back integration
-- **GAP-10-11 (medium):** CI-4.1 manual validation blocked on GAP-10-10
-- **GAP-10-12 (medium):** No proposal-to-Asana-task pipeline
-- **GAP-10-13 (medium):** No proactive email draft generation
-- **GAP-10-03 (low):** No calibration reporting (AT-4.1)
-- **GAP-10-04 (low):** No adaptive threshold validation tests (AT-5.1)
-- **GAP-10-06 (low):** No notification-level muting API
-- **GAP-10-07 (low):** No notification analytics
-- **GAP-10-09 (low):** No end-to-end action validation test
-- **GAP-10-14 (low):** PI-5.1 contextual surfaces manual validation blocked
+**7 gaps found (3 medium, 4 low):**
+- **GAP-11-01 (medium):** Cycle time not tracked in PerformanceMonitor
+- **GAP-11-04 (medium):** No OAuth token refresh handling in collectors
+- **GAP-11-06 (medium):** ComplianceReporter API uses empty defaults, not real governance data
+- **GAP-11-02 (low):** No performance profiling API endpoint
+- **GAP-11-03 (low):** InMemoryCache._touch() is O(n)
+- **GAP-11-05 (low):** Standalone bandit command informational only
+- **GAP-11-07 (low):** No scheduled compliance report generation
 
-**Status:** PR #TBD (branch: verify/intelligence-systems)
+**Status:** PR #TBD (branch: verify/infrastructure)
 
 ---
 
 ## What's Next
 
-### Phase 11: Verify Analytics & Reporting
-- 3 verification tasks -- reporting only, no code changes
-- See `audit-remediation/plan/phase-11.yaml`
-- Scope: verify dashboard data, reporting pipeline, analytics accuracy
+### Phase 12: Verify UI & Dashboard
+- 5 verification tasks -- reporting only, no code changes
+- See `audit-remediation/plan/phase-12.yaml`
+- Scope: verify dashboard components, data flow, UI spec compliance
 
 ---
 
@@ -63,12 +53,13 @@ Verification-only phase. Investigated 6 areas via code reading: adaptive thresho
 9. GAP-08-01 through GAP-08-07 exist -- do not fix during T2 verification
 10. GAP-09-01 through GAP-09-07 exist -- do not fix during T2 verification
 11. GAP-10-01 through GAP-10-14 exist -- do not fix during T2 verification
+12. GAP-11-01 through GAP-11-07 exist -- do not fix during T2 verification
 
 ---
 
 ## Documents to Read
 
 1. `audit-remediation/AGENT.md` -- Engineering standards for this project
-2. `audit-remediation/plan/phase-11.yaml` -- Next phase
+2. `audit-remediation/plan/phase-12.yaml` -- Next phase
 3. `audit-remediation/state.json` -- Current project state
 4. `CLAUDE.md` -- Repo-level engineering rules

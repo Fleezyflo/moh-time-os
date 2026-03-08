@@ -1,0 +1,280 @@
+session: 11
+date: "2026-03-08"
+phase: "phase-11"
+track: "T2"
+branch: "verify/infrastructure"
+
+tasks_completed:
+  - id: "task-01"
+    name: "Verify performance"
+    status: "DONE with 3 GAPs"
+    findings: |
+      Spec: PS-1.1 to PS-5.1 -- N+1 query elimination, caching, pagination,
+      performance baselines, bottleneck detection.
+
+      What exists:
+        - lib/db_opt/query_optimizer.py (245 lines): BatchLoader for N+1 elimination
+          via IN queries. prefetch_related() for bulk loading. explain_query() for
+          EXPLAIN QUERY PLAN. analyze_query_performance() for timing. QueryStats
+          tracks query count, total time, slowest query. All use parameterized queries
+          via lib/safe_sql.
+
+        - lib/intelligence/performance_scale.py (512 lines): Full implementation of
+          PS-1.1 through PS-5.1.
+          * InMemoryCache with TTL, LRU eviction, hit/miss stats (PS-2.1)
+          * QueryOptimizer with N+1 detection (normalized query grouping), slow query
+            detection, index recommendations (PS-1.1)
+          * PaginationParams + PaginatedResult with limit capping at 100 (PS-4.1)
+          * PerformanceMonitor with baselines, p50/p95/p99 tracking, violation
+            detection (PS-5.1)
+
+        - lib/db_opt/__init__.py: Clean exports of BatchLoader, QueryStats,
+          prefetch_related, explain_query, analyze_query_performance, ConnectionPool,
+          PoolStats, IndexReport, ensure_indexes, get_missing_indexes.
+
+        - lib/db_opt/indexes.py + connection_pool.py + db_adapter.py + sql_compat.py:
+          Index management, connection pooling (PooledDatabaseAdapter), dual
+          SQLite/PostgreSQL adapters, SQL dialect translation.
+
+        - tests/test_performance_scale.py: Tests exist for caching, query optimization,
+          pagination, and performance baselines.
+
+        - tests/test_query_optimizer.py: Tests exist for BatchLoader, prefetch_related,
+          explain_query, analyze_query_performance, QueryStats.
+
+      N+1 query analysis:
+        - BatchLoader pattern is available and properly implements IN-query batching.
+        - prefetch_related() supports bulk loading related entities.
+        - QueryOptimizer.detect_n_plus_one() detects repeated normalized queries (3+).
+        - Entity queries in lib/entities.py use single queries with WHERE clauses
+          (not loops), which is correct.
+        - Collectors (calendar, gmail, tasks, chat) make external API calls that are
+          inherently serial (API limits), not an N+1 DB issue.
+
+      Cycle time:
+        - autonomous_loop.py run_cycle() logs phase timing but does not aggregate
+          total cycle time or track it in PerformanceMonitor.
+
+      What's missing:
+        - GAP-11-01 (medium): Autonomous loop cycle time not tracked in
+          PerformanceMonitor. run_cycle() logs phase transitions but never calls
+          PerformanceMonitor.record_timing(). No cycle time baselines, no
+          p50/p95 tracking for cycle duration, no alerting on slow cycles.
+
+        - GAP-11-02 (low): No performance profiling API endpoint. PerformanceMonitor
+          and QueryOptimizer exist but are not wired to any /api endpoint for
+          runtime introspection. Cache stats, slow queries, N+1 detections are
+          only accessible programmatically.
+
+        - GAP-11-03 (low): InMemoryCache._touch() uses list.remove() which is O(n).
+          For the default max_entries=1000 this is acceptable, but would become a
+          bottleneck at scale. An OrderedDict-based LRU would be O(1).
+
+  - id: "task-02"
+    name: "Verify security"
+    status: "DONE with 2 GAPs"
+    findings: |
+      Spec: SH-4.1 to SH-5.1 -- Credential management, secrets handling, OAuth
+      token security.
+
+      What exists:
+        - lib/security/secrets_config.py (155 lines): Centralized secrets registry.
+          REQUIRED_SECRETS list documents all env vars (INTEL_API_TOKEN, ASANA_TOKEN,
+          GMAIL_TOKEN_PATH, GOOGLE_CALENDAR_TOKEN_PATH, XERO_CLIENT_ID,
+          XERO_CLIENT_SECRET, DATABASE_PATH, CORS_ORIGINS, GOOGLE_CHAT_WEBHOOK_URL).
+          validate_secrets() checks which are configured vs missing. mask_secret()
+          for safe logging. get_secret() never logs actual values. is_required_secret()
+          distinguishes required vs optional.
+
+        - lib/security/key_manager.py (450 lines): Production-grade API key management.
+          SHA-256 hashing (never stores plaintext). KeyRole enum (VIEWER, OPERATOR,
+          ADMIN). create_key() with secrets.token_hex (128 bits entropy).
+          validate_key() checks hash, active, expiry, updates last_used_at.
+          revoke_key(), rotate_key() (atomic create+revoke). list_keys() returns
+          metadata only. All operations use parameterized SQL. Proper exception
+          handling with logging.
+
+        - lib/security/rate_limiter.py (181 lines): Thread-safe sliding window rate
+          limiter. Role-based tiers (admin=500, operator=200, viewer=100,
+          unauthenticated=20 per minute). cleanup_expired() for memory management.
+
+        - lib/security/headers.py (176 lines): SecurityHeadersMiddleware (ASGI).
+          CORS (configurable via CORS_ORIGINS env var, wildcard support), CSP
+          (default-src self, script-src self unsafe-inline), HSTS (1 year with
+          subdomains), X-Frame-Options DENY, X-Content-Type-Options nosniff,
+          X-XSS-Protection, Referrer-Policy strict-origin-when-cross-origin,
+          Permissions-Policy (camera, mic, geo denied).
+
+        - lib/security/rbac.py + middleware.py: Role-based access control with
+          require_role() dependency for FastAPI, RBACMiddleware for logging.
+
+        - lib/intelligence/security_hardening.py: Complementary API key management
+          (APIKey dataclass, KeyStore, RBAC scopes). Role → scope mapping
+          (admin: read+write+admin+execute, operator: read+write+execute,
+          viewer: read-only).
+
+        - lib/collectors/recorder.py: SECRET_PATTERNS list redacts access_token,
+          refresh_token, api_key, password, secret, Bearer tokens, Authorization
+          headers from cassette recordings.
+
+      OAuth token handling:
+        - Gmail, Calendar, Chat collectors use google.oauth2.service_account for
+          authentication. Token paths come from env vars (GMAIL_TOKEN_PATH,
+          GOOGLE_CALENDAR_TOKEN_PATH). No hardcoded credentials found in codebase.
+        - Xero uses OAuth2 client_id/client_secret from env vars.
+        - ASANA_TOKEN from env var.
+        - No plaintext secrets anywhere in source code.
+
+      Hardcoded credential search:
+        - Grep for hardcoded passwords/secrets/tokens found zero true positives.
+          All "hardcoded" mentions refer to configuration values (table names,
+          correlation rules), not credentials.
+
+      Tests:
+        - tests/test_key_manager.py: Tests for key creation, validation, rotation,
+          revocation.
+        - tests/test_security_hardening.py: Tests for APIKey, KeyStore, RBAC scopes.
+        - tests/test_security_headers.py: Tests for CORS, CSP, security headers.
+        - tests/test_rate_limiter.py: Tests for rate limiting, role tiers, cleanup.
+
+      What's missing:
+        - GAP-11-04 (medium): No OAuth token refresh handling. Collectors import
+          google.oauth2.service_account but there is no visible token refresh
+          mechanism or token expiry handling. If a service account token expires
+          mid-collection, the error handling catches it but there's no automatic
+          retry with refreshed credentials.
+
+        - GAP-11-05 (low): bandit scan command not generated for Molham
+          (per phase plan: "Generate a bandit command for Molham"). Bandit runs
+          automatically in pre-commit (bandit -r on maintained scope), so this is
+          informational -- the security scan IS running, just via hooks not a
+          standalone command. For completeness: `bandit -r lib/ api/ -c pyproject.toml`
+
+  - id: "task-03"
+    name: "Verify compliance reporting"
+    status: "DONE with 2 GAPs"
+    findings: |
+      Spec: DG-5.1 -- Compliance report generation, data retention policies,
+      subject access request handling.
+
+      What exists:
+        - lib/intelligence/data_governance.py: ComplianceReport dataclass (generated_at,
+          data_inventory, retention_status, deletion_requests_processed, pii_tables_count,
+          policy_violations, overall_status). ComplianceReporter.generate_report()
+          checks PII tables without retention policies, overdue enforcement, and sets
+          status to compliant/warning/non_compliant based on violation count (>3 = non_compliant).
+
+        - api/intelligence_router.py line 1352: GET /api/v2/intelligence/governance/
+          compliance-report endpoint. Instantiates ComplianceReporter and returns
+          report.to_dict(). Proper exception handling with HTTPException 500.
+
+        - lib/governance/retention_engine.py (584 lines): Production-grade retention
+          engine. RetentionPolicy per table with configurable retention_days,
+          archive_before_delete, require_approval, min_rows_preserve. enforce() with
+          dry_run=True default. Protected table enforcement (PROTECTED_TABLES check).
+          Archive-before-delete flow. Audit logging of all retention actions.
+          get_table_age_distribution() with age buckets. get_stale_data_summary().
+
+        - lib/governance/retention_scheduler.py (349 lines): Scheduled retention
+          enforcement. Daily/weekly/monthly schedules. Run history tracking in SQLite.
+          Lock mechanism prevents concurrent runs. should_run() checks elapsed time.
+
+        - lib/governance/subject_access.py (740 lines): GDPR Articles 15/16/17/20.
+          SubjectAccessManager with create_request(), find_subject_data() (searches
+          all tables for email/name/id matches), export_subject_data() (JSON format),
+          delete_subject_data() (with dry_run), anonymize_subject_data() (via
+          Anonymizer). All operations audit-logged via AuditLog.
+
+        - lib/governance/audit_log.py (232 lines): Immutable audit trail.
+          AuditLog.log() records SAR_CREATED, DATA_ACCESSED, DATA_DELETED,
+          DATA_ANONYMIZED, DATA_EXPORTED. get_entries() with subject/action/since
+          filters. get_entry_count().
+
+        - lib/governance/data_classification.py: DataSensitivity enum (PUBLIC through
+          FINANCIAL), DataCategory enum. ColumnClassification, TableClassification.
+          PatternDetector for PII detection (email, phone, SSN, credit card patterns).
+
+        - lib/governance/__init__.py: Clean exports of all governance components.
+
+        - api/governance_router.py: REST endpoints for SAR (POST /api/governance/sar),
+          data search, export, deletion.
+
+        - Tests: test_data_governance.py, test_data_classification.py,
+          test_retention_engine.py, test_subject_access.py, test_data_lifecycle.py,
+          test_audit_trail.py.
+
+      What's missing:
+        - GAP-11-06 (medium): ComplianceReporter in data_governance.py uses in-memory
+          DataCatalog, RetentionEnforcer, SubjectAccessManager -- these are lightweight
+          wrappers, not the production implementations. The API endpoint at
+          /api/v2/intelligence/governance/compliance-report instantiates
+          ComplianceReporter() with no args, which creates empty default instances.
+          The report will always show 0 PII tables, 0 retention policies, 0 deletion
+          requests -- because it's not connected to the real governance.retention_engine
+          or governance.subject_access modules.
+
+        - GAP-11-07 (low): No scheduled compliance report generation. The report is
+          only available on-demand via API. No cron/scheduler integration to produce
+          periodic compliance snapshots for audit trails.
+
+gaps_found:
+  - id: "GAP-11-01"
+    severity: "medium"
+    description: "Autonomous loop cycle time not tracked in PerformanceMonitor"
+    location: "lib/autonomous_loop.py"
+    recommendation: "Wire PerformanceMonitor.record_timing() into run_cycle()"
+
+  - id: "GAP-11-02"
+    severity: "low"
+    description: "No performance profiling API endpoint"
+    location: "api/"
+    recommendation: "Add /api/v2/intelligence/performance endpoint exposing cache stats, slow queries, N+1 detections"
+
+  - id: "GAP-11-03"
+    severity: "low"
+    description: "InMemoryCache._touch() is O(n) list.remove()"
+    location: "lib/intelligence/performance_scale.py:157"
+    recommendation: "Replace with OrderedDict for O(1) LRU"
+
+  - id: "GAP-11-04"
+    severity: "medium"
+    description: "No OAuth token refresh handling in collectors"
+    location: "lib/collectors/"
+    recommendation: "Add token refresh retry logic or use google.auth.transport with auto-refresh"
+
+  - id: "GAP-11-05"
+    severity: "low"
+    description: "Standalone bandit command not generated (runs via pre-commit already)"
+    location: "N/A"
+    recommendation: "For manual audit: bandit -r lib/ api/ -c pyproject.toml"
+
+  - id: "GAP-11-06"
+    severity: "medium"
+    description: "ComplianceReporter API endpoint uses empty default instances, not real governance data"
+    location: "api/intelligence_router.py:1361, lib/intelligence/data_governance.py:641"
+    recommendation: "Wire ComplianceReporter to real RetentionEngine and SubjectAccessManager from governance module"
+
+  - id: "GAP-11-07"
+    severity: "low"
+    description: "No scheduled compliance report generation"
+    location: "lib/governance/"
+    recommendation: "Add periodic compliance snapshot to RetentionScheduler or cron_tasks.py"
+
+files_changed: []
+
+summary: |
+  Phase 11 verified 3 infrastructure areas: performance, security, compliance.
+  Found 7 gaps total (3 medium, 4 low). No critical or high severity issues.
+
+  Performance (PS-1.1 to PS-5.1): Strong foundation. BatchLoader, InMemoryCache,
+  QueryOptimizer, PerformanceMonitor, PaginatedResult all implemented with tests.
+  N+1 patterns addressed. Main gap: cycle time not wired to monitoring.
+
+  Security (SH-4.1 to SH-5.1): Well-implemented. SHA-256 key hashing, RBAC,
+  rate limiting, security headers (CORS/CSP/HSTS), secret redaction in cassettes.
+  No hardcoded credentials. Main gap: no token refresh handling.
+
+  Compliance (DG-5.1): Comprehensive governance stack. RetentionEngine,
+  SubjectAccessManager, AuditLog, DataClassifier all production-grade with
+  safety guards. Main gap: API endpoint creates empty reporter not wired to
+  real data.
