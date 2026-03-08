@@ -3,16 +3,13 @@ Contract Tests — Collector Registry Enforcement
 
 These tests FAIL if:
 1. There is more than one active collector registry/mapping
-2. Canonical runner doesn't use the registry
-3. Legacy collectors are imported
+2. Orchestrator doesn't use class-based collectors
+3. Legacy collectors directory exists
 4. API doesn't read from v29 tables
 """
 
 import importlib.util
-import re
 from pathlib import Path
-
-import pytest
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 
@@ -34,121 +31,90 @@ class TestSingleRegistry:
             f"Expected 8 collectors, got {len(module.COLLECTOR_REGISTRY)}"
         )
 
-    def test_scheduled_collect_uses_registry(self):
-        """scheduled_collect.py must import from lib.collector_registry."""
-        scheduled_path = PROJECT_ROOT / "collectors" / "scheduled_collect.py"
-        content = scheduled_path.read_text()
-
-        assert "from lib.collector_registry import" in content, (
-            "scheduled_collect.py must import from lib.collector_registry"
-        )
-
-    def test_scheduled_collect_uses_lock(self):
-        """scheduled_collect.py must use CollectorLock."""
-        scheduled_path = PROJECT_ROOT / "collectors" / "scheduled_collect.py"
-        content = scheduled_path.read_text()
-
-        assert "CollectorLock" in content, "scheduled_collect.py must use CollectorLock"
-        assert "with CollectorLock()" in content, "scheduled_collect.py must acquire lock"
-
-
-class TestCanonicalRunnerAuthoritative:
-    """Ensure canonical runner sources match registry."""
-
-    def test_sources_match_registry(self):
-        """All sources in scheduled_collect must be in registry."""
+    def test_registry_points_to_lib_collectors(self):
+        """All registry entries must point to lib.collectors modules."""
         registry_path = PROJECT_ROOT / "lib" / "collector_registry.py"
-        scheduled_path = PROJECT_ROOT / "collectors" / "scheduled_collect.py"
 
-        # Load registry
         spec = importlib.util.spec_from_file_location("collector_registry", registry_path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        registry_sources = set(module.COLLECTOR_REGISTRY.keys())
 
-        # Parse scheduled_collect for sources
-        content = scheduled_path.read_text()
-        # Find the collectors dict
-        match = re.search(r"collectors\s*=\s*\{([^}]+)\}", content, re.DOTALL)
-        if match:
-            dict_content = match.group(1)
-            scheduled_sources = set(re.findall(r'["\'](\w+)["\']:', dict_content))
-        else:
-            scheduled_sources = set()
-
-        missing = scheduled_sources - registry_sources
-        assert not missing, f"Sources in scheduled_collect but not in registry: {missing}"
+        for name, entry in module.COLLECTOR_REGISTRY.items():
+            assert entry.module.startswith("lib.collectors."), (
+                f"Collector '{name}' must point to lib.collectors, got '{entry.module}'"
+            )
 
 
-class TestLegacyBlocked:
-    """Ensure legacy collectors cannot be imported."""
+class TestLegacyRemoved:
+    """Ensure legacy collectors directory is gone."""
 
-    def test_legacy_import_raises(self):
-        """Importing from collectors._legacy must raise RuntimeError or ImportError."""
-        import sys
+    def test_no_legacy_collectors_directory(self):
+        """Top-level collectors/ directory must not exist."""
+        legacy_dir = PROJECT_ROOT / "collectors"
+        assert not legacy_dir.exists(), (
+            "Legacy collectors/ directory still exists. "
+            "All collection goes through lib/collectors/ now."
+        )
 
-        # Clear any cached imports to ensure fresh import behavior
-        modules_to_clear = [k for k in sys.modules if k.startswith("collectors._legacy")]
-        for mod in modules_to_clear:
-            del sys.modules[mod]
-
-        # Either RuntimeError (explicit block) or ImportError (import machinery failure)
-        # Both indicate the legacy module is effectively blocked
-        with pytest.raises((RuntimeError, ImportError)):
-            from collectors._legacy import team_calendar  # noqa: F401
-
-    def test_legacy_getattr_raises(self):
-        """Accessing any attribute on _legacy must raise RuntimeError or ImportError."""
-        import sys
-
-        # Clear any cached imports - must clear all related modules
-        modules_to_clear = [
-            k for k in list(sys.modules.keys()) if "collectors" in k or "lib.collectors" in k
-        ]
-        for mod in modules_to_clear:
-            try:
-                del sys.modules[mod]
-            except KeyError:
-                pass
-
-        try:
-            import collectors._legacy as legacy
-
-            # If import succeeds, verify __getattr__ blocks attribute access
-            with pytest.raises(RuntimeError, match="deprecated"):
-                _ = legacy.anything
-        except (RuntimeError, ImportError):
-            # If import itself fails, the legacy module is blocked - test passes
-            pass
+    def test_no_scheduled_collect_imports(self):
+        """No Python files should import from collectors.scheduled_collect."""
+        for py_file in PROJECT_ROOT.rglob("*.py"):
+            # Skip archived files and this test file itself
+            if "_archive" in str(py_file) or py_file == Path(__file__):
+                continue
+            content = py_file.read_text()
+            assert "from collectors.scheduled_collect" not in content, (
+                f"{py_file.relative_to(PROJECT_ROOT)} still imports from "
+                "collectors.scheduled_collect"
+            )
+            assert "from collectors.xero_ops" not in content, (
+                f"{py_file.relative_to(PROJECT_ROOT)} still imports from collectors.xero_ops"
+            )
 
 
-class TestOrchestratorDelegates:
-    """Ensure CollectorOrchestrator delegates to canonical runner."""
+class TestOrchestratorUsesClassCollectors:
+    """Ensure CollectorOrchestrator uses class-based collectors directly."""
 
-    def test_force_sync_delegates(self):
-        """CollectorOrchestrator.force_sync must delegate to scheduled_collect."""
+    def test_orchestrator_has_all_collectors(self):
+        """Orchestrator must initialize all 8 collector types."""
         orch_path = PROJECT_ROOT / "lib" / "collectors" / "orchestrator.py"
         content = orch_path.read_text()
 
-        # Must import from scheduled_collect
-        assert "from collectors.scheduled_collect import" in content, (
-            "orchestrator.force_sync must import from scheduled_collect"
+        expected = [
+            "TasksCollector",
+            "CalendarCollector",
+            "ChatCollector",
+            "GmailCollector",
+            "AsanaCollector",
+            "XeroCollector",
+            "DriveCollector",
+            "ContactsCollector",
+        ]
+        for collector in expected:
+            assert collector in content, f"Orchestrator must use {collector}"
+
+    def test_orchestrator_no_legacy_delegation(self):
+        """Orchestrator must NOT delegate to scheduled_collect."""
+        orch_path = PROJECT_ROOT / "lib" / "collectors" / "orchestrator.py"
+        content = orch_path.read_text()
+
+        assert "scheduled_collect" not in content, (
+            "Orchestrator must not reference scheduled_collect"
         )
 
-    def test_sync_all_delegates(self):
+    def test_sync_all_delegates_to_force_sync(self):
         """CollectorOrchestrator.sync_all must call force_sync."""
         orch_path = PROJECT_ROOT / "lib" / "collectors" / "orchestrator.py"
         content = orch_path.read_text()
+        assert "force_sync" in content, "sync_all must delegate to force_sync"
 
-        # Find sync_all method
-        match = re.search(
-            r"def sync_all\(self\)[^:]*:[^}]+?(?=\n    def |\nclass |\Z)",
-            content,
-            re.DOTALL,
-        )
-        if match:
-            method_body = match.group(0)
-            assert "force_sync" in method_body, "sync_all must delegate to force_sync"
+    def test_orchestrator_uses_lock(self):
+        """Orchestrator must use CollectorLock."""
+        orch_path = PROJECT_ROOT / "lib" / "collectors" / "orchestrator.py"
+        content = orch_path.read_text()
+
+        assert "CollectorLock" in content, "Orchestrator must use CollectorLock"
+        assert "with CollectorLock()" in content, "Orchestrator must acquire lock"
 
 
 class TestAPIUsesV29:
@@ -189,3 +155,28 @@ class TestLockfileExists:
         lock = module.CollectorLock()
         assert hasattr(lock, "__enter__"), "CollectorLock must have __enter__"
         assert hasattr(lock, "__exit__"), "CollectorLock must have __exit__"
+
+
+class TestAllCollectorsUseSAAuth:
+    """Ensure all collectors use service account auth, not gog CLI."""
+
+    def test_no_gog_cli_in_collectors(self):
+        """No collector in lib/collectors/ should shell out to gog CLI."""
+        collectors_dir = PROJECT_ROOT / "lib" / "collectors"
+        for py_file in collectors_dir.glob("*.py"):
+            if py_file.name in (
+                "base.py",
+                "__init__.py",
+                "resilience.py",
+                "recorder.py",
+                "watchdog.py",
+                "orchestrator.py",
+            ):
+                continue
+            content = py_file.read_text()
+            # tasks.py legitimately uses gog CLI for Google Tasks (no Python API)
+            if py_file.name == "tasks.py":
+                continue
+            assert '"gog"' not in content and "'gog'" not in content, (
+                f"{py_file.name} shells out to gog CLI instead of using SA auth"
+            )

@@ -10,7 +10,6 @@ DO NOT define collectors anywhere else.
 import fcntl
 import logging
 import os
-from collections.abc import Callable
 from dataclasses import dataclass, field
 
 from lib import paths
@@ -147,37 +146,38 @@ class CollectorSpec:
 
 
 # THE CANONICAL REGISTRY — This is the ONLY place where collectors are defined.
+# All collectors are class-based in lib/collectors/ using service account auth.
 COLLECTOR_REGISTRY: dict[str, CollectorSpec] = {
     "calendar": CollectorSpec(
         source="calendar",
-        module="collectors.scheduled_collect",
-        function="collect_calendar",
-        json_output="calendar-next.json",
+        module="lib.collectors.calendar",
+        function="CalendarCollector",
+        tables_written=["events"],
         sync_interval_seconds=60,
     ),
     "gmail": CollectorSpec(
         source="gmail",
-        module="collectors.scheduled_collect",
-        function="collect_gmail",
-        json_output="gmail-full.json",
+        module="lib.collectors.gmail",
+        function="GmailCollector",
+        tables_written=["communications"],
         sync_interval_seconds=120,
     ),
     "tasks": CollectorSpec(
         source="tasks",
-        module="collectors.scheduled_collect",
-        function="collect_tasks",
+        module="lib.collectors.tasks",
+        function="TasksCollector",
         tables_written=["tasks"],
     ),
     "chat": CollectorSpec(
         source="chat",
-        module="collectors.scheduled_collect",
-        function="collect_chat",
-        json_output="chat-full.json",
+        module="lib.collectors.chat",
+        function="ChatCollector",
+        tables_written=["chat_messages"],
     ),
     "asana": CollectorSpec(
         source="asana",
-        module="collectors.scheduled_collect",
-        function="collect_asana",
+        module="lib.collectors.asana",
+        function="AsanaCollector",
         tables_written=[
             "tasks",
             "asana_custom_fields",
@@ -191,23 +191,22 @@ COLLECTOR_REGISTRY: dict[str, CollectorSpec] = {
     ),
     "xero": CollectorSpec(
         source="xero",
-        module="collectors.scheduled_collect",
-        function="collect_xero",
+        module="lib.collectors.xero",
+        function="XeroCollector",
         tables_written=["invoices"],
-        json_output="xero-ar.json",
     ),
     "drive": CollectorSpec(
         source="drive",
-        module="collectors.scheduled_collect",
-        function="collect_drive",
-        json_output="drive-recent.json",
+        module="lib.collectors.drive",
+        function="DriveCollector",
+        tables_written=["drive_files"],
         sync_interval_seconds=600,
     ),
     "contacts": CollectorSpec(
         source="contacts",
-        module="collectors.scheduled_collect",
-        function="collect_contacts",
-        json_output="contacts.json",
+        module="lib.collectors.contacts",
+        function="ContactsCollector",
+        tables_written=["contacts"],
         sync_interval_seconds=600,
     ),
 }
@@ -218,23 +217,29 @@ def get_all_sources() -> list[str]:
     return [s for s, spec in COLLECTOR_REGISTRY.items() if spec.enabled]
 
 
-def get_collector_map() -> dict[str, Callable]:
+def get_collector_map() -> dict[str, type]:
     """
-    Get collector function map for scheduled_collect.py.
+    Get collector class map.
 
-    Returns dict of {source_name: collect_function}.
-    This is the ONLY place this mapping should exist.
+    Returns dict of {source_name: CollectorClass}.
+    All collectors are class-based in lib/collectors/.
     """
-    # Import here to avoid circular imports
-    from collectors import scheduled_collect
+    from lib.collectors.asana import AsanaCollector
+    from lib.collectors.calendar import CalendarCollector
+    from lib.collectors.chat import ChatCollector
+    from lib.collectors.contacts import ContactsCollector
+    from lib.collectors.drive import DriveCollector
+    from lib.collectors.gmail import GmailCollector
+    from lib.collectors.tasks import TasksCollector
+    from lib.collectors.xero import XeroCollector
 
     return {
-        "calendar": scheduled_collect.collect_calendar,
-        "gmail": scheduled_collect.collect_gmail,
-        "tasks": scheduled_collect.collect_tasks,
-        "chat": scheduled_collect.collect_chat,
-        "asana": scheduled_collect.collect_asana,
-        "xero": scheduled_collect.collect_xero,
-        "drive": scheduled_collect.collect_drive,
-        "contacts": scheduled_collect.collect_contacts,
+        "calendar": CalendarCollector,
+        "gmail": GmailCollector,
+        "tasks": TasksCollector,
+        "chat": ChatCollector,
+        "asana": AsanaCollector,
+        "xero": XeroCollector,
+        "drive": DriveCollector,
+        "contacts": ContactsCollector,
     }

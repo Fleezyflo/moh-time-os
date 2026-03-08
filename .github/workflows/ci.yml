@@ -109,13 +109,13 @@ jobs:
         run: uv run pre-commit run -a
 
       - name: Ruff Lint (full)
-        run: uv run ruff check lib/ api/ cli/ collectors/ engine/ scripts/ tests/ --output-format=github
+        run: uv run ruff check lib/ api/ cli/ engine/ scripts/ tests/ --output-format=github
 
       - name: Ruff Format Check
-        run: uv run ruff format --check lib/ api/ cli/ collectors/ engine/ scripts/ tests/
+        run: uv run ruff format --check lib/ api/ cli/ engine/ scripts/ tests/
 
       - name: Bandit Security Scan
-        run: uv run bandit -r lib/ api/ cli/ collectors/ engine/ -ll --skip B101,B608
+        run: uv run bandit -r lib/ api/ cli/ engine/ -ll --skip B101,B608
 
       - name: Mypy Baseline Check
         run: uv run python scripts/check_mypy_baseline.py

@@ -204,7 +204,7 @@ def detect_xero_deposits(store) -> list[dict]:
     candidates = []
 
     try:
-        from collectors.xero_ops import get_outstanding_invoices
+        from lib.xero_ops import get_outstanding_invoices
 
         invoices = get_outstanding_invoices()
 

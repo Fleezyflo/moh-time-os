@@ -1539,6 +1539,14 @@
       "source": "collectors/chat.py"
     },
     {
+      "name": "contacts",
+      "source": "collectors/contacts.py"
+    },
+    {
+      "name": "drive",
+      "source": "collectors/drive.py"
+    },
+    {
       "name": "gmail",
       "source": "collectors/gmail.py"
     },
@@ -1692,7 +1700,7 @@
   "generated_by": "scripts/generate_system_map.py",
   "summary": {
     "api_routes_count": 304,
-    "collectors_count": 10,
+    "collectors_count": 12,
     "db_tables_count": 31,
     "ui_routes_count": 32
   },

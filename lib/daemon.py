@@ -35,16 +35,17 @@ from lib.collectors.resilience import CircuitBreaker
 from lib.compat import StrEnum
 from lib.observability.metrics import REGISTRY
 
-collect_all = None  # Lazy-loaded on first use
+_orchestrator = None  # Lazy-loaded on first use
 
 
-def _load_collect_all():
-    """Lazy-import collect_all to avoid import-time side effects."""
-    global collect_all
-    if collect_all is None:
-        from collectors.scheduled_collect import collect_all as _ca
+def _get_orchestrator():
+    """Lazy-import orchestrator to avoid import-time side effects."""
+    global _orchestrator
+    if _orchestrator is None:
+        from lib.collectors.orchestrator import CollectorOrchestrator
 
-        collect_all = _ca
+        _orchestrator = CollectorOrchestrator()
+    return _orchestrator
 
 
 class JobHealth(StrEnum):
@@ -416,11 +417,11 @@ class TimeOSDaemon:
     def _handle_collect(self):
         """Stage 1: Collect data from all sources."""
         try:
-            _load_collect_all()
+            orchestrator = _get_orchestrator()
             self.logger.info("Collecting data from all sources...")
-            collect_all()
+            orchestrator.sync_all()
         except ImportError:
-            self.logger.warning("scheduled_collect not available, skipping collect")
+            self.logger.warning("Collector orchestrator not available, skipping collect")
         except (sqlite3.Error, ValueError, OSError) as e:
             self.logger.error(f"Collect failed: {e}")
             raise
