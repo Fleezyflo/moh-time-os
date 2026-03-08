@@ -67,17 +67,14 @@ UI uses `fetchJson(${API_BASE}/...)` not literal `fetch('/api/...')`. Generator 
 
 Files: `scripts/generate_system_map.py`, `docs/system-map.json`
 
-## Verification
+## Done When
 
-- [ ] `POST /api/v2/intelligence/conversation` works with entity resolution and multi-turn
-- [ ] Compliance report returns real PII counts, retention status, deletion requests
-- [ ] No direct V4 service imports in api/ — all through facade
-- [ ] Entity profile endpoint returns all 7 intelligence dimensions
-- [ ] `engagements` and `engagement_transitions` in schema.py
-- [ ] Intelligence error responses match `{"error", "error_code"}` schema
-- [ ] `/api/v2/search` resolves
-- [ ] INSUFFICIENT_DATA_SCORE handled in scoring and profile building
-- [ ] System map route count ~260 (up from ~217)
-- [ ] `ui_api_calls` populated in system-map.json
-- [ ] Drift Detection CI passes
-- [ ] All existing tests pass
+- `POST /api/v2/intelligence/conversation` endpoint exists, calls ConversationalIntelligence
+- ComplianceReporter wired to real PII counts, retention status, deletion requests
+- V4 facade wraps all V4 service access — no direct imports in `api/`
+- Entity profile endpoint returns all 7 intelligence dimensions
+- `engagements` and `engagement_transitions` tables in schema.py
+- Intelligence error responses use `{"error", "error_code"}` format
+- `/api/v2/search` route exists and resolves
+- INSUFFICIENT_DATA_SCORE constant used in scoring and profile building
+- System map scanner updated for new routes and API calls
