@@ -102,32 +102,36 @@ class TestPipelineStages:
         """Use fixture DB for deterministic testing."""
         return fixture_db_path
 
-    def test_scoring_stage_returns_dict(self, db_path):
-        """Scoring stage should return dict with entity types."""
+    def test_scoring_stage_returns_stage_result(self, db_path):
+        """Scoring stage should return StageResult with data dict."""
+        # Stage functions return StageResult (success, data, errors, partial)
         result = _run_scoring_stage(db_path)
 
-        assert isinstance(result, dict)
-        assert "clients" in result
-        assert "projects" in result
-        assert "persons" in result
-        assert "portfolio" in result
+        assert hasattr(result, 'data'), "Expected StageResult with .data"
+        assert isinstance(result.data, dict)
+        assert "clients" in result.data
+        assert "projects" in result.data
+        assert "persons" in result.data
+        assert "portfolio" in result.data
 
-    def test_signal_stage_returns_dict(self, db_path):
-        """Signal stage should return structured dict."""
+    def test_signal_stage_returns_stage_result(self, db_path):
+        """Signal stage should return StageResult with data dict."""
         result = _run_signal_stage(db_path)
 
-        assert isinstance(result, dict)
-        assert "total_active" in result
-        assert "by_severity" in result
+        assert hasattr(result, 'data'), "Expected StageResult with .data"
+        assert isinstance(result.data, dict)
+        assert "total_active" in result.data
+        assert "by_severity" in result.data
 
-    def test_pattern_stage_returns_dict(self, db_path):
-        """Pattern stage should return structured dict."""
+    def test_pattern_stage_returns_stage_result(self, db_path):
+        """Pattern stage should return StageResult with data dict."""
         result = _run_pattern_stage(db_path)
 
-        assert isinstance(result, dict)
-        assert "total_detected" in result
-        assert "structural" in result
-        assert "operational" in result
+        assert hasattr(result, 'data'), "Expected StageResult with .data"
+        assert isinstance(result.data, dict)
+        assert "total_detected" in result.data
+        assert "structural" in result.data
+        assert "operational" in result.data
 
 
 # =============================================================================
@@ -139,23 +143,29 @@ class TestErrorIsolation:
     """Tests for error isolation in the pipeline."""
 
     def test_scoring_stage_doesnt_crash_on_missing_db(self):
-        """Scoring should return error dict, not crash."""
+        """Scoring should return StageResult with errors, not crash."""
         result = _run_scoring_stage(Path("/nonexistent/path.db"))
 
-        # Should return dict with error indicators, not raise
-        assert isinstance(result, dict)
+        # Should return StageResult (not raise), may have errors captured
+        assert hasattr(result, 'success'), "Expected StageResult"
+        assert hasattr(result, 'data')
+        assert hasattr(result, 'errors')
 
     def test_signal_stage_doesnt_crash_on_missing_db(self):
-        """Signal stage should return error dict, not crash."""
+        """Signal stage should return StageResult with errors, not crash."""
         result = _run_signal_stage(Path("/nonexistent/path.db"))
 
-        assert isinstance(result, dict)
+        assert hasattr(result, 'success'), "Expected StageResult"
+        assert hasattr(result, 'data')
+        assert hasattr(result, 'errors')
 
     def test_pattern_stage_doesnt_crash_on_missing_db(self):
-        """Pattern stage should return error dict, not crash."""
+        """Pattern stage should return StageResult with errors, not crash."""
         result = _run_pattern_stage(Path("/nonexistent/path.db"))
 
-        assert isinstance(result, dict)
+        assert hasattr(result, 'success'), "Expected StageResult"
+        assert hasattr(result, 'data')
+        assert hasattr(result, 'errors')
 
 
 # =============================================================================
@@ -215,14 +225,17 @@ class TestTargetedIntelligence:
         assert "structural_patterns" in intel
         assert "top_proposals" in intel
 
-    def test_critical_items_returns_list(self, db_path):
-        """get_critical_items should return list."""
-        items = get_critical_items(db_path)
+    def test_critical_items_returns_dict_with_items(self, db_path):
+        """get_critical_items should return dict with items list."""
+        # get_critical_items returns {success, errors, items, generated_at}
+        result = get_critical_items(db_path)
 
-        assert isinstance(items, list)
+        assert isinstance(result, dict), "Expected dict with items key"
+        assert "items" in result
+        assert isinstance(result["items"], list)
 
         # Items should have expected structure
-        for item in items:
+        for item in result["items"]:
             assert "headline" in item
             assert "entity" in item
             assert "implied_action" in item
