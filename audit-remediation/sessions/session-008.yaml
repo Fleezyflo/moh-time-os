@@ -1,0 +1,183 @@
+session: 8
+date: "2026-03-08"
+phase: "phase-08"
+track: "T2"
+branch: "verify/cleanup-api-production"
+
+tasks_completed:
+  - id: "task-01"
+    name: "Verify old tier labels removed"
+    status: "DONE"
+    findings: |
+      Old tier system (Tiers 0-4 gating) fully excised:
+
+      Deleted files confirmed absent:
+        - feature_flags.yaml: deleted (was tier-gating config)
+        - lib/tier_calculator.py: deleted
+        - tests/test_tier_calculator.py: deleted
+
+      Codebase grep for "Tier 0", "Tier 1", "Tier 2", "Tier 3", "Tier 4":
+        - Zero references to old numbered tiers in any Python, YAML, or TS file.
+
+      Client tiers A/B/C (legitimate):
+        - lib/classify.py: ClientTier enum with A/B/C values. classify_client() function.
+        - lib/schema.py: clients.tier column (TEXT).
+        - api/spec_router.py: /api/v2/clients/tiers endpoint.
+        - time-os-ui/src/: tier badges, tier filters — all reference A/B/C.
+        - These are the current client classification system, NOT the excised tier gating.
+
+      Verdict: old tier system fully removed. Client tiers A/B/C are legitimate and remain.
+
+  - id: "task-02"
+    name: "Verify old morning brief removed"
+    status: "DONE with 1 GAP"
+    findings: |
+      Old morning brief files confirmed deleted:
+        - lib/brief.py: absent
+        - lib/notifier/briefs.py: absent
+        - lib/notifier/channels/clawdbot.py: absent
+        - lib/integrations/clawdbot_api.py: absent
+        - lib/time_truth/brief.py: absent
+
+      New morning brief (Phase 15e):
+        - lib/detectors/morning_brief.py: sole active brief implementation.
+        - send_if_changed() with timing gate, Google Chat webhook delivery.
+        - Wired into autonomous_loop.py Phase 1b5a.
+
+      Stale references found (GAP-08-01):
+        - 4 Clawdbot references remain in comments/docstrings only:
+          cron_tasks.py:4, cron_tasks.py:248, autonomous_loop.py:44, notifier/__init__.py:5.
+        - No functional code references — comments only.
+
+    gaps:
+      - id: "GAP-08-01"
+        severity: "low"
+        description: "4 stale Clawdbot references in comments/docstrings"
+        locations:
+          - "cron_tasks.py:4"
+          - "cron_tasks.py:248"
+          - "autonomous_loop.py:44"
+          - "notifier/__init__.py:5"
+
+  - id: "task-03"
+    name: "Verify API route completeness"
+    status: "DONE with 3 GAPs"
+    findings: |
+      System map (docs/system-map.json): 217 routes, 9 collectors, 31 db_tables, 31 ui_routes.
+
+      Route sources in api/server.py (8 sub-routers mounted):
+        1. spec_router → /api/v2
+        2. intelligence_router → /api/v2/intelligence
+        3. sse_router → /api/v2
+        4. paginated_router → /api/v2/paginated
+        5. export_router → /api/v2 (or similar)
+        6. governance_router → /api/v2
+        7. action_router → /api
+        8. chat_webhook_router → /api
+
+      System map generator (scripts/generate_system_map.py):
+        - Only scans server.py and spec_router.py for route definitions.
+        - Misses routes from intelligence_router, sse_router, paginated_router,
+          export_router, governance_router, action_router, chat_webhook_router.
+        - ~43 routes not captured (GAP-08-02).
+
+      UI fetch pattern:
+        - api.ts uses fetchJson(${API_BASE}/...) wrapper, not literal fetch().
+        - Generator looks for literal fetch('/api/...') patterns.
+        - ui_api_calls is always empty in system-map.json (GAP-08-03).
+
+      Missing endpoint:
+        - UI calls /api/v2/search (api.ts:1732).
+        - spec_router has no /search endpoint.
+        - server.py has /api/search (legacy) but not /api/v2/search (GAP-08-04).
+
+    gaps:
+      - id: "GAP-08-02"
+        severity: "medium"
+        description: "System map generator misses ~43 routes from 6 sub-routers"
+      - id: "GAP-08-03"
+        severity: "medium"
+        description: "ui_api_calls always empty -- generator can't parse fetchJson wrapper"
+      - id: "GAP-08-04"
+        severity: "low"
+        description: "UI calls /api/v2/search but only /api/search exists (version mismatch)"
+
+  - id: "task-04"
+    name: "Verify production readiness"
+    status: "DONE with 3 GAPs"
+    findings: |
+      Error handling:
+        - daemon.py: try/except with logging in run_cycle(), exponential backoff (max_retries=3).
+        - API routes: HTTPException with status codes, not bare except.
+        - Collectors: per-collector try/except with error logging.
+
+      Logging:
+        - logging.getLogger(__name__) pattern used consistently.
+        - Structured log fields: correlation IDs, timestamps, module names.
+        - No print() statements in production code.
+
+      Graceful shutdown:
+        - daemon.py: SIGTERM/SIGINT signal handlers via signal.signal().
+        - _shutdown_event (threading.Event) for cooperative shutdown.
+        - Uvicorn receives shutdown signal from daemon.
+
+      Health checks:
+        - /api/health endpoint exists in server.py.
+        - Returns {"status": "healthy"} unconditionally (GAP-08-06).
+
+      Configuration:
+        - lib/security/secrets_config.py: SecretsAuditResult, validate_secrets(), mask_secret().
+        - REQUIRED_SECRETS list with optional/required classification.
+        - Environment variables for all secrets (no hardcoded values).
+
+      Security:
+        - SecurityHeaders middleware applied.
+        - Rate limiter on API routes.
+        - RBAC via governance system.
+        - CORS via CORS_ORIGINS env var, defaults to "*" (GAP-08-07).
+
+      Backup/recovery:
+        - SQLite WAL mode for concurrent reads.
+        - Snapshot system for periodic database snapshots.
+
+      Monitoring:
+        - Metrics endpoint (Prometheus-format).
+        - Tracing with correlation IDs.
+
+      Production validator:
+        - scripts/validate_production.py exists but minimal (GAP-08-05).
+        - Checks: imports, DB connectivity, snapshot, test count.
+        - Missing: API endpoint verification, daemon cycle test, notification system test.
+
+    gaps:
+      - id: "GAP-08-05"
+        severity: "medium"
+        description: "validate_production.py minimal -- missing API, daemon, notification checks"
+      - id: "GAP-08-06"
+        severity: "low"
+        description: "/api/health returns healthy unconditionally without subsystem checks"
+      - id: "GAP-08-07"
+        severity: "low"
+        description: "CORS defaults to '*' with no production-mode warning"
+
+verification:
+  all_tasks_reported: true
+  total_done: 4
+  total_gaps: 7
+  gap_ids:
+    - "GAP-08-01"
+    - "GAP-08-02"
+    - "GAP-08-03"
+    - "GAP-08-04"
+    - "GAP-08-05"
+    - "GAP-08-06"
+    - "GAP-08-07"
+
+notes:
+  - "All 4 tasks verified via code investigation -- no runtime testing from sandbox"
+  - "7 gaps found across 4 tasks (1 low + 2 medium + 1 low + 1 medium + 2 low)"
+  - "GAP-08-01 is cleanup only (stale comments)"
+  - "GAP-08-02 and GAP-08-03 affect system map accuracy but not runtime behavior"
+  - "GAP-08-04 is a version mismatch between UI and API (may cause 404 at runtime)"
+  - "GAP-08-05 through GAP-08-07 are production hardening items"
+  - "All gaps deferred per T2 verification rules -- no fixes during verification phases"
