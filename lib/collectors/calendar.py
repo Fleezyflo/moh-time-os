@@ -2,7 +2,7 @@
 Calendar Collector - Pulls events from Google Calendar via Service Account API.
 Uses direct Google API with service account for domain-wide delegation.
 
-Note: DWD allowlist has `calendar` (full) authorized, not `calendar.readonly`.
+DWD allowlist has `calendar.readonly` authorized (verified from admin CSV export).
 """
 
 import json
@@ -21,18 +21,9 @@ logger = logging.getLogger(__name__)
 
 # Service account configuration
 SA_FILE = Path.home() / "Library/Application Support/gogcli/sa-bW9saGFtQGhybW55LmNv.json"
-# Note: calendar.readonly is NOT in our DWD allowlist; calendar (full) IS authorized
-SCOPES = ["https://www.googleapis.com/auth/calendar"]
+# DWD allowlist has calendar.readonly (verified from admin CSV 2026-03-09)
+SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
 DEFAULT_USER = os.environ.get("MOH_ADMIN_EMAIL", "molham@hrmny.co")
-
-# Debug flag (set AUTH_DEBUG=1 to enable)
-AUTH_DEBUG = os.environ.get("AUTH_DEBUG", "0") == "1"
-
-
-def _debug_print(msg: str) -> None:
-    """Print debug message if AUTH_DEBUG is enabled."""
-    if AUTH_DEBUG:
-        print(f"[AUTH_DEBUG] {msg}")
 
 
 class CalendarCollector(BaseCollector):
@@ -53,14 +44,6 @@ class CalendarCollector(BaseCollector):
         try:
             from google.oauth2 import service_account
             from googleapiclient.discovery import build
-
-            # Debug: show SA details
-            if AUTH_DEBUG:
-                with open(SA_FILE) as f:
-                    sa_data = json.load(f)
-                _debug_print(f"SA_EMAIL: {sa_data.get('client_email')}")
-                _debug_print(f"SUBJECT: {user}")
-                _debug_print(f"SCOPES: {SCOPES}")
 
             creds = service_account.Credentials.from_service_account_file(
                 str(SA_FILE), scopes=SCOPES
@@ -88,17 +71,17 @@ class CalendarCollector(BaseCollector):
             time_max = (now + timedelta(days=lookahead_days)).isoformat()
 
             # Step 1: List all available calendars
-            _debug_print("ENDPOINT: calendar.calendarList.list")
+            logger.debug("ENDPOINT: calendar.calendarList.list")
             calendars_result = service.calendarList().list().execute()
             calendar_items = calendars_result.get("items", [])
-            _debug_print(f"STATUS: 200 OK, {len(calendar_items)} calendars")
+            logger.debug(f"STATUS: 200 OK, {len(calendar_items)} calendars")
 
             # Step 2: Fetch events from each calendar
             per_calendar_limit = max(1, max_results // max(1, len(calendar_items)))
 
             for calendar in calendar_items:
                 calendar_id = calendar.get("id", "primary")
-                _debug_print(f"ENDPOINT: calendar.events.list(calendarId='{calendar_id}')")
+                logger.debug(f"ENDPOINT: calendar.events.list(calendarId='{calendar_id}')")
 
                 try:
                     results = (
@@ -116,7 +99,7 @@ class CalendarCollector(BaseCollector):
                     )
 
                     events = results.get("items", [])
-                    _debug_print(f"STATUS: 200 OK, {len(events)} events from {calendar_id}")
+                    logger.debug(f"STATUS: 200 OK, {len(events)} events from {calendar_id}")
 
                     for event in events:
                         event_copy = event.copy()
@@ -135,7 +118,7 @@ class CalendarCollector(BaseCollector):
 
         except COLLECTOR_ERRORS as e:
             self.logger.error(f"Calendar collection failed: {e}")
-            return {"events": []}
+            raise
 
     def transform(self, raw_data: dict) -> list[dict]:
         """Transform Calendar events to canonical format."""

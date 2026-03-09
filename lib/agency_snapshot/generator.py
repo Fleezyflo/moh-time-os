@@ -32,9 +32,6 @@ from lib.contracts.schema import SCHEMA_VERSION
 from lib.contracts.thresholds import ResolutionStats
 
 from .capacity_command_page7 import CapacityCommandPage7Engine
-from .cash_ar import CashAREngine
-from .client360 import Client360Engine
-from .comms_commitments import CommsCommitmentsEngine
 from .confidence import ConfidenceModel, TrustState
 from .delivery import DeliveryEngine, ProjectDeliveryData, ProjectStatus
 from .scoring import (
@@ -101,9 +98,6 @@ class AgencySnapshotGenerator:
         self.delivery_engine = DeliveryEngine(db_path)
         self.confidence_model = ConfidenceModel(db_path)
         self.capacity_engine = CapacityCommandPage7Engine(db_path, mode, horizon)
-        self.cash_ar_engine = CashAREngine(db_path, mode, horizon)
-        self.comms_engine = CommsCommitmentsEngine(db_path, mode, horizon)
-        self.client360_engine = Client360Engine(db_path, mode, horizon)
 
         self.now = datetime.now()
         self.today = date.today()
@@ -1500,9 +1494,9 @@ class AgencySnapshotGenerator:
         return {"portfolio": portfolio, "selected_project": None}
 
     def _build_client_360_minimal(self, normalized) -> dict:
-        """Build client 360 using Client360Engine."""
+        """Build client 360 using Client360Page10Engine with normalized fallback."""
         try:
-            full_snapshot = self.client360_engine.generate()
+            full_snapshot = self._build_client_360()
             portfolio = full_snapshot.get("portfolio", [])
             at_risk_count = len([c for c in portfolio if c.get("at_risk")])
 
@@ -1512,7 +1506,7 @@ class AgencySnapshotGenerator:
                 "drawer": {},
             }
         except (sqlite3.Error, ValueError, OSError) as e:
-            logger.warning(f"Client360Engine.generate() failed: {e}, using minimal data")
+            logger.warning(f"Client360Page10Engine.generate() failed: {e}, using minimal data")
             portfolio = []
             for client in normalized.clients[:25]:
                 tier = client.get("tier")
@@ -1534,42 +1528,11 @@ class AgencySnapshotGenerator:
             return {"portfolio": portfolio, "at_risk_count": at_risk_count, "drawer": {}}
 
     def _build_cash_ar_minimal(self, normalized) -> dict:
-        """Build cash AR using CashAREngine."""
+        """Build cash AR using CashARPage12Engine with normalized fallback."""
         try:
-            full_snapshot = self.cash_ar_engine.generate()
-            summary = full_snapshot.get("summary", {})
-            portfolio = full_snapshot.get("portfolio", [])
-
-            # Convert portfolio to debtors format
-            debtors = []
-            for client_data in portfolio:
-                debtors.append(
-                    {
-                        "client_id": client_data.get("client_id", ""),
-                        "client_name": client_data.get("name", "Unknown"),
-                        "currency": "AED",
-                        "total_valid_ar": client_data.get("valid_ar_total", 0),
-                        "severe_ar": client_data.get("overdue_total", 0),
-                        "aging_bucket": client_data.get("worst_bucket", "current"),
-                        "days_overdue_max": client_data.get("oldest_days_overdue", 0),
-                        "invoice_count": 0,
-                        "risk_score": 0.0,
-                    }
-                )
-
-            tiles = {
-                "valid_ar": {"AED": summary.get("valid_ar_total", 0)},
-                "severe_ar": {"AED": summary.get("overdue_total", 0)},
-                "badge": summary.get("risk_band", "GREEN"),
-                "summary": summary.get("summary_sentence", ""),
-            }
-
-            return {
-                "tiles": tiles,
-                "debtors": debtors,
-            }
+            return self._build_cash_ar()
         except (sqlite3.Error, ValueError, OSError) as e:
-            logger.warning(f"CashAREngine.generate() failed: {e}, using minimal data")
+            logger.warning(f"CashARPage12Engine.generate() failed: {e}, using minimal data")
             total_ar = sum(inv.get("amount", 0) for inv in normalized.invoices)
             severe_ar = sum(
                 inv.get("amount", 0)
@@ -1632,16 +1595,13 @@ class AgencySnapshotGenerator:
             return 0
 
     def _build_comms_commitments_minimal(self, normalized) -> dict:
-        """Build comms/commitments using CommsCommitmentsEngine."""
+        """Build comms/commitments using CommsCommitmentsPage11Engine with normalized fallback."""
         try:
-            full_snapshot = self.comms_engine.generate()
-            return {
-                "threads": full_snapshot.get("threads", []),
-                "commitments": full_snapshot.get("commitments", []),
-                "overdue_count": full_snapshot.get("overdue_count", 0),
-            }
+            return self._build_comms_commitments()
         except (sqlite3.Error, ValueError, OSError) as e:
-            logger.warning(f"CommsCommitmentsEngine.generate() failed: {e}, using minimal data")
+            logger.warning(
+                f"CommsCommitmentsPage11Engine.generate() failed: {e}, using minimal data"
+            )
             threads = []
             for comm in normalized.communications[:10]:
                 threads.append(
