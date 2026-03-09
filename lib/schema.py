@@ -17,7 +17,7 @@ from collections import OrderedDict
 # =============================================================================
 # Schema version — bump when you change this file
 # =============================================================================
-SCHEMA_VERSION = 16
+SCHEMA_VERSION = 17
 
 # =============================================================================
 # Table Definitions
@@ -977,6 +977,7 @@ TABLES["asana_attachments"] = {
 TABLES["gmail_participants"] = {
     "columns": [
         ("id", "INTEGER PRIMARY KEY AUTOINCREMENT"),
+        ("thread_id", "TEXT"),
         ("message_id", "TEXT NOT NULL"),
         ("role", "TEXT NOT NULL"),
         ("email", "TEXT NOT NULL"),
@@ -987,6 +988,7 @@ TABLES["gmail_participants"] = {
 TABLES["gmail_attachments"] = {
     "columns": [
         ("id", "INTEGER PRIMARY KEY AUTOINCREMENT"),
+        ("thread_id", "TEXT"),
         ("message_id", "TEXT NOT NULL"),
         ("filename", "TEXT NOT NULL"),
         ("mime_type", "TEXT"),
@@ -998,9 +1000,32 @@ TABLES["gmail_attachments"] = {
 TABLES["gmail_labels"] = {
     "columns": [
         ("id", "INTEGER PRIMARY KEY AUTOINCREMENT"),
+        ("thread_id", "TEXT"),
         ("message_id", "TEXT NOT NULL"),
         ("label_id", "TEXT NOT NULL"),
         ("label_name", "TEXT"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Collector expansion: Drive
+# ---------------------------------------------------------------------------
+TABLES["drive_files"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("source", "TEXT"),
+        ("source_id", "TEXT"),
+        ("name", "TEXT"),
+        ("mime_type", "TEXT"),
+        ("modified_time", "TEXT"),
+        ("created_time", "TEXT"),
+        ("owners", "TEXT"),
+        ("last_modifying_user", "TEXT"),
+        ("web_view_link", "TEXT"),
+        ("shared", "INTEGER DEFAULT 0"),
+        ("size", "INTEGER DEFAULT 0"),
+        ("created_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+        ("updated_at", "TEXT"),
     ],
 }
 
@@ -1033,16 +1058,22 @@ TABLES["calendar_recurrence_rules"] = {
 TABLES["chat_messages"] = {
     "columns": [
         ("id", "TEXT PRIMARY KEY"),
+        ("message_name", "TEXT"),
         ("space_id", "TEXT"),
+        ("space_name", "TEXT"),
         ("sender_id", "TEXT"),
         ("sender_name", "TEXT"),
+        ("sender_email", "TEXT"),
         ("text", "TEXT"),
+        ("create_time", "TEXT"),
+        ("raw_json", "TEXT"),
         ("thread_id", "TEXT"),
         ("thread_reply_count", "INTEGER DEFAULT 0"),
         ("reaction_count", "INTEGER DEFAULT 0"),
         ("has_attachment", "INTEGER DEFAULT 0"),
         ("attachment_count", "INTEGER DEFAULT 0"),
         ("created_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+        ("updated_at", "TEXT"),
     ],
 }
 

@@ -8,7 +8,6 @@ Note: DWD allowlist has `calendar` (full) authorized, not `calendar.readonly`.
 import json
 import logging
 import os
-import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -16,6 +15,7 @@ from typing import Any
 from lib.compat import UTC
 
 from .base import BaseCollector
+from .resilience import COLLECTOR_ERRORS
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,7 @@ class CalendarCollector(BaseCollector):
             creds = creds.with_subject(user)
             self._service = build("calendar", "v3", credentials=creds)
             return self._service
-        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+        except COLLECTOR_ERRORS as e:
             self.logger.error(f"Failed to get Calendar service: {e}")
             raise
 
@@ -127,13 +127,13 @@ class CalendarCollector(BaseCollector):
                         if len(all_events) >= max_results:
                             return {"events": all_events[:max_results]}
 
-                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+                except COLLECTOR_ERRORS as e:
                     self.logger.warning(f"Failed to fetch events from calendar {calendar_id}: {e}")
                     continue
 
             return {"events": all_events[:max_results]}
 
-        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+        except COLLECTOR_ERRORS as e:
             self.logger.error(f"Calendar collection failed: {e}")
             return {"events": []}
 
@@ -384,7 +384,7 @@ class CalendarCollector(BaseCollector):
                 from .resilience import retry_with_backoff
 
                 raw_data = retry_with_backoff(collect_with_retry, self.retry_config, self.logger)
-            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+            except COLLECTOR_ERRORS as e:
                 self.logger.error(f"Collect failed after retries: {e}")
                 self.circuit_breaker.record_failure()
                 self.store.update_sync_state(self.source_name, success=False, error=str(e))
@@ -398,7 +398,7 @@ class CalendarCollector(BaseCollector):
             # Step 2: Transform to canonical format
             try:
                 transformed = self.transform(raw_data)
-            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+            except COLLECTOR_ERRORS as e:
                 self.logger.warning(f"Transform failed: {e}. Attempting partial success.")
                 transformed = []
                 self.metrics["partial_failures"] += 1
@@ -426,7 +426,7 @@ class CalendarCollector(BaseCollector):
                         attendees_stored += self.store.insert_many(
                             "calendar_attendees", attendee_rows
                         )
-                    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+                    except COLLECTOR_ERRORS as e:
                         self.logger.warning(f"Failed to store attendees for {event_id}: {e}")
 
                 # Store recurrence rules
@@ -437,7 +437,7 @@ class CalendarCollector(BaseCollector):
                         recurrence_stored += self.store.insert_many(
                             "calendar_recurrence_rules", recurrence_rows
                         )
-                    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+                    except COLLECTOR_ERRORS as e:
                         self.logger.warning(f"Failed to store recurrence for {event_id}: {e}")
 
             # Step 5: Update sync state and record success
@@ -459,7 +459,7 @@ class CalendarCollector(BaseCollector):
                 "timestamp": self.last_sync.isoformat(),
             }
 
-        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+        except COLLECTOR_ERRORS as e:
             self.logger.error(f"Sync failed for {self.source_name}: {e}")
             self.circuit_breaker.record_failure()
             self.store.update_sync_state(self.source_name, success=False, error=str(e))

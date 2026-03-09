@@ -1556,7 +1556,7 @@
     },
     {
       "name": "resilience",
-      "source": "collectors/resilience.py"
+      "source": "orchestrator.py"
     },
     {
       "name": "tasks",

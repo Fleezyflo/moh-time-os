@@ -1,33 +1,96 @@
 """
-Tasks Collector - Pulls tasks from Google Tasks via gog CLI.
-REPLACES the broken Asana collector - uses real working commands.
+Tasks Collector - Pulls tasks from Google Tasks via Service Account API.
+Uses direct Google API with service account for domain-wide delegation.
 """
 
 import json
-import sqlite3
+import logging
+import os
+import socket
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from .base import BaseCollector
+from .resilience import COLLECTOR_ERRORS
+
+logger = logging.getLogger(__name__)
+
+# Service account configuration
+SA_FILE = Path.home() / "Library/Application Support/gogcli/sa-bW9saGFtQGhybW55LmNv.json"
+SCOPES = ["https://www.googleapis.com/auth/tasks.readonly"]
+DEFAULT_USER = os.environ.get("MOH_ADMIN_EMAIL", "molham@hrmny.co")
 
 
 class TasksCollector(BaseCollector):
-    """Collects tasks from Google Tasks."""
+    """Collects tasks from Google Tasks using Service Account."""
 
     source_name = "tasks"
     target_table = "tasks"
 
-    def collect(self) -> dict[str, Any]:
-        """Fetch tasks from Google Tasks using gog CLI."""
+    def __init__(self, config: dict, store=None):
+        super().__init__(config, store)
+        self._service = None
+
+    def _set_ipv4_only(self):
+        """Force IPv4 to avoid IPv6 timeout issues."""
+        original_getaddrinfo = socket.getaddrinfo
+
+        def getaddrinfo_ipv4(host, port, family=0, type=0, proto=0, flags=0):
+            return original_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
+
+        socket.getaddrinfo = getaddrinfo_ipv4
+
+    def _get_service(self, user: str = DEFAULT_USER):
+        """Get Tasks API service using service account."""
+        if self._service:
+            return self._service
+
         try:
+            from google.oauth2 import service_account
+            from googleapiclient.discovery import build
+
+            creds = service_account.Credentials.from_service_account_file(
+                str(SA_FILE), scopes=SCOPES
+            )
+            creds = creds.with_subject(user)
+            self._service = build("tasks", "v1", credentials=creds)
+            return self._service
+        except COLLECTOR_ERRORS as e:
+            self.logger.error(f"Failed to get Tasks service: {e}")
+            raise
+
+    def collect(self) -> dict[str, Any]:
+        """Fetch tasks from Google Tasks using Service Account API."""
+        self._set_ipv4_only()
+
+        try:
+            service = self._get_service()
             all_tasks = []
+            task_lists = []
 
-            # Get all task lists - command as list, no shell interpretation
-            output = self._run_command(["gog", "tasks", "lists", "--json"])
-            lists_data = self._parse_json_output(output) if output.strip() else {}
-            task_lists = lists_data.get("tasklists", [])
+            # Get all task lists with pagination
+            page_token = None
+            while True:
+                result = (
+                    service.tasklists()
+                    .list(
+                        maxResults=100,
+                        pageToken=page_token,
+                    )
+                    .execute()
+                )
 
-            # Get tasks from each list
+                items = result.get("items", [])
+                task_lists.extend(items)
+
+                page_token = result.get("nextPageToken")
+                if not page_token:
+                    break
+
+            self.logger.info(f"Found {len(task_lists)} task lists")
+
+            # Get tasks from each list with pagination
             for tl in task_lists:
                 list_id = tl.get("id")
                 list_name = tl.get("title", "Unknown")
@@ -35,24 +98,37 @@ class TasksCollector(BaseCollector):
                 if not list_id:
                     continue
 
-                # Validate list_id format (alphanumeric only) to prevent injection
-                if not list_id.replace("-", "").replace("_", "").isalnum():
-                    self.logger.warning(f"Skipping invalid list_id format: {list_id}")
-                    continue
+                try:
+                    page_token = None
+                    while True:
+                        result = (
+                            service.tasks()
+                            .list(
+                                tasklist=list_id,
+                                maxResults=100,
+                                showCompleted=False,
+                                showHidden=False,
+                                pageToken=page_token,
+                            )
+                            .execute()
+                        )
 
-                # Command as list - list_id is a single argument, not shell-interpreted
-                output = self._run_command(["gog", "tasks", "list", list_id, "--json"])
-                tasks_data = self._parse_json_output(output) if output.strip() else {}
-                tasks = tasks_data.get("tasks", [])
+                        tasks = result.get("items", [])
+                        for task in tasks:
+                            task["_list_id"] = list_id
+                            task["_list_name"] = list_name
+                            all_tasks.append(task)
 
-                for task in tasks:
-                    task["_list_id"] = list_id
-                    task["_list_name"] = list_name
-                    all_tasks.append(task)
+                        page_token = result.get("nextPageToken")
+                        if not page_token:
+                            break
+
+                except COLLECTOR_ERRORS as e:
+                    self.logger.warning(f"Failed to fetch tasks from list {list_name}: {e}")
 
             return {"tasks": all_tasks, "lists": task_lists}
 
-        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+        except COLLECTOR_ERRORS as e:
             self.logger.exception(f"Tasks collection failed: {e}")
             raise  # Propagate error to sync() which handles it properly
 

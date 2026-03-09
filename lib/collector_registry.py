@@ -2,12 +2,11 @@
 Collector Registry — Single Source of Truth
 
 This module defines THE ONLY list of enabled collectors.
-Both scheduled_collect.py and CollectorOrchestrator must read from here.
+CollectorOrchestrator reads from here.
 
 DO NOT define collectors anywhere else.
 """
 
-import fcntl
 import logging
 import os
 from dataclasses import dataclass, field
@@ -24,10 +23,16 @@ LOCK_FILE = paths.data_dir() / ".collector.lock"
 
 class CollectorLock:
     """
-    Prevents concurrent collector runs with stale lock detection.
+    PID-file lock that self-heals without manual intervention.
 
-    Stores PID + timestamp on acquire. On contention, checks if the
-    holding process is still alive. Breaks stale locks after TTL.
+    How it works:
+    - Write our PID + timestamp to the lock file
+    - On contention: check if holding PID is alive. If dead, take over.
+    - TTL safety net: if lock is older than 15 min, break it regardless.
+    - Cleanup: always delete lock file on exit (including crashes via atexit).
+
+    No fcntl.flock — that approach breaks when files are rm'd (inode mismatch)
+    and doesn't survive process crashes cleanly.
 
     Usage:
         with CollectorLock() as lock:
@@ -37,11 +42,10 @@ class CollectorLock:
             # do collection
     """
 
-    TTL_SECONDS = 1800  # 30 minutes
+    TTL_SECONDS = 900  # 15 minutes — matches cron interval
 
     def __init__(self):
         self.lock_file = LOCK_FILE
-        self.lock_fd = None
         self.acquired = False
 
     def _is_pid_alive(self, pid: int) -> bool:
@@ -67,66 +71,68 @@ class CollectorLock:
             pass
         return None, None
 
-    def _break_stale_lock(self) -> bool:
-        """Break a stale lock if the holding process is dead or TTL expired."""
+    def _can_acquire(self) -> bool:
+        """Check if we can acquire the lock. Self-heals stale locks."""
         import time
 
         pid, timestamp = self._read_lock_info()
-        if pid is None:
-            return True  # No valid lock info, safe to acquire
 
-        # Check if PID is alive
-        if not self._is_pid_alive(pid):
-            logger.warning("Breaking stale lock: PID %d is no longer alive", pid)
+        # No lock file or unreadable — acquire
+        if pid is None:
             return True
 
-        # Check TTL
+        # Holding process is dead — acquire
+        if not self._is_pid_alive(pid):
+            logger.info("Lock held by dead PID %d, taking over", pid)
+            return True
+
+        # TTL expired — acquire (safety net for zombie processes)
         if timestamp is not None:
             age = time.time() - timestamp
             if age > self.TTL_SECONDS:
                 logger.warning(
-                    "Breaking stale lock: held by PID %d for %.0fs (TTL=%ds)",
+                    "Lock held by PID %d for %.0fs (TTL=%ds), forcing takeover",
                     pid,
                     age,
                     self.TTL_SECONDS,
                 )
                 return True
 
-        return False  # Lock is valid
+        # Lock is valid — someone else is running
+        return False
 
-    def __enter__(self):
+    def _write_lock(self) -> None:
+        """Write our PID and timestamp to the lock file."""
+        import atexit
         import time
 
         self.lock_file.parent.mkdir(parents=True, exist_ok=True)
-        self.lock_fd = open(self.lock_file, "w")
+        self.lock_file.write_text(f"{os.getpid()}\n{time.time()}\n")
+        # Register cleanup so lock is released even on unhandled exceptions
+        atexit.register(self._cleanup)
+
+    def _cleanup(self) -> None:
+        """Remove lock file if we own it."""
         try:
-            fcntl.flock(self.lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            self.lock_fd.write(f"{os.getpid()}\n{time.time()}\n")
-            self.lock_fd.flush()
+            pid, _ = self._read_lock_info()
+            if pid == os.getpid():
+                self.lock_file.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+    def __enter__(self):
+        if self._can_acquire():
+            self._write_lock()
             self.acquired = True
-        except BlockingIOError:
-            # Lock contention — check if stale
-            self.lock_fd.close()
-            if self._break_stale_lock():
-                # Try again after breaking stale lock
-                self.lock_fd = open(self.lock_file, "w")
-                try:
-                    fcntl.flock(self.lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                    self.lock_fd.write(f"{os.getpid()}\n{time.time()}\n")
-                    self.lock_fd.flush()
-                    self.acquired = True
-                except BlockingIOError:
-                    self.acquired = False
-            else:
-                self.lock_fd = open(self.lock_file)
-                self.acquired = False
+        else:
+            pid, _ = self._read_lock_info()
+            logger.warning("Lock held by PID %d, skipping", pid)
+            self.acquired = False
         return self
 
     def __exit__(self, *args):
-        if self.lock_fd:
-            if self.acquired:
-                fcntl.flock(self.lock_fd, fcntl.LOCK_UN)
-            self.lock_fd.close()
+        if self.acquired:
+            self._cleanup()
 
 
 # ============================================================================
