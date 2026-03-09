@@ -9,6 +9,7 @@ DO NOT define collectors anywhere else.
 
 import logging
 import os
+import threading
 import time
 from dataclasses import dataclass, field
 
@@ -26,14 +27,17 @@ class CollectorLock:
     """
     Self-healing lock that NEVER requires manual intervention.
 
-    Two-layer protection:
+    Three-layer protection:
     1. PID check: if the holder process is dead, break immediately.
-       os.kill(pid, 0) raises ProcessLookupError when PID doesn't exist.
-    2. TTL fallback: if PID was recycled by macOS (rare — os.kill returns
-       True for an unrelated process), the 5-minute TTL breaks the lock.
+    2. Heartbeat: while holding the lock, a daemon thread touches the
+       lock file every 20s, keeping its mtime fresh.
+    3. TTL (60s): if the lock file hasn't been touched in 60 seconds,
+       the holder is dead (heartbeat stopped). Break immediately.
 
-    A full sync cycle takes 1-3 minutes. TTL of 300s guarantees self-heal
-    even in the worst case (PID recycling + long sync).
+    Because the heartbeat keeps the mtime fresh during a legitimate sync
+    (even if it takes minutes), the TTL can be aggressive (60s). If the
+    process dies, heartbeat stops, lock goes stale in <=60s. PID recycling
+    is irrelevant — the stale mtime proves the holder is dead.
 
     Usage:
         with CollectorLock() as lock:
@@ -43,11 +47,14 @@ class CollectorLock:
             # do collection
     """
 
-    TTL_SECONDS = 300  # 5 minutes — sync never takes this long
+    TTL_SECONDS = 60  # 1 minute — heartbeat keeps live locks fresh
+    HEARTBEAT_INTERVAL = 20  # Touch lock file every 20 seconds
 
     def __init__(self):
         self.lock_file = LOCK_FILE
         self.acquired = False
+        self._stop_heartbeat = threading.Event()
+        self._heartbeat_thread: threading.Thread | None = None
 
     def _lock_age(self) -> float | None:
         """Return age of lock file in seconds, or None if no lock."""
@@ -72,16 +79,16 @@ class CollectorLock:
         if pid is None:
             return False
         if pid == os.getpid():
-            return True  # We own it
+            return True
         try:
             os.kill(pid, 0)
-            return True  # Process exists (may be recycled — TTL is backup)
+            return True
         except ProcessLookupError:
-            return False  # Process is definitely dead
+            return False
         except PermissionError:
-            return True  # Process exists, different user
+            return True
         except OSError:
-            return False  # Other OS error — treat as dead
+            return False
 
     def _can_acquire(self) -> bool:
         """Check if we can acquire the lock. Self-heals dead holders."""
@@ -91,10 +98,10 @@ class CollectorLock:
         if age is None:
             return True
 
-        # Lock is stale (older than TTL) — force takeover regardless
+        # Lock is stale (older than TTL) — heartbeat stopped = holder dead
         if age > self.TTL_SECONDS:
             logger.info(
-                "Lock file is %.0fs old (TTL=%ds), forcing takeover",
+                "Lock file is %.0fs old (TTL=%ds) -- holder dead, taking over",
                 age,
                 self.TTL_SECONDS,
             )
@@ -116,6 +123,25 @@ class CollectorLock:
         self.lock_file.write_text(f"{os.getpid()}\n")
         atexit.register(self._cleanup)
 
+    def _start_heartbeat(self) -> None:
+        """Start daemon thread that touches lock file every HEARTBEAT_INTERVAL."""
+
+        def _beat():
+            while not self._stop_heartbeat.wait(self.HEARTBEAT_INTERVAL):
+                try:
+                    self.lock_file.write_text(f"{os.getpid()}\n")
+                except OSError:
+                    break
+
+        self._heartbeat_thread = threading.Thread(target=_beat, daemon=True)
+        self._heartbeat_thread.start()
+
+    def _stop_heartbeat_thread(self) -> None:
+        """Signal heartbeat to stop and wait for it."""
+        self._stop_heartbeat.set()
+        if self._heartbeat_thread is not None:
+            self._heartbeat_thread.join(timeout=5)
+
     def _cleanup(self) -> None:
         """Remove lock file if we own it."""
         try:
@@ -128,6 +154,7 @@ class CollectorLock:
     def __enter__(self):
         if self._can_acquire():
             self._write_lock()
+            self._start_heartbeat()
             self.acquired = True
         else:
             age = self._lock_age()
@@ -137,6 +164,7 @@ class CollectorLock:
 
     def __exit__(self, *args):
         if self.acquired:
+            self._stop_heartbeat_thread()
             self._cleanup()
 
 
