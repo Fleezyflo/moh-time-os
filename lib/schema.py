@@ -17,7 +17,7 @@ from collections import OrderedDict
 # =============================================================================
 # Schema version — bump when you change this file
 # =============================================================================
-SCHEMA_VERSION = 17
+SCHEMA_VERSION = 18
 
 # =============================================================================
 # Table Definitions
@@ -1030,6 +1030,27 @@ TABLES["drive_files"] = {
 }
 
 # ---------------------------------------------------------------------------
+# Collector expansion: Contacts
+# ---------------------------------------------------------------------------
+TABLES["contacts"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("source", "TEXT"),
+        ("source_id", "TEXT"),
+        ("name", "TEXT"),
+        ("first_name", "TEXT"),
+        ("last_name", "TEXT"),
+        ("primary_email", "TEXT"),
+        ("emails", "TEXT"),
+        ("phones", "TEXT"),
+        ("organization", "TEXT"),
+        ("title", "TEXT"),
+        ("created_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+        ("updated_at", "TEXT"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
 # Collector expansion: Calendar
 # ---------------------------------------------------------------------------
 TABLES["calendar_attendees"] = {
@@ -1456,6 +1477,7 @@ INDEXES: list[tuple[str, str, str, str | None]] = [
     ("idx_chat_space_members_space", "chat_space_members", "space_id", None),
     ("idx_xero_line_items_invoice", "xero_line_items", "invoice_id", None),
     ("idx_xero_contacts_name", "xero_contacts", "name", None),
+    ("idx_contacts_email", "contacts", "primary_email", None),
     ("idx_xero_credit_notes_contact", "xero_credit_notes", "contact_id", None),
     ("idx_xero_bank_transactions_contact", "xero_bank_transactions", "contact_id", None),
     # signal_state
