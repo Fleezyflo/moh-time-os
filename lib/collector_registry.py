@@ -2,14 +2,15 @@
 Collector Registry — Single Source of Truth
 
 This module defines THE ONLY list of enabled collectors.
-Both scheduled_collect.py and CollectorOrchestrator must read from here.
+CollectorOrchestrator reads from here.
 
 DO NOT define collectors anywhere else.
 """
 
-import fcntl
 import logging
 import os
+import threading
+import time
 from dataclasses import dataclass, field
 
 from lib import paths
@@ -24,10 +25,19 @@ LOCK_FILE = paths.data_dir() / ".collector.lock"
 
 class CollectorLock:
     """
-    Prevents concurrent collector runs with stale lock detection.
+    Self-healing lock that NEVER requires manual intervention.
 
-    Stores PID + timestamp on acquire. On contention, checks if the
-    holding process is still alive. Breaks stale locks after TTL.
+    Three-layer protection:
+    1. PID check: if the holder process is dead, break immediately.
+    2. Heartbeat: while holding the lock, a daemon thread touches the
+       lock file every 20s, keeping its mtime fresh.
+    3. TTL (60s): if the lock file hasn't been touched in 60 seconds,
+       the holder is dead (heartbeat stopped). Break immediately.
+
+    Because the heartbeat keeps the mtime fresh during a legitimate sync
+    (even if it takes minutes), the TTL can be aggressive (60s). If the
+    process dies, heartbeat stops, lock goes stale in <=60s. PID recycling
+    is irrelevant — the stale mtime proves the holder is dead.
 
     Usage:
         with CollectorLock() as lock:
@@ -37,96 +47,125 @@ class CollectorLock:
             # do collection
     """
 
-    TTL_SECONDS = 1800  # 30 minutes
+    TTL_SECONDS = 60  # 1 minute — heartbeat keeps live locks fresh
+    HEARTBEAT_INTERVAL = 20  # Touch lock file every 20 seconds
 
     def __init__(self):
         self.lock_file = LOCK_FILE
-        self.lock_fd = None
         self.acquired = False
+        self._stop_heartbeat = threading.Event()
+        self._heartbeat_thread: threading.Thread | None = None
 
-    def _is_pid_alive(self, pid: int) -> bool:
-        """Check if a process with the given PID is alive."""
+    def _lock_age(self) -> float | None:
+        """Return age of lock file in seconds, or None if no lock."""
+        try:
+            if self.lock_file.exists():
+                return time.time() - self.lock_file.stat().st_mtime
+        except OSError:
+            pass
+        return None
+
+    def _holder_pid(self) -> int | None:
+        """Read PID from lock file, or None if unreadable."""
+        try:
+            content = self.lock_file.read_text().strip()
+            return int(content)
+        except (OSError, ValueError):
+            return None
+
+    def _holder_alive(self) -> bool:
+        """Check if the process that wrote the lock still exists."""
+        pid = self._holder_pid()
+        if pid is None:
+            return False
+        if pid == os.getpid():
+            return True
         try:
             os.kill(pid, 0)
             return True
         except ProcessLookupError:
             return False
         except PermissionError:
-            return True  # Process exists but we can't signal it
+            return True
+        except OSError:
+            return False
 
-    def _read_lock_info(self) -> tuple[int | None, float | None]:
-        """Read PID and timestamp from lock file."""
-        try:
-            if self.lock_file.exists():
-                content = self.lock_file.read_text().strip()
-                parts = content.split("\n")
-                pid = int(parts[0]) if parts else None
-                timestamp = float(parts[1]) if len(parts) > 1 else None
-                return pid, timestamp
-        except (ValueError, OSError):
-            pass
-        return None, None
+    def _can_acquire(self) -> bool:
+        """Check if we can acquire the lock. Self-heals dead holders."""
+        age = self._lock_age()
 
-    def _break_stale_lock(self) -> bool:
-        """Break a stale lock if the holding process is dead or TTL expired."""
-        import time
-
-        pid, timestamp = self._read_lock_info()
-        if pid is None:
-            return True  # No valid lock info, safe to acquire
-
-        # Check if PID is alive
-        if not self._is_pid_alive(pid):
-            logger.warning("Breaking stale lock: PID %d is no longer alive", pid)
+        # No lock file — acquire
+        if age is None:
             return True
 
-        # Check TTL
-        if timestamp is not None:
-            age = time.time() - timestamp
-            if age > self.TTL_SECONDS:
-                logger.warning(
-                    "Breaking stale lock: held by PID %d for %.0fs (TTL=%ds)",
-                    pid,
-                    age,
-                    self.TTL_SECONDS,
-                )
-                return True
+        # Lock is stale (older than TTL) — heartbeat stopped = holder dead
+        if age > self.TTL_SECONDS:
+            logger.info(
+                "Lock file is %.0fs old (TTL=%ds) -- holder dead, taking over",
+                age,
+                self.TTL_SECONDS,
+            )
+            return True
 
-        return False  # Lock is valid
+        # Lock is fresh — but is the holder actually alive?
+        if not self._holder_alive():
+            logger.info("Lock holder is dead (PID gone), taking over")
+            return True
 
-    def __enter__(self):
-        import time
+        # Lock is fresh AND holder appears alive — respect it
+        return False
+
+    def _write_lock(self) -> None:
+        """Write our PID to the lock file."""
+        import atexit
 
         self.lock_file.parent.mkdir(parents=True, exist_ok=True)
-        self.lock_fd = open(self.lock_file, "w")
-        try:
-            fcntl.flock(self.lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            self.lock_fd.write(f"{os.getpid()}\n{time.time()}\n")
-            self.lock_fd.flush()
-            self.acquired = True
-        except BlockingIOError:
-            # Lock contention — check if stale
-            self.lock_fd.close()
-            if self._break_stale_lock():
-                # Try again after breaking stale lock
-                self.lock_fd = open(self.lock_file, "w")
+        self.lock_file.write_text(f"{os.getpid()}\n")
+        atexit.register(self._cleanup)
+
+    def _start_heartbeat(self) -> None:
+        """Start daemon thread that touches lock file every HEARTBEAT_INTERVAL."""
+
+        def _beat():
+            while not self._stop_heartbeat.wait(self.HEARTBEAT_INTERVAL):
                 try:
-                    fcntl.flock(self.lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                    self.lock_fd.write(f"{os.getpid()}\n{time.time()}\n")
-                    self.lock_fd.flush()
-                    self.acquired = True
-                except BlockingIOError:
-                    self.acquired = False
-            else:
-                self.lock_fd = open(self.lock_file)
-                self.acquired = False
+                    self.lock_file.write_text(f"{os.getpid()}\n")
+                except OSError:
+                    break
+
+        self._heartbeat_thread = threading.Thread(target=_beat, daemon=True)
+        self._heartbeat_thread.start()
+
+    def _stop_heartbeat_thread(self) -> None:
+        """Signal heartbeat to stop and wait for it."""
+        self._stop_heartbeat.set()
+        if self._heartbeat_thread is not None:
+            self._heartbeat_thread.join(timeout=5)
+
+    def _cleanup(self) -> None:
+        """Remove lock file if we own it."""
+        try:
+            content = self.lock_file.read_text().strip() if self.lock_file.exists() else ""
+            if content == str(os.getpid()):
+                self.lock_file.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+    def __enter__(self):
+        if self._can_acquire():
+            self._write_lock()
+            self._start_heartbeat()
+            self.acquired = True
+        else:
+            age = self._lock_age()
+            logger.warning("Lock file exists (age=%.0fs), skipping", age or 0)
+            self.acquired = False
         return self
 
     def __exit__(self, *args):
-        if self.lock_fd:
-            if self.acquired:
-                fcntl.flock(self.lock_fd, fcntl.LOCK_UN)
-            self.lock_fd.close()
+        if self.acquired:
+            self._stop_heartbeat_thread()
+            self._cleanup()
 
 
 # ============================================================================

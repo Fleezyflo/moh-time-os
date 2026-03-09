@@ -8,6 +8,7 @@ Provides:
 - retry_with_backoff: Decorator/function for exponential backoff with jitter
 """
 
+import json
 import logging
 import random
 import sqlite3
@@ -19,6 +20,46 @@ from typing import TypeVar
 T = TypeVar("T")
 
 logger = logging.getLogger(__name__)
+
+# --------------------------------------------------------------------------- #
+# Canonical exception tuple for ALL collector error handling.                   #
+# Every except clause in lib/collectors/ MUST use this tuple (or Exception     #
+# only in top-level main() / CLI entry points).                                #
+#                                                                              #
+# Why: Google API, Xero, Asana all throw their own exception types.            #
+# The original code only caught (sqlite3.Error, ValueError, OSError, KeyError) #
+# which let HttpError, RefreshError, ConnectionError, etc. crash through.      #
+# --------------------------------------------------------------------------- #
+# Build tuple dynamically so missing packages don't break import
+_base_errors: tuple[type[BaseException], ...] = (
+    sqlite3.Error,
+    ValueError,
+    OSError,
+    KeyError,
+    ConnectionError,
+    TimeoutError,
+    json.JSONDecodeError,
+    RuntimeError,
+    AttributeError,
+    TypeError,
+    ImportError,
+)
+
+_optional: list[type[BaseException]] = []
+try:
+    from googleapiclient.errors import HttpError
+
+    _optional.append(HttpError)
+except ImportError:
+    pass
+
+try:
+    from google.auth.exceptions import RefreshError, TransportError
+
+    _optional.extend([RefreshError, TransportError])
+except ImportError:
+    pass
+COLLECTOR_ERRORS: tuple[type[BaseException], ...] = _base_errors + tuple(_optional)
 
 
 @dataclass
@@ -170,12 +211,12 @@ def retry_with_backoff(
     Raises:
         Last exception if all retries exhausted
     """
-    last_error: Exception | None = None
+    last_error: BaseException | None = None
 
     for attempt in range(config.max_retries + 1):
         try:
             return func()
-        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+        except COLLECTOR_ERRORS as e:
             last_error = e
 
             if attempt < config.max_retries:

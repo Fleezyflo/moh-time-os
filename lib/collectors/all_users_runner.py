@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from lib import paths
+from lib.collectors.resilience import COLLECTOR_ERRORS
 from lib.compat import UTC
 
 logging.basicConfig(
@@ -314,7 +315,7 @@ def collect_gmail_for_user(
         result["ok"] = True
         result["count"] = total_count
 
-    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+    except COLLECTOR_ERRORS as e:
         error_str = str(e)
         result["error"] = error_str
         debug_print(f"ERROR: {error_str}")
@@ -448,7 +449,7 @@ def collect_calendar_for_user(
                     page_token = next_page_token
                     debug_print("nextPageToken present for events, continuing...")
 
-                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+                except COLLECTOR_ERRORS as e:
                     # Some calendars may not be accessible; log and continue
                     debug_print(f"ERROR fetching events from {cal_id[:30]}...: {e}")
                     break
@@ -463,7 +464,7 @@ def collect_calendar_for_user(
         result["ok"] = True
         result["count"] = total_events
 
-    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+    except COLLECTOR_ERRORS as e:
         error_str = str(e)
         result["error"] = error_str
         debug_print(f"ERROR: {error_str}")
@@ -614,7 +615,7 @@ def collect_chat_for_user(
                         break
                     page_token = next_page_token
 
-                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+                except COLLECTOR_ERRORS as e:
                     debug_print(f"ERROR fetching messages from {space_name[:20]}...: {e}")
                     break
 
@@ -625,7 +626,7 @@ def collect_chat_for_user(
         result["ok"] = True
         result["count"] = total_messages
 
-    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+    except COLLECTOR_ERRORS as e:
         error_str = str(e)
         result["error"] = error_str
         debug_print(f"ERROR: {error_str}")
@@ -732,7 +733,7 @@ def collect_drive_for_user(
         result["docs_count"] = len(doc_ids)
         result["doc_ids"] = doc_ids[:limit]  # Limit doc IDs for docs extraction
 
-    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+    except COLLECTOR_ERRORS as e:
         error_str = str(e)
         result["error"] = error_str
         debug_print(f"ERROR: {error_str}")
@@ -787,7 +788,7 @@ def collect_docs_for_user(
 
                 debug_print(f"STATUS: 200 OK, exported doc {doc_id[:15]}... ({len(text)} chars)")
 
-            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+            except COLLECTOR_ERRORS as e:
                 debug_print(f"ERROR exporting doc {doc_id[:15]}...: {e}")
                 continue
 
@@ -795,7 +796,7 @@ def collect_docs_for_user(
         result["count"] = extracted_count
         result["sample_text"] = sample_text
 
-    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+    except COLLECTOR_ERRORS as e:
         error_str = str(e)
         result["error"] = error_str
         debug_print(f"ERROR: {error_str}")
@@ -850,7 +851,7 @@ def micro_sync_calendar(user_email: str, since: str, until: str, db_path: Path) 
 
     try:
         return collector.sync()
-    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+    except COLLECTOR_ERRORS as e:
         logger.error("micro_sync_calendar failed for %s: %s", user_email, e)
         return {"source": "calendar", "success": False, "error": str(e)}
 
@@ -889,7 +890,7 @@ def micro_sync_gmail(user_email: str, since: str, until: str, db_path: Path) -> 
 
     try:
         return collector.sync()
-    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+    except COLLECTOR_ERRORS as e:
         logger.error("micro_sync_gmail failed for %s: %s", user_email, e)
         return {"source": "gmail", "success": False, "error": str(e)}
 

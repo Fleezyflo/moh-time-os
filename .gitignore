@@ -104,3 +104,8 @@ lib/collectors/debug_*.py
 /task*.md
 lib/collectors/test_*.py
 .db_watch.log
+':memory:'
+cron.md
+loga.md
+*-diagnostic.md
+codebase-hygiene-report.md

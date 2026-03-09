@@ -21,6 +21,12 @@ def asana_get(endpoint: str, params: dict | None = None) -> dict[str, Any]:
     pat = load_pat()
 
     url = f"{ASANA_API_BASE}/{endpoint}"
+    if params is None:
+        params = {}
+    # Always set a limit to avoid "result is too large" errors
+    if "limit" not in params:
+        params["limit"] = "100"
+
     resp = requests.get(
         url,
         params=params,
@@ -37,6 +43,25 @@ def asana_get(endpoint: str, params: dict | None = None) -> dict[str, Any]:
     return resp.json()
 
 
+def asana_get_all(endpoint: str, params: dict | None = None) -> list[dict]:
+    """Make paginated GET request to Asana API, returning all results."""
+    all_data: list[dict] = []
+    if params is None:
+        params = {}
+
+    while True:
+        result = asana_get(endpoint, params=dict(params))
+        all_data.extend(result.get("data", []))
+
+        next_page = result.get("next_page")
+        if not next_page or not next_page.get("offset"):
+            break
+
+        params["offset"] = next_page["offset"]
+
+    return all_data
+
+
 def list_workspaces() -> list[dict]:
     """List all workspaces."""
     data = asana_get("workspaces")
@@ -46,12 +71,11 @@ def list_workspaces() -> list[dict]:
 def list_projects(
     workspace_gid: str, *, archived: bool = False, opt_fields: str = None
 ) -> list[dict]:
-    """List projects in a workspace."""
+    """List projects in a workspace (paginated)."""
     params = {"workspace": workspace_gid, "archived": str(archived).lower()}
     if opt_fields:
         params["opt_fields"] = opt_fields
-    data = asana_get("projects", params=params)
-    return data.get("data", [])
+    return asana_get_all("projects", params=params)
 
 
 def get_project(project_gid: str) -> dict:
@@ -63,7 +87,7 @@ def get_project(project_gid: str) -> dict:
 def list_tasks_in_project(
     project_gid: str, *, completed: bool | None = None, opt_fields: str = None
 ) -> list[dict]:
-    """List tasks in a project."""
+    """List tasks in a project (paginated)."""
     params = {}
     if opt_fields:
         params["opt_fields"] = opt_fields
@@ -74,8 +98,7 @@ def list_tasks_in_project(
     if completed is not None:
         params["completed_since"] = "now" if not completed else None
 
-    data = asana_get(f"projects/{project_gid}/tasks", params=params)
-    return data.get("data", [])
+    return asana_get_all(f"projects/{project_gid}/tasks", params=params)
 
 
 def list_sections(project_gid: str) -> list[dict]:

@@ -11,12 +11,19 @@ Features:
 import hashlib
 import json
 import re
-import sqlite3
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
+
+# Import COLLECTOR_ERRORS for use in validate_cassettes
+try:
+    from .resilience import COLLECTOR_ERRORS
+except ImportError:
+    import sqlite3
+
+    COLLECTOR_ERRORS = (sqlite3.Error, ValueError, OSError, KeyError)
 
 CASSETTES_DIR = Path(__file__).parent.parent.parent / "tests" / "cassettes"
 
@@ -254,7 +261,7 @@ def validate_cassettes() -> list[str]:
             if expired_count > 0:
                 issues.append(f"{path.name}: {expired_count} expired entries")
 
-        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+        except COLLECTOR_ERRORS as e:
             issues.append(f"{path.name}: {e}")
 
     return issues

@@ -114,7 +114,7 @@ class TestOrchestratorUsesClassCollectors:
         content = orch_path.read_text()
 
         assert "CollectorLock" in content, "Orchestrator must use CollectorLock"
-        assert "with CollectorLock()" in content, "Orchestrator must acquire lock"
+        assert "with CollectorLock(" in content, "Orchestrator must acquire lock"
 
 
 class TestAPIUsesV29:

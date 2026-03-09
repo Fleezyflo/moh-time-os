@@ -7,12 +7,12 @@ import json
 import logging
 import os
 import socket
-import sqlite3
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 from .base import BaseCollector
+from .resilience import COLLECTOR_ERRORS
 
 logger = logging.getLogger(__name__)
 
@@ -56,7 +56,7 @@ class DriveCollector(BaseCollector):
             creds = creds.with_subject(user)
             self._service = build("drive", "v3", credentials=creds)
             return self._service
-        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+        except COLLECTOR_ERRORS as e:
             self.logger.error(f"Failed to get Drive service: {e}")
             raise
 
@@ -110,7 +110,7 @@ class DriveCollector(BaseCollector):
 
             return {"files": all_files}
 
-        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+        except COLLECTOR_ERRORS as e:
             self.logger.error(f"Drive collection failed: {e}")
             return {"files": []}
 

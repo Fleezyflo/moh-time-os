@@ -145,6 +145,42 @@ def converge(conn: sqlite3.Connection) -> dict:
     existing_objects = _get_existing_tables(conn)
     existing_indexes = _get_existing_indexes(conn)
 
+    # ── Phase 0: Drop tables with PK type mismatch ──────────
+    # If a table was created with the wrong PK type (e.g., INTEGER vs TEXT),
+    # ALTER TABLE can't fix it. Drop and let Phase 1 recreate it.
+    results["tables_rebuilt"] = []
+    for table_name, table_def in schema.TABLES.items():
+        if existing_objects.get(table_name) != "table":
+            continue
+        # Find the declared PK column and its expected type prefix
+        declared_pk_type = None
+        for _col_name, col_ddl in table_def["columns"]:
+            if "PRIMARY KEY" in col_ddl.upper():
+                declared_pk_type = col_ddl.split()[0].upper()  # TEXT or INTEGER
+                break
+        if declared_pk_type is None:
+            continue
+        # Check actual PK type in the existing table
+        try:
+            cursor = conn.execute(f"PRAGMA table_info([{table_name}])")
+            for row in cursor.fetchall():
+                # row: (cid, name, type, notnull, dflt_value, pk)
+                if row[5]:  # pk flag is non-zero
+                    actual_type = (row[2] or "").upper()
+                    if actual_type != declared_pk_type:
+                        logger.info(
+                            "schema_engine: rebuilding %s (PK type %s != declared %s)",
+                            table_name,
+                            actual_type,
+                            declared_pk_type,
+                        )
+                        conn.execute(safe_sql.drop_table(table_name))
+                        existing_objects.pop(table_name, None)
+                        results["tables_rebuilt"].append(table_name)
+                    break
+        except sqlite3.OperationalError as e:
+            logger.warning("schema_engine: PK check for %s failed: %s", table_name, e)
+
     # ── Phase 1: Tables and columns ──────────────────────────
 
     for table_name, table_def in schema.TABLES.items():

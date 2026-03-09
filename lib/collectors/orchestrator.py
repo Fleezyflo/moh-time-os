@@ -7,7 +7,6 @@ No legacy scripts, no gog CLI, no importlib hacks.
 """
 
 import logging
-import sqlite3
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
@@ -15,6 +14,7 @@ import yaml
 
 from lib import paths
 from lib.collector_registry import CollectorLock
+from lib.collectors.resilience import COLLECTOR_ERRORS
 from lib.state_tracker import mark_collected
 
 from ..state_store import StateStore, get_store
@@ -103,7 +103,7 @@ class CollectorOrchestrator:
                 try:
                     self.collectors[source_name] = collector_class(source_config, self.store)
                     self.logger.info(f"Initialized collector: {source_name}")
-                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+                except COLLECTOR_ERRORS as e:
                     self.logger.error(f"Failed to initialize {source_name}: {e}")
 
     def _sync_one(self, name: str) -> dict[str, Any]:
@@ -117,7 +117,7 @@ class CollectorOrchestrator:
             if result.get("success"):
                 mark_collected(name)
             return result
-        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+        except COLLECTOR_ERRORS as e:
             self.logger.error(f"Sync failed for {name}: {e}")
             return {"source": name, "success": False, "error": str(e)}
 
@@ -177,7 +177,7 @@ class CollectorOrchestrator:
                         "success": False,
                         "error": f"timeout after {COLLECTOR_TIMEOUT_SECONDS}s",
                     }
-                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+                except COLLECTOR_ERRORS as e:
                     self.logger.warning("Collector %s failed: %s", name, e)
                     results[name] = {"source": name, "success": False, "error": str(e)}
 
@@ -197,7 +197,7 @@ class CollectorOrchestrator:
             self.logger.info("Running entity linking")
             linking_results = run_linking(dry_run=False)
             results["entity_linking"] = linking_results.get("stats", {})
-        except (OSError, ValueError, KeyError, ImportError) as e:
+        except COLLECTOR_ERRORS as e:
             self.logger.warning("Entity linking failed: %s", e)
             results["entity_linking"] = {"error": str(e)}
 
@@ -209,7 +209,7 @@ class CollectorOrchestrator:
             self.logger.info("Running inbox enrichment")
             enrichment_stats = run_enrichment_batch(use_llm=True, limit=20)
             results["inbox_enrichment"] = enrichment_stats
-        except (OSError, ValueError, KeyError, ImportError) as e:
+        except COLLECTOR_ERRORS as e:
             self.logger.warning("Inbox enrichment failed: %s", e)
             results["inbox_enrichment"] = {"error": str(e)}
 
@@ -238,32 +238,42 @@ class CollectorOrchestrator:
         for name, collector in self.collectors.items():
             try:
                 results[name] = collector.health_check()
-            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+            except COLLECTOR_ERRORS as e:
                 self.logger.warning(f"Health check failed for {name}: {e}")
                 results[name] = False
         return results
 
 
 def main():
-    """CLI entry point."""
+    """CLI entry point. All errors print to stderr — never fails silently."""
     import json
     import sys
+    import traceback
 
-    if len(sys.argv) < 2:
-        logger.info("Usage: python -m lib.collectors.orchestrator <sync|status>")
-        sys.exit(1)
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
 
-    command = sys.argv[1]
-    orchestrator = CollectorOrchestrator()
+    try:
+        if len(sys.argv) < 2:
+            print("Usage: python -m lib.collectors.orchestrator <sync|status>", file=sys.stderr)
+            sys.exit(1)
 
-    if command == "sync":
-        results = orchestrator.sync_all()
-        logger.info(json.dumps(results, indent=2, default=str))
-    elif command == "status":
-        status = orchestrator.get_status()
-        logger.info(json.dumps(status, indent=2, default=str))
-    else:
-        logger.info(f"Unknown command: {command}")
+        command = sys.argv[1]
+        orchestrator = CollectorOrchestrator()
+
+        if command == "sync":
+            results = orchestrator.sync_all()
+            print(json.dumps(results, indent=2, default=str))
+        elif command == "status":
+            status = orchestrator.get_status()
+            print(json.dumps(status, indent=2, default=str))
+        else:
+            print(f"Unknown command: {command}", file=sys.stderr)
+            sys.exit(1)
+    except Exception:
+        traceback.print_exc()
         sys.exit(1)
 
 

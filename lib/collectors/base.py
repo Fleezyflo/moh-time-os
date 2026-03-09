@@ -8,14 +8,13 @@ Every collector MUST:
 
 import json
 import logging
-import sqlite3
 import subprocess
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Any
 
 from ..state_store import StateStore, get_store
-from .resilience import CircuitBreaker, RetryConfig, retry_with_backoff
+from .resilience import COLLECTOR_ERRORS, CircuitBreaker, RetryConfig, retry_with_backoff
 
 
 class BaseCollector(ABC):
@@ -105,7 +104,7 @@ class BaseCollector(ABC):
 
             try:
                 raw_data = retry_with_backoff(collect_with_retry, self.retry_config, self.logger)
-            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+            except COLLECTOR_ERRORS as e:
                 self.logger.error(f"Collect failed after retries: {e}")
                 self.circuit_breaker.record_failure()
                 self.store.update_sync_state(self.source_name, success=False, error=str(e))
@@ -119,7 +118,7 @@ class BaseCollector(ABC):
             # Step 2: Transform to canonical format with partial success handling
             try:
                 transformed = self.transform(raw_data)
-            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+            except COLLECTOR_ERRORS as e:
                 self.logger.warning(f"Transform failed: {e}. Attempting partial success.")
                 # If transform fails, try to store what we can
                 transformed = []
@@ -158,7 +157,7 @@ class BaseCollector(ABC):
                 "timestamp": self.last_sync.isoformat(),
             }
 
-        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+        except COLLECTOR_ERRORS as e:
             self.logger.error(f"Sync failed for {self.source_name}: {e}")
             self.circuit_breaker.record_failure()
             self.store.update_sync_state(self.source_name, success=False, error=str(e))
@@ -182,7 +181,7 @@ class BaseCollector(ABC):
             # Default: try a minimal collect
             self.collect()
             return True
-        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+        except COLLECTOR_ERRORS as e:
             self.logger.error(f"Health check failed: {e}")
             return False
 

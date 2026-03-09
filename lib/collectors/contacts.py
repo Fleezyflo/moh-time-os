@@ -7,12 +7,12 @@ import json
 import logging
 import os
 import socket
-import sqlite3
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from .base import BaseCollector
+from .resilience import COLLECTOR_ERRORS
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ class ContactsCollector(BaseCollector):
             creds = creds.with_subject(user)
             self._service = build("people", "v1", credentials=creds)
             return self._service
-        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+        except COLLECTOR_ERRORS as e:
             self.logger.error(f"Failed to get People service: {e}")
             raise
 
@@ -105,12 +105,12 @@ class ContactsCollector(BaseCollector):
                     .execute()
                 )
                 directory = dir_results.get("people", [])
-            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+            except COLLECTOR_ERRORS as e:
                 self.logger.warning(f"Directory listing failed: {e}")
 
             return {"contacts": contacts, "directory": directory}
 
-        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+        except COLLECTOR_ERRORS as e:
             self.logger.error(f"Contacts collection failed: {e}")
             return {"contacts": [], "directory": []}
 

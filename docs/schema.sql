@@ -734,6 +734,7 @@ CREATE TABLE IF NOT EXISTS [asana_attachments] (
 
 CREATE TABLE IF NOT EXISTS [gmail_participants] (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    thread_id TEXT,
     message_id TEXT NOT NULL,
     role TEXT NOT NULL,
     email TEXT NOT NULL,
@@ -742,6 +743,7 @@ CREATE TABLE IF NOT EXISTS [gmail_participants] (
 
 CREATE TABLE IF NOT EXISTS [gmail_attachments] (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    thread_id TEXT,
     message_id TEXT NOT NULL,
     filename TEXT NOT NULL,
     mime_type TEXT,
@@ -751,9 +753,43 @@ CREATE TABLE IF NOT EXISTS [gmail_attachments] (
 
 CREATE TABLE IF NOT EXISTS [gmail_labels] (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
+    thread_id TEXT,
     message_id TEXT NOT NULL,
     label_id TEXT NOT NULL,
     label_name TEXT
+)
+
+CREATE TABLE IF NOT EXISTS [drive_files] (
+    id TEXT PRIMARY KEY,
+    source TEXT,
+    source_id TEXT,
+    name TEXT,
+    mime_type TEXT,
+    modified_time TEXT,
+    created_time TEXT,
+    owners TEXT,
+    last_modifying_user TEXT,
+    web_view_link TEXT,
+    shared INTEGER DEFAULT 0,
+    size INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT
+)
+
+CREATE TABLE IF NOT EXISTS [contacts] (
+    id TEXT PRIMARY KEY,
+    source TEXT,
+    source_id TEXT,
+    name TEXT,
+    first_name TEXT,
+    last_name TEXT,
+    primary_email TEXT,
+    emails TEXT,
+    phones TEXT,
+    organization TEXT,
+    title TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT
 )
 
 CREATE TABLE IF NOT EXISTS [calendar_attendees] (
@@ -774,16 +810,22 @@ CREATE TABLE IF NOT EXISTS [calendar_recurrence_rules] (
 
 CREATE TABLE IF NOT EXISTS [chat_messages] (
     id TEXT PRIMARY KEY,
+    message_name TEXT,
     space_id TEXT,
+    space_name TEXT,
     sender_id TEXT,
     sender_name TEXT,
+    sender_email TEXT,
     text TEXT,
+    create_time TEXT,
+    raw_json TEXT,
     thread_id TEXT,
     thread_reply_count INTEGER DEFAULT 0,
     reaction_count INTEGER DEFAULT 0,
     has_attachment INTEGER DEFAULT 0,
     attachment_count INTEGER DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT
 )
 
 CREATE TABLE IF NOT EXISTS [chat_reactions] (

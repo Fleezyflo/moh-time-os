@@ -7,10 +7,11 @@ enabling accurate financial calculations for YTD, prior year, and lifetime reven
 
 import logging
 import re
-import sqlite3
 from datetime import date, datetime
 
 from lib.state_store import get_store
+
+from .resilience import COLLECTOR_ERRORS
 
 logger = logging.getLogger(__name__)
 
@@ -284,7 +285,7 @@ class XeroCollector:
                 logger.info("Fetching contacts from Xero...")
                 all_contacts = list_contacts()
                 logger.info(f"Found {len(all_contacts)} contacts")
-            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+            except COLLECTOR_ERRORS as e:
                 logger.warning(f"Failed to fetch contacts: {e}")
                 all_contacts = []
 
@@ -292,7 +293,7 @@ class XeroCollector:
                 logger.info("Fetching credit notes from Xero...")
                 all_credit_notes = list_credit_notes()
                 logger.info(f"Found {len(all_credit_notes)} credit notes")
-            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+            except COLLECTOR_ERRORS as e:
                 logger.warning(f"Failed to fetch credit notes: {e}")
                 all_credit_notes = []
 
@@ -300,7 +301,7 @@ class XeroCollector:
                 logger.info("Fetching bank transactions from Xero...")
                 all_bank_transactions = list_bank_transactions()
                 logger.info(f"Found {len(all_bank_transactions)} bank transactions")
-            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+            except COLLECTOR_ERRORS as e:
                 logger.warning(f"Failed to fetch bank transactions: {e}")
                 all_bank_transactions = []
 
@@ -308,7 +309,7 @@ class XeroCollector:
                 logger.info("Fetching tax rates from Xero...")
                 all_tax_rates = list_tax_rates()
                 logger.info(f"Found {len(all_tax_rates)} tax rates")
-            except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+            except COLLECTOR_ERRORS as e:
                 logger.warning(f"Failed to fetch tax rates: {e}")
                 all_tax_rates = []
 
@@ -414,7 +415,7 @@ class XeroCollector:
                                     ar_by_client[client_id]["max_days"], days_overdue
                                 )
 
-                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+                except COLLECTOR_ERRORS as e:
                     logger.warning(f"Failed to store invoice {inv_number}: {e}")
 
             # Update client AR fields
@@ -482,7 +483,7 @@ class XeroCollector:
                     stored = self.store.insert_many("xero_line_items", line_items_rows)
                     secondary_stats["line_items"] = stored
                     logger.info(f"Stored {stored} line items")
-                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+                except COLLECTOR_ERRORS as e:
                     logger.warning(f"Failed to store line_items: {e}")
 
             # Contacts
@@ -492,7 +493,7 @@ class XeroCollector:
                     stored = self.store.insert_many("xero_contacts", contacts_rows)
                     secondary_stats["contacts"] = stored
                     logger.info(f"Stored {stored} contacts")
-                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+                except COLLECTOR_ERRORS as e:
                     logger.warning(f"Failed to store contacts: {e}")
 
             # Credit notes
@@ -502,7 +503,7 @@ class XeroCollector:
                     stored = self.store.insert_many("xero_credit_notes", credit_notes_rows)
                     secondary_stats["credit_notes"] = stored
                     logger.info(f"Stored {stored} credit notes")
-                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+                except COLLECTOR_ERRORS as e:
                     logger.warning(f"Failed to store credit_notes: {e}")
 
             # Bank transactions
@@ -512,7 +513,7 @@ class XeroCollector:
                     stored = self.store.insert_many("xero_bank_transactions", bank_txn_rows)
                     secondary_stats["bank_transactions"] = stored
                     logger.info(f"Stored {stored} bank transactions")
-                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+                except COLLECTOR_ERRORS as e:
                     logger.warning(f"Failed to store bank_transactions: {e}")
 
             # Tax rates
@@ -522,7 +523,7 @@ class XeroCollector:
                     stored = self.store.insert_many("xero_tax_rates", tax_rates_rows)
                     secondary_stats["tax_rates"] = stored
                     logger.info(f"Stored {stored} tax rates")
-                except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+                except COLLECTOR_ERRORS as e:
                     logger.warning(f"Failed to store tax_rates: {e}")
 
             self.circuit_breaker.record_success()
@@ -536,7 +537,7 @@ class XeroCollector:
                 "timestamp": now,
             }
 
-        except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+        except COLLECTOR_ERRORS as e:
             self.circuit_breaker.record_failure()
             logger.exception(f"Xero sync failed: {e}")
             return {"error": str(e), "synced": 0}
