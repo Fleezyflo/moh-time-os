@@ -9,6 +9,7 @@ DO NOT define collectors anywhere else.
 
 import logging
 import os
+import time
 from dataclasses import dataclass, field
 
 from lib import paths
@@ -23,16 +24,16 @@ LOCK_FILE = paths.data_dir() / ".collector.lock"
 
 class CollectorLock:
     """
-    PID-file lock that self-heals without manual intervention.
+    Self-healing lock that NEVER requires manual intervention.
 
-    How it works:
-    - Write our PID + timestamp to the lock file
-    - On contention: check if holding PID is alive. If dead, take over.
-    - TTL safety net: if lock is older than 15 min, break it regardless.
-    - Cleanup: always delete lock file on exit (including crashes via atexit).
+    Two-layer protection:
+    1. PID check: if the holder process is dead, break immediately.
+       os.kill(pid, 0) raises ProcessLookupError when PID doesn't exist.
+    2. TTL fallback: if PID was recycled by macOS (rare — os.kill returns
+       True for an unrelated process), the 5-minute TTL breaks the lock.
 
-    No fcntl.flock — that approach breaks when files are rm'd (inode mismatch)
-    and doesn't survive process crashes cleanly.
+    A full sync cycle takes 1-3 minutes. TTL of 300s guarantees self-heal
+    even in the worst case (PID recycling + long sync).
 
     Usage:
         with CollectorLock() as lock:
@@ -42,80 +43,84 @@ class CollectorLock:
             # do collection
     """
 
-    TTL_SECONDS = 900  # 15 minutes — matches cron interval
+    TTL_SECONDS = 300  # 5 minutes — sync never takes this long
 
     def __init__(self):
         self.lock_file = LOCK_FILE
         self.acquired = False
 
-    def _is_pid_alive(self, pid: int) -> bool:
-        """Check if a process with the given PID is alive."""
-        try:
-            os.kill(pid, 0)
-            return True
-        except ProcessLookupError:
-            return False
-        except PermissionError:
-            return True  # Process exists but we can't signal it
-
-    def _read_lock_info(self) -> tuple[int | None, float | None]:
-        """Read PID and timestamp from lock file."""
+    def _lock_age(self) -> float | None:
+        """Return age of lock file in seconds, or None if no lock."""
         try:
             if self.lock_file.exists():
-                content = self.lock_file.read_text().strip()
-                parts = content.split("\n")
-                pid = int(parts[0]) if parts else None
-                timestamp = float(parts[1]) if len(parts) > 1 else None
-                return pid, timestamp
-        except (ValueError, OSError):
+                return time.time() - self.lock_file.stat().st_mtime
+        except OSError:
             pass
-        return None, None
+        return None
+
+    def _holder_pid(self) -> int | None:
+        """Read PID from lock file, or None if unreadable."""
+        try:
+            content = self.lock_file.read_text().strip()
+            return int(content)
+        except (OSError, ValueError):
+            return None
+
+    def _holder_alive(self) -> bool:
+        """Check if the process that wrote the lock still exists."""
+        pid = self._holder_pid()
+        if pid is None:
+            return False
+        if pid == os.getpid():
+            return True  # We own it
+        try:
+            os.kill(pid, 0)
+            return True  # Process exists (may be recycled — TTL is backup)
+        except ProcessLookupError:
+            return False  # Process is definitely dead
+        except PermissionError:
+            return True  # Process exists, different user
+        except OSError:
+            return False  # Other OS error — treat as dead
 
     def _can_acquire(self) -> bool:
-        """Check if we can acquire the lock. Self-heals stale locks."""
-        import time
+        """Check if we can acquire the lock. Self-heals dead holders."""
+        age = self._lock_age()
 
-        pid, timestamp = self._read_lock_info()
-
-        # No lock file or unreadable — acquire
-        if pid is None:
+        # No lock file — acquire
+        if age is None:
             return True
 
-        # Holding process is dead — acquire
-        if not self._is_pid_alive(pid):
-            logger.info("Lock held by dead PID %d, taking over", pid)
+        # Lock is stale (older than TTL) — force takeover regardless
+        if age > self.TTL_SECONDS:
+            logger.info(
+                "Lock file is %.0fs old (TTL=%ds), forcing takeover",
+                age,
+                self.TTL_SECONDS,
+            )
             return True
 
-        # TTL expired — acquire (safety net for zombie processes)
-        if timestamp is not None:
-            age = time.time() - timestamp
-            if age > self.TTL_SECONDS:
-                logger.warning(
-                    "Lock held by PID %d for %.0fs (TTL=%ds), forcing takeover",
-                    pid,
-                    age,
-                    self.TTL_SECONDS,
-                )
-                return True
+        # Lock is fresh — but is the holder actually alive?
+        if not self._holder_alive():
+            logger.info("Lock holder is dead (PID gone), taking over")
+            return True
 
-        # Lock is valid — someone else is running
+        # Lock is fresh AND holder appears alive — respect it
         return False
 
     def _write_lock(self) -> None:
-        """Write our PID and timestamp to the lock file."""
+        """Write our PID to the lock file."""
         import atexit
-        import time
 
         self.lock_file.parent.mkdir(parents=True, exist_ok=True)
-        self.lock_file.write_text(f"{os.getpid()}\n{time.time()}\n")
-        # Register cleanup so lock is released even on unhandled exceptions
+        self.lock_file.write_text(f"{os.getpid()}\n")
         atexit.register(self._cleanup)
 
     def _cleanup(self) -> None:
         """Remove lock file if we own it."""
         try:
-            pid, _ = self._read_lock_info()
-            if pid == os.getpid():
+            content = self.lock_file.read_text().strip() if self.lock_file.exists() else ""
+            if content == str(os.getpid()):
                 self.lock_file.unlink(missing_ok=True)
         except OSError:
             pass
@@ -125,8 +130,8 @@ class CollectorLock:
             self._write_lock()
             self.acquired = True
         else:
-            pid, _ = self._read_lock_info()
-            logger.warning("Lock held by PID %d, skipping", pid)
+            age = self._lock_age()
+            logger.warning("Lock file exists (age=%.0fs), skipping", age or 0)
             self.acquired = False
         return self
 
