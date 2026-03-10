@@ -4,7 +4,7 @@ import json
 import os
 from typing import Any
 
-import requests
+import httpx
 
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", ".credentials.json")
 ASANA_API_BASE = "https://app.asana.com/api/1.0"
@@ -27,7 +27,7 @@ def asana_get(endpoint: str, params: dict | None = None) -> dict[str, Any]:
     if "limit" not in params:
         params["limit"] = "100"
 
-    resp = requests.get(
+    resp = httpx.get(
         url,
         params=params,
         headers={

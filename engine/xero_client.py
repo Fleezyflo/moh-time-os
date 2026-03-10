@@ -6,7 +6,7 @@ import os
 from dataclasses import dataclass
 from typing import Any
 
-import requests
+import httpx
 
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", ".credentials.json")
 TOKEN_CACHE_PATH = os.path.join(os.path.dirname(__file__), "..", "config", ".xero_token_cache.json")
@@ -65,7 +65,7 @@ def save_tokens(access_token: str, refresh_token: str) -> None:
 
 def refresh_access_token(creds: XeroCredentials) -> str:
     """Use refresh token to get new access token."""
-    resp = requests.post(
+    resp = httpx.post(
         XERO_OAUTH_ENDPOINT,
         data={
             "grant_type": "refresh_token",
@@ -102,7 +102,7 @@ def xero_get(endpoint: str) -> dict[str, Any]:
     access_token, tenant_id = get_access_token()
 
     url = f"{XERO_API_BASE}/{endpoint}"
-    resp = requests.get(
+    resp = httpx.get(
         url,
         headers={
             "Authorization": f"Bearer {access_token}",

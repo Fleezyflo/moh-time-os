@@ -1501,12 +1501,18 @@ def evaluate_signal(
 
 
 def _format_evidence(signal_def: SignalDefinition, evidence: dict) -> str:
-    """Format evidence into human-readable text using the template."""
+    """Format evidence into human-readable text using the template.
+
+    Uses format_map with a default dict so missing template keys produce '?'
+    instead of crashing with KeyError. Also adds common aliases so templates
+    can reference metric-specific names (e.g. {overdue_count}) even though
+    the evidence dict uses generic keys (e.g. current_value).
+    """
     template = signal_def.evidence_template
 
     try:
         # Build substitution dict from evidence
-        subs = {}
+        subs: dict[str, str] = {}
         for key, value in evidence.items():
             if isinstance(value, float):
                 subs[key] = f"{value:.1f}"
@@ -1520,8 +1526,42 @@ def _format_evidence(signal_def: SignalDefinition, evidence: dict) -> str:
                 pct = (evidence["current_value"] / baseline) * 100
                 subs["pct_of_baseline"] = f"{pct:.0f}"
 
-        return template.format(**subs)
-    except (sqlite3.Error, ValueError, OSError):
+        # Metric-specific aliases — templates reference domain names while
+        # evidence dicts use generic keys (current_value, consecutive_periods).
+        _METRIC_ALIASES = {
+            "overdue_tasks": "overdue_count",
+            "invoice_days_outstanding": "days",
+            "composite_score": "score",
+            "tasks_per_person": "tasks_per_person",
+            "active_tasks": "active_tasks",
+            "sole_assignee_projects": "count",
+            "revenue_concentration": "pct",
+            "avg_load_score": "score",
+            "days_since_last_comm": "days",
+            "days_since_last_email": "days",
+        }
+
+        metric = evidence.get("metric", "")
+        if metric and "current_value" in subs:
+            alias = _METRIC_ALIASES.get(metric)
+            if alias and alias not in subs:
+                subs[alias] = subs["current_value"]
+
+        # Alias consecutive_periods → periods for trend templates
+        if "consecutive_periods" in subs and "periods" not in subs:
+            subs["periods"] = subs["consecutive_periods"]
+
+        # Alias current_value → current for anomaly templates
+        if "current_value" in subs and "current" not in subs:
+            subs["current"] = subs["current_value"]
+
+        # Use format_map with defaultdict so missing keys produce '?' not KeyError
+        class _SafeDict(dict):
+            def __missing__(self, key: str) -> str:
+                return "?"
+
+        return template.format_map(_SafeDict(subs))
+    except (sqlite3.Error, ValueError, OSError, KeyError):
         return str(evidence)
 
 
