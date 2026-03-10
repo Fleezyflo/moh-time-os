@@ -17,6 +17,6 @@ python -m lib.collectors.orchestrator sync 2>&1 || echo "Collection had errors, 
 
 # Step 2: Run V4 pipeline cycle
 echo "Step 2: Running V4 pipeline..."
-python cli_v4.py cycle 2>&1
+python -m cli.main ops:cycle 2>&1
 
 echo "$(date '+%Y-%m-%d %H:%M:%S') Time OS cycle complete"
