@@ -25,7 +25,6 @@ from lib.actions import (
     ActionFramework,
     ActionProposal,
     ActionResult,
-    ActionRouter,
     ActionSource,
     ActionStatus,
     ApprovalPolicy,
@@ -829,78 +828,6 @@ class TestActionFrameworkMiddleware:
 
         assert result.success is False
         assert error_hook_called is True
-
-
-# =============================================================================
-# ACTIONROUTER TESTS
-# =============================================================================
-
-
-class TestActionRouter:
-    """Tests for ActionRouter."""
-
-    def test_router_dispatch(self):
-        """Router should dispatch to registered handler."""
-        router = ActionRouter()
-
-        def handler(payload):
-            return ActionResult(action_id="test", success=True, result_data={"processed": True})
-
-        router.register("test_action", handler)
-
-        result = router.dispatch("test_action", {}, action_id="test")
-
-        assert result.success is True
-        assert result.result_data["processed"] is True
-
-    def test_router_dispatch_missing_handler(self):
-        """Router should fail gracefully with missing handler."""
-        router = ActionRouter()
-
-        result = router.dispatch("unknown_action", {}, action_id="test")
-
-        assert result.success is False
-        assert "No handler registered" in result.error
-
-    def test_router_dry_run(self):
-        """Router should support dry-run mode."""
-        router = ActionRouter()
-        router.dry_run = True
-
-        handler_called = False
-
-        def handler(payload):
-            nonlocal handler_called
-            handler_called = True
-            return ActionResult(action_id="test", success=True)
-
-        router.register("test_action", handler)
-
-        result = router.dispatch("test_action", {"key": "value"}, action_id="test")
-
-        assert result.success is True
-        assert handler_called is False
-        assert result.result_data["dry_run"] is True
-
-    def test_router_before_dispatch_hook(self):
-        """Router should call before-dispatch hooks."""
-        router = ActionRouter()
-
-        hook_called = False
-
-        def hook(action_type, payload):
-            nonlocal hook_called
-            hook_called = True
-
-        router.register_before_dispatch(hook)
-
-        def handler(payload):
-            return ActionResult(action_id="test", success=True)
-
-        router.register("test_action", handler)
-        router.dispatch("test_action", {}, action_id="test")
-
-        assert hook_called is True
 
 
 # =============================================================================
