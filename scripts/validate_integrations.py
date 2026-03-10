@@ -64,11 +64,9 @@ def main() -> int:
     print("\n1. Action Framework (BI-1.1)")
     af = BASE / "lib" / "actions" / "action_framework.py"
     ap = BASE / "lib" / "actions" / "approval_policies.py"
-    ar = BASE / "lib" / "actions" / "action_router.py"
     api_ar = BASE / "api" / "action_router.py"
     check("action_framework.py exists", af.exists())
     check("approval_policies.py exists", ap.exists())
-    check("action_router.py exists", ar.exists())
     check("api/action_router.py exists", api_ar.exists())
     if af.exists():
         code = af.read_text()
@@ -82,9 +80,6 @@ def main() -> int:
         code = ap.read_text()
         check("Has ApprovalRule", "ApprovalRule" in code)
         check("Has PolicyEngine", "PolicyEngine" in code)
-    if ar.exists():
-        code = ar.read_text()
-        check("Has ActionRouter", "ActionRouter" in code)
 
     # Check 2: Asana Write-Back (BI-2.1)
     print("\n2. Asana Write-Back (BI-2.1)")

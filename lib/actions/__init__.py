@@ -11,9 +11,6 @@ from lib.actions.action_framework import (
     ApprovalDecision,
     RiskLevel,
 )
-from lib.actions.action_router import (
-    ActionRouter,
-)
 from lib.actions.approval_policies import (
     DEFAULT_POLICIES,
     ApprovalPolicy,
@@ -33,5 +30,4 @@ __all__ = [
     "ApprovalRule",
     "PolicyEngine",
     "DEFAULT_POLICIES",
-    "ActionRouter",
 ]
