@@ -9,7 +9,7 @@ import sys
 import urllib.parse
 import webbrowser
 
-import requests
+import httpx
 
 from lib import paths
 
@@ -103,7 +103,7 @@ def main():
 
     print("✓ Got auth code, exchanging for tokens...")
 
-    resp = requests.post(
+    resp = httpx.post(
         XERO_OAUTH_ENDPOINT,
         data={
             "grant_type": "authorization_code",
@@ -123,7 +123,7 @@ def main():
     print("✓ Got tokens!")
 
     # Get tenant ID
-    conn_resp = requests.get(
+    conn_resp = httpx.get(
         XERO_CONNECTIONS_URL,
         headers={"Authorization": f"Bearer {tokens['access_token']}"},
         timeout=30,

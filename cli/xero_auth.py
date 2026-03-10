@@ -6,19 +6,12 @@ import json
 import os
 import secrets
 import socketserver
+import sys
 import urllib.parse
 import webbrowser
 from typing import Any
 
-try:
-    import requests
-except ImportError:
-    print("Installing requests...")
-    import subprocess
-    import sys
-
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "requests"])
-    import requests
+import httpx
 
 from lib import paths
 
@@ -102,7 +95,7 @@ class OAuthCallbackHandler(http.server.BaseHTTPRequestHandler):
 
 def exchange_code_for_tokens(client_id: str, client_secret: str, auth_code: str) -> dict:
     """Exchange authorization code for access and refresh tokens."""
-    resp = requests.post(
+    resp = httpx.post(
         XERO_OAUTH_ENDPOINT,
         data={
             "grant_type": "authorization_code",
@@ -123,7 +116,7 @@ def exchange_code_for_tokens(client_id: str, client_secret: str, auth_code: str)
 
 def get_tenant_id(access_token: str) -> str:
     """Get the tenant ID (organization) from Xero."""
-    resp = requests.get(
+    resp = httpx.get(
         XERO_CONNECTIONS_URL,
         headers={"Authorization": f"Bearer {access_token}"},
         timeout=30,
