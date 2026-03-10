@@ -25,6 +25,7 @@ dependencies = [
 
 [project.scripts]
 moh = "api.server:main"
+moh-cli = "cli.main:main"
 
 [build-system]
 requires = ["hatchling"]
