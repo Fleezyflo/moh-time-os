@@ -106,9 +106,12 @@ class CollectorOrchestrator:
                 except COLLECTOR_ERRORS as e:
                     self.logger.error(f"Failed to initialize {source_name}: {e}")
 
-    def _sync_one(self, name: str) -> dict[str, Any]:
+    def _sync_one(self, name: str, *, force: bool = False) -> dict[str, Any]:
         """Sync a single collector under a per-collector lock."""
-        with CollectorLock(name) as lock:
+        lock_obj = CollectorLock(name)
+        if force:
+            lock_obj.break_lock()
+        with lock_obj as lock:
             if not lock.acquired:
                 self.logger.warning("Collector %s is already running, skipping", name)
                 return {
@@ -130,39 +133,48 @@ class CollectorOrchestrator:
                 self.logger.error("Sync failed for %s: %s", name, e)
                 return {"source": name, "success": False, "error": str(e)}
 
-    def sync_all(self) -> dict[str, Any]:
+    def sync_all(self, *, force: bool = False) -> dict[str, Any]:
         """Sync all collectors in parallel with per-collector locks."""
-        return self.force_sync(source=None)
+        return self.force_sync(source=None, force=force)
 
-    def sync(self, source: str | None = None) -> dict[str, Any]:
+    def sync(self, source: str | None = None, *, force: bool = False) -> dict[str, Any]:
         """Sync one or all collectors. Alias for force_sync."""
-        return self.force_sync(source=source)
+        return self.force_sync(source=source, force=force)
 
-    def force_sync(self, source: str | None = None) -> dict[str, Any]:
+    def force_sync(self, source: str | None = None, *, force: bool = False) -> dict[str, Any]:
         """
         Force sync — runs class-based collectors directly.
 
         All collectors use service account auth (no gog CLI).
         Each collector acquires its own lock in _sync_one, so a slow
         collector (e.g. Asana) never blocks faster ones.
-        """
-        return self._sync_impl(source)
 
-    def _sync_impl(self, source: str | None = None) -> dict[str, Any]:
+        Args:
+            source: Collector name, or None for all.
+            force: Break existing locks before acquiring.
+        """
+        return self._sync_impl(source, force=force)
+
+    def _sync_impl(self, source: str | None = None, *, force: bool = False) -> dict[str, Any]:
         """Internal sync implementation. Each collector locks independently."""
         if source:
             # Single source sync
-            result = self._sync_one(source)
+            result = self._sync_one(source, force=force)
             return {source: result}
 
         # All sources in parallel
         sources_to_sync = list(self.collectors.keys())
         results = {}
 
+        if force:
+            self.logger.info("Force mode: breaking all collector locks")
+
         self.logger.info(f"Starting parallel sync of {len(sources_to_sync)} collectors")
 
         with ThreadPoolExecutor(max_workers=5) as executor:
-            futures = {executor.submit(self._sync_one, name): name for name in sources_to_sync}
+            futures = {
+                executor.submit(self._sync_one, name, force=force): name for name in sources_to_sync
+            }
 
             for future in as_completed(futures):
                 name = futures[future]
@@ -246,6 +258,7 @@ class CollectorOrchestrator:
 
 def main():
     """CLI entry point. All errors print to stderr — never fails silently."""
+    import argparse
     import json
     import sys
     import traceback
@@ -256,22 +269,22 @@ def main():
     )
 
     try:
-        if len(sys.argv) < 2:
-            print("Usage: python -m lib.collectors.orchestrator <sync|status>", file=sys.stderr)
-            sys.exit(1)
+        parser = argparse.ArgumentParser(description="Collector Orchestrator")
+        parser.add_argument("command", choices=["sync", "status"])
+        parser.add_argument(
+            "--force", action="store_true", help="Break existing locks before syncing"
+        )
+        parser.add_argument("--source", help="Sync a single collector by name")
+        args = parser.parse_args()
 
-        command = sys.argv[1]
         orchestrator = CollectorOrchestrator()
 
-        if command == "sync":
-            results = orchestrator.sync_all()
+        if args.command == "sync":
+            results = orchestrator.sync(source=args.source, force=args.force)
             print(json.dumps(results, indent=2, default=str))
-        elif command == "status":
+        elif args.command == "status":
             status = orchestrator.get_status()
             print(json.dumps(status, indent=2, default=str))
-        else:
-            print(f"Unknown command: {command}", file=sys.stderr)
-            sys.exit(1)
     except Exception:
         traceback.print_exc()
         sys.exit(1)

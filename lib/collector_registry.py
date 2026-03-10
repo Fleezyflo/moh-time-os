@@ -150,6 +150,30 @@ class CollectorLock:
         except OSError:
             pass
 
+    def break_lock(self) -> None:
+        """Forcibly remove the lock file regardless of holder state."""
+        try:
+            if self.lock_file.exists():
+                pid = self._holder_pid()
+                logger.warning("Breaking lock for %s (holder PID=%s)", self.name, pid)
+                self.lock_file.unlink(missing_ok=True)
+        except OSError as e:
+            logger.warning("Failed to break lock for %s: %s", self.name, e)
+
+    @classmethod
+    def break_all(cls) -> int:
+        """Remove all collector lock files. Returns count of locks broken."""
+        count = 0
+        for lock_file in LOCK_DIR.glob(".collector.*.lock"):
+            try:
+                pid_text = lock_file.read_text().strip()
+                logger.warning("Breaking lock %s (PID=%s)", lock_file.name, pid_text)
+                lock_file.unlink(missing_ok=True)
+                count += 1
+            except OSError as e:
+                logger.warning("Failed to break %s: %s", lock_file.name, e)
+        return count
+
     def __enter__(self):
         if self._can_acquire():
             self._write_lock()
