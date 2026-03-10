@@ -20,12 +20,15 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 # LOCKFILE GUARD — Prevents double execution
 # ============================================================================
-LOCK_FILE = paths.data_dir() / ".collector.lock"
+LOCK_DIR = paths.data_dir()
 
 
 class CollectorLock:
     """
-    Self-healing lock that NEVER requires manual intervention.
+    Per-collector self-healing lock that NEVER requires manual intervention.
+
+    Each collector gets its own lock file (.collector.{name}.lock) so a slow
+    collector (e.g. Asana at 49 min) doesn't block faster ones.
 
     Three-layer protection:
     1. PID check: if the holder process is dead, break immediately.
@@ -34,15 +37,10 @@ class CollectorLock:
     3. TTL (60s): if the lock file hasn't been touched in 60 seconds,
        the holder is dead (heartbeat stopped). Break immediately.
 
-    Because the heartbeat keeps the mtime fresh during a legitimate sync
-    (even if it takes minutes), the TTL can be aggressive (60s). If the
-    process dies, heartbeat stops, lock goes stale in <=60s. PID recycling
-    is irrelevant — the stale mtime proves the holder is dead.
-
     Usage:
-        with CollectorLock() as lock:
+        with CollectorLock("tasks") as lock:
             if not lock.acquired:
-                print("Another collector is running")
+                print("tasks collector is already running")
                 return
             # do collection
     """
@@ -50,8 +48,9 @@ class CollectorLock:
     TTL_SECONDS = 60  # 1 minute — heartbeat keeps live locks fresh
     HEARTBEAT_INTERVAL = 20  # Touch lock file every 20 seconds
 
-    def __init__(self):
-        self.lock_file = LOCK_FILE
+    def __init__(self, name: str = "global"):
+        self.lock_file = LOCK_DIR / f".collector.{name}.lock"
+        self.name = name
         self.acquired = False
         self._stop_heartbeat = threading.Event()
         self._heartbeat_thread: threading.Thread | None = None

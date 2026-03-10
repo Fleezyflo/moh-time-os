@@ -6,7 +6,6 @@ Uses direct Google API with service account for domain-wide delegation.
 import json
 import logging
 import os
-import socket
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -32,15 +31,6 @@ class TasksCollector(BaseCollector):
         super().__init__(config, store)
         self._service = None
 
-    def _set_ipv4_only(self):
-        """Force IPv4 to avoid IPv6 timeout issues."""
-        original_getaddrinfo = socket.getaddrinfo
-
-        def getaddrinfo_ipv4(host, port, family=0, type=0, proto=0, flags=0):
-            return original_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
-
-        socket.getaddrinfo = getaddrinfo_ipv4
-
     def _get_service(self, user: str = DEFAULT_USER):
         """Get Tasks API service using service account."""
         if self._service:
@@ -62,8 +52,6 @@ class TasksCollector(BaseCollector):
 
     def collect(self) -> dict[str, Any]:
         """Fetch tasks from Google Tasks using Service Account API."""
-        self._set_ipv4_only()
-
         try:
             service = self._get_service()
             all_tasks = []
