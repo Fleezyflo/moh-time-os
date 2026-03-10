@@ -107,22 +107,31 @@ class CollectorOrchestrator:
                     self.logger.error(f"Failed to initialize {source_name}: {e}")
 
     def _sync_one(self, name: str) -> dict[str, Any]:
-        """Sync a single collector and mark collected."""
-        collector = self.collectors.get(name)
-        if not collector:
-            return {"source": name, "success": False, "error": f"Unknown collector: {name}"}
+        """Sync a single collector under a per-collector lock."""
+        with CollectorLock(name) as lock:
+            if not lock.acquired:
+                self.logger.warning("Collector %s is already running, skipping", name)
+                return {
+                    "source": name,
+                    "success": False,
+                    "error": f"{name} collector is already running",
+                }
 
-        try:
-            result: dict[str, Any] = collector.sync()
-            if result.get("success"):
-                mark_collected(name)
-            return result
-        except COLLECTOR_ERRORS as e:
-            self.logger.error(f"Sync failed for {name}: {e}")
-            return {"source": name, "success": False, "error": str(e)}
+            collector = self.collectors.get(name)
+            if not collector:
+                return {"source": name, "success": False, "error": f"Unknown collector: {name}"}
+
+            try:
+                result: dict[str, Any] = collector.sync()
+                if result.get("success"):
+                    mark_collected(name)
+                return result
+            except COLLECTOR_ERRORS as e:
+                self.logger.error("Sync failed for %s: %s", name, e)
+                return {"source": name, "success": False, "error": str(e)}
 
     def sync_all(self) -> dict[str, Any]:
-        """Sync all collectors — runs them in parallel under a lock."""
+        """Sync all collectors in parallel with per-collector locks."""
         return self.force_sync(source=None)
 
     def sync(self, source: str | None = None) -> dict[str, Any]:
@@ -134,22 +143,13 @@ class CollectorOrchestrator:
         Force sync — runs class-based collectors directly.
 
         All collectors use service account auth (no gog CLI).
-        Runs in parallel with a lock to prevent concurrent runs.
+        Each collector acquires its own lock in _sync_one, so a slow
+        collector (e.g. Asana) never blocks faster ones.
         """
-        with CollectorLock() as lock:
-            if not lock.acquired:
-                self.logger.warning("Another collector is already running")
-                return {
-                    source or "all": {
-                        "success": False,
-                        "error": "Another collector is running",
-                    }
-                }
-
-            return self._sync_impl(source)
+        return self._sync_impl(source)
 
     def _sync_impl(self, source: str | None = None) -> dict[str, Any]:
-        """Internal sync implementation (runs under lock)."""
+        """Internal sync implementation. Each collector locks independently."""
         if source:
             # Single source sync
             result = self._sync_one(source)
