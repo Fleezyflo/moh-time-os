@@ -47,6 +47,8 @@ def _get_asana_collector_class():
         for key, val in saved.items():
             if val is not None:
                 sys.modules[key] = val
+            else:
+                sys.modules.pop(key, None)
 
 
 # Cache the class

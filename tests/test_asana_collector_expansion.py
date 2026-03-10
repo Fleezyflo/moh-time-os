@@ -710,7 +710,7 @@ class TestCollectionMethod:
         mock_tasks.return_value = [{"gid": "task_1", "name": "Task", "num_subtasks": 1}]
 
         with patch("engine.asana_client.list_subtasks") as mock_subtasks:
-            mock_subtasks.side_effect = Exception("API error")
+            mock_subtasks.side_effect = RuntimeError("API error")
             raw_data = collector.collect()
 
             # Should still return task even if subtask pull fails
