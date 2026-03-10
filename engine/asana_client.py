@@ -1,13 +1,27 @@
 """Asana API client using Personal Access Token."""
 
 import json
+import logging
 import os
+import threading
+import time
 from typing import Any
 
 import httpx
 
+from lib.collectors.resilience import RateLimiter
+
 CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", ".credentials.json")
 ASANA_API_BASE = "https://app.asana.com/api/1.0"
+
+# Asana PAT rate limit: 150 requests/minute. Use 120 for safety margin.
+_rate_limiter = RateLimiter(requests_per_minute=120)
+_rate_lock = threading.Lock()
+
+logger = logging.getLogger(__name__)
+
+# Default retry-after seconds when header is missing
+_DEFAULT_RETRY_AFTER = 60
 
 
 def load_pat() -> str:
@@ -17,7 +31,7 @@ def load_pat() -> str:
 
 
 def asana_get(endpoint: str, params: dict | None = None) -> dict[str, Any]:
-    """Make authenticated GET request to Asana API."""
+    """Make authenticated GET request to Asana API with rate limiting and 429 retry."""
     pat = load_pat()
 
     url = f"{ASANA_API_BASE}/{endpoint}"
@@ -27,20 +41,43 @@ def asana_get(endpoint: str, params: dict | None = None) -> dict[str, Any]:
     if "limit" not in params:
         params["limit"] = "100"
 
-    resp = httpx.get(
-        url,
-        params=params,
-        headers={
-            "Authorization": f"Bearer {pat}",
-            "Accept": "application/json",
-        },
-        timeout=30,
-    )
+    headers = {
+        "Authorization": f"Bearer {pat}",
+        "Accept": "application/json",
+    }
 
-    if resp.status_code != 200:
-        raise RuntimeError(f"Asana API error: {resp.status_code} {resp.text}")
+    # Pre-flight rate limit check
+    with _rate_lock:
+        if not _rate_limiter.allow_request():
+            wait = _rate_limiter.get_wait_time()
+            logger.debug(f"Rate limiter: waiting {wait:.1f}s before request")
+            time.sleep(wait)
+            _rate_limiter.allow_request()  # Consume token after wait
 
-    return resp.json()
+    max_retries = 3
+    for attempt in range(max_retries + 1):
+        resp = httpx.get(url, params=params, headers=headers, timeout=30)
+
+        if resp.status_code == 429:
+            if attempt >= max_retries:
+                raise RuntimeError(
+                    f"Asana API rate limited after {max_retries + 1} attempts: {endpoint}"
+                )
+            retry_after = int(resp.headers.get("Retry-After", _DEFAULT_RETRY_AFTER))
+            logger.warning(
+                f"Asana 429 on {endpoint} (attempt {attempt + 1}/{max_retries + 1}). "
+                f"Waiting {retry_after}s"
+            )
+            time.sleep(retry_after)
+            continue
+
+        if resp.status_code != 200:
+            raise RuntimeError(f"Asana API error: {resp.status_code} {resp.text}")
+
+        return resp.json()
+
+    # Should not reach here, but just in case
+    raise RuntimeError(f"Asana API: exhausted retries for {endpoint}")
 
 
 def asana_get_all(endpoint: str, params: dict | None = None) -> list[dict]:

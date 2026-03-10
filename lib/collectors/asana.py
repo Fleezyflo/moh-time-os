@@ -9,6 +9,7 @@ Expanded API coverage (~90%):
 
 import json
 import logging
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime
 from typing import Any
 
@@ -59,25 +60,35 @@ class AsanaCollector(BaseCollector):
             projects = list_projects(HRMNY_WORKSPACE_GID, archived=False)
             self.logger.info(f"Collecting from {len(projects)} projects")
 
-            # Collect basic tasks from all projects
-            for proj in projects:
+            # Collect tasks from all projects in parallel.
+            # max_workers=5 keeps us well under the 150 req/min Asana PAT limit
+            # (rate limiter in asana_client.py enforces the actual ceiling).
+            def _fetch_project_tasks(proj: dict) -> list[dict]:
                 proj_gid = proj.get("gid")
                 proj_name = proj.get("name", "Unknown")
-
                 if not proj_gid:
-                    continue
+                    return []
+                tasks = list_tasks_in_project(proj_gid, opt_fields=TASK_OPT_FIELDS)
+                for task in tasks:
+                    task["_project_name"] = proj_name
+                    task["_project_gid"] = proj_gid
+                return tasks
 
-                try:
-                    # Collect ALL tasks (not just incomplete)
-                    tasks = list_tasks_in_project(proj_gid, opt_fields=TASK_OPT_FIELDS)
+            failed_projects = 0
+            with ThreadPoolExecutor(max_workers=5) as pool:
+                futures = {pool.submit(_fetch_project_tasks, proj): proj for proj in projects}
+                for future in as_completed(futures):
+                    proj = futures[future]
+                    try:
+                        all_tasks.extend(future.result())
+                    except COLLECTOR_ERRORS as e:
+                        failed_projects += 1
+                        self.logger.warning(
+                            f"Failed to fetch tasks for project {proj.get('name', 'Unknown')}: {e}"
+                        )
 
-                    for task in tasks:
-                        task["_project_name"] = proj_name
-                        task["_project_gid"] = proj_gid
-                        all_tasks.append(task)
-
-                except COLLECTOR_ERRORS as e:
-                    self.logger.warning(f"Failed to fetch tasks for project {proj_name}: {e}")
+            if failed_projects:
+                self.logger.info(f"Completed with {failed_projects} project failures")
 
             # Secondary pulls for expanded data — only for INCOMPLETE tasks
             # With 17k+ tasks, pulling expanded data for all is too slow (9+ min)

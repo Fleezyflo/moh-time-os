@@ -1055,7 +1055,7 @@ TABLES["contacts"] = {
 # ---------------------------------------------------------------------------
 TABLES["calendar_attendees"] = {
     "columns": [
-        ("id", "INTEGER PRIMARY KEY AUTOINCREMENT"),
+        ("id", "TEXT PRIMARY KEY"),
         ("event_id", "TEXT NOT NULL"),
         ("email", "TEXT NOT NULL"),
         ("display_name", "TEXT"),
