@@ -793,7 +793,7 @@ CREATE TABLE IF NOT EXISTS [contacts] (
 )
 
 CREATE TABLE IF NOT EXISTS [calendar_attendees] (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id TEXT PRIMARY KEY,
     event_id TEXT NOT NULL,
     email TEXT NOT NULL,
     display_name TEXT,
