@@ -370,9 +370,9 @@ class ActionFramework:
                         execution_time_ms=execution_time,
                     )
 
-        except (sqlite3.Error, ValueError, OSError) as e:
+        except Exception as e:
             execution_error = str(e)
-            logger.error(f"Action execution failed: {execution_error}")
+            logger.error("Action execution failed: %s", execution_error, exc_info=True)
             execution_time = int((time.time() - start_time) * 1000)
 
             result = ActionResult(
@@ -386,8 +386,8 @@ class ActionFramework:
             try:
                 for hook in self.on_error_hooks:
                     hook(proposal, result)
-            except (sqlite3.Error, ValueError, OSError) as hook_error:
-                logger.error(f"Error hook failed: {str(hook_error)}")
+            except Exception as hook_error:
+                logger.error("Error hook failed: %s", hook_error, exc_info=True)
 
         # Store result
         final_status = ActionStatus.SUCCESS if result.success else ActionStatus.FAILED
