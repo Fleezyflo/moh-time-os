@@ -1,0 +1,57 @@
+session: 23
+date: "2026-03-12"
+phase: post-audit
+description: "Gap closure -- schema-code mismatch fixes, Mock→SQLite test conversion, DigestEngine persistence unification"
+status: complete
+branch: fix/data-loss-write-safety
+
+tasks_completed:
+  - id: GAP-A
+    description: "Convert TestNotificationMuting and TestNotificationAnalytics from Mock to real SQLite fixture DB"
+    files_modified:
+      - tests/test_action_integration.py
+
+  - id: GAP-A-BUGFIX-1
+    description: "Fix mute_entity() schema mismatch -- removed muted_at, added entity_type extraction"
+    files_modified:
+      - lib/notifier/engine.py
+
+  - id: GAP-A-BUGFIX-2
+    description: "Fix get_active_mutes() -- changed muted_at to created_at (actual schema column)"
+    files_modified:
+      - lib/notifier/engine.py
+
+  - id: GAP-A-BUGFIX-3
+    description: "Fix track_delivery() -- removed metadata/recorded_at, map outcomes to schema timestamp columns"
+    files_modified:
+      - lib/notifier/engine.py
+
+  - id: GAP-A-BUGFIX-4
+    description: "Fix get_analytics_summary() -- changed recorded_at to created_at"
+    files_modified:
+      - lib/notifier/engine.py
+
+  - id: GAP-B
+    description: "Refactor DigestEngine generate_digest, mark_as_processed, get_pending_count to use safe_sql.select()"
+    files_modified:
+      - lib/notifier/digest.py
+
+  - id: GAP-B-SUPPORT
+    description: "Add count() and delete() methods to _FixtureStore in test_digest_engine.py"
+    files_modified:
+      - tests/test_digest_engine.py
+
+  - id: GAP-C
+    description: "Blast-radius analysis -- mapped all fixes to files, API surfaces, runtime callers, test coverage"
+    files_modified: []
+
+  - id: GAP-D
+    description: "Leftover sweep -- identified remaining raw SQL in NotificationEngine as polish (read-only, correct pattern)"
+    files_modified: []
+
+gaps_found: []
+
+lessons:
+  - "Mock tests at persistence boundaries hide schema-code mismatches. mute_entity() inserted muted_at (column doesn't exist) and omitted entity_type (NOT NULL). 4 production bugs survived because Mock never touched the real schema."
+  - "The fixture DB conversion pattern is: _FixtureStore class + create_fixture_db() + function-scoped tmp_path. This is now the canonical test pattern for any code that writes to the database."
+  - "safe_sql.select() supports GROUP BY via the suffix= parameter. This eliminates the need for raw SQL strings in queries that use GROUP BY."

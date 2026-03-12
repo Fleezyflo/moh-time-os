@@ -3,14 +3,19 @@ DigestEngine - Batches notifications into daily/weekly/hourly digests.
 
 Handles queueing, grouping by category, and formatting notifications
 for digest delivery instead of individual messages.
+
+Receives a store (StateStore) via constructor.  All DB access goes
+through store.query() for reads and store.insert() / store.update()
+for writes.  Tables and indexes are owned by lib/schema.py, not here.
 """
 
 import json
 import logging
 import sqlite3
+import uuid
 from datetime import datetime
 
-from lib.store import get_connection
+from lib import safe_sql
 
 log = logging.getLogger(__name__)
 
@@ -24,56 +29,27 @@ SEVERITY_ORDER = {
 
 
 class DigestEngine:
-    """Manages notification digests for batched delivery."""
+    """Manages notification digests for batched delivery.
 
-    def __init__(self):
-        """Initialize digest engine with database access."""
-        self._ensure_tables()
+    Tables (digest_queue, digest_history) and their indexes are defined
+    in lib/schema.py and created by schema_engine during DB init.
+    DigestEngine does not create or manage schema.
 
-    def _ensure_tables(self) -> None:
-        """Create digest_queue and digest_history tables if they don't exist."""
-        with get_connection() as conn:
-            # Create digest_queue table
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS digest_queue (
-                    id TEXT PRIMARY KEY,
-                    user_id TEXT NOT NULL,
-                    notification_id TEXT NOT NULL,
-                    event_type TEXT NOT NULL,
-                    category TEXT NOT NULL,
-                    severity TEXT NOT NULL,
-                    bucket TEXT NOT NULL,
-                    processed INTEGER DEFAULT 0,
-                    created_at TEXT NOT NULL,
-                    processed_at TEXT
-                )
-                """
-            )
+    All DB access goes through self.store:
+    - store.query() for SELECTs
+    - store.insert() for INSERTs (write-locked)
+    - store.update() for UPDATEs (write-locked)
+    """
 
-            # Create digest_history table
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS digest_history (
-                    id TEXT PRIMARY KEY,
-                    user_id TEXT NOT NULL,
-                    bucket TEXT NOT NULL,
-                    digest_json TEXT NOT NULL,
-                    item_count INTEGER NOT NULL,
-                    sent_at TEXT NOT NULL
-                )
-                """
-            )
+    def __init__(self, store):
+        """Initialize digest engine.
 
-            # Create indexes for performance
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_digest_queue_user_bucket "
-                "ON digest_queue(user_id, bucket, processed)"
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_digest_history_user_bucket "
-                "ON digest_history(user_id, bucket)"
-            )
+        Args:
+            store: StateStore instance (or any object providing
+                   .query(sql, params), .insert(table, data),
+                   and .update(table, id, data)).
+        """
+        self.store = store
 
     def queue_notification(
         self,
@@ -100,27 +76,22 @@ class DigestEngine:
             category = self._categorize_event(event_type)
             now = datetime.now().isoformat()
 
-            with get_connection() as conn:
-                conn.execute(
-                    """
-                    INSERT INTO digest_queue
-                    (id, user_id, notification_id, event_type, category, severity, bucket, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (
-                        f"{user_id}_{notification_id}_{bucket}_{now}",
-                        user_id,
-                        notification_id,
-                        event_type,
-                        category,
-                        severity,
-                        bucket,
-                        now,
-                    ),
-                )
+            self.store.insert(
+                "digest_queue",
+                {
+                    "id": f"{user_id}_{notification_id}_{bucket}_{now}",
+                    "user_id": user_id,
+                    "notification_id": notification_id,
+                    "event_type": event_type,
+                    "category": category,
+                    "severity": severity,
+                    "bucket": bucket,
+                    "created_at": now,
+                },
+            )
             return True
         except (sqlite3.Error, ValueError, OSError) as e:
-            log.error(f"Failed to queue notification: {e}")
+            log.error("Failed to queue notification: %s", e)
             return False
 
     def _categorize_event(self, event_type: str) -> str:
@@ -158,23 +129,19 @@ class DigestEngine:
             Digest dict with total, categories, summary, bucket or None if no items
         """
         try:
-            with get_connection() as conn:
-                # Get all pending items for this user+bucket
-                rows = conn.execute(
-                    """
-                    SELECT id, notification_id, event_type, category, severity
-                    FROM digest_queue
-                    WHERE user_id = ? AND bucket = ? AND processed = 0
-                    ORDER BY severity DESC, created_at ASC
-                    """,
-                    (user_id, bucket),
-                ).fetchall()
+            sql = safe_sql.select(
+                "digest_queue",
+                columns="id, notification_id, event_type, category, severity",
+                where="user_id = ? AND bucket = ? AND processed = 0",
+                order_by="severity DESC, created_at ASC",
+            )
+            rows = self.store.query(sql, [user_id, bucket])
 
             if not rows:
                 return None
 
             # Group by category
-            categories = {}
+            categories: dict[str, list[dict]] = {}
             for row in rows:
                 category = row["category"]
                 if category not in categories:
@@ -190,10 +157,9 @@ class DigestEngine:
                 )
 
             # Sort items within each category by severity
-            severity_values = {"low": 0, "medium": 1, "high": 2, "critical": 3}
             for category in categories:
                 categories[category].sort(
-                    key=lambda x: severity_values.get(x["severity"], 0), reverse=True
+                    key=lambda x: SEVERITY_ORDER.get(x["severity"], 0), reverse=True
                 )
 
             # Build summary
@@ -210,12 +176,15 @@ class DigestEngine:
                 "bucket": bucket,
             }
         except (sqlite3.Error, ValueError, OSError) as e:
-            log.error(f"Failed to generate digest: {e}")
+            log.error("Failed to generate digest: %s", e)
             return None
 
     def mark_as_processed(self, user_id: str, notification_ids: list, bucket: str) -> bool:
         """
         Mark items as processed in the digest queue.
+
+        Uses store.update() (write-locked) instead of raw SQL to ensure
+        write serialization with concurrent queue_notification/insert calls.
 
         Args:
             user_id: User ID
@@ -228,19 +197,24 @@ class DigestEngine:
         try:
             now = datetime.now().isoformat()
 
-            with get_connection() as conn:
-                for notif_id in notification_ids:
-                    conn.execute(
-                        """
-                        UPDATE digest_queue
-                        SET processed = 1, processed_at = ?
-                        WHERE user_id = ? AND notification_id = ? AND bucket = ?
-                        """,
-                        (now, user_id, notif_id, bucket),
+            for notif_id in notification_ids:
+                # Look up row IDs matching this notification in this bucket
+                sql = safe_sql.select(
+                    "digest_queue",
+                    columns="id",
+                    where="user_id = ? AND notification_id = ? AND bucket = ? AND processed = 0",
+                )
+                rows = self.store.query(sql, [user_id, notif_id, bucket])
+                # Update each matching row through the write-locked path
+                for row in rows:
+                    self.store.update(
+                        "digest_queue",
+                        row["id"],
+                        {"processed": 1, "processed_at": now},
                     )
             return True
         except (sqlite3.Error, ValueError, OSError) as e:
-            log.error(f"Failed to mark as processed: {e}")
+            log.error("Failed to mark as processed: %s", e)
             return False
 
     def record_digest_sent(self, user_id: str, bucket: str, digest: dict, sent_time: str) -> bool:
@@ -257,24 +231,24 @@ class DigestEngine:
             True on success, False on failure
         """
         try:
-            import uuid
-
             digest_id = str(uuid.uuid4())
             digest_json = json.dumps(digest) if digest else "{}"
             item_count = digest.get("total", 0) if digest else 0
 
-            with get_connection() as conn:
-                conn.execute(
-                    """
-                    INSERT INTO digest_history
-                    (id, user_id, bucket, digest_json, item_count, sent_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                    """,
-                    (digest_id, user_id, bucket, digest_json, item_count, sent_time),
-                )
+            self.store.insert(
+                "digest_history",
+                {
+                    "id": digest_id,
+                    "user_id": user_id,
+                    "bucket": bucket,
+                    "digest_json": digest_json,
+                    "item_count": item_count,
+                    "sent_at": sent_time,
+                },
+            )
             return True
         except (sqlite3.Error, ValueError, OSError) as e:
-            log.error(f"Failed to record digest sent: {e}")
+            log.error("Failed to record digest sent: %s", e)
             return False
 
     def get_pending_count(self, user_id: str) -> dict:
@@ -287,24 +261,18 @@ class DigestEngine:
         Returns:
             Dict mapping bucket -> count of pending items
         """
-        try:
-            with get_connection() as conn:
-                rows = conn.execute(
-                    """
-                    SELECT bucket, COUNT(*) as count
-                    FROM digest_queue
-                    WHERE user_id = ? AND processed = 0
-                    GROUP BY bucket
-                    """,
-                    (user_id,),
-                ).fetchall()
+        sql = safe_sql.select(
+            "digest_queue",
+            columns="bucket, COUNT(*) as count",
+            where="user_id = ? AND processed = 0",
+            suffix="GROUP BY bucket",
+        )
+        rows = self.store.query(sql, [user_id])
 
-            counts = {}
-            for row in rows:
-                counts[row["bucket"]] = row["count"]
-            return counts
-        except (sqlite3.Error, ValueError, OSError):
-            raise  # was silently swallowed
+        counts = {}
+        for row in rows:
+            counts[row["bucket"]] = row["count"]
+        return counts
 
     def format_plaintext(self, digest: dict | None) -> str:
         """

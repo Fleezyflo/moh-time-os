@@ -10,7 +10,7 @@ import logging
 import os
 import sqlite3
 import uuid
-from datetime import datetime
+from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
@@ -53,10 +53,10 @@ class NotificationEngine:
         try:
             from lib.notifier.digest import DigestEngine
 
-            self._digest_engine = DigestEngine()
+            self._digest_engine = DigestEngine(self.store)
             logger.info("NotificationEngine: digest engine enabled")
         except (ImportError, sqlite3.Error, ValueError, OSError) as e:
-            logger.error(f"NotificationEngine: digest engine init failed: {e}")
+            logger.error("NotificationEngine: digest engine init failed: %s", e)
 
     def _load_channels(self):
         """Load configured notification channels."""
@@ -199,16 +199,37 @@ class NotificationEngine:
                     result = await channel.send(message, priority=priority)
 
                     if result.get("success"):
-                        # Mark as sent
-                        self.store.update(
-                            "notifications",
-                            notif_id,
-                            {
-                                "sent_at": datetime.now().isoformat(),
-                                "delivery_channel": channel_name,
-                                "delivery_id": result.get("message_id"),
-                            },
-                        )
+                        # Mark as sent — if DB update fails after channel send
+                        # succeeded, log the orphan so we can detect duplicates
+                        # on next cycle (audit re-review: async path was missed
+                        # in first remediation, only sync path was fixed).
+                        try:
+                            self.store.update(
+                                "notifications",
+                                notif_id,
+                                {
+                                    "sent_at": datetime.now().isoformat(),
+                                    "delivery_channel": channel_name,
+                                    "delivery_id": result.get("message_id"),
+                                },
+                            )
+                        except (sqlite3.Error, ValueError, OSError) as db_err:
+                            logger.error(
+                                "Notification %s sent via %s but DB update failed: %s. "
+                                "May cause duplicate on next cycle.",
+                                notif_id,
+                                channel_name,
+                                db_err,
+                            )
+                            results.append(
+                                {
+                                    "id": notif_id,
+                                    "channel": channel_name,
+                                    "status": "sent_but_untracked",
+                                    "error": f"DB update failed: {db_err}",
+                                }
+                            )
+                            continue
 
                         results.append(
                             {
@@ -370,15 +391,38 @@ class NotificationEngine:
                     result = channel.send_sync(message, priority=priority)
 
                     if result.get("success"):
-                        self.store.update(
-                            "notifications",
-                            notif_id,
-                            {
-                                "sent_at": datetime.now().isoformat(),
-                                "delivery_channel": channel_name,
-                                "delivery_id": result.get("message_id"),
-                            },
-                        )
+                        # Mark as sent — if DB update fails after channel send
+                        # succeeded, log the orphan so we can detect duplicates
+                        # on next cycle (audit finding: notification transaction
+                        # boundary missing).
+                        try:
+                            self.store.update(
+                                "notifications",
+                                notif_id,
+                                {
+                                    "sent_at": datetime.now().isoformat(),
+                                    "delivery_channel": channel_name,
+                                    "delivery_id": result.get("message_id"),
+                                },
+                            )
+                        except (sqlite3.Error, ValueError, OSError) as db_err:
+                            logger.error(
+                                "Notification %s sent via %s but DB update failed: %s. "
+                                "May cause duplicate on next cycle.",
+                                notif_id,
+                                channel_name,
+                                db_err,
+                            )
+                            results.append(
+                                {
+                                    "id": notif_id,
+                                    "channel": channel_name,
+                                    "status": "sent_but_untracked",
+                                    "error": f"DB update failed: {db_err}",
+                                }
+                            )
+                            continue
+
                         results.append({"id": notif_id, "channel": channel_name, "status": "sent"})
                     else:
                         results.append(
@@ -533,14 +577,16 @@ class NotificationEngine:
             mute_id
         """
         mute_id = str(uuid.uuid4())
-        now = datetime.now().isoformat()
+
+        # Extract entity_type from "type:id" format (schema requires NOT NULL)
+        entity_type = entity_id.split(":")[0] if ":" in entity_id else "entity"
 
         self.store.insert(
             "notification_mutes",
             {
                 "id": mute_id,
+                "entity_type": entity_type,
                 "entity_id": entity_id,
-                "muted_at": now,
                 "mute_until": mute_until,
                 "mute_reason": reason,
             },
@@ -592,7 +638,7 @@ class NotificationEngine:
         now = datetime.now().isoformat()
         return self.store.query(
             """
-            SELECT id, entity_id, muted_at, mute_until, mute_reason
+            SELECT id, entity_id, created_at, mute_until, mute_reason
             FROM notification_mutes
             WHERE mute_until > ?
             ORDER BY mute_until ASC
@@ -616,7 +662,7 @@ class NotificationEngine:
             notification_id: ID of the notification
             channel: Delivery channel name
             outcome: 'delivered' | 'failed' | 'opened' | 'acted_on'
-            metadata: Optional metadata dict
+            metadata: Optional metadata dict (stored in failed_reason for failures)
 
         Returns:
             analytics_id
@@ -624,17 +670,30 @@ class NotificationEngine:
         analytics_id = str(uuid.uuid4())
         now = datetime.now().isoformat()
 
-        self.store.insert(
-            "notification_analytics",
-            {
-                "id": analytics_id,
-                "notification_id": notification_id,
-                "channel": channel,
-                "outcome": outcome,
-                "metadata": json.dumps(metadata) if metadata else None,
-                "recorded_at": now,
-            },
-        )
+        data = {
+            "id": analytics_id,
+            "notification_id": notification_id,
+            "channel": channel,
+            "outcome": outcome,
+        }
+
+        # Map outcome to the schema's timestamp columns
+        outcome_to_column = {
+            "delivered": "delivered_at",
+            "opened": "opened_at",
+            "acted_on": "acted_on_at",
+        }
+        ts_col = outcome_to_column.get(outcome)
+        if ts_col:
+            data[ts_col] = now
+
+        # Store failure metadata in failed_reason column
+        if outcome == "failed" and metadata:
+            data["failed_reason"] = (
+                json.dumps(metadata) if isinstance(metadata, dict) else str(metadata)
+            )
+
+        self.store.insert("notification_analytics", data)
 
         return analytics_id
 
@@ -650,15 +709,13 @@ class NotificationEngine:
                 "action_rate": float
             }
         """
-        from datetime import timedelta
-
         cutoff = (datetime.now() - timedelta(days=days)).isoformat()
 
         rows = self.store.query(
             """
             SELECT channel, outcome, COUNT(*) as cnt
             FROM notification_analytics
-            WHERE recorded_at >= ?
+            WHERE created_at >= ?
             GROUP BY channel, outcome
         """,
             [cutoff],
