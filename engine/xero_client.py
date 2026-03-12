@@ -1,4 +1,9 @@
-"""Xero API client with OAuth2 refresh token flow."""
+"""Xero API client with OAuth2 refresh token flow.
+
+Credentials: reads XERO_CLIENT_ID, XERO_CLIENT_SECRET, XERO_REFRESH_TOKEN,
+XERO_TENANT_ID env vars first, falls back to config/.credentials.json.
+Token cache still uses .xero_token_cache.json for the rotating access token.
+"""
 
 import json
 import logging
@@ -8,11 +13,13 @@ from typing import Any
 
 import httpx
 
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", ".credentials.json")
+_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", ".credentials.json")
 TOKEN_CACHE_PATH = os.path.join(os.path.dirname(__file__), "..", "config", ".xero_token_cache.json")
 
 XERO_OAUTH_ENDPOINT = "https://identity.xero.com/connect/token"
 XERO_API_BASE = "https://api.xero.com/api.xro/2.0"
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -24,10 +31,49 @@ class XeroCredentials:
     access_token: str | None = None
 
 
+def _load_from_env() -> XeroCredentials | None:
+    """Try loading Xero credentials from environment variables."""
+    client_id = os.environ.get("XERO_CLIENT_ID")
+    client_secret = os.environ.get("XERO_CLIENT_SECRET")
+    refresh_token = os.environ.get("XERO_REFRESH_TOKEN")
+    tenant_id = os.environ.get("XERO_TENANT_ID")
+
+    if all([client_id, client_secret, refresh_token, tenant_id]):
+        # Still check token cache for access token
+        access_token = None
+        if os.path.exists(TOKEN_CACHE_PATH):
+            try:
+                with open(TOKEN_CACHE_PATH) as f:
+                    cache = json.load(f)
+                    access_token = cache.get("access_token")
+            except (OSError, json.JSONDecodeError):
+                logger.debug("Token cache read failed", exc_info=True)
+
+        return XeroCredentials(
+            client_id=client_id,
+            client_secret=client_secret,
+            refresh_token=refresh_token,
+            tenant_id=tenant_id,
+            access_token=access_token,
+        )
+    return None
+
+
 def load_credentials() -> XeroCredentials:
-    with open(CONFIG_PATH) as f:
-        data = json.load(f)
-    xero = data["xero"]
+    """Load Xero credentials from env vars, falling back to credentials file."""
+    env_creds = _load_from_env()
+    if env_creds:
+        return env_creds
+
+    try:
+        with open(_CONFIG_PATH) as f:
+            data = json.load(f)
+        xero = data["xero"]
+    except (FileNotFoundError, KeyError, json.JSONDecodeError) as e:
+        raise RuntimeError(
+            "Xero credentials not found. Set XERO_CLIENT_ID/XERO_CLIENT_SECRET/"
+            "XERO_REFRESH_TOKEN/XERO_TENANT_ID env vars or populate config/.credentials.json"
+        ) from e
 
     # Check for cached access token
     access_token = None
@@ -36,8 +82,8 @@ def load_credentials() -> XeroCredentials:
             with open(TOKEN_CACHE_PATH) as f:
                 cache = json.load(f)
                 access_token = cache.get("access_token")
-        except Exception:
-            logging.getLogger(__name__).debug("Token cache read failed", exc_info=True)
+        except (OSError, json.JSONDecodeError):
+            logger.debug("Token cache read failed", exc_info=True)
 
     return XeroCredentials(
         client_id=xero["client_id"],
@@ -49,18 +95,35 @@ def load_credentials() -> XeroCredentials:
 
 
 def save_tokens(access_token: str, refresh_token: str) -> None:
-    """Save tokens to cache and update refresh token in credentials."""
+    """Save tokens to cache and update refresh token in credentials.
+
+    Access token always cached to .xero_token_cache.json.
+    Refresh token written back to .credentials.json only if using file-based creds.
+    When using env vars, the rotated refresh token is logged as a warning so
+    the operator can update the env var.
+    """
     # Save access token to cache
     os.makedirs(os.path.dirname(TOKEN_CACHE_PATH), exist_ok=True)
     with open(TOKEN_CACHE_PATH, "w") as f:
         json.dump({"access_token": access_token}, f)
 
-    # Update refresh token in credentials (it rotates)
-    with open(CONFIG_PATH) as f:
-        data = json.load(f)
-    data["xero"]["refresh_token"] = refresh_token
-    with open(CONFIG_PATH, "w") as f:
-        json.dump(data, f, indent=2)
+    # Update refresh token — file-based or env-var mode
+    if os.environ.get("XERO_REFRESH_TOKEN"):
+        # Env var mode: can't write back, warn operator
+        if refresh_token != os.environ.get("XERO_REFRESH_TOKEN"):
+            logger.warning(
+                "Xero refresh token rotated. Update XERO_REFRESH_TOKEN env var to avoid re-auth.",
+            )
+    else:
+        # File-based mode: update credentials file
+        try:
+            with open(_CONFIG_PATH) as f:
+                data = json.load(f)
+            data["xero"]["refresh_token"] = refresh_token
+            with open(_CONFIG_PATH, "w") as f:
+                json.dump(data, f, indent=2)
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            logger.error("Failed to save rotated refresh token: %s", e)
 
 
 def refresh_access_token(creds: XeroCredentials) -> str:

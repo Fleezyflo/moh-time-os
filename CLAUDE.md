@@ -14,6 +14,8 @@ You are Molham's engineering partner working on MOH Time OS, a personal intellig
 
 **Verify before claiming done.** Run tests, lint, scanners, and pre-commit before pushing. Show the output. If you can't prove it works, it doesn't work.
 
+**Read before you write. No exceptions.** See Pre-Edit Gate in Verification Requirements — it is mandatory and enforced via the verification log (`audit-remediation/VERIFICATION_LOG_TEMPLATE.md`).
+
 ## Decision Authority
 
 - **You decide:** how to implement, which pattern to follow, what tests to write, how to structure a fix
@@ -79,9 +81,9 @@ The sandbox (Linux x86) and Molham's Mac (Darwin ARM) share the same repo folder
 - Always stage ALL modified files before committing (prevents ruff-format stash conflicts).
 - If pre-commit fails, the commit didn't happen -- do NOT use `--amend` next, just fix and commit fresh.
 
-### Branch Management (Session 7)
+### Branch Management (Session 7, updated Session 19)
 
-- Always check `git branch --show-current` before trying to create a branch -- you might already be on it.
+- **Never use `git checkout -b <branch>`.** It fails if the branch exists. Always use idempotent form: `git checkout <branch> 2>/dev/null || git checkout -b <branch>`. Session 19 hit this twice in a row because branches existed from previous attempts.
 - If branch exists in a worktree, `git branch -D` will fail -- check with `git worktree list` first.
 
 ### Before Push -- Mac Only (Session 7)
@@ -117,6 +119,8 @@ The sandbox (Linux x86) and Molham's Mac (Darwin ARM) share the same repo folder
 
 ## Code Rules
 
+- **No unverified interface calls** — if you haven't read `def function_name` in this session, you don't call `function_name()`. Grep first. Read the source. Confirm the signature. (Session 21)
+- **No runtime assumptions** — if you add a lock, read the connection model first. If you redirect a function to a new backend, read the backend's return type first. If you add an import at module level, verify every test file that imports this module can resolve the new dependency. (Session 21)
 - No `except Exception: pass` or `except: pass` — log errors and return typed error results
 - No `return {}` or `return []` on failure — these hide errors as "no data"
 - No `shell=True` in subprocess — use list arguments
@@ -129,6 +133,10 @@ The sandbox (Linux x86) and Molham's Mac (Darwin ARM) share the same repo folder
 - No `requests.get/post` without `timeout=` parameter — always pass `timeout=30` or appropriate value (S113)
 - No silent `except: pass` or `except: continue` anywhere — always `logging.debug()` with context (S110/S112 enforced globally)
 - No `isinstance(x, (A, B))` — use `isinstance(x, A | B)` (UP038, Python 3.11+)
+
+## One PR, One Purpose (Session 21)
+
+**Never bundle unrelated fixes into a single commit or PR.** If a plan says "5 PRs," you produce 5 PRs. Each PR must be independently revertable without affecting the others. Session 21 collapsed 5 planned PRs into 1 commit touching 9 files across 4 unrelated concerns (credentials, data loss, backup, API error handling). That made it impossible to revert one fix without reverting all of them. If a plan specifies sequenced PRs, follow the sequence exactly.
 
 ## No-Bypass Rule
 
@@ -144,14 +152,35 @@ This rule exists because Session 2 added 10 bypass comments that all turned out 
 
 ## Verification Requirements
 
+### Pre-Edit Gate (Session 21 — MANDATORY)
+
+**Before writing a single line into any file, you must complete these steps. No shortcuts. No "I already know." Read it now, in this session.**
+
+1. **Read every function you will call.** Open the source file. Read the function definition. Confirm: name matches, parameters match, return type matches what you expect. Show the line numbers in your reasoning.
+2. **Read every function that calls the code you are changing.** If you are editing `insert()`, find every caller of `insert()` with Grep. Confirm your change is compatible with every call site.
+3. **If you cannot read the source** (external library, no access), state that explicitly and explain why you believe the interface is correct. Cite documentation or prior verified usage in the codebase.
+4. **Never call a method you found by name-guessing.** If you think a method called `get_sync_states()` exists, Grep for `def get_sync_states` first. If it doesn't exist, you don't call it.
+
+**Violation of this gate is a session-ending failure.** Session 21 skipped all four steps on multiple edits and produced code that called nonexistent interfaces, wrapped locks around connection patterns it hadn't read, and shipped 9 unverified files. That is never acceptable.
+
+**Why this gate exists — Session 21 incident report:**
+
+Session 21 edited 9 source files across 4 unrelated concerns in a single pass. The agent ran `ruff check` and `ast.parse` and presented that as "verification." It was not verification — it was syntax checking. The agent never read `_get_conn()` before wrapping it in a lock. Never grepped for `def get_sync_states` before calling it. Never checked the SQLite version before using `VACUUM INTO`. Never checked whether `import httpx` at module level would break test isolation. Then the agent bundled all 9 files into one commit, violating the approved 5-PR plan that existed specifically for safe rollback. When confronted, the agent wrote more rules and documentation instead of doing the actual verification work — producing the appearance of progress without substance. This pattern — optimizing for speed of output over correctness, substituting syntax checks for real verification, writing rules instead of doing work — is the specific failure mode this gate prevents. You are not trusted by default. You earn trust by filling out the verification log with real file paths and real line numbers before you write a single line of code.
+
+**Enforcement mechanism:** Copy `audit-remediation/VERIFICATION_LOG_TEMPLATE.md` to `audit-remediation/VERIFICATION_LOG_S[session].md` at session start. Fill in the Pre-Edit table BEFORE each edit. Include the filled log in `git add` with every commit. If the log is missing or has blank cells, the commit is invalid.
+
+### Pre-Commit Gate
+
 Before giving Molham a commit command, verify ALL of the following locally:
 
 1. `ruff check` — zero lint errors on changed files
 2. `ruff format --check` — zero format issues on changed files
 3. `bandit -r` — zero security findings on changed files
-4. `python -m pytest tests/ -x` — tests pass
+4. `python -m pytest tests/ -x` — tests pass (if sandbox has pytest; otherwise tell Molham to run it)
 5. `python scripts/check_mypy_baseline.py --strict-only` — zero mypy errors in strict islands
 6. Stage ALL modified files before committing (prevents ruff-format stash conflicts)
+7. **Verify every method call in changed files resolves to a real function** — Grep for `def <method_name>` and confirm it exists
+8. **Verification log is filled out and included in `git add`** — no blank cells in Pre-Edit or Pre-Commit tables
 
 Before giving Molham a push command, verify the full 7-gate pre-push will pass:
 
