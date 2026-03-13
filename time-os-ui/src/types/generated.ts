@@ -6634,6 +6634,65 @@ export interface components {
             total_pages: number;
         };
         /**
+         * PatternDetectionData
+         * @description Typed payload for pattern detection results.
+         */
+        PatternDetectionData: {
+            /** Detection Error Details */
+            detection_error_details?: string[];
+            /**
+             * Detection Errors
+             * @default 0
+             */
+            detection_errors: number;
+            /**
+             * Detection Success
+             * @default true
+             */
+            detection_success: boolean;
+            /** Patterns */
+            patterns?: unknown[];
+            /**
+             * Total Detected
+             * @default 0
+             */
+            total_detected: number;
+        };
+        /**
+         * PatternDetectionResponse
+         * @description Typed envelope for /intelligence/patterns — extends IntelligenceResponse shape.
+         */
+        PatternDetectionResponse: {
+            /**
+             * Computed At
+             * @description ISO timestamp of computation
+             */
+            computed_at: string;
+            data?: components["schemas"]["PatternDetectionData"] | null;
+            /**
+             * Error
+             * @description Error message if status=error
+             */
+            error?: string | null;
+            /**
+             * Error Code
+             * @description Error code if status=error
+             */
+            error_code?: string | null;
+            /**
+             * Params
+             * @description Echo of request params
+             */
+            params?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Status
+             * @description ok or error
+             */
+            status: string;
+        };
+        /**
          * ProposalRequest
          * @description Request to propose an action.
          */

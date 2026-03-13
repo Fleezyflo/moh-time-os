@@ -4936,29 +4936,6 @@ async def get_fix_data():
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
 
-        # Ensure required tables exist (defensive)
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS identities (
-                id TEXT PRIMARY KEY,
-                display_name TEXT,
-                source TEXT,
-                canonical_id TEXT,
-                confidence_score REAL DEFAULT 0.5
-            )
-        """)
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS entity_links (
-                link_id TEXT PRIMARY KEY,
-                from_artifact_type TEXT,
-                from_artifact_id TEXT,
-                to_entity_type TEXT,
-                to_entity_id TEXT,
-                method TEXT,
-                confidence REAL DEFAULT 0.5,
-                status TEXT DEFAULT 'active'
-            )
-        """)
-
         # Identity conflicts
         cur.execute("""
             SELECT i.id, i.display_name, i.source, i.confidence_score
@@ -5222,7 +5199,7 @@ async def resolve_fix_data_item(item_type: str, item_id: str, body: ResolveFixDa
                 UPDATE entity_links
                 SET confidence = 1.0,
                     updated_at = ?
-                WHERE id = ?
+                WHERE link_id = ?
             """,
                 (now, item_id),
             )
@@ -5335,8 +5312,8 @@ async def get_evidence(entity_type: str, entity_id: str):
                    a.source, a.type as artifact_type, a.occurred_at
             FROM excerpts e
             JOIN artifacts a ON e.artifact_id = a.artifact_id
-            JOIN entity_links el ON el.entity_id = ?
-            WHERE el.entity_type = ? AND e.artifact_id = el.linked_id
+            JOIN entity_links el ON el.to_entity_id = ?
+            WHERE el.to_entity_type = ? AND e.artifact_id = el.from_artifact_id
             ORDER BY a.occurred_at DESC
             LIMIT 50
         """,
