@@ -1,58 +1,92 @@
 # HANDOFF -- Audit Remediation
 
-**Generated:** 2026-03-08
-**Current Phase:** all-complete
-**Current Session:** 19
-**Track:** Gap remediation (phases A-D)
+**Generated:** 2026-03-12
+**Current Phase:** systemic-remediation (VERIFIED -- READY TO COMMIT)
+**Current Session:** 22
+**Track:** Systemic audit remediation (post-audit)
+
+---
+
+## Status: All 9 Files Verified and Bug-Fixed
+
+Session 22 completed full verification of all 9 files edited in Session 21. Found and fixed 4 bugs:
+
+1. **`state_tracker.py` line 79** — `sqlite3.Row` doesn't support `.get()`. Fixed: bracket access with None guard.
+2. **`backup.py`** — No SQLite version guard for `VACUUM INTO`. Fixed: runtime version check with fallback to checkpoint + copy.
+3. **`xero_client.py` line 117** — Logged 8 chars of refresh token. Fixed: removed token prefix from log message.
+4. **`health.py` line 15** — Module-level `import httpx` breaks test isolation. Fixed: moved import inside `_alert_on_degradation()` with ImportError guard.
+
+Verification log: `audit-remediation/VERIFICATION_LOG_S22.md`
+
+**All files pass ruff check, ruff format (except xero_client.py needs Mac formatting), and bandit with zero issues.**
+
+**None of this has been committed. All changes are in the working tree. Ready for the 4-PR commit sequence below.**
 
 ---
 
 ## What Just Happened
 
-### Session 018 -- Phase D: Polish
+### Session 20 (completed)
 
-All 10 work items completed in a single PR. PR #TBD (branch: phase-d/polish).
+PR #95 merged (branch: `fix/sync-calendar-asana`):
+1. Calendar attendees PK mismatch fixed (INTEGER → TEXT)
+2. Asana sequential pagination: RateLimiter + ThreadPoolExecutor
+3. Test fixes for sys.modules pollution and exception types
+4. ADR-0020 documents the schema change
 
-**Cleanup (GAP-08-01, GAP-12-03, GAP-09-03):**
-- GAP-08-01: Removed all 6 stale Clawdbot references across `lib/cron_tasks.py` (2), `lib/autonomous_loop.py` (1), `lib/notifier/__init__.py` (1), `scripts/install_cron.sh` (2). Zero grep hits for Clawdbot in maintained scope.
-- GAP-12-03: Updated `lib/intelligence/unified_intelligence.py` docstring -- removed stale "parallel V4 and V5" reference, now reads "Provides a unified facade".
-- GAP-09-03: Investigated `lib/collectors/all_users_runner.py` -- NOT orphaned. It's a functional multi-service CLI runner with argparse for gmail, calendar, chat, drive, docs collection. No code change needed.
+### Session 21 (completed -- code written, not committed)
 
-**Test Coverage (GAP-09-04):**
-- Created `tests/test_xero_collector.py` -- covers parse_xero_date, _determine_invoice_status, _transform_line_items, _transform_contacts, _transform_credit_notes, _find_client_id, circuit breaker blocking.
-- Expanded `tests/test_gmail_collector.py` -- added init, body extraction (direct + parts + empty), header extraction (found/case-insensitive/missing), config defaults.
-- Created `tests/test_tasks_collector.py` -- covers transform (completed skip, active include, source/id/project), _map_status, _extract_due_date, _compute_priority (overdue/today/capped).
-- Note: drive.py and contacts.py collectors do not exist -- only 3 test files needed.
+Systemic audit identified 10 architectural issues. A 5-PR remediation plan was approved. Implementation done across 9 files but without proper verification. Session 21 also added Pre-Edit Gate, verification log template, and Session 21 incident report to CLAUDE.md.
 
-**Observability (GAP-11-02, GAP-12-06, GAP-11-07):**
-- GAP-11-02: Added `GET /api/v2/intelligence/performance` endpoint to `api/intelligence_router.py` -- returns cache stats, baselines, violations, slow queries, N+1 detections.
-- GAP-12-06: Added `GET /api/debug/config` endpoint to `api/server.py` -- returns masked CORS origins, middleware stack, collector intervals, rate limits, environment. No secrets exposed.
-- GAP-11-07: Added `run_compliance_snapshot()` method to `lib/governance/retention_scheduler.py` -- generates dry-run enforcement report and stores as compliance_report record in retention_runs table.
+### Session 22 (current)
 
-**UI (GAP-12-01):**
-- Created `time-os-ui/src/pages/NotFound.tsx` -- 404 page with "Back to Inbox" link.
-- Updated `time-os-ui/src/router.tsx` -- added NotFound lazy import, catch-all `*` route (last in route tree).
-
-**Performance (GAP-11-03):**
-- Replaced O(n) list-based LRU in `lib/intelligence/performance_scale.py` with O(1) `OrderedDict` -- `_touch()` uses `move_to_end()`, `_evict_lru()` uses `next(iter())`.
-
-**Documentation (GAP-13-02, GAP-11-05):**
-- GAP-13-02: Added pagination variance documentation to `api/response_models.py` -- block comment explaining divergence of InvoiceListResponse, EngagementListResponse, SignalListResponse, TeamInvolvementResponse from standard ListResponse, plus updated individual docstrings.
-- GAP-11-05: Added standalone bandit command documentation to `docs/SAFETY.md` -- `bandit -r lib/ api/ -c pyproject.toml`.
-
-**Files created:** `tests/test_xero_collector.py`, `tests/test_tasks_collector.py`, `time-os-ui/src/pages/NotFound.tsx`
-**Files modified:** `lib/cron_tasks.py`, `lib/autonomous_loop.py`, `lib/notifier/__init__.py`, `scripts/install_cron.sh`, `lib/intelligence/unified_intelligence.py`, `lib/intelligence/performance_scale.py`, `api/intelligence_router.py`, `api/server.py`, `lib/governance/retention_scheduler.py`, `time-os-ui/src/router.tsx`, `api/response_models.py`, `docs/SAFETY.md`, `tests/test_gmail_collector.py`
+Verified all 9 files. Fixed 4 bugs found during verification. Created VERIFICATION_LOG_S22.md. Ready for commit sequence.
 
 ---
 
-## What's Next
+## What's Next — Exact PR Sequence
 
-All four phases (A through D) are complete. The audit remediation track is finished. No further phases remain.
+**You must follow this sequence exactly. One PR per row. No bundling. No reordering.**
 
-Next steps for Molham:
-- Merge the Phase D PR
-- Run the full test suite and confirm green CI
-- Consider a final enforcement audit to verify all new files are covered
+### PR 1: Credentials to env vars
+| File | Status |
+|------|--------|
+| `engine/asana_client.py` | VERIFIED — env var loading correct |
+| `engine/xero_client.py` | FIXED — removed token prefix from log |
+
+Branch: `fix/credentials-env-vars`
+
+### PR 2: Data loss + write lock + state tracker
+| File | Status |
+|------|--------|
+| `lib/collectors/base.py` | VERIFIED — COLLECTOR_ERRORS imported, update_sync_state signature matches |
+| `lib/state_store.py` | VERIFIED — _write_lock correct for singleton with per-call connections |
+| `lib/state_tracker.py` | FIXED — sqlite3.Row bracket access instead of .get() |
+
+Branch: `fix/data-loss-write-safety`
+
+### PR 3: Backup VACUUM INTO
+| File | Status |
+|------|--------|
+| `lib/backup.py` | FIXED — SQLite version guard with fallback to checkpoint + copy |
+
+Branch: `fix/backup-vacuum-into`
+
+### PR 4: Schema + alerting + API handler
+| File | Status |
+|------|--------|
+| `lib/schema_engine.py` | VERIFIED — standard SQLite savepoint pattern |
+| `lib/observability/health.py` | FIXED — httpx import moved inside method with ImportError guard |
+| `api/server.py` | VERIFIED — standard FastAPI pattern, Request/JSONResponse/os imported |
+
+Branch: `fix/schema-alerting-api-handler`
+
+### For each PR:
+1. Molham runs `uv run pre-commit run ruff-format --files <files>` to format
+2. Molham runs `uv run python -m pytest tests/ -x` to verify
+3. Commit ONLY that PR's files + verification log
+4. Push, create PR, set auto-merge, watch CI
+5. Wait for merge before starting next PR
 
 ---
 
@@ -60,16 +94,14 @@ Next steps for Molham:
 
 1. You write code. You never run anything.
 2. Commit subject under 72 chars, valid types only
-3. "HANDOFF.md removed and rewritten" required in commit body
-4. If 20+ deletions, include "Deletion rationale:" in body
-5. Match existing patterns obsessively
-6. No comments in command blocks
-7. `lib/governance/` has REAL production classes -- `lib/intelligence/data_governance.py` has toy in-memory versions. Always use the real ones.
-8. `DataCatalog` takes `tables: dict[str, TableClassification]`, NOT `db_path`. Use `DataClassifier(db_path).classify_database()` to get a DataCatalog.
-9. Intelligence error responses must use `JSONResponse(content=_error_response(...))`, NOT `raise HTTPException(detail=...)` for 500 errors.
-10. Inline `from fastapi.responses import JSONResponse` is redundant -- it's imported at module level (line 22 of intelligence_router.py).
-11. CalendarWriter already exists at `lib/integrations/calendar_writer.py` -- don't recreate it.
-12. NotificationEngine has TWO methods returning the same dict comprehension pattern (`get_pending_count` and `get_sent_today`) -- use enough context to disambiguate when editing.
+3. **READ BEFORE YOU WRITE (Session 21).** Before editing any function, read every function your new code calls. Grep for `def <name>`. Read the source. Confirm signature and return type. No exceptions.
+4. **NEVER CALL UNVERIFIED INTERFACES (Session 21).** If you haven't read `def function_name` in this session, you don't call it.
+5. **ONE PR, ONE PURPOSE (Session 21).** If a plan says 5 PRs, you produce 5 PRs. Never bundle.
+6. If 20+ deletions, include "Deletion rationale:" in body
+7. Match existing patterns obsessively
+8. No comments in command blocks
+9. `lib/governance/` has REAL production classes -- `lib/intelligence/data_governance.py` has toy in-memory versions.
+10. Intelligence error responses must use `JSONResponse(content=_error_response(...))`, NOT `raise HTTPException(detail=...)` for 500 errors.
 
 ---
 
@@ -77,4 +109,5 @@ Next steps for Molham:
 
 1. `audit-remediation/AGENT.md` -- This brief
 2. `audit-remediation/state.json` -- Current project state
-3. `CLAUDE.md` -- Repo-level engineering rules
+3. `CLAUDE.md` -- Repo-level engineering rules (UPDATED Session 21 with pre-edit gate, never-assume rule, one-PR-one-purpose rule)
+4. `audit-remediation/VERIFICATION_LOG_S22.md` -- Verification log for this session

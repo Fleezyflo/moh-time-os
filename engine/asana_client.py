@@ -1,4 +1,7 @@
-"""Asana API client using Personal Access Token."""
+"""Asana API client using Personal Access Token.
+
+Credentials: reads ASANA_PAT env var first, falls back to config/.credentials.json.
+"""
 
 import json
 import logging
@@ -11,7 +14,7 @@ import httpx
 
 from lib.collectors.resilience import RateLimiter
 
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", ".credentials.json")
+_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", ".credentials.json")
 ASANA_API_BASE = "https://app.asana.com/api/1.0"
 
 # Asana PAT rate limit: 150 requests/minute. Use 120 for safety margin.
@@ -25,9 +28,18 @@ _DEFAULT_RETRY_AFTER = 60
 
 
 def load_pat() -> str:
-    with open(CONFIG_PATH) as f:
-        data = json.load(f)
-    return data["asana"]["pat"]
+    """Load Asana PAT from ASANA_PAT env var, falling back to credentials file."""
+    pat = os.environ.get("ASANA_PAT")
+    if pat:
+        return pat
+    try:
+        with open(_CONFIG_PATH) as f:
+            data = json.load(f)
+        return data["asana"]["pat"]
+    except (FileNotFoundError, KeyError, json.JSONDecodeError) as e:
+        raise RuntimeError(
+            "Asana PAT not found. Set ASANA_PAT env var or populate config/.credentials.json"
+        ) from e
 
 
 def asana_get(endpoint: str, params: dict | None = None) -> dict[str, Any]:
