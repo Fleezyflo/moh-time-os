@@ -138,15 +138,20 @@ class NotificationHandler:
         return {"success": True, "notification_id": notif_id}
 
     def _log_action(self, action: dict, result: dict):
-        """Log action to database."""
+        """Log action to database.
+
+        Bug fix A-I1: columns domain, action_type, target_id, data
+        do not exist in actions table. Mapped to schema-valid columns:
+        action_type → type (NOT NULL), target_id → target_system,
+        data → payload (NOT NULL), domain dropped (no column).
+        """
         self.store.insert(
             "actions",
             {
                 "id": f"action_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}",
-                "domain": "notifications",
-                "action_type": action.get("action_type"),
-                "target_id": result.get("notification_id"),
-                "data": json.dumps(action.get("data", {})),
+                "type": action.get("action_type", "notification"),
+                "target_system": "notifications",
+                "payload": json.dumps(action.get("data", {})),
                 "result": json.dumps(result),
                 "status": "completed" if result.get("success") else "failed",
                 "created_at": datetime.now().isoformat(),
