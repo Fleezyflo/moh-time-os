@@ -6,7 +6,6 @@ accurate OpenAPI schemas instead of empty `schema: {}`.
 
 Usage:
     from api.response_models import IntelligenceResponse, ListResponse
-import sqlite3
 
     @router.get("/endpoint", response_model=IntelligenceResponse)
     async def my_endpoint(): ...
@@ -181,3 +180,30 @@ class FixDataResponse(BaseModel):
     ambiguous_links: list[Any] = Field(default_factory=list)
     missing_mappings: list[Any] = Field(default_factory=list)
     total: int = Field(default=0)
+
+
+# ==== Pattern Detection ====
+# Typed contract for /intelligence/patterns endpoint.
+# detect_all_patterns() returns {success, detection_errors, errors, patterns, ...}.
+# This model surfaces detection health alongside results.
+
+
+class PatternDetectionData(BaseModel):
+    """Typed payload for pattern detection results."""
+
+    patterns: list[Any] = Field(default_factory=list)
+    total_detected: int = Field(default=0)
+    detection_success: bool = Field(default=True)
+    detection_errors: int = Field(default=0)
+    detection_error_details: list[str] = Field(default_factory=list)
+
+
+class PatternDetectionResponse(BaseModel):
+    """Typed envelope for /intelligence/patterns — extends IntelligenceResponse shape."""
+
+    status: str = Field(description="ok or error")
+    data: PatternDetectionData | None = Field(default=None)
+    computed_at: str = Field(description="ISO timestamp of computation")
+    params: dict[str, Any] = Field(default_factory=dict, description="Echo of request params")
+    error: str | None = Field(default=None, description="Error message if status=error")
+    error_code: str | None = Field(default=None, description="Error code if status=error")

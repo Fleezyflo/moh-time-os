@@ -1443,6 +1443,101 @@
         "title": "PaginatedResponse",
         "type": "object"
       },
+      "PatternDetectionData": {
+        "description": "Typed payload for pattern detection results.",
+        "properties": {
+          "detection_error_details": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Detection Error Details",
+            "type": "array"
+          },
+          "detection_errors": {
+            "default": 0,
+            "title": "Detection Errors",
+            "type": "integer"
+          },
+          "detection_success": {
+            "default": true,
+            "title": "Detection Success",
+            "type": "boolean"
+          },
+          "patterns": {
+            "items": {},
+            "title": "Patterns",
+            "type": "array"
+          },
+          "total_detected": {
+            "default": 0,
+            "title": "Total Detected",
+            "type": "integer"
+          }
+        },
+        "title": "PatternDetectionData",
+        "type": "object"
+      },
+      "PatternDetectionResponse": {
+        "description": "Typed envelope for /intelligence/patterns \u2014 extends IntelligenceResponse shape.",
+        "properties": {
+          "computed_at": {
+            "description": "ISO timestamp of computation",
+            "title": "Computed At",
+            "type": "string"
+          },
+          "data": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PatternDetectionData"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Error message if status=error",
+            "title": "Error"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Error code if status=error",
+            "title": "Error Code"
+          },
+          "params": {
+            "additionalProperties": true,
+            "description": "Echo of request params",
+            "title": "Params",
+            "type": "object"
+          },
+          "status": {
+            "description": "ok or error",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "computed_at"
+        ],
+        "title": "PatternDetectionResponse",
+        "type": "object"
+      },
       "ProposalRequest": {
         "description": "Request to propose an action.",
         "properties": {

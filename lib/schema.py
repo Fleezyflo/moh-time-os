@@ -17,7 +17,7 @@ from collections import OrderedDict
 # =============================================================================
 # Schema version — bump when you change this file
 # =============================================================================
-SCHEMA_VERSION = 20
+SCHEMA_VERSION = 21
 
 # =============================================================================
 # Table Definitions
@@ -1499,6 +1499,7 @@ INDEXES: list[tuple[str, str, str, str | None]] = [
     # artifacts + entity_links
     ("idx_entity_links_artifact", "entity_links", "from_artifact_id", None),
     ("idx_entity_links_target", "entity_links", "to_entity_type, to_entity_id", None),
+    ("idx_entity_links_status", "entity_links", "status", None),
     # Digest system
     ("idx_digest_queue_user_bucket", "digest_queue", "user_id, bucket, processed", None),
     ("idx_digest_history_user_bucket", "digest_history", "user_id, bucket", None),
@@ -1545,13 +1546,18 @@ TABLES["artifacts"] = {
 
 TABLES["entity_links"] = {
     "columns": [
-        ("id", "INTEGER PRIMARY KEY"),
+        ("link_id", "TEXT PRIMARY KEY"),
         ("from_artifact_id", "TEXT"),
         ("to_entity_type", "TEXT NOT NULL"),
         ("to_entity_id", "TEXT NOT NULL"),
+        ("method", "TEXT"),
         ("confidence", "REAL DEFAULT 1.0"),
-        ("method", "TEXT DEFAULT 'system'"),
+        ("confidence_reasons", "TEXT DEFAULT '[]'"),
+        ("status", "TEXT NOT NULL DEFAULT 'proposed'"),
         ("created_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+        ("updated_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+        ("confirmed_by", "TEXT"),
+        ("confirmed_at", "TEXT"),
     ],
 }
 

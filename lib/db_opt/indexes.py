@@ -90,10 +90,10 @@ PERFORMANCE_INDEXES = [
     ("commitments", ["due_at"]),
     ("commitments", ["status"]),
     ("commitments", ["due_at", "status"]),
-    # Entity links (composite indexes for common joins)
-    ("entity_links", ["source_type", "source_id"]),
-    ("entity_links", ["target_type", "target_id"]),
-    ("entity_links", ["source_type", "source_id", "target_type"]),
+    # Entity links (indexes for actual query patterns)
+    ("entity_links", ["from_artifact_id"]),
+    ("entity_links", ["to_entity_type", "to_entity_id"]),
+    ("entity_links", ["status"]),
     # Issues/Engagements
     ("issues", ["client_id"]),
     ("issues", ["state"]),

@@ -31,6 +31,8 @@ from api.response_models import (
     InvoiceListResponse,
     ListResponse,
     MutationResponse,
+    PatternDetectionData,
+    PatternDetectionResponse,
     SignalListResponse,
     TeamInvolvementResponse,
 )
@@ -1505,8 +1507,9 @@ async def get_couplings_v2(
         sql = "".join(
             [
                 "SELECT coupling_id, anchor_ref_type, anchor_ref_id, entity_refs, ",
-                "coupling_type, strength, why, confidence ",
-                "FROM entity_links ",
+                "coupling_type, strength, why, confidence, ",
+                "investigation_path, created_at, updated_at ",
+                "FROM couplings ",
                 "WHERE ",
                 " AND ".join(where),
                 " ",
@@ -1776,24 +1779,44 @@ async def get_intelligence_signal_history(
         return _intel_error(str(e))
 
 
-@spec_router.get("/intelligence/patterns", response_model=IntelligenceResponse)
+@spec_router.get("/intelligence/patterns", response_model=PatternDetectionResponse)
 async def get_intelligence_patterns():
     """
     GET /api/v2/intelligence/patterns
 
     Detects and returns all active patterns.
+    Returns PatternDetectionResponse with detection health metadata.
     """
     try:
         from lib.intelligence.patterns import detect_all_patterns
 
         detection = detect_all_patterns()
         patterns = detection.get("patterns", [])
-        return _intel_response(
-            {"patterns": patterns, "total_detected": len(patterns)},
+        errors_list = detection.get("errors", [])
+        error_details = [
+            e.get("message", str(e)) if isinstance(e, dict) else str(e) for e in errors_list
+        ]
+
+        data = PatternDetectionData(
+            patterns=patterns,
+            total_detected=len(patterns),
+            detection_success=detection.get("success", True),
+            detection_errors=detection.get("detection_errors", 0),
+            detection_error_details=error_details,
+        )
+        return PatternDetectionResponse(
+            status="ok",
+            data=data,
+            computed_at=now_iso(),
         )
     except (sqlite3.Error, ValueError) as e:
         logger.error(f"Intelligence patterns error: {e}", exc_info=True)
-        return _intel_error(str(e))
+        return PatternDetectionResponse(
+            status="error",
+            data=None,
+            computed_at=now_iso(),
+            error=str(e),
+        )
 
 
 @spec_router.get("/intelligence/patterns/catalog", response_model=IntelligenceResponse)
