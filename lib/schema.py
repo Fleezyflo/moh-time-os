@@ -17,7 +17,7 @@ from collections import OrderedDict
 # =============================================================================
 # Schema version — bump when you change this file
 # =============================================================================
-SCHEMA_VERSION = 18
+SCHEMA_VERSION = 20
 
 # =============================================================================
 # Table Definitions
@@ -711,6 +711,8 @@ TABLES["insights"] = {
         ("data", "TEXT"),
         ("actionable", "INTEGER DEFAULT 0"),
         ("action_taken", "INTEGER DEFAULT 0"),
+        # V19: severity for anomaly ordering (I-I1 from closure-audit, D2)
+        ("severity", "TEXT DEFAULT 'medium'"),
         ("created_at", "TEXT NOT NULL"),
         ("expires_at", "TEXT"),
     ],
@@ -750,6 +752,12 @@ TABLES["notifications"] = {
         ("sent_at", "TEXT"),
         ("read_at", "TEXT"),
         ("acted_on_at", "TEXT"),
+        # V19: dismissed ≠ read (N-I1, N-I2 from closure-audit)
+        ("dismissed", "INTEGER DEFAULT 0"),
+        ("dismissed_at", "TEXT"),
+        # V19: task/recipient context for notification routing (N-I3, N-I4)
+        ("task_id", "TEXT"),
+        ("recipient_id", "TEXT"),
         ("created_at", "TEXT NOT NULL"),
     ],
 }
@@ -808,6 +816,10 @@ TABLES["cycle_logs"] = {
         ("phase", "TEXT"),
         ("data", "TEXT"),
         ("duration_ms", "REAL"),
+        # V19: columns used by sync_health.py for collector health checks (CL-T1..4)
+        ("source", "TEXT"),
+        ("status", "TEXT"),
+        ("completed_at", "TEXT"),
         ("created_at", "TEXT NOT NULL"),
     ],
 }
@@ -1487,6 +1499,14 @@ INDEXES: list[tuple[str, str, str, str | None]] = [
     # artifacts + entity_links
     ("idx_entity_links_artifact", "entity_links", "from_artifact_id", None),
     ("idx_entity_links_target", "entity_links", "to_entity_type, to_entity_id", None),
+    # Digest system
+    ("idx_digest_queue_user_bucket", "digest_queue", "user_id, bucket, processed", None),
+    ("idx_digest_history_user_bucket", "digest_history", "user_id, bucket", None),
+    # issue_notes, watchers, identities (moved from runtime DDL in SCHEMA_VERSION 20)
+    ("idx_issue_notes_issue", "issue_notes", "issue_id", None),
+    ("idx_watchers_issue", "watchers", "issue_id", None),
+    ("idx_watchers_triggered", "watchers", "triggered_at", "triggered_at IS NOT NULL"),
+    ("idx_identities_canonical", "identities", "canonical_id", None),
 ]
 
 # ---------------------------------------------------------------------------
@@ -1693,6 +1713,96 @@ TABLES["notification_analytics"] = {
         ("acted_on_at", "TEXT"),
         ("failed_reason", "TEXT"),
         ("created_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# V19: saved_filters (D3 from closure-audit, SF-1)
+# Persists user-defined filter presets for the UI SavedFilterSelector component.
+# ---------------------------------------------------------------------------
+TABLES["saved_filters"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("name", "TEXT NOT NULL"),
+        ("filters", "TEXT NOT NULL"),
+        ("created_by", "TEXT DEFAULT 'system'"),
+        ("created_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+        ("updated_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# V19: couplings (D5 from closure-audit, CP-1)
+# Registered from CouplingService._ensure_tables() into schema.py
+# so converge() manages it. Columns match coupling_service.py usage.
+# ---------------------------------------------------------------------------
+TABLES["couplings"] = {
+    "columns": [
+        ("coupling_id", "TEXT PRIMARY KEY"),
+        ("anchor_ref_type", "TEXT NOT NULL"),
+        ("anchor_ref_id", "TEXT NOT NULL"),
+        ("entity_refs", "TEXT NOT NULL"),
+        ("coupling_type", "TEXT NOT NULL"),
+        ("strength", "REAL NOT NULL"),
+        ("why", "TEXT NOT NULL"),
+        ("investigation_path", "TEXT NOT NULL"),
+        ("confidence", "REAL NOT NULL"),
+        ("created_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+        ("updated_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Issue notes — notes attached to control-room issues.
+# Previously created at runtime in api/server.py (schema-ownership defect).
+# Moved here so schema_engine owns the table definition.
+# ---------------------------------------------------------------------------
+TABLES["issue_notes"] = {
+    "columns": [
+        ("note_id", "TEXT PRIMARY KEY"),
+        ("issue_id", "TEXT NOT NULL"),
+        ("text", "TEXT NOT NULL"),
+        ("actor", "TEXT"),
+        ("created_at", "TEXT DEFAULT (datetime('now'))"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Watchers — alerts/watches on control-room issues.
+# Previously created at runtime in api/server.py (schema-ownership defect).
+# Moved here so schema_engine owns the table definition.
+# ---------------------------------------------------------------------------
+TABLES["watchers"] = {
+    "columns": [
+        ("watcher_id", "TEXT PRIMARY KEY"),
+        ("issue_id", "TEXT NOT NULL"),
+        ("watch_type", "TEXT NOT NULL"),
+        ("params", "TEXT NOT NULL DEFAULT '{}'"),
+        ("active", "INTEGER NOT NULL DEFAULT 1"),
+        ("next_check_at", "TEXT NOT NULL"),
+        ("last_checked_at", "TEXT"),
+        ("triggered_at", "TEXT"),
+        ("trigger_count", "INTEGER NOT NULL DEFAULT 0"),
+        # Columns used by dismiss_watcher and snooze_watcher endpoints
+        ("dismissed_at", "TEXT"),
+        ("dismissed_by", "TEXT"),
+        ("snoozed_until", "TEXT"),
+        ("snoozed_by", "TEXT"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Identities — identity resolution records for data quality (Fix tab).
+# Previously created at runtime in api/server.py (schema-ownership defect).
+# Moved here so schema_engine owns the table definition.
+# ---------------------------------------------------------------------------
+TABLES["identities"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("display_name", "TEXT"),
+        ("source", "TEXT"),
+        ("canonical_id", "TEXT"),
+        ("confidence_score", "REAL DEFAULT 0.5"),
     ],
 }
 
