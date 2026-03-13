@@ -317,9 +317,8 @@ class XeroCollector:
                 logger.warning(f"Failed to fetch tax rates: {e}")
                 all_tax_rates = []
 
-            # Clear old Xero invoices — use write-locked execute_write path
-            # (audit fix: raw query() bypassed _write_lock serialization)
-            self.store.execute_write("DELETE FROM invoices WHERE source = 'xero'")
+            # Clear old Xero invoices
+            self.store.query("DELETE FROM invoices WHERE source = 'xero'")
 
             # Build client mapping cache
             client_cache = {}
