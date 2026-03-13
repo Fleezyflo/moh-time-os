@@ -525,6 +525,7 @@ CREATE TABLE IF NOT EXISTS [insights] (
     data TEXT,
     actionable INTEGER DEFAULT 0,
     action_taken INTEGER DEFAULT 0,
+    severity TEXT DEFAULT 'medium',
     created_at TEXT NOT NULL,
     expires_at TEXT
 )
@@ -560,6 +561,10 @@ CREATE TABLE IF NOT EXISTS [notifications] (
     sent_at TEXT,
     read_at TEXT,
     acted_on_at TEXT,
+    dismissed INTEGER DEFAULT 0,
+    dismissed_at TEXT,
+    task_id TEXT,
+    recipient_id TEXT,
     created_at TEXT NOT NULL
 )
 
@@ -607,6 +612,9 @@ CREATE TABLE IF NOT EXISTS [cycle_logs] (
     phase TEXT,
     data TEXT,
     duration_ms REAL,
+    source TEXT,
+    status TEXT,
+    completed_at TEXT,
     created_at TEXT NOT NULL
 )
 
@@ -1207,4 +1215,59 @@ CREATE TABLE IF NOT EXISTS [notification_analytics] (
     acted_on_at TEXT,
     failed_reason TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
+)
+
+CREATE TABLE IF NOT EXISTS [saved_filters] (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    filters TEXT NOT NULL,
+    created_by TEXT DEFAULT 'system',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+)
+
+CREATE TABLE IF NOT EXISTS [couplings] (
+    coupling_id TEXT PRIMARY KEY,
+    anchor_ref_type TEXT NOT NULL,
+    anchor_ref_id TEXT NOT NULL,
+    entity_refs TEXT NOT NULL,
+    coupling_type TEXT NOT NULL,
+    strength REAL NOT NULL,
+    why TEXT NOT NULL,
+    investigation_path TEXT NOT NULL,
+    confidence REAL NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+)
+
+CREATE TABLE IF NOT EXISTS [issue_notes] (
+    note_id TEXT PRIMARY KEY,
+    issue_id TEXT NOT NULL,
+    text TEXT NOT NULL,
+    actor TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+)
+
+CREATE TABLE IF NOT EXISTS [watchers] (
+    watcher_id TEXT PRIMARY KEY,
+    issue_id TEXT NOT NULL,
+    watch_type TEXT NOT NULL,
+    params TEXT NOT NULL DEFAULT '{}',
+    active INTEGER NOT NULL DEFAULT 1,
+    next_check_at TEXT NOT NULL,
+    last_checked_at TEXT,
+    triggered_at TEXT,
+    trigger_count INTEGER NOT NULL DEFAULT 0,
+    dismissed_at TEXT,
+    dismissed_by TEXT,
+    snoozed_until TEXT,
+    snoozed_by TEXT
+)
+
+CREATE TABLE IF NOT EXISTS [identities] (
+    id TEXT PRIMARY KEY,
+    display_name TEXT,
+    source TEXT,
+    canonical_id TEXT,
+    confidence_score REAL DEFAULT 0.5
 )
