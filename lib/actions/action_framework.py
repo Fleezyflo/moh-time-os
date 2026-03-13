@@ -279,13 +279,16 @@ class ActionFramework:
             logger.error(f"Cannot reject action in state: {proposal['status']}")
             return False
 
+        # Bug fix A-U1: rejected_by and rejection_reason columns do not
+        # exist in actions table. Encode rejection info into error (TEXT)
+        # and result (TEXT) which are schema-valid columns.
         self.store.update(
             "actions",
             action_id,
             {
                 "status": ActionStatus.REJECTED.value,
-                "rejected_by": rejected_by,
-                "rejection_reason": reason,
+                "error": reason,
+                "result": json.dumps({"rejected_by": rejected_by, "reason": reason}),
             },
         )
 
@@ -438,16 +441,20 @@ class ActionFramework:
     def get_action_history(
         self, entity_id: str | None = None, action_type: str | None = None, limit: int = 50
     ) -> list[dict]:
-        """Get action history with optional filters."""
+        """Get action history with optional filters.
+
+        Bug fix A-S1: target_id column does not exist in actions table.
+        Filter by target_system instead (closest schema-valid column).
+        """
         query = "SELECT * FROM actions WHERE status IN (?, ?, ?)"
-        params = [
+        params: list = [
             ActionStatus.SUCCESS.value,
             ActionStatus.FAILED.value,
             ActionStatus.REJECTED.value,
         ]
 
         if entity_id:
-            query += " AND target_id = ?"
+            query += " AND target_system = ?"
             params.append(entity_id)
 
         if action_type:
@@ -460,18 +467,29 @@ class ActionFramework:
         return self.store.query(query, params)
 
     def _store_proposal(self, proposal: ActionProposal):
-        """Store proposal in database."""
+        """Store proposal in database.
+
+        Bug fix A-I3: columns target_entity, target_id, risk_level,
+        source, confidence_score do not exist in actions table.
+        Non-column metadata encoded into payload JSON.
+        target_entity → target_system (closest schema column).
+        """
+        enriched_payload = {
+            **proposal.payload,
+            "_meta": {
+                "target_id": proposal.target_id,
+                "risk_level": proposal.risk_level.value,
+                "source": proposal.source.value,
+                "confidence_score": proposal.confidence_score,
+            },
+        }
         self.store.insert(
             "actions",
             {
                 "id": proposal.id,
                 "type": proposal.type,
-                "target_entity": proposal.target_entity,
-                "target_id": proposal.target_id,
-                "payload": json.dumps(proposal.payload),
-                "risk_level": proposal.risk_level.value,
-                "source": proposal.source.value,
-                "confidence_score": proposal.confidence_score,
+                "target_system": proposal.target_entity,
+                "payload": json.dumps(enriched_payload),
                 "requires_approval": 1 if proposal.requires_approval else 0,
                 "status": proposal.status.value,
                 "approved_by": proposal.approved_by,
