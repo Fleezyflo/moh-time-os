@@ -1,7 +1,6 @@
 """Tests for sync schedule config parsing and health checks."""
 
 import sqlite3
-import tempfile
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -34,21 +33,19 @@ def schedule_file(tmp_path):
 
 
 @pytest.fixture
-def health_db():
-    """Create a test DB with cycle_logs table."""
-    tmp = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
-    conn = sqlite3.connect(tmp.name)
-    conn.execute("""
-        CREATE TABLE cycle_logs (
-            id INTEGER PRIMARY KEY,
-            source TEXT NOT NULL,
-            status TEXT NOT NULL,
-            completed_at TEXT NOT NULL
-        )
-    """)
-    conn.commit()
+def health_db(tmp_path):
+    """Create a test DB with full production schema via create_fixture_db().
+
+    Bug fix CL-T1..4: previous fixture created cycle_logs with an inline
+    schema that diverged from schema.py. Now uses the real schema so tests
+    validate against the same columns sync_health.py queries.
+    """
+    from tests.fixtures.fixture_db import create_fixture_db
+
+    db_path = tmp_path / "health_test.db"
+    conn = create_fixture_db(db_path)
     conn.close()
-    return tmp.name
+    return str(db_path)
 
 
 class TestLoadSchedule:
@@ -114,8 +111,8 @@ class TestCheckCollectorHealth:
 
         conn = sqlite3.connect(health_db)
         conn.execute(
-            "INSERT INTO cycle_logs (source, status, completed_at) VALUES (?, ?, ?)",
-            ("asana", "success", recent),
+            "INSERT INTO cycle_logs (id, source, status, completed_at, created_at) VALUES (?, ?, ?, ?, ?)",
+            ("cl_asana_1", "asana", "success", recent, recent),
         )
         conn.commit()
         conn.close()
@@ -130,8 +127,8 @@ class TestCheckCollectorHealth:
 
         conn = sqlite3.connect(health_db)
         conn.execute(
-            "INSERT INTO cycle_logs (source, status, completed_at) VALUES (?, ?, ?)",
-            ("gmail", "success", old),
+            "INSERT INTO cycle_logs (id, source, status, completed_at, created_at) VALUES (?, ?, ?, ?, ?)",
+            ("cl_gmail_1", "gmail", "success", old, old),
         )
         conn.commit()
         conn.close()
@@ -158,8 +155,8 @@ class TestCheckCollectorHealth:
 
         conn = sqlite3.connect(health_db)
         conn.execute(
-            "INSERT INTO cycle_logs (source, status, completed_at) VALUES (?, ?, ?)",
-            ("asana", "failed", recent),
+            "INSERT INTO cycle_logs (id, source, status, completed_at, created_at) VALUES (?, ?, ?, ?, ?)",
+            ("cl_asana_fail_1", "asana", "failed", recent, recent),
         )
         conn.commit()
         conn.close()
@@ -174,8 +171,8 @@ class TestCheckCollectorHealth:
 
         conn = sqlite3.connect(health_db)
         conn.execute(
-            "INSERT INTO cycle_logs (source, status, completed_at) VALUES (?, ?, ?)",
-            ("xero", "success", old),
+            "INSERT INTO cycle_logs (id, source, status, completed_at, created_at) VALUES (?, ?, ?, ?, ?)",
+            ("cl_xero_1", "xero", "success", old, old),
         )
         conn.commit()
         conn.close()
