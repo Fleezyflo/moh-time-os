@@ -254,7 +254,11 @@ class XeroCollector:
             logger.warning(
                 "XeroCollector circuit breaker is %s, skipping sync", self.circuit_breaker.state
             )
-            return {"error": f"Circuit breaker {self.circuit_breaker.state}", "synced": 0}
+            return {
+                "success": False,
+                "error": f"Circuit breaker {self.circuit_breaker.state}",
+                "synced": 0,
+            }
 
         try:
             from engine.xero_client import (
@@ -528,6 +532,7 @@ class XeroCollector:
 
             self.circuit_breaker.record_success()
             return {
+                "success": True,
                 "invoices_stored": invoices_stored,
                 "paid_invoices": len(paid_invoices),
                 "authorised_invoices": len(authorised_invoices),
@@ -540,7 +545,7 @@ class XeroCollector:
         except COLLECTOR_ERRORS as e:
             self.circuit_breaker.record_failure()
             logger.exception(f"Xero sync failed: {e}")
-            return {"error": str(e), "synced": 0}
+            return {"success": False, "error": str(e), "synced": 0}
 
 
 def sync():

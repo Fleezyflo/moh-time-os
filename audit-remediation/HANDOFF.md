@@ -1,92 +1,68 @@
 # HANDOFF -- Audit Remediation
 
 **Generated:** 2026-03-12
-**Current Phase:** systemic-remediation (VERIFIED -- READY TO COMMIT)
-**Current Session:** 22
-**Track:** Systemic audit remediation (post-audit)
-
----
-
-## Status: All 9 Files Verified and Bug-Fixed
-
-Session 22 completed full verification of all 9 files edited in Session 21. Found and fixed 4 bugs:
-
-1. **`state_tracker.py` line 79** — `sqlite3.Row` doesn't support `.get()`. Fixed: bracket access with None guard.
-2. **`backup.py`** — No SQLite version guard for `VACUUM INTO`. Fixed: runtime version check with fallback to checkpoint + copy.
-3. **`xero_client.py` line 117** — Logged 8 chars of refresh token. Fixed: removed token prefix from log message.
-4. **`health.py` line 15** — Module-level `import httpx` breaks test isolation. Fixed: moved import inside `_alert_on_degradation()` with ImportError guard.
-
-Verification log: `audit-remediation/VERIFICATION_LOG_S22.md`
-
-**All files pass ruff check, ruff format (except xero_client.py needs Mac formatting), and bandit with zero issues.**
-
-**None of this has been committed. All changes are in the working tree. Ready for the 4-PR commit sequence below.**
+**Current Phase:** post-audit (hostile review complete, gap closure complete)
+**Current Session:** 23
+**Track:** Post-audit structural repair
 
 ---
 
 ## What Just Happened
 
-### Session 20 (completed)
+### Session 023 -- Gap Closure: Schema-Code Mismatches + Persistence Unification
 
-PR #95 merged (branch: `fix/sync-calendar-asana`):
-1. Calendar attendees PK mismatch fixed (INTEGER → TEXT)
-2. Asana sequential pagination: RateLimiter + ThreadPoolExecutor
-3. Test fixes for sys.modules pollution and exception types
-4. ADR-0020 documents the schema change
+Branch: fix/data-loss-write-safety (continues from Session 022).
 
-### Session 21 (completed -- code written, not committed)
+**Three gaps from Session 022 hostile review closed:**
 
-Systemic audit identified 10 architectural issues. A 5-PR remediation plan was approved. Implementation done across 9 files but without proper verification. Session 21 also added Pre-Edit Gate, verification log template, and Session 21 incident report to CLAUDE.md.
+1. **Gap A: Mock-based muting/analytics tests → real SQLite** -- Rewrote TestNotificationMuting (6 tests) and TestNotificationAnalytics (4 tests) in test_action_integration.py. Added _FixtureStore class and fixture_store/notif_engine fixtures using create_fixture_db() for full production schema.
 
-### Session 22 (current)
+2. **Gap B: Split persistence in DigestEngine** -- Refactored generate_digest(), mark_as_processed() SELECT, and get_pending_count() to use safe_sql.select() instead of raw SQL string construction. Added `from lib import safe_sql` import.
 
-Verified all 9 files. Fixed 4 bugs found during verification. Created VERIFICATION_LOG_S22.md. Ready for commit sequence.
+3. **Gap C: Blast-radius analysis** -- Completed. See below.
+
+**Critical production bugs found by Gap A (hidden by Mocks):**
+
+- `mute_entity()` inserted `muted_at` (column doesn't exist) and omitted `entity_type` (NOT NULL). Fixed: entity_type extracted from "type:id" format, muted_at removed.
+- `get_active_mutes()` queried `muted_at` (doesn't exist). Fixed: changed to `created_at`.
+- `track_delivery()` inserted `metadata` and `recorded_at` (neither exists). Fixed: outcomes map to schema timestamp columns (delivered_at, opened_at, acted_on_at), metadata stored in failed_reason for failures.
+- `get_analytics_summary()` queried `recorded_at` (doesn't exist). Fixed: changed to `created_at`.
+
+**Verification:** 36 tests pass (17 in test_action_integration.py, 19 in test_digest_engine.py). ruff clean, bandit clean (only B101 assert in tests, B608 in test fixtures with noqa).
+
+**Files changed (this session):**
+- `lib/notifier/engine.py` -- 4 schema-code mismatch fixes in muting/analytics methods
+- `lib/notifier/digest.py` -- safe_sql import + 3 query refactors
+- `tests/test_action_integration.py` -- _FixtureStore, fixtures, 10 real SQLite tests replacing Mock tests
+- `tests/test_digest_engine.py` -- count() and delete() added to _FixtureStore
+
+### Blast-Radius Analysis
+
+| Fix | Files touched | API surface | Runtime callers | Test coverage |
+|-----|---------------|-------------|-----------------|---------------|
+| mute_entity schema fix | engine.py | POST /api/v2/notifications/mute | spec_router.mute_entity_notifications() | test_mute_and_check, test_mute_stores_entity_type |
+| get_active_mutes column fix | engine.py | GET /api/v2/notifications/mutes | spec_router.get_active_mutes() | test_get_active_mutes, test_expired_mute_not_active |
+| track_delivery schema fix | engine.py | (internal -- called by process_pending) | NotificationEngine.process_pending() | test_track_delivery, test_track_delivery_outcome_timestamps, test_track_delivery_failed_with_metadata |
+| get_analytics_summary column fix | engine.py | GET /api/v2/notifications/analytics | spec_router.get_notification_analytics() | test_analytics_summary |
+| DigestEngine safe_sql refactor | digest.py | (internal -- called by engine.py) | DigestEngine.generate_digest, mark_as_processed, get_pending_count | All 19 test_digest_engine.py tests |
+
+**Regression risk:** LOW. All fixes align production code with the actual database schema. The old code would have crashed on real SQLite -- Mocks masked the failures. No behavioral change for callers; only the column names in SQL now match reality.
+
+### Leftover Sweep
+
+HANDOFF.md line 50 previously referenced: "Replace remaining `store.query(raw SQL)` in DigestEngine with store CRUD. Convert NotificationEngine muting/analytics tests from Mock to fixture DB." The second item is now done. The first item (raw SQL in NotificationEngine methods like get_pending_count, get_sent_today, unmute_entity, get_active_mutes, get_analytics_summary) remains as a true follow-up -- these are read-only queries via store.query() which is correct for reads. Converting them to safe_sql.select() is a polish task, not a defect.
 
 ---
 
-## What's Next — Exact PR Sequence
+## What's Next
 
-**You must follow this sequence exactly. One PR per row. No bundling. No reordering.**
+All audit remediation phases (A-D) complete. Hostile review complete. Gap closure complete.
 
-### PR 1: Credentials to env vars
-| File | Status |
-|------|--------|
-| `engine/asana_client.py` | VERIFIED — env var loading correct |
-| `engine/xero_client.py` | FIXED — removed token prefix from log |
-
-Branch: `fix/credentials-env-vars`
-
-### PR 2: Data loss + write lock + state tracker
-| File | Status |
-|------|--------|
-| `lib/collectors/base.py` | VERIFIED — COLLECTOR_ERRORS imported, update_sync_state signature matches |
-| `lib/state_store.py` | VERIFIED — _write_lock correct for singleton with per-call connections |
-| `lib/state_tracker.py` | FIXED — sqlite3.Row bracket access instead of .get() |
-
-Branch: `fix/data-loss-write-safety`
-
-### PR 3: Backup VACUUM INTO
-| File | Status |
-|------|--------|
-| `lib/backup.py` | FIXED — SQLite version guard with fallback to checkpoint + copy |
-
-Branch: `fix/backup-vacuum-into`
-
-### PR 4: Schema + alerting + API handler
-| File | Status |
-|------|--------|
-| `lib/schema_engine.py` | VERIFIED — standard SQLite savepoint pattern |
-| `lib/observability/health.py` | FIXED — httpx import moved inside method with ImportError guard |
-| `api/server.py` | VERIFIED — standard FastAPI pattern, Request/JSONResponse/os imported |
-
-Branch: `fix/schema-alerting-api-handler`
-
-### For each PR:
-1. Molham runs `uv run pre-commit run ruff-format --files <files>` to format
-2. Molham runs `uv run python -m pytest tests/ -x` to verify
-3. Commit ONLY that PR's files + verification log
-4. Push, create PR, set auto-merge, watch CI
-5. Wait for merge before starting next PR
+Remaining work:
+1. **Merge PR** -- fix/data-loss-write-safety branch (includes Session 022 + 023 changes)
+2. **PR #3 (backup VACUUM INTO)** -- `lib/backup.py`, `tests/test_backup.py`
+3. **PR #4 (schema + alerting + API handler)** -- `lib/schema_engine.py`, `lib/observability/health.py`, `api/server.py`
+4. **Polish follow-up:** Convert remaining raw SQL in NotificationEngine read methods to safe_sql.select().
 
 ---
 
@@ -94,14 +70,19 @@ Branch: `fix/schema-alerting-api-handler`
 
 1. You write code. You never run anything.
 2. Commit subject under 72 chars, valid types only
-3. **READ BEFORE YOU WRITE (Session 21).** Before editing any function, read every function your new code calls. Grep for `def <name>`. Read the source. Confirm signature and return type. No exceptions.
-4. **NEVER CALL UNVERIFIED INTERFACES (Session 21).** If you haven't read `def function_name` in this session, you don't call it.
-5. **ONE PR, ONE PURPOSE (Session 21).** If a plan says 5 PRs, you produce 5 PRs. Never bundle.
-6. If 20+ deletions, include "Deletion rationale:" in body
-7. Match existing patterns obsessively
-8. No comments in command blocks
-9. `lib/governance/` has REAL production classes -- `lib/intelligence/data_governance.py` has toy in-memory versions.
-10. Intelligence error responses must use `JSONResponse(content=_error_response(...))`, NOT `raise HTTPException(detail=...)` for 500 errors.
+3. "HANDOFF.md removed and rewritten" required in commit body
+4. If 20+ deletions, include "Deletion rationale:" in body
+5. Match existing patterns obsessively
+6. No comments in command blocks
+7. `store.query()` is for reads ONLY -- all writes must go through `store.insert()`, `store.update()`, `store.delete()` to acquire `_write_lock`
+8. Schema (tables + indexes) lives in `lib/schema.py` only -- no runtime class may create or manage schema
+9. Deferred imports are justified only for circular dependency breaking or graceful degradation (try/except). Lazy stdlib imports are not acceptable.
+10. Test fixture stores must match production semantics exactly (INSERT OR REPLACE, not INSERT INTO)
+11. Test DB fixtures should be function-scoped (`tmp_path`) for per-test isolation, not session-scoped shared files
+12. `lib/governance/` has REAL production classes -- `lib/intelligence/data_governance.py` has toy in-memory versions. Always use the real ones.
+13. NotificationEngine has TWO methods returning the same dict comprehension pattern (`get_pending_count` and `get_sent_today`) -- use enough context to disambiguate when editing.
+14. Mock tests MUST NOT be used when testing persistence boundaries -- they hide schema-code mismatches that crash on real SQLite. (Session 23: 4 production bugs hidden by Mocks)
+15. Production code columns must match lib/schema.py exactly -- no invented columns (muted_at, recorded_at, metadata). (Session 23: caught by fixture DB conversion)
 
 ---
 
@@ -109,5 +90,4 @@ Branch: `fix/schema-alerting-api-handler`
 
 1. `audit-remediation/AGENT.md` -- This brief
 2. `audit-remediation/state.json` -- Current project state
-3. `CLAUDE.md` -- Repo-level engineering rules (UPDATED Session 21 with pre-edit gate, never-assume rule, one-PR-one-purpose rule)
-4. `audit-remediation/VERIFICATION_LOG_S22.md` -- Verification log for this session
+3. `CLAUDE.md` -- Repo-level engineering rules

@@ -2,8 +2,8 @@
   "$schema": "../session-system-v2/core/state.schema.json",
   "project": "MOH Time OS — Audit Remediation",
   "owner": "Fleezyflo",
-  "current_phase": "all-complete",
-  "current_session": 19,
+  "current_phase": "post-audit",
+  "current_session": 23,
   "phases": {
     "phase-01": {
       "status": "complete",

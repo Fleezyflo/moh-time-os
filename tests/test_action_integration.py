@@ -3,8 +3,15 @@ End-to-end action integration tests.
 
 GAP-10-09: Tests the full propose -> approve -> execute -> verify chain
 across Asana and email handlers in dry_run mode.
+
+Muting and analytics tests (TestNotificationMuting, TestNotificationAnalytics)
+use real SQLite fixture DBs to verify persistence boundaries honestly.
+ActionFramework tests use Mock stores (correct: they test state machine logic,
+not persistence).
 """
 
+import sqlite3
+from contextlib import contextmanager
 from unittest.mock import Mock
 
 import pytest
@@ -22,7 +29,11 @@ from lib.actions.action_framework import (
 
 @pytest.fixture
 def mock_store():
-    """Provide a mock state store matching test_action_framework pattern."""
+    """Provide a mock state store matching test_action_framework pattern.
+
+    Mock's auto-created .query() and .insert() satisfy DigestEngine's
+    store interface without touching any real database.
+    """
     store = Mock()
     store.data = {}
 
@@ -296,91 +307,253 @@ class TestCrossHandlerFlow:
 
 
 # =============================================================================
-# NOTIFICATION MUTING TESTS
+# REAL SQLITE FIXTURE STORE (for muting + analytics tests)
+# =============================================================================
+
+
+class _FixtureStore:
+    """Lightweight store adapter backed by real SQLite.
+
+    Matches the StateStore public interface that NotificationEngine uses:
+    query(), insert(), update(), count(), delete().
+
+    Uses INSERT OR REPLACE to match StateStore.insert() semantics
+    (safe_sql.insert_or_replace).  Each test gets a fresh per-test DB
+    via function-scoped tmp_path.
+    """
+
+    def __init__(self, db_path: str):
+        self.db_path = str(db_path)
+
+    @contextmanager
+    def _conn(self):
+        conn = sqlite3.connect(self.db_path, timeout=30)
+        conn.row_factory = sqlite3.Row
+        try:
+            yield conn
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+    def query(self, sql: str, params: list = None) -> list[dict]:
+        with self._conn() as conn:
+            rows = conn.execute(sql, params or []).fetchall()
+            return [dict(row) for row in rows]
+
+    def insert(self, table: str, data: dict) -> str:
+        columns = list(data.keys())
+        placeholders = ", ".join("?" for _ in columns)
+        col_str = ", ".join(columns)
+        sql = f"INSERT OR REPLACE INTO {table} ({col_str}) VALUES ({placeholders})"  # noqa: S608
+        with self._conn() as conn:
+            conn.execute(sql, [data[c] for c in columns])
+        return data.get("id", "")
+
+    def update(self, table: str, row_id: str, data: dict) -> bool:
+        if not data:
+            return False
+        set_clause = ", ".join(f"{k} = ?" for k in data)
+        sql = f"UPDATE {table} SET {set_clause} WHERE id = ?"  # noqa: S608
+        values = list(data.values()) + [row_id]
+        with self._conn() as conn:
+            result = conn.execute(sql, values)
+            return result.rowcount > 0
+
+    def count(self, table: str, where: str = None, params: list = None) -> int:
+        sql = f"SELECT COUNT(*) as c FROM {table}"  # noqa: S608
+        if where:
+            sql += f" WHERE {where}"
+        with self._conn() as conn:
+            row = conn.execute(sql, params or []).fetchone()
+            return row["c"] if row else 0
+
+    def delete(self, table: str, id: str) -> bool:
+        sql = f"DELETE FROM {table} WHERE id = ?"  # noqa: S608
+        with self._conn() as conn:
+            result = conn.execute(sql, [id])
+            return result.rowcount > 0
+
+
+@pytest.fixture
+def fixture_store(tmp_path):
+    """Create a real SQLite fixture store for muting/analytics tests.
+
+    Uses create_fixture_db() for full production schema, then wraps
+    in _FixtureStore.  Per-test isolation via function-scoped tmp_path.
+    """
+    from tests.fixtures.fixture_db import create_fixture_db
+
+    db_path = tmp_path / "notif_engine_test.db"
+    conn = create_fixture_db(db_path)
+    conn.close()
+    return _FixtureStore(db_path)
+
+
+@pytest.fixture
+def notif_engine(fixture_store):
+    """Create NotificationEngine with real SQLite fixture store."""
+    from lib.notifier.engine import NotificationEngine
+
+    return NotificationEngine(fixture_store)
+
+
+# =============================================================================
+# NOTIFICATION MUTING TESTS (real SQLite -- no mocks)
 # =============================================================================
 
 
 class TestNotificationMuting:
-    """Tests for notification muting via NotificationEngine."""
+    """Tests for notification muting via NotificationEngine against real SQLite.
 
-    def test_mute_and_check(self, mock_store):
-        """Mute an entity and verify is_muted returns True."""
-        from lib.notifier.engine import NotificationEngine
+    Validates that mute_entity, unmute_entity, and is_muted operate correctly
+    against the production schema (notification_mutes table).
+    """
 
-        engine = NotificationEngine(mock_store)
-
-        # Mock the query and count methods for muting
-        mock_store.count = Mock(return_value=1)
-        mock_store.query = Mock(return_value=[])
-
-        mute_id = engine.mute_entity(
+    def test_mute_and_check(self, notif_engine):
+        """Mute an entity and verify is_muted returns True from real DB."""
+        mute_id = notif_engine.mute_entity(
             entity_id="client:acme",
             mute_until="2026-12-31T23:59:59",
             reason="On vacation",
         )
-        assert mute_id  # Should return a UUID string
+        assert mute_id
 
-        # Check muted
-        assert engine.is_muted("client:acme") is True
+        assert notif_engine.is_muted("client:acme") is True
 
-    def test_unmute_clears_mute(self, mock_store):
-        """Unmute should clear active mute."""
-        from lib.notifier.engine import NotificationEngine
+    def test_mute_stores_entity_type(self, notif_engine, fixture_store):
+        """Verify entity_type is extracted and stored correctly."""
+        notif_engine.mute_entity(
+            entity_id="client:acme",
+            mute_until="2026-12-31T23:59:59",
+            reason="Testing",
+        )
 
-        engine = NotificationEngine(mock_store)
+        rows = fixture_store.query("SELECT entity_type, entity_id FROM notification_mutes")
+        assert len(rows) == 1
+        assert rows[0]["entity_type"] == "client"
+        assert rows[0]["entity_id"] == "client:acme"
 
-        # Simulate existing mute
-        mock_store.query = Mock(return_value=[{"id": "mute_123"}])
-        result = engine.unmute_entity("client:acme")
+    def test_unmute_clears_mute(self, notif_engine):
+        """Unmute should set mute_until to now, making is_muted return False."""
+        notif_engine.mute_entity(
+            entity_id="client:acme",
+            mute_until="2026-12-31T23:59:59",
+            reason="On vacation",
+        )
+        assert notif_engine.is_muted("client:acme") is True
+
+        result = notif_engine.unmute_entity("client:acme")
         assert result is True
 
-    def test_unmute_no_active_mute(self, mock_store):
-        """Unmuting when no active mute returns False."""
-        from lib.notifier.engine import NotificationEngine
+        assert notif_engine.is_muted("client:acme") is False
 
-        engine = NotificationEngine(mock_store)
-        mock_store.query = Mock(return_value=[])
-        result = engine.unmute_entity("client:nonexistent")
+    def test_unmute_no_active_mute(self, notif_engine):
+        """Unmuting when no active mute returns False."""
+        result = notif_engine.unmute_entity("client:nonexistent")
         assert result is False
+
+    def test_get_active_mutes(self, notif_engine):
+        """get_active_mutes returns all currently active mutes from DB."""
+        notif_engine.mute_entity("client:acme", "2026-12-31T23:59:59", "Vacation")
+        notif_engine.mute_entity("project:alpha", "2026-12-31T23:59:59", "Paused")
+
+        mutes = notif_engine.get_active_mutes()
+        assert len(mutes) == 2
+        entity_ids = {m["entity_id"] for m in mutes}
+        assert "client:acme" in entity_ids
+        assert "project:alpha" in entity_ids
+
+    def test_expired_mute_not_active(self, notif_engine):
+        """A mute with mute_until in the past should not show as muted."""
+        notif_engine.mute_entity(
+            entity_id="client:expired",
+            mute_until="2020-01-01T00:00:00",
+            reason="Old mute",
+        )
+
+        assert notif_engine.is_muted("client:expired") is False
+        assert len(notif_engine.get_active_mutes()) == 0
 
 
 # =============================================================================
-# NOTIFICATION ANALYTICS TESTS
+# NOTIFICATION ANALYTICS TESTS (real SQLite -- no mocks)
 # =============================================================================
 
 
 class TestNotificationAnalytics:
-    """Tests for notification delivery analytics."""
+    """Tests for notification delivery analytics against real SQLite.
 
-    def test_track_delivery(self, mock_store):
-        """Track a delivery outcome."""
-        from lib.notifier.engine import NotificationEngine
+    Validates that track_delivery and get_analytics_summary operate correctly
+    against the production schema (notification_analytics table).
+    """
 
-        engine = NotificationEngine(mock_store)
-
-        analytics_id = engine.track_delivery(
+    def test_track_delivery(self, notif_engine, fixture_store):
+        """Track a delivery outcome and verify row in DB."""
+        analytics_id = notif_engine.track_delivery(
             notification_id="notif_123",
             channel="google_chat",
             outcome="delivered",
         )
-        assert analytics_id  # Should return UUID
+        assert analytics_id
 
-    def test_analytics_summary(self, mock_store):
-        """Analytics summary with mock data."""
-        from lib.notifier.engine import NotificationEngine
+        rows = fixture_store.query(
+            "SELECT * FROM notification_analytics WHERE id = ?",
+            [analytics_id],
+        )
+        assert len(rows) == 1
+        assert rows[0]["channel"] == "google_chat"
+        assert rows[0]["outcome"] == "delivered"
+        assert rows[0]["delivered_at"] is not None
 
-        engine = NotificationEngine(mock_store)
+    def test_track_delivery_outcome_timestamps(self, notif_engine, fixture_store):
+        """Each outcome maps to its correct timestamp column."""
+        id_delivered = notif_engine.track_delivery("n1", "chat", "delivered")
+        id_opened = notif_engine.track_delivery("n2", "chat", "opened")
+        id_acted = notif_engine.track_delivery("n3", "chat", "acted_on")
 
-        mock_store.query = Mock(
-            return_value=[
-                {"channel": "google_chat", "outcome": "delivered", "cnt": 10},
-                {"channel": "google_chat", "outcome": "acted_on", "cnt": 3},
-                {"channel": "email", "outcome": "delivered", "cnt": 5},
-            ]
+        r1 = fixture_store.query(
+            "SELECT * FROM notification_analytics WHERE id = ?", [id_delivered]
+        )
+        assert r1[0]["delivered_at"] is not None
+        assert r1[0]["opened_at"] is None
+
+        r2 = fixture_store.query("SELECT * FROM notification_analytics WHERE id = ?", [id_opened])
+        assert r2[0]["opened_at"] is not None
+        assert r2[0]["delivered_at"] is None
+
+        r3 = fixture_store.query("SELECT * FROM notification_analytics WHERE id = ?", [id_acted])
+        assert r3[0]["acted_on_at"] is not None
+
+    def test_track_delivery_failed_with_metadata(self, notif_engine, fixture_store):
+        """Failed outcome stores metadata in failed_reason column."""
+        analytics_id = notif_engine.track_delivery(
+            notification_id="notif_fail",
+            channel="email",
+            outcome="failed",
+            metadata={"error": "Connection refused"},
         )
 
-        summary = engine.get_analytics_summary(days=30)
-        assert summary["total_sent"] == 18
+        rows = fixture_store.query(
+            "SELECT * FROM notification_analytics WHERE id = ?",
+            [analytics_id],
+        )
+        assert len(rows) == 1
+        assert rows[0]["outcome"] == "failed"
+        assert "Connection refused" in rows[0]["failed_reason"]
+
+    def test_analytics_summary(self, notif_engine):
+        """Analytics summary aggregates from real DB rows."""
+        notif_engine.track_delivery("n1", "google_chat", "delivered")
+        notif_engine.track_delivery("n2", "google_chat", "delivered")
+        notif_engine.track_delivery("n3", "google_chat", "acted_on")
+        notif_engine.track_delivery("n4", "email", "delivered")
+
+        summary = notif_engine.get_analytics_summary(days=30)
+        assert summary["total_sent"] == 4
         assert "google_chat" in summary["by_channel"]
-        assert summary["by_outcome"]["delivered"] == 15  # 10 + 5
+        assert summary["by_channel"]["google_chat"]["delivered"] == 2
+        assert summary["by_outcome"]["delivered"] == 3
         assert summary["action_rate"] > 0

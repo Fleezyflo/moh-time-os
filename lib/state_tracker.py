@@ -9,17 +9,41 @@ Maintains:
 - Change detection for intelligent filtering
 """
 
+import fcntl
 import hashlib
 import json
 import logging
+import tempfile
+from contextlib import contextmanager
 from datetime import datetime
+from pathlib import Path
 
 from lib import paths
 from lib.compat import UTC
+from lib.state_store import get_store
 
 logger = logging.getLogger(__name__)
 
 STATE_FILE = paths.data_dir() / "state.json"
+_STATE_LOCK = STATE_FILE.parent / ".state.lock"
+
+
+@contextmanager
+def _file_lock():
+    """Acquire exclusive lock for state file read-modify-write cycles.
+
+    Without this, concurrent threads/processes could both read stale
+    state, both write back, and one thread's changes would be lost
+    (audit finding: state tracker lost updates).
+    """
+    _STATE_LOCK.parent.mkdir(parents=True, exist_ok=True)
+    lock_fd = open(_STATE_LOCK, "w")
+    try:
+        fcntl.flock(lock_fd, fcntl.LOCK_EX)
+        yield
+    finally:
+        fcntl.flock(lock_fd, fcntl.LOCK_UN)
+        lock_fd.close()
 
 
 def load_state() -> dict:
@@ -44,8 +68,23 @@ def _default_state() -> dict:
 
 
 def save_state(state: dict) -> None:
-    """Save state to disk."""
-    STATE_FILE.write_text(json.dumps(state, indent=2, default=str))
+    """Save state to disk atomically via temp file + rename.
+
+    Previous version used write_text() directly, which could leave
+    truncated/corrupt state files on crash (audit fix).
+    """
+    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    content = json.dumps(state, indent=2, default=str)
+    # Atomic write: write to temp then rename
+    fd = tempfile.NamedTemporaryFile(mode="w", dir=STATE_FILE.parent, suffix=".tmp", delete=False)
+    try:
+        fd.write(content)
+        fd.flush()
+        fd.close()
+        Path(fd.name).rename(STATE_FILE)
+    except BaseException:
+        Path(fd.name).unlink(missing_ok=True)
+        raise
 
 
 def hash_item(item: dict, keys: list[str] = None) -> str:
@@ -56,35 +95,49 @@ def hash_item(item: dict, keys: list[str] = None) -> str:
 
 
 def mark_collected(source: str) -> None:
-    """Mark a source as collected now."""
-    state = load_state()
-    state["last_collection"][source] = datetime.now(UTC).isoformat()
-    save_state(state)
+    """Mark a source as collected now.
+
+    Delegates to StateStore.update_sync_state() for thread-safe, DB-backed
+    tracking. The JSON state file is no longer updated for collection timestamps
+    — use get_sync_states() on the store instead.
+    """
+    get_store().update_sync_state(source, success=True)
 
 
 def get_last_collection(source: str) -> datetime | None:
-    """Get when a source was last collected."""
-    state = load_state()
-    ts = state.get("last_collection", {}).get(source)
-    if ts:
-        return datetime.fromisoformat(ts.replace("Z", "+00:00"))
+    """Get when a source was last collected.
+
+    Reads from StateStore (DB-backed) instead of JSON state file.
+    """
+    states = get_store().get_sync_states()
+    info = states.get(source)
+    if info is None:
+        return None
+    last_sync = info["last_sync"]
+    if last_sync:
+        return datetime.fromisoformat(last_sync.replace("Z", "+00:00"))
     return None
 
 
 def mark_surfaced(source: str, items: list[dict], hash_keys: list[str] = None) -> None:
-    """Mark items as surfaced (won't alert again unless changed)."""
-    state = load_state()
-    now = datetime.now(UTC).isoformat()
+    """Mark items as surfaced (won't alert again unless changed).
 
-    if source not in state["surfaced_hashes"]:
-        state["surfaced_hashes"][source] = {}
+    Uses file lock to prevent lost updates from concurrent writes
+    (audit finding: state tracker race condition).
+    """
+    with _file_lock():
+        state = load_state()
+        now = datetime.now(UTC).isoformat()
 
-    for item in items:
-        h = hash_item(item, hash_keys)
-        state["surfaced_hashes"][source][h] = now
+        if source not in state["surfaced_hashes"]:
+            state["surfaced_hashes"][source] = {}
 
-    state["last_surface"] = now
-    save_state(state)
+        for item in items:
+            h = hash_item(item, hash_keys)
+            state["surfaced_hashes"][source][h] = now
+
+        state["last_surface"] = now
+        save_state(state)
 
 
 def filter_new_items(source: str, items: list[dict], hash_keys: list[str] = None) -> list[dict]:
@@ -108,26 +161,27 @@ def get_new_count(source: str, items: list[dict], hash_keys: list[str] = None) -
 
 def cleanup_old_hashes(max_age_days: int = 7) -> int:
     """Remove hashes older than max_age_days to prevent unbounded growth."""
-    state = load_state()
-    cutoff = datetime.now(UTC).timestamp() - (max_age_days * 86400)
-    removed = 0
+    with _file_lock():
+        state = load_state()
+        cutoff = datetime.now(UTC).timestamp() - (max_age_days * 86400)
+        removed = 0
 
-    for source in state.get("surfaced_hashes", {}):
-        hashes = state["surfaced_hashes"][source]
-        to_remove = []
-        for h, ts in hashes.items():
-            try:
-                item_ts = datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp()
-                if item_ts < cutoff:
-                    to_remove.append(h)
-            except (ValueError, TypeError, AttributeError) as e:
-                logger.debug(f"Could not parse timestamp '{ts}': {e}")
-        for h in to_remove:
-            del hashes[h]
-            removed += 1
+        for source in state.get("surfaced_hashes", {}):
+            hashes = state["surfaced_hashes"][source]
+            to_remove = []
+            for h, ts in hashes.items():
+                try:
+                    item_ts = datetime.fromisoformat(ts.replace("Z", "+00:00")).timestamp()
+                    if item_ts < cutoff:
+                        to_remove.append(h)
+                except (ValueError, TypeError, AttributeError) as e:
+                    logger.debug(f"Could not parse timestamp '{ts}': {e}")
+            for h in to_remove:
+                del hashes[h]
+                removed += 1
 
-    save_state(state)
-    return removed
+        save_state(state)
+        return removed
 
 
 def get_state_summary() -> dict:
