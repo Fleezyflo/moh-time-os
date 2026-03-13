@@ -1091,13 +1091,18 @@ CREATE TABLE IF NOT EXISTS [artifacts] (
 )
 
 CREATE TABLE IF NOT EXISTS [entity_links] (
-    id INTEGER PRIMARY KEY,
+    link_id TEXT PRIMARY KEY,
     from_artifact_id TEXT,
     to_entity_type TEXT NOT NULL,
     to_entity_id TEXT NOT NULL,
+    method TEXT,
     confidence REAL DEFAULT 1.0,
-    method TEXT DEFAULT 'system',
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    confidence_reasons TEXT DEFAULT '[]',
+    status TEXT NOT NULL DEFAULT 'proposed',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    confirmed_by TEXT,
+    confirmed_at TEXT
 )
 
 CREATE TABLE IF NOT EXISTS [detection_findings] (
