@@ -13,6 +13,7 @@ import logging
 import sqlite3
 from collections.abc import Generator
 from contextlib import contextmanager
+from datetime import timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query
@@ -67,9 +68,6 @@ logger = logging.getLogger(__name__)
 # Router
 spec_router = APIRouter(tags=["Spec v2.9"])
 
-# Database path
-DB_PATH = paths.db_path()
-
 
 def _validate_sql_fragment(fragment: str) -> None:
     """
@@ -97,7 +95,8 @@ def _validate_sql_fragment(fragment: str) -> None:
 
 def get_db() -> sqlite3.Connection:
     """Get database connection with row factory."""
-    conn = sqlite3.connect(str(DB_PATH))
+    db_path = str(paths.db_path())
+    conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -2191,7 +2190,7 @@ async def snooze_proposal(proposal_id: str, request: SnoozeRequest):
     try:
         from datetime import datetime, timedelta
 
-        snooze_until = (datetime.now() + timedelta(days=request.days)).isoformat()
+        snooze_until = (datetime.now(timezone.utc) + timedelta(days=request.days)).isoformat()
         cursor = conn.execute(
             "UPDATE proposals_v4 SET status = 'snoozed', snoozed_until = ? WHERE proposal_id = ?",
             (snooze_until, proposal_id),
@@ -2272,7 +2271,7 @@ async def snooze_watcher(watcher_id: str, request: WatcherSnoozeRequest):
     try:
         from datetime import datetime, timedelta
 
-        snooze_until = (datetime.now() + timedelta(hours=request.hours)).isoformat()
+        snooze_until = (datetime.now(timezone.utc) + timedelta(hours=request.hours)).isoformat()
         cursor = conn.execute(
             "UPDATE watchers SET next_check_at = ?, last_checked_at = ? WHERE watcher_id = ?",
             (snooze_until, now_iso(), watcher_id),
@@ -2556,7 +2555,7 @@ def _get_query_engine() -> Any:
     if _query_engine_instance is None:
         from lib.query_engine import QueryEngine
 
-        _query_engine_instance = QueryEngine(DB_PATH)
+        _query_engine_instance = QueryEngine(paths.db_path())
     return _query_engine_instance
 
 

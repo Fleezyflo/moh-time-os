@@ -524,7 +524,7 @@ export async function addIssueNote(
 
 /** Health check */
 export interface HealthResponse {
-  status: 'healthy' | 'unhealthy';
+  status: 'healthy' | 'degraded' | 'unhealthy';
   version: string;
   timestamp: string;
   database?: {

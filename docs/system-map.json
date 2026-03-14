@@ -1560,7 +1560,7 @@
     },
     {
       "name": "result",
-      "source": "collectors/result.py"
+      "source": "orchestrator.py"
     },
     {
       "name": "tasks",

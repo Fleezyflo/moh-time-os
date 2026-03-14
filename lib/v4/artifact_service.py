@@ -11,42 +11,50 @@ import json
 import logging
 import os
 import sqlite3
+import threading
 import uuid
 from typing import Any
 
 from cryptography.fernet import Fernet
 
+from lib import paths
+
 log = logging.getLogger("moh_time_os.v4.artifact_service")
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "moh_time_os.db")
-KEY_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "config", ".blob_key")
+
+def _key_path() -> str:
+    """Resolve blob key path at call time to respect env overrides."""
+    return os.path.join(os.path.dirname(__file__), "..", "..", "config", ".blob_key")
 
 
 def _get_or_create_key() -> bytes:
     """Get encryption key, creating if needed."""
-    if os.path.exists(KEY_PATH):
-        with open(KEY_PATH, "rb") as f:
+    if os.path.exists(_key_path()):
+        with open(_key_path(), "rb") as f:
             return f.read()
 
     # Create new key
     key = Fernet.generate_key()
-    os.makedirs(os.path.dirname(KEY_PATH), exist_ok=True)
-    with open(KEY_PATH, "wb") as f:
+    os.makedirs(os.path.dirname(_key_path()), exist_ok=True)
+    with open(_key_path(), "wb") as f:
         f.write(key)
-    os.chmod(KEY_PATH, 0o600)  # Owner read/write only
+    os.chmod(_key_path(), 0o600)  # Owner read/write only
     log.info("Created new blob encryption key")
     return key
 
 
 # Initialize encryption
 _FERNET = None
+_fernet_lock = threading.Lock()
 
 
 def _get_fernet() -> Fernet:
     """Get Fernet instance (lazy init)."""
     global _FERNET
     if _FERNET is None:
-        _FERNET = Fernet(_get_or_create_key())
+        with _fernet_lock:
+            if _FERNET is None:
+                _FERNET = Fernet(_get_or_create_key())
     return _FERNET
 
 
@@ -98,7 +106,7 @@ class ArtifactService:
     }
 
     def __init__(self, db_path: str = None):
-        self.db_path = db_path or DB_PATH
+        self.db_path = db_path or str(paths.db_path())
 
     def _get_conn(self):
         return sqlite3.connect(self.db_path, timeout=30)
@@ -524,11 +532,14 @@ class ArtifactService:
 
 # Singleton instance
 _artifact_service = None
+_service_lock = threading.Lock()
 
 
 def get_artifact_service() -> ArtifactService:
     """Get the singleton artifact service instance."""
     global _artifact_service
     if _artifact_service is None:
-        _artifact_service = ArtifactService()
+        with _service_lock:
+            if _artifact_service is None:
+                _artifact_service = ArtifactService()
     return _artifact_service

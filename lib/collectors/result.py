@@ -20,7 +20,7 @@ import enum
 import logging
 import sqlite3
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -62,7 +62,7 @@ class CollectorResult:
 
     source: str
     status: CollectorStatus
-    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     # Counts — meaningful only when status is SUCCESS or PARTIAL
     collected: int = 0

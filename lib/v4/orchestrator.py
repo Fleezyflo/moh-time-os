@@ -12,8 +12,9 @@ Runs the complete V4 pipeline:
 
 import logging
 import sqlite3
+import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from .artifact_service import get_artifact_service
@@ -205,7 +206,7 @@ class V4Orchestrator:
             Cycle statistics
         """
         start_time = time.time()
-        stats = {"started_at": datetime.now().isoformat(), "stages": {}}
+        stats = {"started_at": datetime.now(timezone.utc).isoformat(), "stages": {}}
 
         log.info("Starting V4 pipeline cycle")
 
@@ -291,7 +292,7 @@ class V4Orchestrator:
 
         # Final stats
         stats["total_duration_ms"] = int((time.time() - start_time) * 1000)
-        stats["completed_at"] = datetime.now().isoformat()
+        stats["completed_at"] = datetime.now(timezone.utc).isoformat()
 
         log.info(f"V4 cycle completed in {stats['total_duration_ms']}ms")
 
@@ -347,7 +348,7 @@ class V4Orchestrator:
         issue_stats = self.issue_svc.get_stats()
 
         return {
-            "generated_at": datetime.now().isoformat(),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
             "summary": {
                 "active_signals": sum(signal_stats.get("by_status", {}).values())
                 - signal_stats.get("by_status", {}).get("consumed", 0),
@@ -374,12 +375,15 @@ class V4Orchestrator:
 
 # Singleton
 _orchestrator = None
+_orchestrator_lock = threading.Lock()
 
 
 def get_orchestrator() -> V4Orchestrator:
     global _orchestrator
     if _orchestrator is None:
-        _orchestrator = V4Orchestrator()
+        with _orchestrator_lock:
+            if _orchestrator is None:
+                _orchestrator = V4Orchestrator()
     return _orchestrator
 
 

@@ -5,11 +5,15 @@ Task: SYSPREP 0.4 — Docs Inventory
 """
 
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent
-DATA_DIR = REPO_ROOT / "data"
+
+
+def _data_dir():
+    return REPO_ROOT / "data"
+
 
 # Active operations files (these are always ACTIVE-OPERATIONS)
 OPERATIONS_FILES = {
@@ -76,7 +80,7 @@ def get_file_metadata(file_path: Path) -> dict:
         return {
             "path": str(file_path.relative_to(REPO_ROOT)),
             "size": stat.st_size,
-            "mtime": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+            "mtime": datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc).isoformat(),
             "lines": len(file_path.read_text(errors="ignore").splitlines()),
         }
     except Exception as e:
@@ -206,7 +210,7 @@ def identify_canonical_specs(files: list) -> dict:
 
 def generate_report(files: list, canonical: dict) -> str:
     """Generate markdown report."""
-    date_str = datetime.now().strftime("%Y-%m-%d")
+    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     # Count by category
     counts = {}
@@ -374,8 +378,8 @@ def main():
     report = generate_report(files, canonical)
 
     # Save
-    date_str = datetime.now().strftime("%Y%m%d")
-    output_file = DATA_DIR / f"docs_inventory_{date_str}.md"
+    date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
+    output_file = _data_dir() / f"docs_inventory_{date_str}.md"
     output_file.write_text(report)
 
     print(f"\n✓ Report saved to: {output_file}")

@@ -6,12 +6,12 @@ They show "why" entities are related via shared signals/evidence.
 """
 
 import json
-import os
 import sqlite3
+import threading
 import uuid
 from typing import Any
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "moh_time_os.db")
+from lib import paths
 
 
 class CouplingService:
@@ -25,7 +25,7 @@ class CouplingService:
     """
 
     def __init__(self, db_path: str = None):
-        self.db_path = db_path or DB_PATH
+        self.db_path = db_path or str(paths.db_path())
 
     def _get_conn(self):
         return sqlite3.connect(self.db_path, timeout=30)
@@ -250,10 +250,13 @@ class CouplingService:
 
 # Singleton
 _coupling_service = None
+_coupling_lock = threading.Lock()
 
 
 def get_coupling_service() -> CouplingService:
     global _coupling_service
     if _coupling_service is None:
-        _coupling_service = CouplingService()
+        with _coupling_lock:
+            if _coupling_service is None:
+                _coupling_service = CouplingService()
     return _coupling_service

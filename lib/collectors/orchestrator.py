@@ -15,6 +15,7 @@ import yaml
 from lib import paths
 from lib.collector_registry import CollectorLock
 from lib.collectors.resilience import COLLECTOR_ERRORS
+from lib.collectors.result import CollectorResult, CollectorStatus, classify_error
 from lib.state_tracker import mark_collected
 
 from ..state_store import StateStore, get_store
@@ -114,24 +115,39 @@ class CollectorOrchestrator:
         with lock_obj as lock:
             if not lock.acquired:
                 self.logger.warning("Collector %s is already running, skipping", name)
-                return {
-                    "source": name,
-                    "success": False,
-                    "error": f"{name} collector is already running",
-                }
+                cr = CollectorResult(
+                    source=name,
+                    status=CollectorStatus.SKIPPED,
+                    error=f"{name} collector is already running",
+                    error_type="lock_contention",
+                )
+                return cr.to_dict()
 
             collector = self.collectors.get(name)
             if not collector:
-                return {"source": name, "success": False, "error": f"Unknown collector: {name}"}
+                cr = CollectorResult(
+                    source=name,
+                    status=CollectorStatus.FAILED,
+                    error=f"Unknown collector: {name}",
+                    error_type="configuration",
+                )
+                return cr.to_dict()
 
             try:
                 result: dict[str, Any] = collector.sync()
-                if result.get("success"):
+                # Mark collected for SUCCESS or PARTIAL — both wrote primary data
+                if result.get("status") in ("success", "partial"):
                     mark_collected(name)
                 return result
             except COLLECTOR_ERRORS as e:
                 self.logger.error("Sync failed for %s: %s", name, e)
-                return {"source": name, "success": False, "error": str(e)}
+                cr = CollectorResult(
+                    source=name,
+                    status=CollectorStatus.FAILED,
+                    error=str(e),
+                    error_type=classify_error(e),
+                )
+                return cr.to_dict()
 
     def sync_all(self, *, force: bool = False) -> dict[str, Any]:
         """Sync all collectors in parallel with per-collector locks."""
@@ -184,14 +200,22 @@ class CollectorOrchestrator:
                     self.logger.error(
                         "Collector %s timed out after %ds", name, COLLECTOR_TIMEOUT_SECONDS
                     )
-                    results[name] = {
-                        "source": name,
-                        "success": False,
-                        "error": f"timeout after {COLLECTOR_TIMEOUT_SECONDS}s",
-                    }
+                    cr = CollectorResult(
+                        source=name,
+                        status=CollectorStatus.FAILED,
+                        error=f"timeout after {COLLECTOR_TIMEOUT_SECONDS}s",
+                        error_type="timeout",
+                    )
+                    results[name] = cr.to_dict()
                 except COLLECTOR_ERRORS as e:
                     self.logger.warning("Collector %s failed: %s", name, e)
-                    results[name] = {"source": name, "success": False, "error": str(e)}
+                    cr = CollectorResult(
+                        source=name,
+                        status=CollectorStatus.FAILED,
+                        error=str(e),
+                        error_type=classify_error(e),
+                    )
+                    results[name] = cr.to_dict()
 
         # Post-collection: entity linking
         self._run_entity_linking(results)
@@ -226,19 +250,66 @@ class CollectorOrchestrator:
             results["inbox_enrichment"] = {"error": str(e)}
 
     def get_status(self) -> dict[str, Any]:
-        """Get status of all collectors."""
+        """Get status of all collectors with degraded-state signaling.
+
+        Each collector entry includes:
+          - status: "healthy", "degraded", or "failed"
+          - circuit_breaker_state: current state of the circuit breaker
+          - stale: True if data freshness has lapsed
+
+        Freshness rule: data is stale when last_success is older than
+        3x sync_interval. This gives two missed cycles of grace before
+        marking stale, avoiding false alarms from single slow cycles.
+        """
         sync_states = self.store.get_sync_states()
 
         status = {}
         for name, collector in self.collectors.items():
             state = sync_states.get(name, {})
+            has_error = state.get("error") is not None
+            last_success = state.get("last_success")
+
+            # Freshness check: stale if no successful sync within 3x interval.
+            # 3x gives two missed cycles of grace before declaring stale.
+            is_stale = False
+            stale_threshold = collector.sync_interval * 3
+            if last_success:
+                try:
+                    from datetime import datetime, timezone
+
+                    last_success_dt = datetime.fromisoformat(last_success)
+                    if last_success_dt.tzinfo is None:
+                        last_success_dt = last_success_dt.replace(tzinfo=timezone.utc)
+                    elapsed = (datetime.now(timezone.utc) - last_success_dt).total_seconds()
+                    is_stale = elapsed > stale_threshold
+                except (ValueError, TypeError):
+                    is_stale = True
+            else:
+                # Never succeeded — no data at all, not stale (it's failed)
+                is_stale = False
+
+            # Derive collector health status from observed signals:
+            # - failed: has error and has never succeeded (no data to serve)
+            # - degraded: has error, or data is stale, or circuit breaker not closed
+            # - healthy: no error, data is fresh, circuit breaker closed
+            cb_state = collector.circuit_breaker.state
+            if has_error and not last_success:
+                health = "failed"
+            elif has_error or is_stale or cb_state != "closed":
+                health = "degraded"
+            else:
+                health = "healthy"
+
             status[name] = {
                 "enabled": True,
+                "status": health,
                 "last_sync": state.get("last_sync"),
-                "last_success": state.get("last_success"),
+                "last_success": last_success,
                 "items_synced": state.get("items_synced", 0),
                 "error": state.get("error"),
-                "healthy": state.get("error") is None,
+                "healthy": health == "healthy",
+                "stale": is_stale,
+                "circuit_breaker_state": cb_state,
                 "sync_interval": collector.sync_interval,
             }
 

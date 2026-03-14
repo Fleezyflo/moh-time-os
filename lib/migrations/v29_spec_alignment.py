@@ -21,20 +21,21 @@ import hashlib
 import json
 import logging
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 
 from lib import paths
 
 logger = logging.getLogger(__name__)
 
 
-# Database paths
-V5_DB_PATH = paths.v5_db_path()
+def _v5_db_path():
+    """Resolve V5 DB path at call time."""
+    return paths.v5_db_path()
 
 
 def get_utc_now_iso() -> str:
     """Returns current UTC time in canonical 24-char format per §0.1."""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     return now.strftime("%Y-%m-%dT%H:%M:%S.") + f"{now.microsecond // 1000:03d}Z"
 
 
@@ -329,12 +330,12 @@ def run_migration():
     logger.info("=" * 60)
     logger.info("v2.9 Spec Alignment Migration")
     logger.info("=" * 60)
-    logger.info(f"\nDatabase: {V5_DB_PATH}")
-    if not V5_DB_PATH.exists():
-        logger.info(f"ERROR: Database not found at {V5_DB_PATH}")
+    logger.info(f"\nDatabase: {_v5_db_path()}")
+    if not _v5_db_path().exists():
+        logger.info(f"ERROR: Database not found at {_v5_db_path()}")
         return False
 
-    conn = sqlite3.connect(V5_DB_PATH)
+    conn = sqlite3.connect(_v5_db_path())
     cursor = conn.cursor()
 
     try:

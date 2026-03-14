@@ -6,12 +6,12 @@ Provides confidence scoring and Fix Data queue generation.
 """
 
 import json
-import os
 import sqlite3
+import threading
 import uuid
 from typing import Any
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "moh_time_os.db")
+from lib import paths
 
 
 class EntityLinkService:
@@ -46,7 +46,7 @@ class EntityLinkService:
     LOW_CONFIDENCE = 0.4
 
     def __init__(self, db_path: str = None):
-        self.db_path = db_path or DB_PATH
+        self.db_path = db_path or str(paths.db_path())
 
     def _get_conn(self):
         return sqlite3.connect(self.db_path, timeout=30)
@@ -612,10 +612,13 @@ class EntityLinkService:
 
 # Singleton
 _entity_link_service = None
+_entity_link_lock = threading.Lock()
 
 
 def get_entity_link_service() -> EntityLinkService:
     global _entity_link_service
     if _entity_link_service is None:
-        _entity_link_service = EntityLinkService()
+        with _entity_link_lock:
+            if _entity_link_service is None:
+                _entity_link_service = EntityLinkService()
     return _entity_link_service
