@@ -1559,6 +1559,10 @@
       "source": "orchestrator.py"
     },
     {
+      "name": "result",
+      "source": "collectors/result.py"
+    },
+    {
       "name": "tasks",
       "source": "collectors/tasks.py"
     },
@@ -1700,7 +1704,7 @@
   "generated_by": "scripts/generate_system_map.py",
   "summary": {
     "api_routes_count": 304,
-    "collectors_count": 12,
+    "collectors_count": 13,
     "db_tables_count": 31,
     "ui_routes_count": 32
   },

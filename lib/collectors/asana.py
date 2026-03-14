@@ -15,6 +15,7 @@ from typing import Any
 
 from .base import BaseCollector
 from .resilience import COLLECTOR_ERRORS
+from .result import CollectorResult, CollectorStatus, classify_error
 
 logger = logging.getLogger(__name__)
 
@@ -119,7 +120,7 @@ class AsanaCollector(BaseCollector):
                     if stories:
                         stories_by_task[task_gid] = stories
                 except COLLECTOR_ERRORS as e:
-                    self.logger.debug(f"Failed to fetch stories for {task_gid}: {e}")
+                    self.logger.warning(f"Failed to fetch stories for {task_gid}: {e}")
 
                 # Pull dependencies - optional
                 try:
@@ -127,7 +128,7 @@ class AsanaCollector(BaseCollector):
                     if deps:
                         dependencies_by_task[task_gid] = deps
                 except COLLECTOR_ERRORS as e:
-                    self.logger.debug(f"Failed to fetch dependencies for {task_gid}: {e}")
+                    self.logger.warning(f"Failed to fetch dependencies for {task_gid}: {e}")
 
                 # Pull attachments - optional
                 try:
@@ -135,20 +136,24 @@ class AsanaCollector(BaseCollector):
                     if attachments:
                         attachments_by_task[task_gid] = attachments
                 except COLLECTOR_ERRORS as e:
-                    self.logger.debug(f"Failed to fetch attachments for {task_gid}: {e}")
+                    self.logger.warning(f"Failed to fetch attachments for {task_gid}: {e}")
 
-            # Pull portfolios and goals
+            # Pull portfolios and goals — track fetch errors explicitly
+            # so sync() can surface them via escalate_to_partial().
             portfolios = []
             goals = []
+            secondary_fetch_errors: dict[str, str] = {}
             try:
                 portfolios = list_portfolios(HRMNY_WORKSPACE_GID)
             except COLLECTOR_ERRORS as e:
                 self.logger.warning(f"Failed to fetch portfolios: {e}")
+                secondary_fetch_errors["asana_portfolios"] = f"fetch failed: {e}"
 
             try:
                 goals = list_goals(HRMNY_WORKSPACE_GID)
             except COLLECTOR_ERRORS as e:
                 self.logger.warning(f"Failed to fetch goals: {e}")
+                secondary_fetch_errors["asana_goals"] = f"fetch failed: {e}"
 
             return {
                 "tasks": all_tasks,
@@ -158,19 +163,12 @@ class AsanaCollector(BaseCollector):
                 "attachments_by_task": attachments_by_task,
                 "portfolios": portfolios,
                 "goals": goals,
+                "_secondary_fetch_errors": secondary_fetch_errors,
             }
 
         except COLLECTOR_ERRORS as e:
             self.logger.error(f"Asana collection failed: {e}")
-            return {
-                "tasks": [],
-                "subtasks_by_parent": {},
-                "stories_by_task": {},
-                "dependencies_by_task": {},
-                "attachments_by_task": {},
-                "portfolios": [],
-                "goals": [],
-            }
+            raise  # Propagate to sync() — never return empty data as success
 
     def transform(self, raw_data: dict) -> list[dict]:
         """Transform Asana tasks to canonical format."""
@@ -484,6 +482,8 @@ class AsanaCollector(BaseCollector):
         - tasks (main target)
         - asana_custom_fields, asana_subtasks, asana_sections, asana_stories,
           asana_task_dependencies, asana_portfolios, asana_goals, asana_attachments
+
+        Returns CollectorResult.to_dict() with status indicating health.
         """
         cycle_start = datetime.now()
 
@@ -491,12 +491,14 @@ class AsanaCollector(BaseCollector):
         if not self.circuit_breaker.can_execute():
             self.logger.warning(f"Circuit breaker is {self.circuit_breaker.state}. Skipping sync.")
             self.metrics["circuit_opens"] += 1
-            return {
-                "source": self.source_name,
-                "success": False,
-                "error": f"Circuit breaker {self.circuit_breaker.state}",
-                "timestamp": datetime.now().isoformat(),
-            }
+            cr = CollectorResult(
+                source=self.source_name,
+                status=CollectorStatus.STALE,
+                error=f"Circuit breaker {self.circuit_breaker.state}",
+                error_type="circuit_breaker",
+                circuit_breaker_state=self.circuit_breaker.state,
+            )
+            return cr.to_dict()
 
         try:
             # Step 1: Collect from external source
@@ -507,13 +509,23 @@ class AsanaCollector(BaseCollector):
             except COLLECTOR_ERRORS as e:
                 self.logger.error(f"Collect failed: {e}")
                 self.circuit_breaker.record_failure()
-                self.store.update_sync_state(self.source_name, success=False, error=str(e))
-                return {
-                    "source": self.source_name,
-                    "success": False,
-                    "error": str(e),
-                    "timestamp": datetime.now().isoformat(),
-                }
+                err_type = classify_error(e)
+                self.store.update_sync_state(
+                    self.source_name,
+                    success=False,
+                    error=str(e),
+                    error_type=err_type,
+                    status="failed",
+                )
+                cr = CollectorResult(
+                    source=self.source_name,
+                    status=CollectorStatus.FAILED,
+                    error=str(e),
+                    error_type=err_type,
+                    circuit_breaker_state=self.circuit_breaker.state,
+                    duration_ms=(datetime.now() - cycle_start).total_seconds() * 1000,
+                )
+                return cr.to_dict()
 
             # Step 2: Transform to canonical format
             try:
@@ -528,17 +540,26 @@ class AsanaCollector(BaseCollector):
             # Step 3: Store tasks in main table
             stored_tasks = self.store.insert_many(self.target_table, transformed_tasks)
 
-            # Step 4: Store expanded data in secondary tables (non-blocking)
-            secondary_stats = {
-                "custom_fields": 0,
-                "subtasks": 0,
-                "sections": 0,
-                "stories": 0,
-                "dependencies": 0,
-                "attachments": 0,
-                "portfolios": 0,
-                "goals": 0,
-            }
+            # Step 4: Build typed result and store secondary tables
+            cr = CollectorResult(
+                source=self.source_name,
+                status=CollectorStatus.SUCCESS,
+                collected=len(raw_data.get("tasks", [])),
+                transformed=len(transformed_tasks),
+                stored=stored_tasks,
+                circuit_breaker_state=self.circuit_breaker.state,
+            )
+
+            # Helper to store a secondary table with error tracking
+            def _store_secondary(table_name: str, rows: list[dict]) -> None:
+                if not rows:
+                    return
+                try:
+                    stored = self.store.insert_many(table_name, rows)
+                    cr.add_secondary(table_name, stored=stored)
+                except COLLECTOR_ERRORS as e:
+                    self.logger.warning(f"Failed to store {table_name}: {e}")
+                    cr.add_secondary(table_name, error=str(e))
 
             # Custom fields
             custom_fields_rows = []
@@ -549,109 +570,84 @@ class AsanaCollector(BaseCollector):
                 if task_gid and project_gid and custom_fields:
                     rows = self._transform_custom_fields(task_gid, project_gid, custom_fields)
                     custom_fields_rows.extend(rows)
-
-            if custom_fields_rows:
-                try:
-                    stored = self.store.insert_many("asana_custom_fields", custom_fields_rows)
-                    secondary_stats["custom_fields"] = stored
-                except COLLECTOR_ERRORS as e:
-                    self.logger.warning(f"Failed to store custom_fields: {e}")
+            _store_secondary("asana_custom_fields", custom_fields_rows)
 
             # Subtasks
             subtasks_rows = []
             for parent_gid, subtasks in raw_data.get("subtasks_by_parent", {}).items():
                 rows = self._transform_subtasks(parent_gid, subtasks)
                 subtasks_rows.extend(rows)
-
-            if subtasks_rows:
-                try:
-                    stored = self.store.insert_many("asana_subtasks", subtasks_rows)
-                    secondary_stats["subtasks"] = stored
-                except COLLECTOR_ERRORS as e:
-                    self.logger.warning(f"Failed to store subtasks: {e}")
+            _store_secondary("asana_subtasks", subtasks_rows)
 
             # Stories
             stories_rows = []
             for task_gid, stories in raw_data.get("stories_by_task", {}).items():
                 rows = self._transform_stories(task_gid, stories)
                 stories_rows.extend(rows)
-
-            if stories_rows:
-                try:
-                    stored = self.store.insert_many("asana_stories", stories_rows)
-                    secondary_stats["stories"] = stored
-                except COLLECTOR_ERRORS as e:
-                    self.logger.warning(f"Failed to store stories: {e}")
+            _store_secondary("asana_stories", stories_rows)
 
             # Dependencies
             dependencies_rows = []
             for task_gid, deps in raw_data.get("dependencies_by_task", {}).items():
                 rows = self._transform_dependencies(task_gid, deps)
                 dependencies_rows.extend(rows)
-
-            if dependencies_rows:
-                try:
-                    stored = self.store.insert_many("asana_task_dependencies", dependencies_rows)
-                    secondary_stats["dependencies"] = stored
-                except COLLECTOR_ERRORS as e:
-                    self.logger.warning(f"Failed to store dependencies: {e}")
+            _store_secondary("asana_task_dependencies", dependencies_rows)
 
             # Attachments
             attachments_rows = []
             for task_gid, attachments in raw_data.get("attachments_by_task", {}).items():
                 rows = self._transform_attachments(task_gid, attachments)
                 attachments_rows.extend(rows)
-
-            if attachments_rows:
-                try:
-                    stored = self.store.insert_many("asana_attachments", attachments_rows)
-                    secondary_stats["attachments"] = stored
-                except COLLECTOR_ERRORS as e:
-                    self.logger.warning(f"Failed to store attachments: {e}")
+            _store_secondary("asana_attachments", attachments_rows)
 
             # Portfolios
             portfolios_rows = self._transform_portfolios(raw_data.get("portfolios", []))
-            if portfolios_rows:
-                try:
-                    stored = self.store.insert_many("asana_portfolios", portfolios_rows)
-                    secondary_stats["portfolios"] = stored
-                except COLLECTOR_ERRORS as e:
-                    self.logger.warning(f"Failed to store portfolios: {e}")
+            _store_secondary("asana_portfolios", portfolios_rows)
 
             # Goals
             goals_rows = self._transform_goals(raw_data.get("goals", []))
-            if goals_rows:
-                try:
-                    stored = self.store.insert_many("asana_goals", goals_rows)
-                    secondary_stats["goals"] = stored
-                except COLLECTOR_ERRORS as e:
-                    self.logger.warning(f"Failed to store goals: {e}")
+            _store_secondary("asana_goals", goals_rows)
 
-            # Step 5: Update sync state and record success
+            # Surface secondary FETCH errors (from collect phase).
+            # Storage errors are already tracked by _store_secondary above.
+            # Fetch errors apply to tables where the API call failed, so
+            # _store_secondary never ran (empty list → early return).
+            for table_name, fetch_err in raw_data.get("_secondary_fetch_errors", {}).items():
+                if table_name not in cr.secondary_tables:
+                    cr.add_secondary(table_name, stored=0, error=fetch_err)
+
+            # Step 5: Finalize status, update sync state, record success
             self.last_sync = datetime.now()
-            self.store.update_sync_state(self.source_name, success=True, items=stored_tasks)
+            cr.duration_ms = (datetime.now() - cycle_start).total_seconds() * 1000
+            cr.timestamp = self.last_sync.isoformat()
+            cr.escalate_to_partial()
+            self.store.update_sync_state(
+                self.source_name,
+                success=(cr.status == CollectorStatus.SUCCESS),
+                items=stored_tasks,
+                status=cr.status.value,
+            )
             self.circuit_breaker.record_success()
 
-            duration_ms = (datetime.now() - cycle_start).total_seconds() * 1000
-
-            return {
-                "source": self.source_name,
-                "success": True,
-                "collected": len(raw_data.get("tasks", [])),
-                "transformed": len(transformed_tasks),
-                "stored_tasks": stored_tasks,
-                "secondary_tables": secondary_stats,
-                "duration_ms": duration_ms,
-                "timestamp": self.last_sync.isoformat(),
-            }
+            return cr.to_dict()
 
         except COLLECTOR_ERRORS as e:
             self.logger.error(f"Sync failed for {self.source_name}: {e}")
             self.circuit_breaker.record_failure()
-            self.store.update_sync_state(self.source_name, success=False, error=str(e))
-            return {
-                "source": self.source_name,
-                "success": False,
-                "error": str(e),
-                "timestamp": datetime.now().isoformat(),
-            }
+            err_type = classify_error(e)
+            self.store.update_sync_state(
+                self.source_name,
+                success=False,
+                error=str(e),
+                error_type=err_type,
+                status="failed",
+            )
+            cr = CollectorResult(
+                source=self.source_name,
+                status=CollectorStatus.FAILED,
+                error=str(e),
+                error_type=err_type,
+                circuit_breaker_state=self.circuit_breaker.state,
+                duration_ms=(datetime.now() - cycle_start).total_seconds() * 1000,
+            )
+            return cr.to_dict()
