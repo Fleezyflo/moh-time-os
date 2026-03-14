@@ -223,7 +223,9 @@ class ReplaySession:
         for entry in self.cassette.entries:
             if entry.request_method == method and self._urls_match(entry.request_url, url):
                 # Check expiry
-                expires = datetime.fromisoformat(entry.expires_at.rstrip("Z"))
+                expires = datetime.fromisoformat(entry.expires_at.rstrip("Z")).replace(
+                    tzinfo=timezone.utc
+                )
                 if datetime.now(timezone.utc) > expires:
                     continue  # Expired
                 return entry
@@ -257,7 +259,9 @@ def validate_cassettes() -> list[str]:
             # Check for expired entries
             expired_count = 0
             for entry in cassette.entries:
-                expires = datetime.fromisoformat(entry.expires_at.rstrip("Z"))
+                expires = datetime.fromisoformat(entry.expires_at.rstrip("Z")).replace(
+                    tzinfo=timezone.utc
+                )
                 if datetime.now(timezone.utc) > expires:
                     expired_count += 1
 

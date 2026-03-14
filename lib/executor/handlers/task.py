@@ -9,8 +9,13 @@ Handles:
 """
 
 import json
+import logging
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
+
+from lib.outbox import get_outbox
+
+task_logger = logging.getLogger(__name__)
 
 
 class TaskHandler:
@@ -67,7 +72,8 @@ class TaskHandler:
         task_id = self.store.insert(
             "tasks",
             {
-                "id": data.get("id") or f"task_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                "id": data.get("id")
+                or f"task_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}",
                 "source": data.get("source", "time_os"),
                 "title": data["title"],
                 "status": "pending",
@@ -79,8 +85,8 @@ class TaskHandler:
                 "lane": data.get("lane", "ops"),
                 "tags": json.dumps(data.get("tags", [])),
                 "context": json.dumps(data.get("context", {})),
-                "created_at": datetime.now().isoformat(),
-                "updated_at": datetime.now().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
             },
         )
 
@@ -99,7 +105,7 @@ class TaskHandler:
             return {"success": False, "error": "task_id required"}
 
         # Update local store
-        data["updated_at"] = datetime.now().isoformat()
+        data["updated_at"] = datetime.now(timezone.utc).isoformat()
         self.store.update("tasks", task_id, data)
 
         return {"success": True, "task_id": task_id}
@@ -114,7 +120,7 @@ class TaskHandler:
         self.store.update(
             "tasks",
             task_id,
-            {"status": "completed", "updated_at": datetime.now().isoformat()},
+            {"status": "completed", "updated_at": datetime.now(timezone.utc).isoformat()},
         )
 
         # Sync to external system
@@ -135,7 +141,7 @@ class TaskHandler:
         self.store.update(
             "tasks",
             task_id,
-            {"assignee": assignee, "updated_at": datetime.now().isoformat()},
+            {"assignee": assignee, "updated_at": datetime.now(timezone.utc).isoformat()},
         )
 
         return {"success": True, "task_id": task_id, "assignee": assignee}
@@ -151,7 +157,7 @@ class TaskHandler:
         self.store.update(
             "tasks",
             task_id,
-            {"priority": priority, "updated_at": datetime.now().isoformat()},
+            {"priority": priority, "updated_at": datetime.now(timezone.utc).isoformat()},
         )
 
         return {"success": True, "task_id": task_id, "priority": priority}
@@ -170,7 +176,7 @@ class TaskHandler:
             {
                 "status": "snoozed",
                 "due_date": until,
-                "updated_at": datetime.now().isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
             },
         )
 
@@ -178,19 +184,19 @@ class TaskHandler:
 
     def _sync_to_asana(self, task_id: str, data: dict):
         """
-        Sync task to Asana via API.
+        Sync task to Asana via API with outbox safety.
 
         Uses the Asana client from config to create or update a task.
-        Falls back gracefully if Asana credentials are not configured.
+        Records durable intent before external call; prevents duplicate
+        creation on retry.
         """
-        import logging
-
-        logger = logging.getLogger(__name__)
-
         asana_client = self.config.get("asana_client")
         if not asana_client:
-            logger.warning(f"Asana client not configured; skipping sync for task {task_id}")
+            task_logger.warning("Asana client not configured; skipping sync for task %s", task_id)
             return
+
+        outbox = get_outbox()
+        existing_gid = data.get("asana_gid")
 
         try:
             project_gid = data.get("asana_project_gid")
@@ -203,51 +209,95 @@ class TaskHandler:
             if data.get("assignee_email"):
                 task_data["assignee"] = data["assignee_email"]
 
-            existing_gid = data.get("asana_gid")
             if existing_gid:
                 # Update existing task
+                idem_key = f"task_sync_update_{task_id}_{existing_gid}"
+                fulfilled = outbox.get_fulfilled_intent(idempotency_key=idem_key)
+                if fulfilled:
+                    task_logger.info("Asana sync update already fulfilled for task %s", task_id)
+                    return
+
+                intent_id = outbox.record_intent(
+                    handler="task_sync",
+                    action="update_asana",
+                    payload={"task_id": task_id, "asana_gid": existing_gid},
+                    idempotency_key=idem_key,
+                )
+
                 asana_client.tasks.update_task(existing_gid, task_data)
-                logger.info(f"Updated Asana task {existing_gid} for local task {task_id}")
+                outbox.mark_fulfilled(intent_id, external_resource_id=existing_gid)
+                task_logger.info("Updated Asana task %s for local task %s", existing_gid, task_id)
             else:
                 # Create new task
+                idem_key = f"task_sync_create_{task_id}"
+                fulfilled = outbox.get_fulfilled_intent(idempotency_key=idem_key)
+                if fulfilled:
+                    task_logger.info("Asana sync create already fulfilled for task %s", task_id)
+                    return
+
+                intent_id = outbox.record_intent(
+                    handler="task_sync",
+                    action="create_asana",
+                    payload={"task_id": task_id},
+                    idempotency_key=idem_key,
+                )
+
                 if project_gid:
                     task_data["projects"] = [project_gid]
                 result = asana_client.tasks.create_task(task_data)
                 new_gid = result.get("gid", "")
+
+                outbox.mark_fulfilled(intent_id, external_resource_id=new_gid)
                 # Store Asana GID back to local record
                 self.store.update("tasks", task_id, {"asana_gid": new_gid})
-                logger.info(f"Created Asana task {new_gid} for local task {task_id}")
+                task_logger.info("Created Asana task %s for local task %s", new_gid, task_id)
 
         except (sqlite3.Error, ValueError, OSError) as e:
-            logger.error(f"Asana sync failed for task {task_id}: {e}")
+            task_logger.error("Asana sync failed for task %s: %s", task_id, e)
 
     def _complete_in_asana(self, asana_id: str):
         """
-        Mark task complete in Asana.
+        Mark task complete in Asana with outbox safety.
 
-        Falls back gracefully if Asana credentials are not configured.
+        Records durable intent before external call; prevents duplicate
+        completion on retry.
         """
-        import logging
-
-        logger = logging.getLogger(__name__)
-
         asana_client = self.config.get("asana_client")
         if not asana_client:
-            logger.warning(f"Asana client not configured; skipping complete for {asana_id}")
+            task_logger.warning("Asana client not configured; skipping complete for %s", asana_id)
             return
+
+        outbox = get_outbox()
+        idem_key = f"task_complete_asana_{asana_id}"
+
+        # Check if already completed (idempotent retry)
+        fulfilled = outbox.get_fulfilled_intent(idempotency_key=idem_key)
+        if fulfilled:
+            task_logger.info("Asana task %s already marked complete", asana_id)
+            return
+
+        # Record intent BEFORE external call
+        intent_id = outbox.record_intent(
+            handler="task_sync",
+            action="complete_asana",
+            payload={"asana_id": asana_id},
+            idempotency_key=idem_key,
+        )
 
         try:
             asana_client.tasks.update_task(asana_id, {"completed": True})
-            logger.info(f"Marked Asana task {asana_id} as complete")
+            outbox.mark_fulfilled(intent_id, external_resource_id=asana_id)
+            task_logger.info("Marked Asana task %s as complete", asana_id)
         except (sqlite3.Error, ValueError, OSError) as e:
-            logger.error(f"Failed to complete Asana task {asana_id}: {e}")
+            outbox.mark_failed(intent_id, error=str(e))
+            task_logger.error("Failed to complete Asana task %s: %s", asana_id, e)
 
     def _log_action(self, action: dict, result: dict):
         """Log action to database."""
         self.store.insert(
             "actions",
             {
-                "id": f"action_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}",
+                "id": f"action_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S_%f')}",
                 "type": action.get("action_type", "task_action"),
                 "target_system": "tasks",
                 "payload": json.dumps(
@@ -260,6 +310,6 @@ class TaskHandler:
                 "status": "completed" if result.get("success") else "failed",
                 "requires_approval": 0,
                 "result": json.dumps(result),
-                "created_at": datetime.now().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             },
         )

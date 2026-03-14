@@ -356,36 +356,80 @@ def process_intelligence_for_notifications(
     Process intelligence data and changes to generate notifications.
 
     Returns list of notification IDs created.
+    Logs warnings when expected data structures are missing so that
+    silent signal/pattern/proposal drops are visible in logs.
     """
     notification_ids = []
 
-    # Critical signals
-    signals = intel_data.get("signals", {})
-    by_severity = signals.get("by_severity", {})
-    for signal in by_severity.get("critical", []):
-        try:
-            nid = notify_critical_signal(signal, db_path)
-            notification_ids.append(nid)
-        except (sqlite3.Error, ValueError, OSError) as e:
-            logger.warning(f"Failed to create signal notification: {e}")
+    # Critical signals — warn if expected structure is absent
+    signals = intel_data.get("signals")
+    if signals is None:
+        logger.warning(
+            "intel_data missing 'signals' key -- no signal notifications will be created"
+        )
+    elif not isinstance(signals, dict):
+        logger.warning(
+            "intel_data['signals'] is %s, expected dict -- cannot extract by_severity",
+            type(signals).__name__,
+        )
+    else:
+        by_severity = signals.get("by_severity")
+        if by_severity is None:
+            logger.warning(
+                "intel_data['signals'] missing 'by_severity' key "
+                "-- critical signals will not be notified"
+            )
+        else:
+            for signal in by_severity.get("critical", []):
+                try:
+                    nid = notify_critical_signal(signal, db_path)
+                    notification_ids.append(nid)
+                except (sqlite3.Error, ValueError, OSError) as e:
+                    logger.warning("Failed to create signal notification: %s", e)
 
     # Structural patterns
-    patterns = intel_data.get("patterns", {})
-    for pattern in patterns.get("structural", []):
-        try:
-            nid = notify_pattern_detected(pattern, db_path)
-            notification_ids.append(nid)
-        except (sqlite3.Error, ValueError, OSError) as e:
-            logger.warning(f"Failed to create pattern notification: {e}")
+    patterns = intel_data.get("patterns")
+    if patterns is None:
+        logger.warning(
+            "intel_data missing 'patterns' key -- no pattern notifications will be created"
+        )
+    elif not isinstance(patterns, dict):
+        logger.warning(
+            "intel_data['patterns'] is %s, expected dict",
+            type(patterns).__name__,
+        )
+    else:
+        for pattern in patterns.get("structural", []):
+            try:
+                nid = notify_pattern_detected(pattern, db_path)
+                notification_ids.append(nid)
+            except (sqlite3.Error, ValueError, OSError) as e:
+                logger.warning("Failed to create pattern notification: %s", e)
 
     # Immediate proposals
-    proposals = intel_data.get("proposals", {})
-    by_urgency = proposals.get("by_urgency", {})
-    for proposal in by_urgency.get("immediate", []):
-        try:
-            nid = notify_proposal(proposal, db_path)
-            notification_ids.append(nid)
-        except (sqlite3.Error, ValueError, OSError) as e:
-            logger.warning(f"Failed to create proposal notification: {e}")
+    proposals = intel_data.get("proposals")
+    if proposals is None:
+        logger.warning(
+            "intel_data missing 'proposals' key -- no proposal notifications will be created"
+        )
+    elif not isinstance(proposals, dict):
+        logger.warning(
+            "intel_data['proposals'] is %s, expected dict",
+            type(proposals).__name__,
+        )
+    else:
+        by_urgency = proposals.get("by_urgency")
+        if by_urgency is None:
+            logger.warning(
+                "intel_data['proposals'] missing 'by_urgency' key "
+                "-- immediate proposals will not be notified"
+            )
+        else:
+            for proposal in by_urgency.get("immediate", []):
+                try:
+                    nid = notify_proposal(proposal, db_path)
+                    notification_ids.append(nid)
+                except (sqlite3.Error, ValueError, OSError) as e:
+                    logger.warning("Failed to create proposal notification: %s", e)
 
     return notification_ids
