@@ -12,7 +12,7 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -25,7 +25,10 @@ except ImportError:
 
     COLLECTOR_ERRORS = (sqlite3.Error, ValueError, OSError, KeyError)
 
-CASSETTES_DIR = Path(__file__).parent.parent.parent / "tests" / "cassettes"
+
+def _cassettes_dir() -> Path:
+    return Path(__file__).parent.parent.parent / "tests" / "cassettes"
+
 
 # Patterns for secret redaction
 SECRET_PATTERNS = [
@@ -126,7 +129,7 @@ def redact_secrets(text: str) -> str:
 
 def get_cassette_path(name: str) -> Path:
     """Get path for a cassette file."""
-    return CASSETTES_DIR / f"{name}.json"
+    return _cassettes_dir() / f"{name}.json"
 
 
 def save_cassette(cassette: Cassette) -> Path:
@@ -180,7 +183,7 @@ class RecordingSession:
         response_body: str,
     ) -> None:
         """Record an HTTP interaction."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         expires = now + timedelta(days=self.expiry_days)
 
         entry = CassetteEntry(
@@ -220,8 +223,10 @@ class ReplaySession:
         for entry in self.cassette.entries:
             if entry.request_method == method and self._urls_match(entry.request_url, url):
                 # Check expiry
-                expires = datetime.fromisoformat(entry.expires_at.rstrip("Z"))
-                if datetime.utcnow() > expires:
+                expires = datetime.fromisoformat(entry.expires_at.rstrip("Z")).replace(
+                    tzinfo=timezone.utc
+                )
+                if datetime.now(timezone.utc) > expires:
                     continue  # Expired
                 return entry
 
@@ -244,7 +249,7 @@ def validate_cassettes() -> list[str]:
     """Validate all cassettes for expiry and schema."""
     issues = []
 
-    for path in CASSETTES_DIR.glob("*.json"):
+    for path in _cassettes_dir().glob("*.json"):
         try:
             cassette = load_cassette(path.stem)
             if not cassette:
@@ -254,8 +259,10 @@ def validate_cassettes() -> list[str]:
             # Check for expired entries
             expired_count = 0
             for entry in cassette.entries:
-                expires = datetime.fromisoformat(entry.expires_at.rstrip("Z"))
-                if datetime.utcnow() > expires:
+                expires = datetime.fromisoformat(entry.expires_at.rstrip("Z")).replace(
+                    tzinfo=timezone.utc
+                )
+                if datetime.now(timezone.utc) > expires:
                     expired_count += 1
 
             if expired_count > 0:

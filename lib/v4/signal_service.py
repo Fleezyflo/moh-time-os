@@ -7,16 +7,14 @@ Signals are the atomic intelligence units that feed into Proposals.
 
 import json
 import logging
-import os
 import sqlite3
+import threading
 import uuid
 from typing import Any
 
-from lib import safe_sql
+from lib import paths, safe_sql
 
 log = logging.getLogger("moh_time_os.v4.signal_service")
-
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "moh_time_os.db")
 
 
 class SignalService:
@@ -34,7 +32,7 @@ class SignalService:
     """
 
     def __init__(self, db_path: str = None):
-        self.db_path = db_path or DB_PATH
+        self.db_path = db_path or str(paths.db_path())
 
     def _get_conn(self):
         return sqlite3.connect(self.db_path, timeout=30)
@@ -870,10 +868,13 @@ class SignalService:
 
 # Singleton
 _signal_service = None
+_signal_service_lock = threading.Lock()
 
 
 def get_signal_service() -> SignalService:
     global _signal_service
     if _signal_service is None:
-        _signal_service = SignalService()
+        with _signal_service_lock:
+            if _signal_service is None:
+                _signal_service = SignalService()
     return _signal_service

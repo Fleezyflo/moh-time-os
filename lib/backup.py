@@ -3,14 +3,17 @@
 import logging
 import shutil
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
-from .store import DB_PATH, checkpoint_wal, db_exists
+from . import paths
+from .store import checkpoint_wal, db_exists
 
 log = logging.getLogger("moh_time_os")
 
-BACKUP_DIR = DB_PATH.parent / "backups"
+
+def _backup_dir():
+    return paths.db_path().parent / "backups"
 
 
 def create_backup(label: str = None) -> Path | None:
@@ -22,7 +25,7 @@ def create_backup(label: str = None) -> Path | None:
         log.warning("Cannot backup: database does not exist")
         return None
 
-    BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    _backup_dir().mkdir(parents=True, exist_ok=True)
 
     # Checkpoint WAL first to ensure consistency
     try:
@@ -32,13 +35,13 @@ def create_backup(label: str = None) -> Path | None:
         log.warning(f"WAL checkpoint failed before backup: {e}", exc_info=True)
 
     # Generate backup filename
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
     filename = f"moh_time_os_{timestamp}_{label}.db" if label else f"moh_time_os_{timestamp}.db"
 
-    backup_path = BACKUP_DIR / filename
+    backup_path = _backup_dir() / filename
 
     try:
-        shutil.copy2(DB_PATH, backup_path)
+        shutil.copy2(paths.db_path(), backup_path)
         log.info(f"Created backup: {backup_path}")
         return backup_path
     except PermissionError as e:
@@ -57,14 +60,14 @@ def list_backups() -> list[tuple[Path, datetime, int]]:
     List available backups.
     Returns list of (path, modified_time, size_bytes).
     """
-    if not BACKUP_DIR.exists():
+    if not _backup_dir().exists():
         return []
 
     backups = []
-    for f in BACKUP_DIR.glob("*.db"):
+    for f in _backup_dir().glob("*.db"):
         try:
             stat = f.stat()
-            mtime = datetime.fromtimestamp(stat.st_mtime)
+            mtime = datetime.fromtimestamp(stat.st_mtime, tz=timezone.utc)
             backups.append((f, mtime, stat.st_size))
         except OSError as e:
             # File may have been deleted/moved - skip it
@@ -107,11 +110,11 @@ def restore_backup(backup_path: Path, create_safety_backup: bool = True) -> bool
                 log.warning(f"WAL checkpoint failed during restore: {e}", exc_info=True)
 
         # Copy backup to main path
-        shutil.copy2(backup_path, DB_PATH)
+        shutil.copy2(backup_path, paths.db_path())
 
         # Also remove any leftover WAL/SHM files
-        wal_file = Path(str(DB_PATH) + "-wal")
-        shm_file = Path(str(DB_PATH) + "-shm")
+        wal_file = Path(str(paths.db_path()) + "-wal")
+        shm_file = Path(str(paths.db_path()) + "-shm")
         for f in [wal_file, shm_file]:
             if f.exists():
                 f.unlink()
@@ -171,7 +174,7 @@ def backup_status() -> str:
 
     for path, mtime, size in backups[:5]:
         size_kb = size / 1024
-        age = datetime.now() - mtime
+        age = datetime.now(timezone.utc) - mtime
         if age.days > 0:
             age_str = f"{age.days}d ago"
         elif age.seconds > 3600:

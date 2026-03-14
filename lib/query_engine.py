@@ -849,10 +849,10 @@ class QueryEngine:
         - windows: list of {period_start, period_end, metrics}
         - trends: computed trend (INCREASING/STABLE/DECLINING) for each metric
         """
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
 
         # Calculate windows going back from today
-        end_date = datetime.now()
+        end_date = datetime.now(timezone.utc)
         windows_data = []
 
         for i in range(num_windows):
@@ -951,7 +951,7 @@ class QueryEngine:
         """
         Load and activity trajectory for a person.
         """
-        from datetime import datetime, timedelta
+        from datetime import datetime, timedelta, timezone
 
         # Get person name
         profile = self.person_operational_profile(person_id)
@@ -961,7 +961,7 @@ class QueryEngine:
         person_name = profile["person_name"]
 
         # Calculate windows
-        end_date = datetime.now()
+        end_date = datetime.now(timezone.utc)
         windows_data = []
 
         for i in range(num_windows):

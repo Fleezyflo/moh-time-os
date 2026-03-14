@@ -6,15 +6,13 @@ Ensures consistent identity across all artifacts and entities.
 """
 
 import json
-import os
 import re
 import sqlite3
+import threading
 import uuid
 from typing import Any
 
-from lib import safe_sql
-
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "moh_time_os.db")
+from lib import paths, safe_sql
 
 
 class IdentityService:
@@ -34,7 +32,7 @@ class IdentityService:
     PROFILE_TYPES = {"person", "org"}
 
     def __init__(self, db_path: str = None):
-        self.db_path = db_path or DB_PATH
+        self.db_path = db_path or str(paths.db_path())
 
     def _get_conn(self):
         return sqlite3.connect(self.db_path, timeout=30)
@@ -592,10 +590,13 @@ class IdentityService:
 
 # Singleton
 _identity_service = None
+_identity_service_lock = threading.Lock()
 
 
 def get_identity_service() -> IdentityService:
     global _identity_service
     if _identity_service is None:
-        _identity_service = IdentityService()
+        with _identity_service_lock:
+            if _identity_service is None:
+                _identity_service = IdentityService()
     return _identity_service

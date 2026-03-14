@@ -7,17 +7,17 @@ Reports are evidence-backed and reproducible.
 
 import hashlib
 import json
-import os
 import sqlite3
+import threading
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
+
+from lib import paths
 
 from .issue_service import get_issue_service
 from .proposal_service import get_proposal_service
 from .signal_service import get_signal_service
-
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "moh_time_os.db")
 
 
 class ReportService:
@@ -61,7 +61,7 @@ class ReportService:
     }
 
     def __init__(self, db_path: str = None):
-        self.db_path = db_path or DB_PATH
+        self.db_path = db_path or str(paths.db_path())
         self.signal_svc = get_signal_service()
         self.proposal_svc = get_proposal_service()
         self.issue_svc = get_issue_service()
@@ -144,7 +144,7 @@ class ReportService:
             client_name, tier, health = client_row
 
             # Build report content
-            period_end = datetime.now()
+            period_end = datetime.now(timezone.utc)
             period_start = period_end - timedelta(days=period_days)
 
             content = {
@@ -272,7 +272,7 @@ class ReportService:
         cursor = conn.cursor()
 
         try:
-            period_end = datetime.now()
+            period_end = datetime.now(timezone.utc)
             period_start = period_end - timedelta(days=period_days)
 
             content = {
@@ -470,10 +470,13 @@ class ReportService:
 
 
 _report_service = None
+_report_service_lock = threading.Lock()
 
 
 def get_report_service() -> ReportService:
     global _report_service
     if _report_service is None:
-        _report_service = ReportService()
+        with _report_service_lock:
+            if _report_service is None:
+                _report_service = ReportService()
     return _report_service

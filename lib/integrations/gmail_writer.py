@@ -12,13 +12,20 @@ import sqlite3
 from dataclasses import dataclass
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from pathlib import Path
+
+from lib.credential_paths import google_sa_file
 
 logger = logging.getLogger(__name__)
 
 # Service account configuration
-DEFAULT_SA_FILE = Path.home() / "Library/Application Support/gogcli/sa-bW9saGFtQGhybW55LmNv.json"
 SCOPES = ["https://www.googleapis.com/auth/gmail.modify"]
+
+
+def _sa_file():
+    """Resolve SA file at call time to respect env overrides."""
+    return google_sa_file()
+
+
 DEFAULT_USER = "molham@hrmny.co"
 
 
@@ -55,9 +62,7 @@ class GmailWriter:
             delegated_user: User to impersonate. If None, uses DEFAULT_USER.
             dry_run: If True, validate without sending.
         """
-        self.credentials_path = credentials_path or os.environ.get(
-            "GMAIL_SA_FILE", str(DEFAULT_SA_FILE)
-        )
+        self.credentials_path = credentials_path or os.environ.get("GMAIL_SA_FILE", str(_sa_file()))
         self.delegated_user = delegated_user or os.environ.get("GMAIL_USER", DEFAULT_USER)
         self.dry_run = dry_run
         self._service = None

@@ -7,16 +7,16 @@ They bundle related signals into actionable briefings with proof.
 
 import json
 import logging
-import os
 import sqlite3
+import threading
 import uuid
 from typing import Any
+
+from lib import paths
 
 from .signal_service import get_signal_service
 
 logger = logging.getLogger(__name__)
-
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "moh_time_os.db")
 
 
 class ProposalService:
@@ -32,7 +32,7 @@ class ProposalService:
     MIN_SIGNALS = 2  # Never create single-signal proposals
 
     def __init__(self, db_path: str = None):
-        self.db_path = db_path or DB_PATH
+        self.db_path = db_path or str(paths.db_path())
         self.signal_svc = get_signal_service()
 
     def _get_conn(self):
@@ -649,10 +649,13 @@ class ProposalService:
 
 # Singleton
 _proposal_service = None
+_proposal_service_lock = threading.Lock()
 
 
 def get_proposal_service() -> ProposalService:
     global _proposal_service
     if _proposal_service is None:
-        _proposal_service = ProposalService()
+        with _proposal_service_lock:
+            if _proposal_service is None:
+                _proposal_service = ProposalService()
     return _proposal_service

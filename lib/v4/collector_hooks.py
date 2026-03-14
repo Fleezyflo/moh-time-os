@@ -7,19 +7,19 @@ Call these after each collector sync completes.
 
 import json
 import logging
-import os
 import re
 import sqlite3
-from datetime import datetime
+import threading
+from datetime import datetime, timezone
 from typing import Any
+
+from lib import paths
 
 from .artifact_service import decrypt_blob_payload, get_artifact_service
 from .entity_link_service import get_entity_link_service
 from .identity_service import get_identity_service
 
 log = logging.getLogger("moh_time_os.v4.hooks")
-
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "moh_time_os.db")
 
 
 class CollectorHooks:
@@ -47,7 +47,7 @@ class CollectorHooks:
         self._load_entity_patterns()
 
     def _get_conn(self):
-        return sqlite3.connect(DB_PATH, timeout=30)
+        return sqlite3.connect(str(paths.db_path()), timeout=30)
 
     def _load_entity_patterns(self):
         """Load client/project/task patterns for entity matching."""
@@ -274,7 +274,7 @@ class CollectorHooks:
         occurred_at = (
             task_data.get("modified_at")
             or task_data.get("created_at")
-            or datetime.now().isoformat()
+            or datetime.now(timezone.utc).isoformat()
         )
 
         result = self.artifact_svc.create_artifact(
@@ -364,7 +364,7 @@ class CollectorHooks:
             source="asana",
             source_id=f"project_{gid}",
             artifact_type="project_update",
-            occurred_at=project_data.get("modified_at", datetime.now().isoformat()),
+            occurred_at=project_data.get("modified_at", datetime.now(timezone.utc).isoformat()),
             payload=project_data,
         )
 
@@ -471,7 +471,7 @@ class CollectorHooks:
             source="xero",
             source_id=invoice_id,
             artifact_type="invoice",
-            occurred_at=invoice_data.get("DateString", datetime.now().isoformat()),
+            occurred_at=invoice_data.get("DateString", datetime.now(timezone.utc).isoformat()),
             payload=invoice_data,
         )
 
@@ -524,7 +524,7 @@ class CollectorHooks:
             source="xero",
             source_id=payment_id,
             artifact_type="payment",
-            occurred_at=payment_data.get("Date", datetime.now().isoformat()),
+            occurred_at=payment_data.get("Date", datetime.now(timezone.utc).isoformat()),
             payload=payment_data,
         )
 
@@ -565,7 +565,7 @@ class CollectorHooks:
             source="gmail",
             source_id=msg_id,
             artifact_type="message",
-            occurred_at=message_data.get("date", datetime.now().isoformat()),
+            occurred_at=message_data.get("date", datetime.now(timezone.utc).isoformat()),
             payload=message_data,
             actor_person_id=actor_id,
             visibility_tags=message_data.get("labels", []),
@@ -711,7 +711,9 @@ class CollectorHooks:
                 actor_id = profile["profile_id"]
 
         start = event_data.get("start", {})
-        occurred_at = start.get("dateTime") or start.get("date") or datetime.now().isoformat()
+        occurred_at = (
+            start.get("dateTime") or start.get("date") or datetime.now(timezone.utc).isoformat()
+        )
 
         result = self.artifact_svc.create_artifact(
             source="calendar",
@@ -911,7 +913,7 @@ class CollectorHooks:
             source="asana",
             source_id=item_id,
             artifact_type="task",
-            occurred_at=created or datetime.now().isoformat(),
+            occurred_at=created or datetime.now(timezone.utc).isoformat(),
             payload={
                 "gid": item_id,
                 "name": title,
@@ -1343,13 +1345,16 @@ class CollectorHooks:
 
 # Singleton instance
 _hooks = None
+_hooks_lock = threading.Lock()
 
 
 def get_hooks() -> CollectorHooks:
     """Get the singleton hooks instance."""
     global _hooks
     if _hooks is None:
-        _hooks = CollectorHooks()
+        with _hooks_lock:
+            if _hooks is None:
+                _hooks = CollectorHooks()
     return _hooks
 
 

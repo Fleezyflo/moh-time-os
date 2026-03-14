@@ -15,7 +15,7 @@ Notification types:
 import logging
 import sqlite3
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 
@@ -61,15 +61,11 @@ class Notification:
         }
 
 
-# Default DB path from lib.paths
-DEFAULT_DB = get_db_path_from_lib()
-
-
 def _get_db_path(db_path: Path | None = None) -> Path:
-    """Get database path."""
+    """Get database path, resolving at call time to respect env overrides."""
     if db_path:
         return Path(db_path)
-    return DEFAULT_DB
+    return get_db_path_from_lib()
 
 
 def ensure_notification_table(db_path: Path | None = None) -> None:
@@ -229,7 +225,7 @@ def mark_delivered(notification_id: str, db_path: Path | None = None) -> None:
             SET delivered_at = ?
             WHERE notification_id = ?
         """,
-            (datetime.now().isoformat(), notification_id),
+            (datetime.now(timezone.utc).isoformat(), notification_id),
         )
         conn.commit()
     finally:
@@ -244,7 +240,7 @@ def mark_delivered(notification_id: str, db_path: Path | None = None) -> None:
 def notify_critical_signal(signal: dict, db_path: Path | None = None) -> str:
     """Create notification for a critical signal."""
     notification = Notification(
-        id=f"sig_{signal.get('signal_id', '')}_{datetime.now().strftime('%Y%m%d%H%M')}",
+        id=f"sig_{signal.get('signal_id', '')}_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M')}",
         type=NotificationType.CRITICAL_SIGNAL,
         priority=NotificationPriority.HIGH,
         title=f"🚨 Critical: {signal.get('name', 'Unknown signal')}",
@@ -252,7 +248,7 @@ def notify_critical_signal(signal: dict, db_path: Path | None = None) -> str:
         entity_type=signal.get("entity_type"),
         entity_id=signal.get("entity_id"),
         data=signal,
-        created_at=datetime.now().isoformat(),
+        created_at=datetime.now(timezone.utc).isoformat(),
     )
     return queue_notification(notification, db_path)
 
@@ -260,7 +256,7 @@ def notify_critical_signal(signal: dict, db_path: Path | None = None) -> str:
 def notify_escalation(signal: dict, from_severity: str, db_path: Path | None = None) -> str:
     """Create notification for a signal escalation."""
     notification = Notification(
-        id=f"esc_{signal.get('signal_id', '')}_{datetime.now().strftime('%Y%m%d%H%M')}",
+        id=f"esc_{signal.get('signal_id', '')}_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M')}",
         type=NotificationType.ESCALATION,
         priority=NotificationPriority.HIGH,
         title=f"⬆️ Escalated: {signal.get('name', 'Unknown')} ({from_severity} → {signal.get('severity')})",
@@ -268,7 +264,7 @@ def notify_escalation(signal: dict, from_severity: str, db_path: Path | None = N
         entity_type=signal.get("entity_type"),
         entity_id=signal.get("entity_id"),
         data={**signal, "escalated_from": from_severity},
-        created_at=datetime.now().isoformat(),
+        created_at=datetime.now(timezone.utc).isoformat(),
     )
     return queue_notification(notification, db_path)
 
@@ -284,7 +280,7 @@ def notify_score_drop(
     """Create notification for a significant score drop."""
     delta = new_score - old_score
     notification = Notification(
-        id=f"score_{entity_type}_{entity_id}_{datetime.now().strftime('%Y%m%d%H%M')}",
+        id=f"score_{entity_type}_{entity_id}_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M')}",
         type=NotificationType.SCORE_DROP,
         priority=NotificationPriority.MEDIUM if delta > -20 else NotificationPriority.HIGH,
         title=f"📉 Score Drop: {entity_name} ({old_score:.0f} → {new_score:.0f})",
@@ -292,7 +288,7 @@ def notify_score_drop(
         entity_type=entity_type,
         entity_id=entity_id,
         data={"old_score": old_score, "new_score": new_score, "delta": delta},
-        created_at=datetime.now().isoformat(),
+        created_at=datetime.now(timezone.utc).isoformat(),
     )
     return queue_notification(notification, db_path)
 
@@ -309,7 +305,7 @@ def notify_pattern_detected(pattern: dict, db_path: Path | None = None) -> str:
     )
 
     notification = Notification(
-        id=f"pat_{pattern.get('pattern_id', '')}_{datetime.now().strftime('%Y%m%d%H%M')}",
+        id=f"pat_{pattern.get('pattern_id', '')}_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M')}",
         type=NotificationType.PATTERN_DETECTED,
         priority=priority,
         title=f"🔺 Pattern: {pattern.get('name', 'Unknown')}",
@@ -317,7 +313,7 @@ def notify_pattern_detected(pattern: dict, db_path: Path | None = None) -> str:
         entity_type="portfolio",
         entity_id=None,
         data=pattern,
-        created_at=datetime.now().isoformat(),
+        created_at=datetime.now(timezone.utc).isoformat(),
     )
     return queue_notification(notification, db_path)
 
@@ -335,7 +331,7 @@ def notify_proposal(proposal: dict, db_path: Path | None = None) -> str:
 
     entity = proposal.get("entity", {})
     notification = Notification(
-        id=f"prop_{proposal.get('id', '')}_{datetime.now().strftime('%Y%m%d%H%M')}",
+        id=f"prop_{proposal.get('id', '')}_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M')}",
         type=NotificationType.PROPOSAL_GENERATED,
         priority=priority,
         title=f"💡 {proposal.get('headline', 'New proposal')}",
@@ -343,7 +339,7 @@ def notify_proposal(proposal: dict, db_path: Path | None = None) -> str:
         entity_type=entity.get("type"),
         entity_id=entity.get("id"),
         data=proposal,
-        created_at=datetime.now().isoformat(),
+        created_at=datetime.now(timezone.utc).isoformat(),
     )
     return queue_notification(notification, db_path)
 
@@ -360,36 +356,80 @@ def process_intelligence_for_notifications(
     Process intelligence data and changes to generate notifications.
 
     Returns list of notification IDs created.
+    Logs warnings when expected data structures are missing so that
+    silent signal/pattern/proposal drops are visible in logs.
     """
     notification_ids = []
 
-    # Critical signals
-    signals = intel_data.get("signals", {})
-    by_severity = signals.get("by_severity", {})
-    for signal in by_severity.get("critical", []):
-        try:
-            nid = notify_critical_signal(signal, db_path)
-            notification_ids.append(nid)
-        except (sqlite3.Error, ValueError, OSError) as e:
-            logger.warning(f"Failed to create signal notification: {e}")
+    # Critical signals — warn if expected structure is absent
+    signals = intel_data.get("signals")
+    if signals is None:
+        logger.warning(
+            "intel_data missing 'signals' key -- no signal notifications will be created"
+        )
+    elif not isinstance(signals, dict):
+        logger.warning(
+            "intel_data['signals'] is %s, expected dict -- cannot extract by_severity",
+            type(signals).__name__,
+        )
+    else:
+        by_severity = signals.get("by_severity")
+        if by_severity is None:
+            logger.warning(
+                "intel_data['signals'] missing 'by_severity' key "
+                "-- critical signals will not be notified"
+            )
+        else:
+            for signal in by_severity.get("critical", []):
+                try:
+                    nid = notify_critical_signal(signal, db_path)
+                    notification_ids.append(nid)
+                except (sqlite3.Error, ValueError, OSError) as e:
+                    logger.warning("Failed to create signal notification: %s", e)
 
     # Structural patterns
-    patterns = intel_data.get("patterns", {})
-    for pattern in patterns.get("structural", []):
-        try:
-            nid = notify_pattern_detected(pattern, db_path)
-            notification_ids.append(nid)
-        except (sqlite3.Error, ValueError, OSError) as e:
-            logger.warning(f"Failed to create pattern notification: {e}")
+    patterns = intel_data.get("patterns")
+    if patterns is None:
+        logger.warning(
+            "intel_data missing 'patterns' key -- no pattern notifications will be created"
+        )
+    elif not isinstance(patterns, dict):
+        logger.warning(
+            "intel_data['patterns'] is %s, expected dict",
+            type(patterns).__name__,
+        )
+    else:
+        for pattern in patterns.get("structural", []):
+            try:
+                nid = notify_pattern_detected(pattern, db_path)
+                notification_ids.append(nid)
+            except (sqlite3.Error, ValueError, OSError) as e:
+                logger.warning("Failed to create pattern notification: %s", e)
 
     # Immediate proposals
-    proposals = intel_data.get("proposals", {})
-    by_urgency = proposals.get("by_urgency", {})
-    for proposal in by_urgency.get("immediate", []):
-        try:
-            nid = notify_proposal(proposal, db_path)
-            notification_ids.append(nid)
-        except (sqlite3.Error, ValueError, OSError) as e:
-            logger.warning(f"Failed to create proposal notification: {e}")
+    proposals = intel_data.get("proposals")
+    if proposals is None:
+        logger.warning(
+            "intel_data missing 'proposals' key -- no proposal notifications will be created"
+        )
+    elif not isinstance(proposals, dict):
+        logger.warning(
+            "intel_data['proposals'] is %s, expected dict",
+            type(proposals).__name__,
+        )
+    else:
+        by_urgency = proposals.get("by_urgency")
+        if by_urgency is None:
+            logger.warning(
+                "intel_data['proposals'] missing 'by_urgency' key "
+                "-- immediate proposals will not be notified"
+            )
+        else:
+            for proposal in by_urgency.get("immediate", []):
+                try:
+                    nid = notify_proposal(proposal, db_path)
+                    notification_ids.append(nid)
+                except (sqlite3.Error, ValueError, OSError) as e:
+                    logger.warning("Failed to create proposal notification: %s", e)
 
     return notification_ids

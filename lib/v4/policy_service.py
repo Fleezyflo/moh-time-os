@@ -6,12 +6,12 @@ Provides governance layer for the executive OS.
 """
 
 import json
-import os
 import sqlite3
+import threading
 import uuid
 from typing import Any
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "moh_time_os.db")
+from lib import paths
 
 
 class PolicyService:
@@ -54,7 +54,7 @@ class PolicyService:
     }
 
     def __init__(self, db_path: str = None):
-        self.db_path = db_path or DB_PATH
+        self.db_path = db_path or str(paths.db_path())
         self._ensure_defaults()
 
     def _get_conn(self):
@@ -660,10 +660,13 @@ class PolicyService:
 
 
 _policy_service = None
+_policy_service_lock = threading.Lock()
 
 
 def get_policy_service() -> PolicyService:
     global _policy_service
     if _policy_service is None:
-        _policy_service = PolicyService()
+        with _policy_service_lock:
+            if _policy_service is None:
+                _policy_service = PolicyService()
     return _policy_service

@@ -15,7 +15,11 @@ import httpx
 
 from lib import paths
 
-CONFIG_PATH = str(paths.config_dir() / ".credentials.json")
+
+def _config_path() -> str:
+    """Resolve config path at call time to respect env overrides."""
+    return str(paths.config_dir() / ".credentials.json")
+
 
 # Xero OAuth endpoints
 XERO_AUTH_URL = "https://login.xero.com/identity/connect/authorize"
@@ -40,12 +44,12 @@ SCOPES = [
 
 
 def load_credentials() -> dict[str, Any]:
-    with open(CONFIG_PATH) as f:
+    with open(_config_path()) as f:
         return json.load(f)
 
 
 def save_credentials(data: dict[str, Any]) -> None:
-    with open(CONFIG_PATH, "w") as f:
+    with open(_config_path(), "w") as f:
         json.dump(data, f, indent=2)
 
 
@@ -215,14 +219,14 @@ def main():
     save_credentials(creds)
 
     # Also save access token to cache
-    cache_path = os.path.join(os.path.dirname(CONFIG_PATH), ".xero_token_cache.json")
+    cache_path = os.path.join(os.path.dirname(_config_path()), ".xero_token_cache.json")
     with open(cache_path, "w") as f:
         json.dump({"access_token": access_token}, f)
 
     print("\n" + "=" * 60)
     print("✅ SUCCESS! Xero authorization complete.")
     print("=" * 60)
-    print(f"\nCredentials saved to: {CONFIG_PATH}")
+    print(f"\nCredentials saved to: {_config_path()}")
     print("\nYou can now use the Xero integration.")
 
 

@@ -6,18 +6,16 @@ They have watchers, handoffs, commitments, and deterministic resolution criteria
 """
 
 import json
-import os
 import sqlite3
+import threading
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
-from lib import safe_sql
+from lib import paths, safe_sql
 
 from .proposal_service import get_proposal_service
 from .signal_service import get_signal_service
-
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "moh_time_os.db")
 
 
 class IssueService:
@@ -34,7 +32,7 @@ class IssueService:
     """
 
     def __init__(self, db_path: str = None):
-        self.db_path = db_path or DB_PATH
+        self.db_path = db_path or str(paths.db_path())
         self.proposal_svc = get_proposal_service()
         self.signal_svc = get_signal_service()
 
@@ -237,7 +235,7 @@ class IssueService:
     ) -> list[dict]:
         """Create default watchers for an issue."""
         watchers = []
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
 
         # All issues get a staleness watcher
         watchers.append(
@@ -520,7 +518,7 @@ class IssueService:
         stats = {"evaluated": 0, "triggered": 0}
 
         try:
-            now = datetime.now().isoformat()
+            now = datetime.now(timezone.utc).isoformat()
 
             cursor.execute(
                 """
@@ -545,7 +543,7 @@ class IssueService:
                     days = params.get("days", 7)
                     if last_activity:
                         last_dt = datetime.fromisoformat(last_activity[:19])
-                        if (datetime.now() - last_dt).days >= days:
+                        if (datetime.now(timezone.utc) - last_dt).days >= days:
                             triggered = True
 
                 elif watch_type == "blocker_age_exceeds":
@@ -621,10 +619,13 @@ class IssueService:
 
 # Singleton
 _issue_service = None
+_issue_service_lock = threading.Lock()
 
 
 def get_issue_service() -> IssueService:
     global _issue_service
     if _issue_service is None:
-        _issue_service = IssueService()
+        with _issue_service_lock:
+            if _issue_service is None:
+                _issue_service = IssueService()
     return _issue_service
