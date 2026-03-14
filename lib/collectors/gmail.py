@@ -14,6 +14,7 @@ from typing import Any
 
 from .base import BaseCollector
 from .resilience import COLLECTOR_ERRORS
+from .result import CollectorResult, CollectorStatus, classify_error
 
 logger = logging.getLogger(__name__)
 
@@ -174,7 +175,7 @@ class GmailCollector(BaseCollector):
 
         except COLLECTOR_ERRORS as e:
             self.logger.error(f"Gmail collection failed: {e}")
-            return {"threads": []}
+            raise  # Propagate to sync() — never return empty data as success
 
     def transform(self, raw_data: dict) -> list[dict]:
         """Transform Gmail threads to canonical format."""
@@ -576,10 +577,12 @@ class GmailCollector(BaseCollector):
 
     def sync(self) -> dict[str, Any]:
         """
-        Full sync cycle: collect → transform → store to multiple tables.
+        Full sync cycle: collect -> transform -> store to multiple tables.
         Overrides BaseCollector.sync to handle secondary tables:
         - Primary: communications
         - Secondary: gmail_participants, gmail_attachments, gmail_labels
+
+        Returns CollectorResult.to_dict() with status indicating health.
         """
         from datetime import datetime
 
@@ -589,12 +592,14 @@ class GmailCollector(BaseCollector):
         if not self.circuit_breaker.can_execute():
             self.logger.warning(f"Circuit breaker is {self.circuit_breaker.state}. Skipping sync.")
             self.metrics["circuit_opens"] += 1
-            return {
-                "source": self.source_name,
-                "success": False,
-                "error": f"Circuit breaker {self.circuit_breaker.state}",
-                "timestamp": datetime.now().isoformat(),
-            }
+            result = CollectorResult(
+                source=self.source_name,
+                status=CollectorStatus.STALE,
+                error=f"Circuit breaker {self.circuit_breaker.state}",
+                error_type="circuit_breaker",
+                circuit_breaker_state=self.circuit_breaker.state,
+            )
+            return result.to_dict()
 
         try:
             # Step 1: Collect from external source
@@ -612,13 +617,23 @@ class GmailCollector(BaseCollector):
             except COLLECTOR_ERRORS as e:
                 self.logger.error(f"Collect failed after retries: {e}")
                 self.circuit_breaker.record_failure()
-                self.store.update_sync_state(self.source_name, success=False, error=str(e))
-                return {
-                    "source": self.source_name,
-                    "success": False,
-                    "error": str(e),
-                    "timestamp": datetime.now().isoformat(),
-                }
+                err_type = classify_error(e)
+                self.store.update_sync_state(
+                    self.source_name,
+                    success=False,
+                    error=str(e),
+                    error_type=err_type,
+                    status="failed",
+                )
+                result = CollectorResult(
+                    source=self.source_name,
+                    status=CollectorStatus.FAILED,
+                    error=str(e),
+                    error_type=err_type,
+                    circuit_breaker_state=self.circuit_breaker.state,
+                    duration_ms=(datetime.now() - cycle_start).total_seconds() * 1000,
+                )
+                return result.to_dict()
 
             # Step 2: Transform to canonical format
             try:
@@ -633,77 +648,93 @@ class GmailCollector(BaseCollector):
             # Step 3: Store primary table (communications)
             stored_primary = self.store.insert_many(self.target_table, transformed)
 
-            # Step 4: Store secondary tables - failures don't block primary
-            secondary_stats: dict[str, int] = {}
+            # Step 4: Store secondary tables — track individual results
+            result = CollectorResult(
+                source=self.source_name,
+                status=CollectorStatus.SUCCESS,
+                collected=len((self._raw_data or {}).get("threads", [])),
+                transformed=len(transformed),
+                stored=stored_primary,
+                circuit_breaker_state=self.circuit_breaker.state,
+            )
+
             for thread in (self._raw_data or {}).get("threads", []):
                 thread_id = thread.get("id")
                 messages = thread.get("messages", [])
                 label_ids = thread.get("labels", [])
-                # Get first message ID for label association
                 first_msg_id = messages[0].get("id", "") if messages else ""
 
                 if not thread_id:
                     continue
 
                 try:
-                    # Store participants
                     participants = self._transform_participants(thread_id, messages)
                     if participants:
                         stored = self.store.insert_many("gmail_participants", participants)
-                        secondary_stats["participants"] = (
-                            secondary_stats.get("participants", 0) + stored
-                        )
+                        prev = result.secondary_tables.get("participants")
+                        prev_stored = prev.stored if prev else 0
+                        result.add_secondary("participants", stored=prev_stored + stored)
                 except COLLECTOR_ERRORS as e:
                     self.logger.warning(f"Failed to store participants for {thread_id}: {e}")
+                    result.add_secondary("participants", error=str(e))
 
                 try:
-                    # Store attachments
                     attachments = self._transform_attachments(thread_id, messages)
                     if attachments:
                         stored = self.store.insert_many("gmail_attachments", attachments)
-                        secondary_stats["attachments"] = (
-                            secondary_stats.get("attachments", 0) + stored
-                        )
+                        prev = result.secondary_tables.get("attachments")
+                        prev_stored = prev.stored if prev else 0
+                        result.add_secondary("attachments", stored=prev_stored + stored)
                 except COLLECTOR_ERRORS as e:
                     self.logger.warning(f"Failed to store attachments for {thread_id}: {e}")
+                    result.add_secondary("attachments", error=str(e))
 
                 try:
-                    # Store labels
                     labels = self._transform_labels(thread_id, first_msg_id, label_ids)
                     if labels:
                         stored = self.store.insert_many("gmail_labels", labels)
-                        secondary_stats["labels"] = secondary_stats.get("labels", 0) + stored
+                        prev = result.secondary_tables.get("labels")
+                        prev_stored = prev.stored if prev else 0
+                        result.add_secondary("labels", stored=prev_stored + stored)
                 except COLLECTOR_ERRORS as e:
                     self.logger.warning(f"Failed to store labels for {thread_id}: {e}")
+                    result.add_secondary("labels", error=str(e))
 
-            # Step 5: Update sync state and record success
+            # Step 5: Finalize status, update sync state, record success
             self.last_sync = datetime.now()
-            self.store.update_sync_state(self.source_name, success=True, items=stored_primary)
+            result.duration_ms = (datetime.now() - cycle_start).total_seconds() * 1000
+            result.timestamp = self.last_sync.isoformat()
+
+            # Escalate to PARTIAL if any secondary table failed
+            result.escalate_to_partial()
+            self.store.update_sync_state(
+                self.source_name,
+                success=(result.status == CollectorStatus.SUCCESS),
+                items=stored_primary,
+                status=result.status.value,
+            )
             self.circuit_breaker.record_success()
 
-            duration_ms = (datetime.now() - cycle_start).total_seconds() * 1000
-
-            result = {
-                "source": self.source_name,
-                "success": True,
-                "collected": len((self._raw_data or {}).get("threads", [])),
-                "transformed": len(transformed),
-                "stored_primary": stored_primary,
-                "stored_secondary": secondary_stats,
-                "duration_ms": duration_ms,
-                "timestamp": self.last_sync.isoformat(),
-            }
-
-            self.logger.info(f"Sync completed: {result}")
-            return result
+            self.logger.info(f"Sync completed: {result.to_dict()}")
+            return result.to_dict()
 
         except COLLECTOR_ERRORS as e:
             self.logger.error(f"Sync failed for {self.source_name}: {e}")
             self.circuit_breaker.record_failure()
-            self.store.update_sync_state(self.source_name, success=False, error=str(e))
-            return {
-                "source": self.source_name,
-                "success": False,
-                "error": str(e),
-                "timestamp": datetime.now().isoformat(),
-            }
+            err_type = classify_error(e)
+            self.store.update_sync_state(
+                self.source_name,
+                success=False,
+                error=str(e),
+                error_type=err_type,
+                status="failed",
+            )
+            result = CollectorResult(
+                source=self.source_name,
+                status=CollectorStatus.FAILED,
+                error=str(e),
+                error_type=err_type,
+                circuit_breaker_state=self.circuit_breaker.state,
+                duration_ms=(datetime.now() - cycle_start).total_seconds() * 1000,
+            )
+            return result.to_dict()

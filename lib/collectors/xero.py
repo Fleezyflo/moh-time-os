@@ -12,6 +12,7 @@ from datetime import date, datetime
 from lib.state_store import get_store
 
 from .resilience import COLLECTOR_ERRORS
+from .result import CollectorResult, CollectorStatus, classify_error
 
 logger = logging.getLogger(__name__)
 
@@ -254,11 +255,14 @@ class XeroCollector:
             logger.warning(
                 "XeroCollector circuit breaker is %s, skipping sync", self.circuit_breaker.state
             )
-            return {
-                "success": False,
-                "error": f"Circuit breaker {self.circuit_breaker.state}",
-                "synced": 0,
-            }
+            cr = CollectorResult(
+                source="xero",
+                status=CollectorStatus.STALE,
+                error=f"Circuit breaker {self.circuit_breaker.state}",
+                error_type="circuit_breaker",
+                circuit_breaker_state=self.circuit_breaker.state,
+            )
+            return cr.to_dict()
 
         try:
             from engine.xero_client import (
@@ -284,7 +288,12 @@ class XeroCollector:
                 f"Total invoices to process: {len(all_invoices)} ({len(paid_invoices)} paid, {len(authorised_invoices)} authorised)"
             )
 
-            # Fetch secondary data (non-blocking)
+            # Fetch secondary data (non-blocking).
+            # IMPORTANT: fetch failures are tracked in secondary_fetch_errors
+            # so escalate_to_partial() can detect them. Without this, a fetch
+            # exception would leave data as [] and silently report SUCCESS.
+            secondary_fetch_errors: dict[str, str] = {}
+
             try:
                 logger.info("Fetching contacts from Xero...")
                 all_contacts = list_contacts()
@@ -292,6 +301,7 @@ class XeroCollector:
             except COLLECTOR_ERRORS as e:
                 logger.warning(f"Failed to fetch contacts: {e}")
                 all_contacts = []
+                secondary_fetch_errors["contacts"] = f"fetch failed: {e}"
 
             try:
                 logger.info("Fetching credit notes from Xero...")
@@ -300,6 +310,7 @@ class XeroCollector:
             except COLLECTOR_ERRORS as e:
                 logger.warning(f"Failed to fetch credit notes: {e}")
                 all_credit_notes = []
+                secondary_fetch_errors["credit_notes"] = f"fetch failed: {e}"
 
             try:
                 logger.info("Fetching bank transactions from Xero...")
@@ -308,6 +319,7 @@ class XeroCollector:
             except COLLECTOR_ERRORS as e:
                 logger.warning(f"Failed to fetch bank transactions: {e}")
                 all_bank_transactions = []
+                secondary_fetch_errors["bank_transactions"] = f"fetch failed: {e}"
 
             try:
                 logger.info("Fetching tax rates from Xero...")
@@ -316,6 +328,7 @@ class XeroCollector:
             except COLLECTOR_ERRORS as e:
                 logger.warning(f"Failed to fetch tax rates: {e}")
                 all_tax_rates = []
+                secondary_fetch_errors["tax_rates"] = f"fetch failed: {e}"
 
             # Clear old Xero invoices
             self.store.query("DELETE FROM invoices WHERE source = 'xero'")
@@ -461,7 +474,8 @@ class XeroCollector:
                         },
                     )
 
-            # Store secondary tables (non-blocking)
+            # Store secondary tables (non-blocking) — tracked for partial detection
+            secondary_errors: dict[str, str] = {}
             secondary_stats = {
                 "line_items": 0,
                 "contacts": 0,
@@ -489,6 +503,7 @@ class XeroCollector:
                     logger.info(f"Stored {stored} line items")
                 except COLLECTOR_ERRORS as e:
                     logger.warning(f"Failed to store line_items: {e}")
+                    secondary_errors["line_items"] = str(e)
 
             # Contacts
             if all_contacts:
@@ -499,6 +514,7 @@ class XeroCollector:
                     logger.info(f"Stored {stored} contacts")
                 except COLLECTOR_ERRORS as e:
                     logger.warning(f"Failed to store contacts: {e}")
+                    secondary_errors["contacts"] = str(e)
 
             # Credit notes
             if all_credit_notes:
@@ -509,6 +525,7 @@ class XeroCollector:
                     logger.info(f"Stored {stored} credit notes")
                 except COLLECTOR_ERRORS as e:
                     logger.warning(f"Failed to store credit_notes: {e}")
+                    secondary_errors["credit_notes"] = str(e)
 
             # Bank transactions
             if all_bank_transactions:
@@ -519,6 +536,7 @@ class XeroCollector:
                     logger.info(f"Stored {stored} bank transactions")
                 except COLLECTOR_ERRORS as e:
                     logger.warning(f"Failed to store bank_transactions: {e}")
+                    secondary_errors["bank_transactions"] = str(e)
 
             # Tax rates
             if all_tax_rates:
@@ -529,23 +547,56 @@ class XeroCollector:
                     logger.info(f"Stored {stored} tax rates")
                 except COLLECTOR_ERRORS as e:
                     logger.warning(f"Failed to store tax_rates: {e}")
+                    secondary_errors["tax_rates"] = str(e)
+
+            # Merge fetch errors into secondary_errors so they are visible
+            # to CollectorResult. Storage errors take precedence (both stages failed),
+            # but fetch errors that weren't overwritten by a storage attempt are added.
+            for table_name, fetch_err in secondary_fetch_errors.items():
+                if table_name not in secondary_errors:
+                    secondary_errors[table_name] = fetch_err
 
             self.circuit_breaker.record_success()
-            return {
-                "success": True,
-                "invoices_stored": invoices_stored,
-                "paid_invoices": len(paid_invoices),
-                "authorised_invoices": len(authorised_invoices),
-                "clients_with_invoices": len(clients_with_invoices),
-                "clients_ar_updated": ar_updated,
-                "secondary": secondary_stats,
-                "timestamp": now,
-            }
+            cr = CollectorResult(
+                source="xero",
+                status=CollectorStatus.SUCCESS,
+                collected=len(all_invoices),
+                stored=invoices_stored,
+                timestamp=now,
+                circuit_breaker_state=self.circuit_breaker.state,
+            )
+            # Track secondary table results including errors
+            for table_name, count in secondary_stats.items():
+                err = secondary_errors.get(table_name)
+                cr.add_secondary(table_name, stored=count, error=err)
+            cr.escalate_to_partial()
+            self.store.update_sync_state(
+                "xero",
+                success=(cr.status == CollectorStatus.SUCCESS),
+                items=invoices_stored,
+                status=cr.status.value,
+            )
+            return cr.to_dict()
 
         except COLLECTOR_ERRORS as e:
             self.circuit_breaker.record_failure()
             logger.exception(f"Xero sync failed: {e}")
-            return {"success": False, "error": str(e), "synced": 0}
+            err_type = classify_error(e)
+            self.store.update_sync_state(
+                "xero",
+                success=False,
+                error=str(e),
+                error_type=err_type,
+                status="failed",
+            )
+            cr = CollectorResult(
+                source="xero",
+                status=CollectorStatus.FAILED,
+                error=str(e),
+                error_type=err_type,
+                circuit_breaker_state=self.circuit_breaker.state,
+            )
+            return cr.to_dict()
 
 
 def sync():

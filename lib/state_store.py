@@ -231,16 +231,40 @@ class StateStore:
                ORDER BY created_at DESC"""
         )
 
-    def update_sync_state(self, source: str, success: bool, items: int = 0, error: str = None):
-        """Update sync state for a source."""
+    def update_sync_state(
+        self,
+        source: str,
+        success: bool,
+        items: int = 0,
+        error: str | None = None,
+        error_type: str | None = None,
+        status: str | None = None,
+    ):
+        """Update sync state for a source.
+
+        Args:
+            source: Collector name.
+            success: Whether the sync produced usable data.
+            items: Number of items stored.
+            error: Error message (None on success).
+            error_type: Classified error category (auth, transport, etc.).
+            status: Collector status string (success, partial, stale, failed).
+        """
         now = datetime.now().isoformat()
         with self._get_conn() as conn:
             conn.execute(
-                """INSERT OR REPLACE INTO sync_state
-                (source, last_sync, last_success, items_synced, error)
-                VALUES (?, ?, ?, ?, ?)
+                """INSERT INTO sync_state
+                (source, last_sync, last_success, items_synced, error, error_type, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(source) DO UPDATE SET
+                    last_sync = excluded.last_sync,
+                    last_success = COALESCE(excluded.last_success, sync_state.last_success),
+                    items_synced = excluded.items_synced,
+                    error = excluded.error,
+                    error_type = excluded.error_type,
+                    status = excluded.status
             """,
-                [source, now, now if success else None, items, error],
+                [source, now, now if success else None, items, error, error_type, status],
             )
 
     def get_sync_states(self) -> dict[str, dict]:

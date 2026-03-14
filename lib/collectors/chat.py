@@ -19,6 +19,7 @@ from typing import Any
 
 from .base import BaseCollector
 from .resilience import COLLECTOR_ERRORS
+from .result import CollectorResult, CollectorStatus, classify_error
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +111,7 @@ class ChatCollector(BaseCollector):
                     if members:
                         space_members_by_space[space_name] = members
                 except COLLECTOR_ERRORS as e:
-                    self.logger.debug(f"Failed to fetch members for {space_name}: {e}")
+                    self.logger.warning(f"Failed to fetch members for {space_name}: {e}")
 
             return {
                 "messages": all_messages,
@@ -121,12 +122,7 @@ class ChatCollector(BaseCollector):
 
         except COLLECTOR_ERRORS as e:
             self.logger.error(f"Chat collection failed: {e}")
-            return {
-                "messages": [],
-                "spaces": [],
-                "space_metadata": {},
-                "space_members_by_space": {},
-            }
+            raise  # Propagate to sync() — never return empty data as success
 
     def _list_spaces(self, service, max_spaces: int = 50) -> list[dict]:
         """List chat spaces."""
@@ -150,7 +146,7 @@ class ChatCollector(BaseCollector):
             )
             return list(results.get("messages", []))
         except COLLECTOR_ERRORS as e:
-            self.logger.debug(f"Failed to fetch messages for {space_name}: {e}")
+            self.logger.warning(f"Failed to fetch messages for {space_name}: {e}")
             return []
 
     def _list_members(self, service, space_name: str) -> list[dict]:
@@ -159,7 +155,7 @@ class ChatCollector(BaseCollector):
             results = service.spaces().members().list(parent=space_name, pageSize=100).execute()
             return list(results.get("memberships", []))
         except COLLECTOR_ERRORS as e:
-            self.logger.debug(f"Failed to fetch members for {space_name}: {e}")
+            self.logger.warning(f"Failed to fetch members for {space_name}: {e}")
             return []
 
     def transform(self, raw_data: dict) -> list[dict]:
@@ -346,6 +342,8 @@ class ChatCollector(BaseCollector):
         Collects and stores:
         - chat_messages (main target)
         - chat_reactions, chat_attachments, chat_space_metadata, chat_space_members
+
+        Returns CollectorResult.to_dict() with status indicating health.
         """
         from datetime import datetime
 
@@ -355,12 +353,14 @@ class ChatCollector(BaseCollector):
         if not self.circuit_breaker.can_execute():
             self.logger.warning(f"Circuit breaker is {self.circuit_breaker.state}. Skipping sync.")
             self.metrics["circuit_opens"] += 1
-            return {
-                "source": self.source_name,
-                "success": False,
-                "error": f"Circuit breaker {self.circuit_breaker.state}",
-                "timestamp": datetime.now().isoformat(),
-            }
+            cr = CollectorResult(
+                source=self.source_name,
+                status=CollectorStatus.STALE,
+                error=f"Circuit breaker {self.circuit_breaker.state}",
+                error_type="circuit_breaker",
+                circuit_breaker_state=self.circuit_breaker.state,
+            )
+            return cr.to_dict()
 
         try:
             # Step 1: Collect from external source
@@ -371,13 +371,23 @@ class ChatCollector(BaseCollector):
             except COLLECTOR_ERRORS as e:
                 self.logger.error(f"Collect failed: {e}")
                 self.circuit_breaker.record_failure()
-                self.store.update_sync_state(self.source_name, success=False, error=str(e))
-                return {
-                    "source": self.source_name,
-                    "success": False,
-                    "error": str(e),
-                    "timestamp": datetime.now().isoformat(),
-                }
+                err_type = classify_error(e)
+                self.store.update_sync_state(
+                    self.source_name,
+                    success=False,
+                    error=str(e),
+                    error_type=err_type,
+                    status="failed",
+                )
+                cr = CollectorResult(
+                    source=self.source_name,
+                    status=CollectorStatus.FAILED,
+                    error=str(e),
+                    error_type=err_type,
+                    circuit_breaker_state=self.circuit_breaker.state,
+                    duration_ms=(datetime.now() - cycle_start).total_seconds() * 1000,
+                )
+                return cr.to_dict()
 
             # Step 2: Transform to canonical format
             try:
@@ -392,13 +402,15 @@ class ChatCollector(BaseCollector):
             # Step 3: Store messages in main table
             stored_messages = self.store.insert_many(self.target_table, transformed_messages)
 
-            # Step 4: Store expanded data in secondary tables (non-blocking)
-            secondary_stats = {
-                "reactions": 0,
-                "attachments": 0,
-                "space_metadata": 0,
-                "space_members": 0,
-            }
+            # Step 4: Build typed result and store secondary tables
+            cr = CollectorResult(
+                source=self.source_name,
+                status=CollectorStatus.SUCCESS,
+                collected=len(raw_data.get("messages", [])),
+                transformed=len(transformed_messages),
+                stored=stored_messages,
+                circuit_breaker_state=self.circuit_breaker.state,
+            )
 
             # Reactions
             reactions_rows = []
@@ -412,9 +424,10 @@ class ChatCollector(BaseCollector):
             if reactions_rows:
                 try:
                     stored = self.store.insert_many("chat_reactions", reactions_rows)
-                    secondary_stats["reactions"] = stored
+                    cr.add_secondary("reactions", stored=stored)
                 except COLLECTOR_ERRORS as e:
                     self.logger.warning(f"Failed to store reactions: {e}")
+                    cr.add_secondary("reactions", error=str(e))
 
             # Attachments
             attachments_rows = []
@@ -428,9 +441,10 @@ class ChatCollector(BaseCollector):
             if attachments_rows:
                 try:
                     stored = self.store.insert_many("chat_attachments", attachments_rows)
-                    secondary_stats["attachments"] = stored
+                    cr.add_secondary("attachments", stored=stored)
                 except COLLECTOR_ERRORS as e:
                     self.logger.warning(f"Failed to store attachments: {e}")
+                    cr.add_secondary("attachments", error=str(e))
 
             # Space metadata
             space_metadata_rows = []
@@ -442,9 +456,10 @@ class ChatCollector(BaseCollector):
             if space_metadata_rows:
                 try:
                     stored = self.store.insert_many("chat_space_metadata", space_metadata_rows)
-                    secondary_stats["space_metadata"] = stored
+                    cr.add_secondary("space_metadata", stored=stored)
                 except COLLECTOR_ERRORS as e:
                     self.logger.warning(f"Failed to store space_metadata: {e}")
+                    cr.add_secondary("space_metadata", error=str(e))
 
             # Space members
             members_rows = []
@@ -455,35 +470,43 @@ class ChatCollector(BaseCollector):
             if members_rows:
                 try:
                     stored = self.store.insert_many("chat_space_members", members_rows)
-                    secondary_stats["space_members"] = stored
+                    cr.add_secondary("space_members", stored=stored)
                 except COLLECTOR_ERRORS as e:
                     self.logger.warning(f"Failed to store space_members: {e}")
+                    cr.add_secondary("space_members", error=str(e))
 
-            # Step 5: Update sync state and record success
+            # Step 5: Finalize status, update sync state, record success
             self.last_sync = datetime.now()
-            self.store.update_sync_state(self.source_name, success=True, items=stored_messages)
+            cr.duration_ms = (datetime.now() - cycle_start).total_seconds() * 1000
+            cr.timestamp = self.last_sync.isoformat()
+            cr.escalate_to_partial()
+            self.store.update_sync_state(
+                self.source_name,
+                success=(cr.status == CollectorStatus.SUCCESS),
+                items=stored_messages,
+                status=cr.status.value,
+            )
             self.circuit_breaker.record_success()
 
-            duration_ms = (datetime.now() - cycle_start).total_seconds() * 1000
-
-            return {
-                "source": self.source_name,
-                "success": True,
-                "collected": len(raw_data.get("messages", [])),
-                "transformed": len(transformed_messages),
-                "stored": stored_messages,
-                "secondary_tables": secondary_stats,
-                "duration_ms": duration_ms,
-                "timestamp": self.last_sync.isoformat(),
-            }
+            return cr.to_dict()
 
         except COLLECTOR_ERRORS as e:
             self.logger.error(f"Sync failed for {self.source_name}: {e}")
             self.circuit_breaker.record_failure()
-            self.store.update_sync_state(self.source_name, success=False, error=str(e))
-            return {
-                "source": self.source_name,
-                "success": False,
-                "error": str(e),
-                "timestamp": datetime.now().isoformat(),
-            }
+            err_type = classify_error(e)
+            self.store.update_sync_state(
+                self.source_name,
+                success=False,
+                error=str(e),
+                error_type=err_type,
+                status="failed",
+            )
+            cr = CollectorResult(
+                source=self.source_name,
+                status=CollectorStatus.FAILED,
+                error=str(e),
+                error_type=err_type,
+                circuit_breaker_state=self.circuit_breaker.state,
+                duration_ms=(datetime.now() - cycle_start).total_seconds() * 1000,
+            )
+            return cr.to_dict()

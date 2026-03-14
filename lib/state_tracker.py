@@ -95,13 +95,27 @@ def hash_item(item: dict, keys: list[str] = None) -> str:
 
 
 def mark_collected(source: str) -> None:
-    """Mark a source as collected now.
+    """Mark a source as collected now (updates last_sync timestamp only).
 
-    Delegates to StateStore.update_sync_state() for thread-safe, DB-backed
-    tracking. The JSON state file is no longer updated for collection timestamps
-    — use get_sync_states() on the store instead.
+    Called by the orchestrator AFTER the collector's own update_sync_state()
+    has already written correct items_synced, status, etc.  This function
+    must NOT overwrite those values — its only job is to record the
+    collection timestamp for get_last_collection() consumers.
+
+    Uses a targeted UPDATE (not update_sync_state) to avoid clobbering
+    the collector-authored sync state with default values.
     """
-    get_store().update_sync_state(source, success=True)
+    from datetime import datetime
+
+    store = get_store()
+    now = datetime.now().isoformat()
+    # UPDATE only last_sync; leave items_synced, status, error, etc. intact.
+    # If no row exists yet (first-ever sync), the collector's own
+    # update_sync_state() call has already created it.
+    store.query(
+        "UPDATE sync_state SET last_sync = ? WHERE source = ?",
+        [now, source],
+    )
 
 
 def get_last_collection(source: str) -> datetime | None:

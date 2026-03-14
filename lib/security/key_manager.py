@@ -62,6 +62,49 @@ class KeyInfo:
         return now >= expires
 
 
+def _row_to_key_info(
+    row: tuple,
+) -> KeyInfo | None:
+    """Convert a database row to KeyInfo with NULL validation.
+
+    Returns None (and logs) if a required field is NULL — which indicates
+    data corruption from a pre-constraint-enforcement era.
+
+    Expected row order:
+        id, name, role, created_at, expires_at, last_used_at, is_active, created_by
+    """
+    (key_id, name, role_str, created_at, expires_at, last_used_at, is_active, created_by) = row
+
+    # Validate required fields are not NULL
+    if key_id is None or name is None or role_str is None or created_at is None:
+        log.error(
+            "Corrupt api_keys row: NULL in required field (id=%r, name=%r, role=%r, created_at=%r)",
+            key_id,
+            name,
+            role_str,
+            created_at,
+        )
+        return None
+
+    # Validate role is a known enum value
+    try:
+        role = KeyRole(role_str)
+    except ValueError:
+        log.error("Corrupt api_keys row %s: invalid role %r", key_id, role_str)
+        return None
+
+    return KeyInfo(
+        id=key_id,
+        name=name,
+        role=role,
+        created_at=created_at,
+        expires_at=expires_at,
+        last_used_at=last_used_at,
+        is_active=bool(is_active) if is_active is not None else False,
+        created_by=created_by,
+    )
+
+
 class KeyManager:
     """Manages API key lifecycle: creation, validation, revocation, rotation."""
 
@@ -73,27 +116,17 @@ class KeyManager:
         self._ensure_schema()
 
     def _ensure_schema(self) -> None:
-        """Create the api_keys table if it doesn't exist."""
-        schema = """
-        CREATE TABLE IF NOT EXISTS api_keys (
-            id TEXT PRIMARY KEY,
-            key_hash TEXT NOT NULL UNIQUE,
-            name TEXT NOT NULL,
-            role TEXT NOT NULL CHECK(role IN ('viewer', 'operator', 'admin')),
-            created_at TEXT NOT NULL,
-            expires_at TEXT,
-            last_used_at TEXT,
-            is_active INTEGER NOT NULL DEFAULT 1,
-            created_by TEXT,
-            CONSTRAINT valid_role CHECK(role IN ('viewer', 'operator', 'admin'))
-        );
+        """Verify api_keys table exists via the canonical schema engine.
+
+        The api_keys table definition lives in lib/schema.py — the single
+        source of truth.  schema_engine.converge() creates it with full
+        NOT NULL, UNIQUE, and CHECK constraints.  This method delegates
+        to the centralized convergence rather than maintaining a second
+        CREATE TABLE statement that could diverge.
         """
-        try:
-            with store.get_connection() as conn:
-                conn.execute(schema)
-        except sqlite3.OperationalError as e:
-            log.error(f"Failed to create api_keys schema: {e}")
-            raise
+        from lib import db
+
+        db.ensure_migrations()
 
     @staticmethod
     def _generate_key() -> str:
@@ -212,44 +245,25 @@ class KeyManager:
                 if not row:
                     return None
 
-                (
-                    key_id,
-                    name,
-                    role_str,
-                    created_at,
-                    expires_at,
-                    last_used_at,
-                    is_active,
-                    created_by,
-                ) = row
-
-                # Check if active
-                if not is_active:
-                    log.debug(f"Key {key_id} is inactive")
+                key_info = _row_to_key_info(row)
+                if key_info is None:
                     return None
 
-                role = KeyRole(role_str)
-                key_info = KeyInfo(
-                    id=key_id,
-                    name=name,
-                    role=role,
-                    created_at=created_at,
-                    expires_at=expires_at,
-                    last_used_at=last_used_at,
-                    is_active=bool(is_active),
-                    created_by=created_by,
-                )
+                # Check if active
+                if not key_info.is_active:
+                    log.debug("Key %s is inactive", key_info.id)
+                    return None
 
                 # Check if expired
                 if key_info.is_expired():
-                    log.debug(f"Key {key_id} is expired")
+                    log.debug("Key %s is expired", key_info.id)
                     return None
 
                 # Update last_used_at
                 now = datetime.utcnow().isoformat() + "Z"
                 conn.execute(
                     "UPDATE api_keys SET last_used_at = ? WHERE id = ?",
-                    (now, key_id),
+                    (now, key_info.id),
                 )
 
                 # Return updated KeyInfo with new last_used_at
@@ -319,8 +333,15 @@ class KeyManager:
                     return None
 
                 old_name, role_str = row
+                if role_str is None:
+                    log.error("Corrupt api_keys row %s: NULL role", key_id)
+                    return None
                 name = new_name or old_name
-                role = KeyRole(role_str)
+                try:
+                    role = KeyRole(role_str)
+                except ValueError:
+                    log.error("Corrupt api_keys row %s: invalid role %r", key_id, role_str)
+                    return None
 
                 # Create new key
                 new_key, new_key_info = self.create_key(
@@ -370,28 +391,9 @@ class KeyManager:
 
                 keys = []
                 for row in rows:
-                    (
-                        key_id,
-                        name,
-                        role_str,
-                        created_at,
-                        expires_at,
-                        last_used_at,
-                        is_active,
-                        created_by,
-                    ) = row
-                    keys.append(
-                        KeyInfo(
-                            id=key_id,
-                            name=name,
-                            role=KeyRole(role_str),
-                            created_at=created_at,
-                            expires_at=expires_at,
-                            last_used_at=last_used_at,
-                            is_active=bool(is_active),
-                            created_by=created_by,
-                        )
-                    )
+                    key_info = _row_to_key_info(row)
+                    if key_info is not None:
+                        keys.append(key_info)
 
                 return keys
 
@@ -423,26 +425,7 @@ class KeyManager:
                 if not row:
                     return None
 
-                (
-                    key_id,
-                    name,
-                    role_str,
-                    created_at,
-                    expires_at,
-                    last_used_at,
-                    is_active,
-                    created_by,
-                ) = row
-                return KeyInfo(
-                    id=key_id,
-                    name=name,
-                    role=KeyRole(role_str),
-                    created_at=created_at,
-                    expires_at=expires_at,
-                    last_used_at=last_used_at,
-                    is_active=bool(is_active),
-                    created_by=created_by,
-                )
+                return _row_to_key_info(row)
 
         except sqlite3.Error as e:
             log.error(f"Failed to get key info for {key_id}: {e}")

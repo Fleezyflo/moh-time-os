@@ -4,6 +4,7 @@ Every collector MUST:
 1. Collect raw data from external source
 2. Transform to canonical format
 3. Store in StateStore
+4. Return a typed CollectorResult (never a plain dict)
 """
 
 import json
@@ -15,6 +16,7 @@ from typing import Any
 
 from ..state_store import StateStore, get_store
 from .resilience import COLLECTOR_ERRORS, CircuitBreaker, RetryConfig, retry_with_backoff
+from .result import CollectorResult, CollectorStatus, classify_error
 
 
 class BaseCollector(ABC):
@@ -63,6 +65,8 @@ class BaseCollector(ABC):
         """
         Collect raw data from source.
         Returns dict with collected items.
+
+        MUST raise on failure — never return empty data to fake success.
         """
         pass
 
@@ -74,13 +78,26 @@ class BaseCollector(ABC):
         """
         pass
 
+    def _count_collected(self, raw_data: dict) -> int:
+        """Count collected items from raw data dict.
+
+        Looks for common keys: items, tasks, events, messages, threads, files, contacts.
+        """
+        for key in ("items", "tasks", "events", "messages", "threads", "files", "contacts"):
+            val = raw_data.get(key)
+            if isinstance(val, list):
+                return len(val)
+        return 0
+
     def sync(self) -> dict[str, Any]:
         """
-        Full sync cycle: collect → transform → store.
+        Full sync cycle: collect -> transform -> store.
         This is the WIRING - data flows through here.
 
         Uses circuit breaker to prevent cascading failures and retry logic
         with exponential backoff on transient errors.
+
+        Returns a CollectorResult.to_dict() — typed, never ambiguous.
         """
         cycle_start = datetime.now()
 
@@ -88,12 +105,14 @@ class BaseCollector(ABC):
         if not self.circuit_breaker.can_execute():
             self.logger.warning(f"Circuit breaker is {self.circuit_breaker.state}. Skipping sync.")
             self.metrics["circuit_opens"] += 1
-            return {
-                "source": self.source_name,
-                "success": False,
-                "error": f"Circuit breaker {self.circuit_breaker.state}",
-                "timestamp": datetime.now().isoformat(),
-            }
+            result = CollectorResult(
+                source=self.source_name,
+                status=CollectorStatus.STALE,
+                error=f"Circuit breaker {self.circuit_breaker.state}",
+                error_type="circuit_breaker",
+                circuit_breaker_state=self.circuit_breaker.state,
+            )
+            return result.to_dict()
 
         try:
             # Step 1: Collect from external source with retry
@@ -107,21 +126,32 @@ class BaseCollector(ABC):
             except COLLECTOR_ERRORS as e:
                 self.logger.error(f"Collect failed after retries: {e}")
                 self.circuit_breaker.record_failure()
-                self.store.update_sync_state(self.source_name, success=False, error=str(e))
-                return {
-                    "source": self.source_name,
-                    "success": False,
-                    "error": str(e),
-                    "timestamp": datetime.now().isoformat(),
-                }
+                err_type = classify_error(e)
+                self.store.update_sync_state(
+                    self.source_name,
+                    success=False,
+                    error=str(e),
+                    error_type=err_type,
+                    status="failed",
+                )
+                result = CollectorResult(
+                    source=self.source_name,
+                    status=CollectorStatus.FAILED,
+                    error=str(e),
+                    error_type=err_type,
+                    circuit_breaker_state=self.circuit_breaker.state,
+                    duration_ms=(datetime.now() - cycle_start).total_seconds() * 1000,
+                )
+                return result.to_dict()
 
-            # Step 2: Transform to canonical format with partial success handling
+            # Step 2: Transform to canonical format
+            transform_failed = False
             try:
                 transformed = self.transform(raw_data)
             except COLLECTOR_ERRORS as e:
-                self.logger.warning(f"Transform failed: {e}. Attempting partial success.")
-                # If transform fails, try to store what we can
+                self.logger.warning(f"Transform failed: {e}. Storing 0 items.")
                 transformed = []
+                transform_failed = True
                 self.metrics["partial_failures"] += 1
 
             self.logger.info(f"Transformed {len(transformed)} items")
@@ -129,44 +159,56 @@ class BaseCollector(ABC):
             # Step 3: Store in state (THE WIRING)
             stored = self.store.insert_many(self.target_table, transformed)
 
-            # Step 4: Update sync state and record success
+            # Step 4: Determine status, update sync state, record success
             self.last_sync = datetime.now()
-            self.store.update_sync_state(self.source_name, success=True, items=stored)
+            # Transform failure means we collected but couldn't process —
+            # that's PARTIAL (primary data lost), not SUCCESS.
+            status = CollectorStatus.PARTIAL if transform_failed else CollectorStatus.SUCCESS
+            self.store.update_sync_state(
+                self.source_name,
+                success=(status == CollectorStatus.SUCCESS),
+                items=stored,
+                error_type="data_error" if transform_failed else None,
+                status=status.value,
+            )
             self.circuit_breaker.record_success()
 
             duration_ms = (datetime.now() - cycle_start).total_seconds() * 1000
 
-            return {
-                "source": self.source_name,
-                "success": True,
-                "collected": len(
-                    raw_data.get(
-                        "items",
-                        raw_data.get(
-                            "tasks",
-                            raw_data.get(
-                                "events",
-                                raw_data.get("messages", raw_data.get("threads", [])),
-                            ),
-                        ),
-                    )
-                ),
-                "transformed": len(transformed),
-                "stored": stored,
-                "duration_ms": duration_ms,
-                "timestamp": self.last_sync.isoformat(),
-            }
+            result = CollectorResult(
+                source=self.source_name,
+                status=status,
+                collected=self._count_collected(raw_data),
+                transformed=len(transformed),
+                stored=stored,
+                duration_ms=duration_ms,
+                timestamp=self.last_sync.isoformat(),
+                circuit_breaker_state=self.circuit_breaker.state,
+                error="Transform failed" if transform_failed else None,
+                error_type="data_error" if transform_failed else None,
+            )
+            return result.to_dict()
 
         except COLLECTOR_ERRORS as e:
             self.logger.error(f"Sync failed for {self.source_name}: {e}")
             self.circuit_breaker.record_failure()
-            self.store.update_sync_state(self.source_name, success=False, error=str(e))
-            return {
-                "source": self.source_name,
-                "success": False,
-                "error": str(e),
-                "timestamp": datetime.now().isoformat(),
-            }
+            err_type = classify_error(e)
+            self.store.update_sync_state(
+                self.source_name,
+                success=False,
+                error=str(e),
+                error_type=err_type,
+                status="failed",
+            )
+            result = CollectorResult(
+                source=self.source_name,
+                status=CollectorStatus.FAILED,
+                error=str(e),
+                error_type=classify_error(e),
+                circuit_breaker_state=self.circuit_breaker.state,
+                duration_ms=(datetime.now() - cycle_start).total_seconds() * 1000,
+            )
+            return result.to_dict()
 
     def should_sync(self) -> bool:
         """Check if this collector needs to sync."""
