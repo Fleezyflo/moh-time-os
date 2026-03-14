@@ -486,21 +486,47 @@ CREATE TABLE IF NOT EXISTS [issues] (
 
 CREATE TABLE IF NOT EXISTS [signals] (
     signal_id TEXT PRIMARY KEY,
-    detector_id TEXT,
     signal_type TEXT NOT NULL,
     entity_ref_type TEXT,
     entity_ref_id TEXT,
     value TEXT,
+    severity TEXT NOT NULL DEFAULT 'medium',
     detected_at TEXT,
-    status TEXT,
+    interpretation_confidence REAL,
+    linkage_confidence_floor REAL,
+    evidence_excerpt_ids TEXT,
+    evidence_artifact_ids TEXT,
+    detector_id TEXT,
+    detector_version TEXT,
+    status TEXT DEFAULT 'active',
+    consumed_by_proposal_id TEXT,
+    expires_at TEXT,
     resolved_at TEXT,
     resolution TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 )
 
 CREATE TABLE IF NOT EXISTS [proposals_v4] (
-    id TEXT PRIMARY KEY,
-    type TEXT,
+    proposal_id TEXT PRIMARY KEY,
+    proposal_type TEXT NOT NULL,
+    primary_ref_type TEXT NOT NULL,
+    primary_ref_id TEXT NOT NULL,
+    scope_refs TEXT NOT NULL DEFAULT '[]',
+    headline TEXT NOT NULL,
+    summary TEXT,
+    impact TEXT NOT NULL DEFAULT '{}',
+    top_hypotheses TEXT NOT NULL DEFAULT '[]',
+    signal_ids TEXT NOT NULL DEFAULT '[]',
+    proof_excerpt_ids TEXT NOT NULL DEFAULT '[]',
+    score REAL NOT NULL DEFAULT 0,
+    first_seen_at TEXT NOT NULL DEFAULT (datetime('now')),
+    last_seen_at TEXT NOT NULL DEFAULT (datetime('now')),
+    occurrence_count INTEGER NOT NULL DEFAULT 1,
+    trend TEXT NOT NULL DEFAULT 'flat',
+    ui_exposure_level TEXT DEFAULT 'none',
+    status TEXT NOT NULL DEFAULT 'open',
+    snoozed_until TEXT,
+    dismissed_reason TEXT,
     scope_level TEXT DEFAULT 'project',
     scope_name TEXT,
     client_id TEXT,
@@ -512,7 +538,8 @@ CREATE TABLE IF NOT EXISTS [proposals_v4] (
     signal_summary_json TEXT,
     score_breakdown_json TEXT,
     affected_task_ids_json TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 )
 
 CREATE TABLE IF NOT EXISTS [insights] (
@@ -1245,6 +1272,53 @@ CREATE TABLE IF NOT EXISTS [couplings] (
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 )
 
+CREATE TABLE IF NOT EXISTS [drift_baselines] (
+    metric_name TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    mean_value REAL NOT NULL,
+    stddev_value REAL NOT NULL,
+    sample_count INTEGER NOT NULL,
+    last_updated TEXT NOT NULL,
+    PRIMARY KEY (metric_name, entity_type, entity_id)
+)
+
+CREATE TABLE IF NOT EXISTS [drift_alerts] (
+    id TEXT PRIMARY KEY,
+    metric_name TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    current_value REAL NOT NULL,
+    baseline_mean REAL NOT NULL,
+    baseline_stddev REAL NOT NULL,
+    deviation_sigma REAL NOT NULL,
+    direction TEXT NOT NULL,
+    severity TEXT NOT NULL,
+    detected_at TEXT NOT NULL,
+    explanation TEXT
+)
+
+CREATE TABLE IF NOT EXISTS [signal_suppressions] (
+    id TEXT PRIMARY KEY,
+    signal_key TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    reason TEXT NOT NULL,
+    suppressed_at TEXT NOT NULL,
+    expires_at TEXT NOT NULL,
+    dismiss_count INTEGER DEFAULT 1,
+    is_active INTEGER DEFAULT 1
+)
+
+CREATE TABLE IF NOT EXISTS [signal_dismiss_log] (
+    id TEXT PRIMARY KEY,
+    signal_key TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    created_at TEXT NOT NULL
+)
+
 CREATE TABLE IF NOT EXISTS [issue_notes] (
     note_id TEXT PRIMARY KEY,
     issue_id TEXT NOT NULL,
@@ -1275,4 +1349,95 @@ CREATE TABLE IF NOT EXISTS [identities] (
     source TEXT,
     canonical_id TEXT,
     confidence_score REAL DEFAULT 0.5
+)
+
+CREATE TABLE IF NOT EXISTS [governance_history] (
+    id TEXT PRIMARY KEY,
+    decision_id TEXT,
+    action TEXT NOT NULL,
+    type TEXT,
+    target_id TEXT,
+    processed_by TEXT,
+    side_effects TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+)
+
+CREATE TABLE IF NOT EXISTS [signal_definitions] (
+    signal_type TEXT PRIMARY KEY,
+    description TEXT NOT NULL,
+    category TEXT NOT NULL,
+    required_evidence_types TEXT NOT NULL,
+    formula_version TEXT NOT NULL,
+    min_link_confidence REAL NOT NULL DEFAULT 0.7,
+    min_interpretation_confidence REAL NOT NULL DEFAULT 0.6,
+    priority_weight REAL NOT NULL DEFAULT 1.0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+)
+
+CREATE TABLE IF NOT EXISTS [detector_versions] (
+    detector_id TEXT NOT NULL,
+    version TEXT NOT NULL,
+    description TEXT,
+    parameters TEXT NOT NULL,
+    released_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(detector_id, version)
+)
+
+CREATE TABLE IF NOT EXISTS [detector_runs] (
+    run_id TEXT PRIMARY KEY,
+    detector_id TEXT NOT NULL,
+    detector_version TEXT NOT NULL,
+    scope TEXT NOT NULL,
+    inputs_hash TEXT NOT NULL,
+    ran_at TEXT NOT NULL DEFAULT (datetime('now')),
+    duration_ms INTEGER,
+    output_counts TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'completed'
+)
+
+CREATE TABLE IF NOT EXISTS [signal_feedback] (
+    feedback_id TEXT PRIMARY KEY,
+    signal_id TEXT NOT NULL,
+    feedback_type TEXT NOT NULL,
+    actor TEXT NOT NULL,
+    note TEXT,
+    reason TEXT,
+    snooze_until TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+)
+
+CREATE TABLE IF NOT EXISTS [issue_signals] (
+    issue_id TEXT NOT NULL,
+    signal_id TEXT NOT NULL,
+    attached_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(issue_id, signal_id)
+)
+
+CREATE TABLE IF NOT EXISTS [issue_evidence] (
+    issue_id TEXT NOT NULL,
+    excerpt_id TEXT NOT NULL,
+    attached_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE(issue_id, excerpt_id)
+)
+
+CREATE TABLE IF NOT EXISTS [decision_log] (
+    decision_id TEXT PRIMARY KEY,
+    issue_id TEXT NOT NULL,
+    actor TEXT NOT NULL,
+    decision_type TEXT NOT NULL,
+    note TEXT,
+    evidence_excerpt_ids TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+)
+
+CREATE TABLE IF NOT EXISTS [handoffs] (
+    handoff_id TEXT PRIMARY KEY,
+    issue_id TEXT NOT NULL,
+    from_person_id TEXT NOT NULL,
+    to_person_id TEXT NOT NULL,
+    what_is_expected TEXT NOT NULL,
+    due_at TEXT,
+    done_definition TEXT NOT NULL,
+    state TEXT NOT NULL DEFAULT 'proposed',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
 )
