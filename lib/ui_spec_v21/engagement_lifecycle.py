@@ -114,26 +114,6 @@ class EngagementLifecycleManager:
 
     def __init__(self, conn: sqlite3.Connection):
         self.conn = conn
-        self._ensure_tables()
-
-    def _ensure_tables(self):
-        """Create required tables if they don't exist."""
-        self.conn.executescript("""
-            CREATE TABLE IF NOT EXISTS engagement_transitions (
-                id TEXT PRIMARY KEY,
-                engagement_id TEXT NOT NULL,
-                from_state TEXT NOT NULL,
-                to_state TEXT NOT NULL,
-                trigger TEXT,
-                actor TEXT,
-                note TEXT,
-                transitioned_at TEXT NOT NULL,
-                created_at TEXT NOT NULL
-            );
-
-            CREATE INDEX IF NOT EXISTS idx_engagement_transitions_engagement_id
-            ON engagement_transitions(engagement_id);
-        """)
 
     def get_engagement(self, engagement_id: str) -> dict[str, Any] | None:
         """Get engagement by ID."""
@@ -433,53 +413,3 @@ class EngagementLifecycleManager:
                 count += 1
 
         return count
-
-
-# SQL migration for engagement tables
-ENGAGEMENT_MIGRATION = """
--- Engagements table with lifecycle state
-CREATE TABLE IF NOT EXISTS engagements (
-    id TEXT PRIMARY KEY,
-    client_id TEXT NOT NULL,
-    brand_id TEXT,
-    name TEXT NOT NULL,
-    type TEXT NOT NULL CHECK (type IN ('project', 'retainer')),
-    state TEXT NOT NULL DEFAULT 'planned' CHECK (state IN (
-        'planned', 'active', 'blocked', 'paused',
-        'delivering', 'delivered', 'completed'
-    )),
-    -- Asana integration
-    asana_project_gid TEXT,
-    asana_url TEXT,
-    -- Dates
-    started_at TEXT,
-    completed_at TEXT,
-    -- Timestamps
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL,
-    -- Foreign keys
-    FOREIGN KEY (client_id) REFERENCES clients(id),
-    FOREIGN KEY (brand_id) REFERENCES brands(id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_engagements_client_id ON engagements(client_id);
-CREATE INDEX IF NOT EXISTS idx_engagements_state ON engagements(state);
-CREATE INDEX IF NOT EXISTS idx_engagements_asana_gid ON engagements(asana_project_gid);
-
--- Engagement transitions audit table
-CREATE TABLE IF NOT EXISTS engagement_transitions (
-    id TEXT PRIMARY KEY,
-    engagement_id TEXT NOT NULL,
-    from_state TEXT NOT NULL,
-    to_state TEXT NOT NULL,
-    trigger TEXT,
-    actor TEXT,
-    note TEXT,
-    transitioned_at TEXT NOT NULL,
-    created_at TEXT NOT NULL,
-    FOREIGN KEY (engagement_id) REFERENCES engagements(id)
-);
-
-CREATE INDEX IF NOT EXISTS idx_engagement_transitions_engagement_id
-ON engagement_transitions(engagement_id);
-"""

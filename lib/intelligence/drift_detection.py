@@ -80,49 +80,6 @@ class DriftDetector:
 
     def __init__(self, db_path: Path):
         self.db_path = db_path
-        self._ensure_tables()
-
-    def _ensure_tables(self) -> None:
-        conn = sqlite3.connect(str(self.db_path))
-        try:
-            # Baseline statistics for metrics
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS drift_baselines (
-                    metric_name TEXT NOT NULL,
-                    entity_type TEXT NOT NULL,
-                    entity_id TEXT NOT NULL,
-                    mean_value REAL NOT NULL,
-                    stddev_value REAL NOT NULL,
-                    sample_count INTEGER NOT NULL,
-                    last_updated TEXT NOT NULL,
-                    PRIMARY KEY (metric_name, entity_type, entity_id)
-                )
-                """
-            )
-            # Detected drift alerts
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS drift_alerts (
-                    id TEXT PRIMARY KEY,
-                    metric_name TEXT NOT NULL,
-                    entity_type TEXT NOT NULL,
-                    entity_id TEXT NOT NULL,
-                    current_value REAL NOT NULL,
-                    baseline_mean REAL NOT NULL,
-                    baseline_stddev REAL NOT NULL,
-                    deviation_sigma REAL NOT NULL,
-                    direction TEXT NOT NULL,
-                    severity TEXT NOT NULL,
-                    detected_at TEXT NOT NULL,
-                    explanation TEXT
-                )
-                """
-            )
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_drift_time ON drift_alerts(detected_at)")
-            conn.commit()
-        finally:
-            conn.close()
 
     def update_baseline(
         self,

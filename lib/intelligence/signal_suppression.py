@@ -84,58 +84,6 @@ class SignalSuppression:
 
     def __init__(self, db_path: Path):
         self.db_path = db_path
-        self._ensure_tables()
-
-    def _ensure_tables(self) -> None:
-        conn = sqlite3.connect(str(self.db_path))
-        try:
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS signal_suppressions (
-                    id TEXT PRIMARY KEY,
-                    signal_key TEXT NOT NULL,
-                    entity_type TEXT NOT NULL,
-                    entity_id TEXT NOT NULL,
-                    reason TEXT NOT NULL,
-                    suppressed_at TEXT NOT NULL,
-                    expires_at TEXT NOT NULL,
-                    dismiss_count INTEGER DEFAULT 1,
-                    is_active INTEGER DEFAULT 1
-                )
-                """
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_suppress_signal ON signal_suppressions(signal_key)"
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_suppress_entity "
-                "ON signal_suppressions(entity_type, entity_id)"
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_suppress_active "
-                "ON signal_suppressions(is_active, expires_at)"
-            )
-
-            # Track signal raise/dismiss history for rate calculations
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS signal_dismiss_log (
-                    id TEXT PRIMARY KEY,
-                    signal_key TEXT NOT NULL,
-                    entity_type TEXT NOT NULL,
-                    entity_id TEXT NOT NULL,
-                    event_type TEXT NOT NULL,  -- 'raised' | 'dismissed'
-                    created_at TEXT NOT NULL
-                )
-                """
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_dismiss_log_signal "
-                "ON signal_dismiss_log(signal_key)"
-            )
-            conn.commit()
-        finally:
-            conn.close()
 
     def is_suppressed(self, signal_key: str) -> bool:
         """Check if a signal is currently suppressed."""
