@@ -16,6 +16,7 @@ from lib.compat import UTC
 
 from .base import BaseCollector
 from .resilience import COLLECTOR_ERRORS
+from .result import CollectorResult, CollectorStatus, classify_error
 
 logger = logging.getLogger(__name__)
 
@@ -342,6 +343,8 @@ class CalendarCollector(BaseCollector):
         Override sync to handle multi-table storage.
         Primary: calendar_events (aliased as 'events')
         Secondary: calendar_attendees, calendar_recurrence_rules
+
+        Returns CollectorResult.to_dict() with status indicating health.
         """
         cycle_start = datetime.now()
 
@@ -349,12 +352,14 @@ class CalendarCollector(BaseCollector):
         if not self.circuit_breaker.can_execute():
             self.logger.warning(f"Circuit breaker is {self.circuit_breaker.state}. Skipping sync.")
             self.metrics["circuit_opens"] += 1
-            return {
-                "source": self.source_name,
-                "success": False,
-                "error": f"Circuit breaker {self.circuit_breaker.state}",
-                "timestamp": datetime.now().isoformat(),
-            }
+            cr = CollectorResult(
+                source=self.source_name,
+                status=CollectorStatus.STALE,
+                error=f"Circuit breaker {self.circuit_breaker.state}",
+                error_type="circuit_breaker",
+                circuit_breaker_state=self.circuit_breaker.state,
+            )
+            return cr.to_dict()
 
         try:
             # Step 1: Collect from external source with retry
@@ -370,13 +375,23 @@ class CalendarCollector(BaseCollector):
             except COLLECTOR_ERRORS as e:
                 self.logger.error(f"Collect failed after retries: {e}")
                 self.circuit_breaker.record_failure()
-                self.store.update_sync_state(self.source_name, success=False, error=str(e))
-                return {
-                    "source": self.source_name,
-                    "success": False,
-                    "error": str(e),
-                    "timestamp": datetime.now().isoformat(),
-                }
+                err_type = classify_error(e)
+                self.store.update_sync_state(
+                    self.source_name,
+                    success=False,
+                    error=str(e),
+                    error_type=err_type,
+                    status="failed",
+                )
+                cr = CollectorResult(
+                    source=self.source_name,
+                    status=CollectorStatus.FAILED,
+                    error=str(e),
+                    error_type=err_type,
+                    circuit_breaker_state=self.circuit_breaker.state,
+                    duration_ms=(datetime.now() - cycle_start).total_seconds() * 1000,
+                )
+                return cr.to_dict()
 
             # Step 2: Transform to canonical format
             try:
@@ -392,9 +407,15 @@ class CalendarCollector(BaseCollector):
             stored_primary = self.store.insert_many(self.target_table, transformed)
             self.logger.info(f"Stored {stored_primary} events to {self.target_table}")
 
-            # Step 4: Store secondary tables
-            attendees_stored = 0
-            recurrence_stored = 0
+            # Step 4: Build typed result and store secondary tables
+            cr = CollectorResult(
+                source=self.source_name,
+                status=CollectorStatus.SUCCESS,
+                collected=len(raw_data.get("events", [])),
+                transformed=len(transformed),
+                stored=stored_primary,
+                circuit_breaker_state=self.circuit_breaker.state,
+            )
 
             for event in raw_data.get("events", []):
                 event_id = event.get("id")
@@ -406,52 +427,64 @@ class CalendarCollector(BaseCollector):
                 attendee_rows = self._transform_attendees(event_id, attendees)
                 if attendee_rows:
                     try:
-                        attendees_stored += self.store.insert_many(
-                            "calendar_attendees", attendee_rows
-                        )
+                        stored = self.store.insert_many("calendar_attendees", attendee_rows)
+                        prev = cr.secondary_tables.get("attendees")
+                        prev_stored = prev.stored if prev else 0
+                        cr.add_secondary("attendees", stored=prev_stored + stored)
                     except COLLECTOR_ERRORS as e:
                         self.logger.warning(f"Failed to store attendees for {event_id}: {e}")
+                        cr.add_secondary("attendees", error=str(e))
 
                 # Store recurrence rules
                 recurrence = event.get("recurrence", [])
                 recurrence_rows = self._transform_recurrence(event_id, recurrence)
                 if recurrence_rows:
                     try:
-                        recurrence_stored += self.store.insert_many(
+                        stored = self.store.insert_many(
                             "calendar_recurrence_rules", recurrence_rows
                         )
+                        prev = cr.secondary_tables.get("recurrence")
+                        prev_stored = prev.stored if prev else 0
+                        cr.add_secondary("recurrence", stored=prev_stored + stored)
                     except COLLECTOR_ERRORS as e:
                         self.logger.warning(f"Failed to store recurrence for {event_id}: {e}")
+                        cr.add_secondary("recurrence", error=str(e))
 
-            # Step 5: Update sync state and record success
+            # Step 5: Finalize status, update sync state, record success
             self.last_sync = datetime.now()
-            self.store.update_sync_state(self.source_name, success=True, items=stored_primary)
+            cr.duration_ms = (datetime.now() - cycle_start).total_seconds() * 1000
+            cr.timestamp = self.last_sync.isoformat()
+            cr.escalate_to_partial()
+            self.store.update_sync_state(
+                self.source_name,
+                success=(cr.status == CollectorStatus.SUCCESS),
+                items=stored_primary,
+                status=cr.status.value,
+            )
             self.circuit_breaker.record_success()
 
-            duration_ms = (datetime.now() - cycle_start).total_seconds() * 1000
-
-            return {
-                "source": self.source_name,
-                "success": True,
-                "collected": len(raw_data.get("events", [])),
-                "transformed": len(transformed),
-                "stored_primary": stored_primary,
-                "stored_attendees": attendees_stored,
-                "stored_recurrence": recurrence_stored,
-                "duration_ms": duration_ms,
-                "timestamp": self.last_sync.isoformat(),
-            }
+            return cr.to_dict()
 
         except COLLECTOR_ERRORS as e:
             self.logger.error(f"Sync failed for {self.source_name}: {e}")
             self.circuit_breaker.record_failure()
-            self.store.update_sync_state(self.source_name, success=False, error=str(e))
-            return {
-                "source": self.source_name,
-                "success": False,
-                "error": str(e),
-                "timestamp": datetime.now().isoformat(),
-            }
+            err_type = classify_error(e)
+            self.store.update_sync_state(
+                self.source_name,
+                success=False,
+                error=str(e),
+                error_type=err_type,
+                status="failed",
+            )
+            cr = CollectorResult(
+                source=self.source_name,
+                status=CollectorStatus.FAILED,
+                error=str(e),
+                error_type=err_type,
+                circuit_breaker_state=self.circuit_breaker.state,
+                duration_ms=(datetime.now() - cycle_start).total_seconds() * 1000,
+            )
+            return cr.to_dict()
 
 
 if __name__ == "__main__":
