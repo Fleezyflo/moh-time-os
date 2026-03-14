@@ -104,7 +104,10 @@ def _build_create_sql(table_name: str, table_def: dict) -> str:
     parts = []
     for col_name, col_ddl in table_def["columns"]:
         parts.append(f"    {col_name} {col_ddl}")
-    # Table-level UNIQUE constraints (optional)
+    # Table-level constraints (optional)
+    pk_cols = table_def.get("primary_key")
+    if pk_cols:
+        parts.append(f"    PRIMARY KEY ({', '.join(pk_cols)})")
     for unique_cols in table_def.get("unique", []):
         cols_str = ", ".join(unique_cols)
         parts.append(f"    UNIQUE({cols_str})")
@@ -286,7 +289,22 @@ def converge(conn: sqlite3.Connection) -> dict:
             results["errors"].append(err)
             logger.warning("schema_engine: %s", err)
 
-    # ── Phase 4: Schema version ──────────────────────────────
+    # ── Phase 4: Views ────────────────────────────────────────
+
+    results["views_created"] = []
+    for view_name, view_sql in schema.VIEWS.items():
+        if view_name in existing_objects:
+            continue
+        try:
+            conn.execute(view_sql)
+            results["views_created"].append(view_name)
+            logger.info("schema_engine: created view %s", view_name)
+        except sqlite3.OperationalError as e:
+            err = f"CREATE VIEW {view_name}: {e}"
+            results["errors"].append(err)
+            logger.warning("schema_engine: %s", err)
+
+    # ── Phase 5: Schema version ──────────────────────────────
 
     conn.execute(safe_sql.pragma_user_version_set(schema.SCHEMA_VERSION))
 
@@ -351,6 +369,17 @@ def create_fresh(conn: sqlite3.Connection) -> dict:
             err = f"CREATE INDEX {idx_name}: {e}"
             results["errors"].append(err)
             logger.warning("schema_engine: create_fresh index %s", err)
+
+    # Create canonical views
+    results["views_created"] = []
+    for view_name, view_sql in schema.VIEWS.items():
+        try:
+            conn.execute(view_sql)
+            results["views_created"].append(view_name)
+        except sqlite3.OperationalError as e:
+            err = f"CREATE VIEW {view_name}: {e}"
+            results["errors"].append(err)
+            logger.warning("schema_engine: create_fresh view %s", err)
 
     # Set schema version
     conn.execute(safe_sql.pragma_user_version_set(schema.SCHEMA_VERSION))

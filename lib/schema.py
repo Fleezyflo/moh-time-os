@@ -17,7 +17,7 @@ from collections import OrderedDict
 # =============================================================================
 # Schema version — bump when you change this file
 # =============================================================================
-SCHEMA_VERSION = 21
+SCHEMA_VERSION = 22
 
 # =============================================================================
 # Table Definitions
@@ -662,13 +662,21 @@ TABLES["issues"] = {
 TABLES["signals"] = {
     "columns": [
         ("signal_id", "TEXT PRIMARY KEY"),
-        ("detector_id", "TEXT"),
         ("signal_type", "TEXT NOT NULL"),
         ("entity_ref_type", "TEXT"),
         ("entity_ref_id", "TEXT"),
         ("value", "TEXT"),
+        ("severity", "TEXT NOT NULL DEFAULT 'medium'"),
         ("detected_at", "TEXT"),
-        ("status", "TEXT"),
+        ("interpretation_confidence", "REAL"),
+        ("linkage_confidence_floor", "REAL"),
+        ("evidence_excerpt_ids", "TEXT"),
+        ("evidence_artifact_ids", "TEXT"),
+        ("detector_id", "TEXT"),
+        ("detector_version", "TEXT"),
+        ("status", "TEXT DEFAULT 'active'"),
+        ("consumed_by_proposal_id", "TEXT"),
+        ("expires_at", "TEXT"),
         ("resolved_at", "TEXT"),
         ("resolution", "TEXT"),
         ("created_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
@@ -676,12 +684,32 @@ TABLES["signals"] = {
 }
 
 # ---------------------------------------------------------------------------
-# Legacy: proposals_v4
+# Proposals (v4 intelligence layer)
 # ---------------------------------------------------------------------------
 TABLES["proposals_v4"] = {
     "columns": [
-        ("id", "TEXT PRIMARY KEY"),
-        ("type", "TEXT"),
+        # V4 service columns (proposal_service.py)
+        ("proposal_id", "TEXT PRIMARY KEY"),
+        ("proposal_type", "TEXT NOT NULL"),
+        ("primary_ref_type", "TEXT NOT NULL"),
+        ("primary_ref_id", "TEXT NOT NULL"),
+        ("scope_refs", "TEXT NOT NULL DEFAULT '[]'"),
+        ("headline", "TEXT NOT NULL"),
+        ("summary", "TEXT"),
+        ("impact", "TEXT NOT NULL DEFAULT '{}'"),
+        ("top_hypotheses", "TEXT NOT NULL DEFAULT '[]'"),
+        ("signal_ids", "TEXT NOT NULL DEFAULT '[]'"),
+        ("proof_excerpt_ids", "TEXT NOT NULL DEFAULT '[]'"),
+        ("score", "REAL NOT NULL DEFAULT 0"),
+        ("first_seen_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+        ("last_seen_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+        ("occurrence_count", "INTEGER NOT NULL DEFAULT 1"),
+        ("trend", "TEXT NOT NULL DEFAULT 'flat'"),
+        ("ui_exposure_level", "TEXT DEFAULT 'none'"),
+        ("status", "TEXT NOT NULL DEFAULT 'open'"),
+        ("snoozed_until", "TEXT"),
+        ("dismissed_reason", "TEXT"),
+        # Aggregator columns (spec_router.py, proposal_aggregator.py)
         ("scope_level", "TEXT DEFAULT 'project'"),
         ("scope_name", "TEXT"),
         ("client_id", "TEXT"),
@@ -693,7 +721,9 @@ TABLES["proposals_v4"] = {
         ("signal_summary_json", "TEXT"),
         ("score_breakdown_json", "TEXT"),
         ("affected_task_ids_json", "TEXT"),
+        # Timestamps
         ("created_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+        ("updated_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
     ],
 }
 
@@ -1468,7 +1498,30 @@ INDEXES: list[tuple[str, str, str, str | None]] = [
     ("idx_client_projects_project", "client_projects", "project_id", None),
     ("idx_client_health_log_client", "client_health_log", "client_id", None),
     ("idx_proposals_hierarchy", "proposals_v4", "client_id, brand_id, scope_level", None),
+    ("idx_proposals_v4_status", "proposals_v4", "status", None),
+    ("idx_proposals_v4_type", "proposals_v4", "proposal_type", None),
+    ("idx_proposals_v4_score", "proposals_v4", "score DESC", None),
+    ("idx_proposals_v4_primary", "proposals_v4", "primary_ref_type, primary_ref_id", None),
+    ("idx_proposals_v4_scope_status", "proposals_v4", "scope_level, primary_ref_id, status", None),
+    # couplings
+    ("idx_couplings_anchor", "couplings", "anchor_ref_type, anchor_ref_id", None),
+    ("idx_couplings_strength", "couplings", "strength DESC", None),
+    ("idx_couplings_type", "couplings", "coupling_type", None),
     ("idx_signals_resolved", "signals", "status, resolved_at", None),
+    ("idx_signals_type", "signals", "signal_type", None),
+    ("idx_signals_entity", "signals", "entity_ref_type, entity_ref_id", None),
+    ("idx_signals_status", "signals", "status", None),
+    ("idx_signals_severity", "signals", "severity", None),
+    ("idx_signals_detected", "signals", "detected_at", None),
+    # governance_history
+    ("idx_governance_history_created", "governance_history", "created_at DESC", None),
+    ("idx_governance_history_decision", "governance_history", "decision_id", None),
+    # decision_log
+    ("idx_decision_log_issue", "decision_log", "issue_id", None),
+    # handoffs
+    ("idx_handoffs_issue", "handoffs", "issue_id", None),
+    # signal_feedback
+    ("idx_signal_feedback_signal", "signal_feedback", "signal_id", None),
     # Collector
     ("idx_asana_custom_fields_project", "asana_custom_fields", "project_id", None),
     ("idx_asana_custom_fields_task", "asana_custom_fields", "task_id", None),
@@ -1508,6 +1561,15 @@ INDEXES: list[tuple[str, str, str, str | None]] = [
     ("idx_watchers_issue", "watchers", "issue_id", None),
     ("idx_watchers_triggered", "watchers", "triggered_at", "triggered_at IS NOT NULL"),
     ("idx_identities_canonical", "identities", "canonical_id", None),
+    # drift detection
+    ("idx_drift_time", "drift_alerts", "detected_at", None),
+    # signal suppression
+    ("idx_suppress_signal", "signal_suppressions", "signal_key", None),
+    ("idx_suppress_entity", "signal_suppressions", "entity_type, entity_id", None),
+    ("idx_suppress_active", "signal_suppressions", "is_active, expires_at", None),
+    ("idx_dismiss_log_signal", "signal_dismiss_log", "signal_key", None),
+    # engagement transitions
+    ("idx_engagement_transitions_engagement_id", "engagement_transitions", "engagement_id", None),
 ]
 
 # ---------------------------------------------------------------------------
@@ -1738,9 +1800,8 @@ TABLES["saved_filters"] = {
 }
 
 # ---------------------------------------------------------------------------
-# V19: couplings (D5 from closure-audit, CP-1)
-# Registered from CouplingService._ensure_tables() into schema.py
-# so converge() manages it. Columns match coupling_service.py usage.
+# Couplings (v4 intelligence layer — intersection engine)
+# Columns match coupling_service.py read/write paths.
 # ---------------------------------------------------------------------------
 TABLES["couplings"] = {
     "columns": [
@@ -1755,6 +1816,87 @@ TABLES["couplings"] = {
         ("confidence", "REAL NOT NULL"),
         ("created_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
         ("updated_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Drift detection (intelligence layer)
+# Columns match lib/intelligence/drift_detection.py read/write paths.
+# ---------------------------------------------------------------------------
+TABLES["drift_baselines"] = {
+    "columns": [
+        ("metric_name", "TEXT NOT NULL"),
+        ("entity_type", "TEXT NOT NULL"),
+        ("entity_id", "TEXT NOT NULL"),
+        ("mean_value", "REAL NOT NULL"),
+        ("stddev_value", "REAL NOT NULL"),
+        ("sample_count", "INTEGER NOT NULL"),
+        ("last_updated", "TEXT NOT NULL"),
+    ],
+    "primary_key": ["metric_name", "entity_type", "entity_id"],
+}
+
+TABLES["drift_alerts"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("metric_name", "TEXT NOT NULL"),
+        ("entity_type", "TEXT NOT NULL"),
+        ("entity_id", "TEXT NOT NULL"),
+        ("current_value", "REAL NOT NULL"),
+        ("baseline_mean", "REAL NOT NULL"),
+        ("baseline_stddev", "REAL NOT NULL"),
+        ("deviation_sigma", "REAL NOT NULL"),
+        ("direction", "TEXT NOT NULL"),
+        ("severity", "TEXT NOT NULL"),
+        ("detected_at", "TEXT NOT NULL"),
+        ("explanation", "TEXT"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Signal suppression (intelligence layer)
+# Columns match lib/intelligence/signal_suppression.py read/write paths.
+# ---------------------------------------------------------------------------
+TABLES["signal_suppressions"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("signal_key", "TEXT NOT NULL"),
+        ("entity_type", "TEXT NOT NULL"),
+        ("entity_id", "TEXT NOT NULL"),
+        ("reason", "TEXT NOT NULL"),
+        ("suppressed_at", "TEXT NOT NULL"),
+        ("expires_at", "TEXT NOT NULL"),
+        ("dismiss_count", "INTEGER DEFAULT 1"),
+        ("is_active", "INTEGER DEFAULT 1"),
+    ],
+}
+
+TABLES["signal_dismiss_log"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("signal_key", "TEXT NOT NULL"),
+        ("entity_type", "TEXT NOT NULL"),
+        ("entity_id", "TEXT NOT NULL"),
+        ("event_type", "TEXT NOT NULL"),
+        ("created_at", "TEXT NOT NULL"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Engagement transitions (ui_spec_v21 lifecycle audit trail)
+# Columns match lib/ui_spec_v21/engagement_lifecycle.py read/write paths.
+# ---------------------------------------------------------------------------
+TABLES["engagement_transitions"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("engagement_id", "TEXT NOT NULL"),
+        ("from_state", "TEXT NOT NULL"),
+        ("to_state", "TEXT NOT NULL"),
+        ("trigger", "TEXT"),
+        ("actor", "TEXT"),
+        ("note", "TEXT"),
+        ("transitioned_at", "TEXT NOT NULL"),
+        ("created_at", "TEXT NOT NULL"),
     ],
 }
 
@@ -1812,6 +1954,151 @@ TABLES["identities"] = {
     ],
 }
 
+# ---------------------------------------------------------------------------
+# Governance: governance_history — audit trail for governance decisions.
+# Previously phantom-referenced in api/server.py without a schema definition.
+# ---------------------------------------------------------------------------
+TABLES["governance_history"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("decision_id", "TEXT"),
+        ("action", "TEXT NOT NULL"),
+        ("type", "TEXT"),
+        ("target_id", "TEXT"),
+        ("processed_by", "TEXT"),
+        ("side_effects", "TEXT"),
+        ("created_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# V4 Signal Service: signal_definitions — registered signal types.
+# Previously created at runtime in lib/v4/signal_service.py.
+# ---------------------------------------------------------------------------
+TABLES["signal_definitions"] = {
+    "columns": [
+        ("signal_type", "TEXT PRIMARY KEY"),
+        ("description", "TEXT NOT NULL"),
+        ("category", "TEXT NOT NULL"),
+        ("required_evidence_types", "TEXT NOT NULL"),
+        ("formula_version", "TEXT NOT NULL"),
+        ("min_link_confidence", "REAL NOT NULL DEFAULT 0.7"),
+        ("min_interpretation_confidence", "REAL NOT NULL DEFAULT 0.6"),
+        ("priority_weight", "REAL NOT NULL DEFAULT 1.0"),
+        ("created_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# V4 Signal Service: detector_versions — versioned detection algorithms.
+# Previously created at runtime in lib/v4/signal_service.py.
+# ---------------------------------------------------------------------------
+TABLES["detector_versions"] = {
+    "columns": [
+        ("detector_id", "TEXT NOT NULL"),
+        ("version", "TEXT NOT NULL"),
+        ("description", "TEXT"),
+        ("parameters", "TEXT NOT NULL"),
+        ("released_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+    ],
+    "unique": [("detector_id", "version")],
+}
+
+# ---------------------------------------------------------------------------
+# V4 Signal Service: detector_runs — audit trail of detector executions.
+# Previously created at runtime in lib/v4/signal_service.py.
+# ---------------------------------------------------------------------------
+TABLES["detector_runs"] = {
+    "columns": [
+        ("run_id", "TEXT PRIMARY KEY"),
+        ("detector_id", "TEXT NOT NULL"),
+        ("detector_version", "TEXT NOT NULL"),
+        ("scope", "TEXT NOT NULL"),
+        ("inputs_hash", "TEXT NOT NULL"),
+        ("ran_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+        ("duration_ms", "INTEGER"),
+        ("output_counts", "TEXT NOT NULL"),
+        ("status", "TEXT NOT NULL DEFAULT 'completed'"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# V4 Signal Service: signal_feedback — user feedback on signals.
+# Previously created at runtime in lib/v4/signal_service.py.
+# ---------------------------------------------------------------------------
+TABLES["signal_feedback"] = {
+    "columns": [
+        ("feedback_id", "TEXT PRIMARY KEY"),
+        ("signal_id", "TEXT NOT NULL"),
+        ("feedback_type", "TEXT NOT NULL"),
+        ("actor", "TEXT NOT NULL"),
+        ("note", "TEXT"),
+        ("reason", "TEXT"),
+        ("snooze_until", "TEXT"),
+        ("created_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# V4 Issue Service: issue_signals — links issues to signals.
+# Previously created at runtime in lib/v4/issue_service.py.
+# ---------------------------------------------------------------------------
+TABLES["issue_signals"] = {
+    "columns": [
+        ("issue_id", "TEXT NOT NULL"),
+        ("signal_id", "TEXT NOT NULL"),
+        ("attached_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+    ],
+    "unique": [("issue_id", "signal_id")],
+}
+
+# ---------------------------------------------------------------------------
+# V4 Issue Service: issue_evidence — links issues to evidence excerpts.
+# Previously created at runtime in lib/v4/issue_service.py.
+# ---------------------------------------------------------------------------
+TABLES["issue_evidence"] = {
+    "columns": [
+        ("issue_id", "TEXT NOT NULL"),
+        ("excerpt_id", "TEXT NOT NULL"),
+        ("attached_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+    ],
+    "unique": [("issue_id", "excerpt_id")],
+}
+
+# ---------------------------------------------------------------------------
+# V4 Issue Service: decision_log — audit trail of issue decisions.
+# Previously created at runtime in lib/v4/issue_service.py.
+# ---------------------------------------------------------------------------
+TABLES["decision_log"] = {
+    "columns": [
+        ("decision_id", "TEXT PRIMARY KEY"),
+        ("issue_id", "TEXT NOT NULL"),
+        ("actor", "TEXT NOT NULL"),
+        ("decision_type", "TEXT NOT NULL"),
+        ("note", "TEXT"),
+        ("evidence_excerpt_ids", "TEXT"),
+        ("created_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# V4 Issue Service: handoffs — delegated work items.
+# Previously created at runtime in lib/v4/issue_service.py.
+# ---------------------------------------------------------------------------
+TABLES["handoffs"] = {
+    "columns": [
+        ("handoff_id", "TEXT PRIMARY KEY"),
+        ("issue_id", "TEXT NOT NULL"),
+        ("from_person_id", "TEXT NOT NULL"),
+        ("to_person_id", "TEXT NOT NULL"),
+        ("what_is_expected", "TEXT NOT NULL"),
+        ("due_at", "TEXT"),
+        ("done_definition", "TEXT NOT NULL"),
+        ("state", "TEXT NOT NULL DEFAULT 'proposed'"),
+        ("created_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+    ],
+}
+
 # =============================================================================
 # Data Migrations — Copy data between columns after schema convergence
 #
@@ -1819,6 +2106,155 @@ TABLES["identities"] = {
 # Executed as: UPDATE table SET target_column = source_expression WHERE condition
 # Idempotent — only updates rows where target is NULL and source is NOT NULL.
 # =============================================================================
+
+# =============================================================================
+# Views — Cross-entity views for the intelligence/query layer.
+#
+# Previously fixture-only (tests/fixtures/fixture_db.py).
+# Promoted to canonical schema so production and test DBs share the same views.
+# schema_engine creates these after all tables exist.
+# =============================================================================
+
+VIEWS: dict[str, str] = OrderedDict()
+
+VIEWS["v_task_with_client"] = """
+CREATE VIEW IF NOT EXISTS v_task_with_client AS
+SELECT
+    t.id as task_id,
+    t.title as task_title,
+    t.status as task_status,
+    t.priority as task_priority,
+    t.due_date,
+    t.assignee,
+    t.project_id,
+    p.name as project_name,
+    COALESCE(t.client_id, p.client_id) as client_id,
+    c.name as client_name,
+    t.created_at
+FROM tasks t
+LEFT JOIN projects p ON t.project_id = p.id
+LEFT JOIN clients c ON COALESCE(t.client_id, p.client_id) = c.id
+"""
+
+VIEWS["v_client_operational_profile"] = """
+CREATE VIEW IF NOT EXISTS v_client_operational_profile AS
+SELECT
+    c.id as client_id,
+    c.name as client_name,
+    c.tier as client_tier,
+    c.relationship_health,
+    (SELECT COUNT(*) FROM projects p WHERE p.client_id = c.id) as project_count,
+    (SELECT COUNT(*) FROM tasks t JOIN projects p ON t.project_id = p.id
+     WHERE p.client_id = c.id) as total_tasks,
+    (SELECT COUNT(*) FROM tasks t JOIN projects p ON t.project_id = p.id
+     WHERE p.client_id = c.id
+     AND t.status NOT IN ('done', 'complete', 'completed')) as active_tasks,
+    (SELECT COUNT(*) FROM invoices i WHERE i.client_id = c.id) as invoice_count,
+    (SELECT COALESCE(SUM(i.amount), 0) FROM invoices i
+     WHERE i.client_id = c.id) as total_invoiced,
+    (SELECT COALESCE(SUM(i.amount), 0) FROM invoices i
+     WHERE i.client_id = c.id AND i.status = 'paid') as total_paid,
+    (SELECT COALESCE(SUM(i.amount), 0) FROM invoices i
+     WHERE i.client_id = c.id AND i.status != 'paid') as total_outstanding,
+    0 as financial_ar_total,
+    0 as financial_ar_overdue,
+    0 as ytd_revenue,
+    (SELECT COUNT(*) FROM entity_links el
+     WHERE el.to_entity_type = 'client'
+     AND el.to_entity_id = c.id) as entity_links_count
+FROM clients c
+"""
+
+VIEWS["v_project_operational_state"] = """
+CREATE VIEW IF NOT EXISTS v_project_operational_state AS
+SELECT
+    p.id as project_id,
+    p.name as project_name,
+    p.status as project_status,
+    p.client_id,
+    c.name as client_name,
+    (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id) as total_tasks,
+    (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id
+     AND t.status NOT IN ('done', 'complete', 'completed')) as open_tasks,
+    (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id
+     AND t.status IN ('done', 'complete', 'completed')) as completed_tasks,
+    (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id
+     AND t.due_date IS NOT NULL AND t.due_date < date('now')
+     AND t.status NOT IN ('done', 'complete', 'completed')) as overdue_tasks,
+    (SELECT COUNT(DISTINCT t.assignee) FROM tasks t
+     WHERE t.project_id = p.id AND t.assignee IS NOT NULL)
+     as assigned_people_count,
+    CASE
+        WHEN (SELECT COUNT(*) FROM tasks t
+              WHERE t.project_id = p.id) = 0 THEN 0
+        ELSE ROUND(100.0 *
+             (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id
+              AND t.status IN ('done', 'complete', 'completed')) /
+             (SELECT COUNT(*) FROM tasks t WHERE t.project_id = p.id), 1)
+    END as completion_rate_pct
+FROM projects p
+LEFT JOIN clients c ON p.client_id = c.id
+"""
+
+VIEWS["v_person_load_profile"] = """
+CREATE VIEW IF NOT EXISTS v_person_load_profile AS
+SELECT
+    ppl.id as person_id,
+    ppl.name as person_name,
+    ppl.email as person_email,
+    ppl.type as role,
+    (SELECT COUNT(*) FROM tasks t
+     WHERE LOWER(t.assignee) = LOWER(ppl.name)) as assigned_tasks,
+    (SELECT COUNT(*) FROM tasks t
+     WHERE LOWER(t.assignee) = LOWER(ppl.name)
+     AND t.status NOT IN ('done', 'complete', 'completed')) as active_tasks,
+    (SELECT COUNT(DISTINCT t.project_id) FROM tasks t
+     WHERE LOWER(t.assignee) = LOWER(ppl.name)) as project_count,
+    (SELECT COUNT(*) FROM entity_links el
+     WHERE el.to_entity_type = 'person'
+     AND el.to_entity_id = ppl.id) as communication_links
+FROM people ppl
+"""
+
+VIEWS["v_communication_client_link"] = """
+CREATE VIEW IF NOT EXISTS v_communication_client_link AS
+SELECT
+    a.artifact_id,
+    a.type as artifact_type,
+    a.source as source_system,
+    a.occurred_at,
+    el.to_entity_id as client_id,
+    c.name as client_name,
+    el.confidence,
+    el.method as link_method
+FROM artifacts a
+JOIN entity_links el ON el.from_artifact_id = a.artifact_id
+JOIN clients c ON el.to_entity_id = c.id
+WHERE el.to_entity_type = 'client'
+"""
+
+VIEWS["v_invoice_client_project"] = """
+CREATE VIEW IF NOT EXISTS v_invoice_client_project AS
+SELECT
+    i.id as invoice_id,
+    i.external_id,
+    i.client_id,
+    c.name as client_name,
+    i.amount,
+    i.currency,
+    i.status as invoice_status,
+    i.issue_date,
+    i.due_date,
+    i.aging_bucket,
+    (SELECT COUNT(*) FROM projects p
+     WHERE p.client_id = i.client_id) as client_project_count,
+    (SELECT COUNT(*) FROM tasks t JOIN projects p ON t.project_id = p.id
+     WHERE p.client_id = i.client_id
+     AND t.status NOT IN ('done', 'complete', 'completed'))
+     as client_active_tasks
+FROM invoices i
+LEFT JOIN clients c ON i.client_id = c.id
+"""
 
 DATA_MIGRATIONS: list[tuple[str, str, str, str]] = [
     # Invoices: copy legacy column data to §12 column names

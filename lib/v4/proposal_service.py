@@ -34,65 +34,12 @@ class ProposalService:
     def __init__(self, db_path: str = None):
         self.db_path = db_path or DB_PATH
         self.signal_svc = get_signal_service()
-        self._ensure_tables()
 
     def _get_conn(self):
         return sqlite3.connect(self.db_path, timeout=30)
 
     def _generate_id(self, prefix: str = "prop") -> str:
         return f"{prefix}_{uuid.uuid4().hex[:16]}"
-
-    def _ensure_tables(self):
-        """Ensure proposal tables exist."""
-        conn = self._get_conn()
-        cursor = conn.cursor()
-
-        try:
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS proposals_v4 (
-                    proposal_id TEXT PRIMARY KEY,
-                    proposal_type TEXT NOT NULL,  -- risk, opportunity, request, decision_needed, anomaly, compliance
-                    primary_ref_type TEXT NOT NULL,
-                    primary_ref_id TEXT NOT NULL,
-                    scope_refs TEXT NOT NULL,  -- JSON array of {type, id}
-                    headline TEXT NOT NULL,
-                    summary TEXT,
-                    impact TEXT NOT NULL,  -- JSON: time/cash/reputation + deadlines
-                    top_hypotheses TEXT NOT NULL,  -- JSON array
-                    signal_ids TEXT NOT NULL,  -- JSON array
-                    proof_excerpt_ids TEXT NOT NULL,  -- JSON array
-                    missing_confirmations TEXT,  -- JSON array
-                    score REAL NOT NULL,
-                    first_seen_at TEXT NOT NULL,
-                    last_seen_at TEXT NOT NULL,
-                    occurrence_count INTEGER NOT NULL DEFAULT 1,
-                    trend TEXT NOT NULL DEFAULT 'flat',  -- worsening, improving, flat
-                    supersedes_proposal_id TEXT,
-                    ui_exposure_level TEXT DEFAULT 'none',  -- none, briefable, surfaced
-                    status TEXT NOT NULL DEFAULT 'open',  -- open, snoozed, dismissed, accepted
-                    snoozed_until TEXT,
-                    dismissed_reason TEXT,
-                    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-                    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-                )
-            """)
-
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_proposals_v4_status ON proposals_v4(status)"
-            )
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_proposals_v4_type ON proposals_v4(proposal_type)"
-            )
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_proposals_v4_score ON proposals_v4(score DESC)"
-            )
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_proposals_v4_primary ON proposals_v4(primary_ref_type, primary_ref_id)"
-            )
-
-            conn.commit()
-        finally:
-            conn.close()
 
     # ===========================================
     # Proposal Generation

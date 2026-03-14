@@ -26,49 +26,12 @@ class CouplingService:
 
     def __init__(self, db_path: str = None):
         self.db_path = db_path or DB_PATH
-        self._ensure_tables()
 
     def _get_conn(self):
         return sqlite3.connect(self.db_path, timeout=30)
 
     def _generate_id(self, prefix: str = "cpl") -> str:
         return f"{prefix}_{uuid.uuid4().hex[:16]}"
-
-    def _ensure_tables(self):
-        """Ensure coupling tables exist."""
-        conn = self._get_conn()
-        cursor = conn.cursor()
-
-        try:
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS couplings (
-                    coupling_id TEXT PRIMARY KEY,
-                    anchor_ref_type TEXT NOT NULL,  -- issue, proposal, signal
-                    anchor_ref_id TEXT NOT NULL,
-                    entity_refs TEXT NOT NULL,  -- JSON array of {type, id}
-                    coupling_type TEXT NOT NULL,  -- shared_signals, shared_people, shared_timeline, shared_risk
-                    strength REAL NOT NULL CHECK (strength >= 0 AND strength <= 1),
-                    why TEXT NOT NULL,  -- JSON: signal_ids + link evidence
-                    investigation_path TEXT NOT NULL,  -- JSON: ordered entity refs
-                    confidence REAL NOT NULL CHECK (confidence >= 0 AND confidence <= 1),
-                    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-                    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-                )
-            """)
-
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_couplings_anchor ON couplings(anchor_ref_type, anchor_ref_id)"
-            )
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_couplings_type ON couplings(coupling_type)"
-            )
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_couplings_strength ON couplings(strength DESC)"
-            )
-
-            conn.commit()
-        finally:
-            conn.close()
 
     # ===========================================
     # Coupling Discovery

@@ -35,110 +35,12 @@ class SignalService:
 
     def __init__(self, db_path: str = None):
         self.db_path = db_path or DB_PATH
-        self._ensure_tables()
 
     def _get_conn(self):
         return sqlite3.connect(self.db_path, timeout=30)
 
     def _generate_id(self, prefix: str = "sig") -> str:
         return f"{prefix}_{uuid.uuid4().hex[:16]}"
-
-    def _ensure_tables(self):
-        """Ensure signal tables exist."""
-        conn = self._get_conn()
-        cursor = conn.cursor()
-
-        try:
-            # Signal definitions (types of signals we can detect)
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS signal_definitions (
-                    signal_type TEXT PRIMARY KEY,
-                    description TEXT NOT NULL,
-                    category TEXT NOT NULL,  -- risk, opportunity, health, protocol, deadline, commitment
-                    required_evidence_types TEXT NOT NULL,  -- JSON array
-                    formula_version TEXT NOT NULL,
-                    min_link_confidence REAL NOT NULL DEFAULT 0.7,
-                    min_interpretation_confidence REAL NOT NULL DEFAULT 0.6,
-                    priority_weight REAL NOT NULL DEFAULT 1.0,
-                    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-                )
-            """)
-
-            # Detector versions (versioned detection algorithms)
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS detector_versions (
-                    detector_id TEXT NOT NULL,
-                    version TEXT NOT NULL,
-                    description TEXT,
-                    parameters TEXT NOT NULL,  -- JSON
-                    released_at TEXT NOT NULL DEFAULT (datetime('now')),
-                    PRIMARY KEY (detector_id, version)
-                )
-            """)
-
-            # Detector runs (audit of when detectors ran)
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS detector_runs (
-                    run_id TEXT PRIMARY KEY,
-                    detector_id TEXT NOT NULL,
-                    detector_version TEXT NOT NULL,
-                    scope TEXT NOT NULL,  -- JSON: what entities/time window
-                    inputs_hash TEXT NOT NULL,
-                    ran_at TEXT NOT NULL DEFAULT (datetime('now')),
-                    duration_ms INTEGER,
-                    output_counts TEXT NOT NULL,  -- JSON
-                    status TEXT NOT NULL DEFAULT 'completed'
-                )
-            """)
-
-            # Signals (detected instances)
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS signals (
-                    signal_id TEXT PRIMARY KEY,
-                    signal_type TEXT NOT NULL,
-                    entity_ref_type TEXT NOT NULL,
-                    entity_ref_id TEXT NOT NULL,
-                    value TEXT NOT NULL,  -- JSON with signal-specific data
-                    severity TEXT NOT NULL DEFAULT 'medium',  -- low, medium, high, critical
-                    detected_at TEXT NOT NULL DEFAULT (datetime('now')),
-                    interpretation_confidence REAL NOT NULL,
-                    linkage_confidence_floor REAL NOT NULL,
-                    evidence_excerpt_ids TEXT NOT NULL,  -- JSON array
-                    evidence_artifact_ids TEXT NOT NULL,  -- JSON array
-                    detector_id TEXT NOT NULL,
-                    detector_version TEXT NOT NULL,
-                    status TEXT NOT NULL DEFAULT 'active',  -- active, consumed, dismissed, expired
-                    consumed_by_proposal_id TEXT,
-                    expires_at TEXT,
-                    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-                )
-            """)
-
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_signals_type ON signals(signal_type)")
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_signals_entity ON signals(entity_ref_type, entity_ref_id)"
-            )
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_signals_status ON signals(status)")
-            cursor.execute("CREATE INDEX IF NOT EXISTS idx_signals_severity ON signals(severity)")
-            cursor.execute(
-                "CREATE INDEX IF NOT EXISTS idx_signals_detected ON signals(detected_at)"
-            )
-
-            # Signal feedback (for learning)
-            cursor.execute("""
-                CREATE TABLE IF NOT EXISTS signal_feedback (
-                    feedback_id TEXT PRIMARY KEY,
-                    signal_id TEXT NOT NULL,
-                    feedback_type TEXT NOT NULL,  -- confirmed, rejected, adjusted
-                    actor TEXT NOT NULL,
-                    note TEXT,
-                    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-                )
-            """)
-
-            conn.commit()
-        finally:
-            conn.close()
 
     # ===========================================
     # Signal Definition Management
