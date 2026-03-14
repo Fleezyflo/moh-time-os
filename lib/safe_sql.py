@@ -281,6 +281,93 @@ def update_where_in(
     )
 
 
+def insert_or_ignore_from_select(
+    target: str,
+    target_cols_csv: str,
+    select_exprs_csv: str,
+    source: str,
+) -> str:
+    """Build INSERT OR IGNORE INTO target (cols) SELECT exprs FROM source.
+
+    Used by schema_engine for constraint-rebuild data copy.
+    *target* and *source* are validated table names.
+    *target_cols_csv* and *select_exprs_csv* are pre-built column lists from
+    schema declarations (not user input).
+    """
+    _validate(target)
+    _validate(source)
+    return (
+        f"INSERT OR IGNORE INTO [{target}] ({target_cols_csv}) "
+        f"SELECT {select_exprs_csv} FROM [{source}]"
+    )
+
+
+def select_column(table: str, column: str) -> str:
+    """Build SELECT [column] FROM [table]."""
+    _validate(table)
+    _validate(column)
+    return f"SELECT [{column}] FROM [{table}]"
+
+
+def create_table_as_empty(target: str, source: str) -> str:
+    """Build CREATE TABLE target AS SELECT * FROM source WHERE 0.
+
+    Creates an empty table with the same schema as source.
+    Used for quarantine tables during constraint rebuilds.
+    """
+    _validate(target)
+    _validate(source)
+    return f"CREATE TABLE [{target}] AS SELECT * FROM [{source}] WHERE 0"
+
+
+def insert_from_except(
+    target: str,
+    source_a: str,
+    source_b: str,
+    id_col: str,
+    cols_csv: str,
+) -> str:
+    """Build INSERT INTO target SELECT ... FROM a WHERE id NOT IN (SELECT id FROM b).
+
+    Copies rows from source_a that are NOT in source_b (by id_col).
+    Used to capture rejected rows during constraint rebuilds.
+    """
+    _validate(target)
+    _validate(source_a)
+    _validate(source_b)
+    _validate(id_col)
+    return (
+        f"INSERT INTO [{target}] ({cols_csv}) "
+        f"SELECT {cols_csv} FROM [{source_a}] "
+        f"WHERE [{id_col}] NOT IN (SELECT [{id_col}] FROM [{source_b}])"
+    )
+
+
+def select_coalesced_pks(
+    old_table: str,
+    new_table: str,
+    pk_col: str,
+    coalesce_col: str,
+    coalesced_value: str,
+) -> str:
+    """Find rows where a column was NULL in old table but coalesced in new table.
+
+    Returns: SELECT old.[pk] FROM old INNER JOIN new ON pk
+             WHERE old.[col] IS NULL AND new.[col] = coalesced_value
+
+    Used to detect silent COALESCE mutations during constraint rebuilds.
+    """
+    _validate(old_table)
+    _validate(new_table)
+    _validate(pk_col)
+    _validate(coalesce_col)
+    return (
+        f"SELECT old.[{pk_col}] FROM [{old_table}] AS old "
+        f"INNER JOIN [{new_table}] AS new ON old.[{pk_col}] = new.[{pk_col}] "
+        f"WHERE old.[{coalesce_col}] IS NULL AND new.[{coalesce_col}] = {coalesced_value}"
+    )
+
+
 def update_set_where_simple(
     table: str,
     target_col: str,
