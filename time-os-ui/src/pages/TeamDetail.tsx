@@ -223,16 +223,14 @@ export function TeamDetail() {
               {/* Due Today Alert */}
               {dueToday != null && dueToday > 0 && (
                 <div className="mb-6 p-3 bg-amber-900/20 border border-amber-900/50 rounded-lg text-[var(--warning)] text-sm">
-                  ⚡ <strong>{dueToday} tasks due today</strong> — requires immediate
-                  attention
+                  ⚡ <strong>{dueToday} tasks due today</strong> — requires immediate attention
                 </div>
               )}
 
               {/* Overdue Alert */}
               {hasOverdue && (
                 <div className="mb-6 p-3 bg-red-900/20 border border-[var(--danger)]/50 rounded-lg text-[var(--danger)] text-sm">
-                  🚨 <strong>{overdueTasks} overdue tasks</strong> — escalation may be
-                  needed
+                  🚨 <strong>{overdueTasks} overdue tasks</strong> — escalation may be needed
                 </div>
               )}
 

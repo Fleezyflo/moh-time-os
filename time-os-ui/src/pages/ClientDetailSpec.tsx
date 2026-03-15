@@ -258,15 +258,13 @@ export function ClientDetailSpec() {
         signals_bad: (signals.bad as number | null) ?? null,
         // Flatten engagements
         brands,
-        active_engagements: brands.length > 0
-          ? brands.reduce(
-              (sum: number, b: Brand) => sum + (b.engagements?.length ?? 0),
-              0
-            )
-          : null,
+        active_engagements:
+          brands.length > 0
+            ? brands.reduce((sum: number, b: Brand) => sum + (b.engagements?.length ?? 0), 0)
+            : null,
         // Null until populated from separate API fields
-        open_tasks: (data as Record<string, unknown>).open_tasks as number | null ?? null,
-        tasks_overdue: (data as Record<string, unknown>).tasks_overdue as number | null ?? null,
+        open_tasks: ((data as Record<string, unknown>).open_tasks as number | null) ?? null,
+        tasks_overdue: ((data as Record<string, unknown>).tasks_overdue as number | null) ?? null,
         invoices: [],
         ar_aging: [],
         team_members: [],
@@ -334,7 +332,15 @@ export function ClientDetailSpec() {
         <MetricCard
           label="Health Score"
           value={healthScore != null ? healthScore.toString() : '--'}
-          severity={healthScore != null ? (healthScore >= 70 ? 'success' : healthScore >= 40 ? 'warning' : 'danger') : undefined}
+          severity={
+            healthScore != null
+              ? healthScore >= 70
+                ? 'success'
+                : healthScore >= 40
+                  ? 'warning'
+                  : 'danger'
+              : undefined
+          }
         />
         <MetricCard label="AR Outstanding" value={formatCurrencyOrNA(client.ar_outstanding)} />
         <MetricCard
@@ -359,7 +365,10 @@ export function ClientDetailSpec() {
             {healthScore != null ? (
               <span className={`font-medium ${getHealthColor(healthScore)}`}>
                 {healthScore}
-                <span className="text-[var(--grey)]"> ({client.health_label || 'provisional'})</span>
+                <span className="text-[var(--grey)]">
+                  {' '}
+                  ({client.health_label || 'provisional'})
+                </span>
               </span>
             ) : (
               <span className="font-medium text-[var(--grey-light)]">--</span>
@@ -458,7 +467,9 @@ function OverviewTab({ client, onIssueAction }: OverviewTabProps) {
             </div>
             <div>
               <div className="text-[var(--grey-light)] text-xs">Overdue</div>
-              <div className={`text-lg font-medium ${client.tasks_overdue != null && client.tasks_overdue > 0 ? 'text-[var(--danger)]' : ''}`}>
+              <div
+                className={`text-lg font-medium ${client.tasks_overdue != null && client.tasks_overdue > 0 ? 'text-[var(--danger)]' : ''}`}
+              >
                 {client.tasks_overdue ?? '--'}
               </div>
             </div>

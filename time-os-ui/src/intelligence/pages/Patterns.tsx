@@ -130,9 +130,7 @@ export default function Patterns() {
           {/* Other (unrecognized severity) — rendered instead of silently dropped */}
           {other.length > 0 && (
             <div>
-              <h2 className="text-lg font-medium text-purple-400 mb-3">
-                Other ({other.length})
-              </h2>
+              <h2 className="text-lg font-medium text-purple-400 mb-3">Other ({other.length})</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {other.map((pattern, i) => (
                   <PatternCard key={pattern.pattern_id || i} pattern={pattern} />

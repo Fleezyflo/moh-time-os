@@ -244,16 +244,28 @@ export function Inbox() {
           <MetricCard
             label="Critical"
             value={counts.by_severity != null ? (counts.by_severity.critical ?? 0) : '--'}
-            severity={counts.by_severity != null && (counts.by_severity.critical ?? 0) > 0 ? 'danger' : undefined}
+            severity={
+              counts.by_severity != null && (counts.by_severity.critical ?? 0) > 0
+                ? 'danger'
+                : undefined
+            }
           />
           <MetricCard
             label="High"
             value={counts.by_severity != null ? (counts.by_severity.high ?? 0) : '--'}
-            severity={counts.by_severity != null && (counts.by_severity.high ?? 0) > 0 ? 'warning' : undefined}
+            severity={
+              counts.by_severity != null && (counts.by_severity.high ?? 0) > 0
+                ? 'warning'
+                : undefined
+            }
           />
           <MetricCard
             label="Categories"
-            value={counts.by_type != null ? Object.values(counts.by_type).filter((c) => c > 0).length : '--'}
+            value={
+              counts.by_type != null
+                ? Object.values(counts.by_type).filter((c) => c > 0).length
+                : '--'
+            }
           />
         </SummaryGrid>
       )}

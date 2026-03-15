@@ -232,9 +232,9 @@ export function Portfolio() {
                     </p>
                   </div>
                 ) : !financialDetail.data ||
-                (!financialDetail.data.contacts &&
-                  !financialDetail.data.transactions &&
-                  !financialDetail.data.tax_rates) ? (
+                  (!financialDetail.data.contacts &&
+                    !financialDetail.data.transactions &&
+                    !financialDetail.data.tax_rates) ? (
                   <div className="p-4 text-center">
                     <p className="text-[var(--grey-light)]">
                       No financial detail available. Run the Xero collector to populate.
@@ -421,7 +421,7 @@ export function Portfolio() {
                     </p>
                   </div>
                 ) : !asanaContext.data ||
-                (!asanaContext.data.portfolios && !asanaContext.data.goals) ? (
+                  (!asanaContext.data.portfolios && !asanaContext.data.goals) ? (
                   <div className="p-4 text-center">
                     <p className="text-[var(--grey-light)]">
                       No Asana context available. Run the Asana collector to populate.

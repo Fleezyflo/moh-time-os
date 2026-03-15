@@ -40,7 +40,9 @@ export function DegradedModeBanner() {
   const bgColor = isOffline ? 'bg-red-500/10' : 'bg-amber-500/10';
   const textColor = isOffline ? 'text-red-300' : 'text-amber-300';
   const detailBg = isOffline ? 'bg-red-900/20' : 'bg-amber-900/20';
-  const btnBg = isOffline ? 'bg-red-500/20 hover:bg-red-500/30 text-red-300' : 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300';
+  const btnBg = isOffline
+    ? 'bg-red-500/20 hover:bg-red-500/30 text-red-300'
+    : 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300';
 
   return (
     <div className={`${bgColor} border-b ${borderColor} px-4 py-3`}>
@@ -52,7 +54,8 @@ export function DegradedModeBanner() {
             </span>
           ) : (
             <span className={textColor}>
-              ⚠️ {state.failedRequests.length} request{state.failedRequests.length !== 1 ? 's' : ''} failed — some data below may be stale.
+              ⚠️ {state.failedRequests.length} request{state.failedRequests.length !== 1 ? 's' : ''}{' '}
+              failed — some data below may be stale.
             </span>
           )}
         </div>
@@ -64,10 +67,7 @@ export function DegradedModeBanner() {
           >
             {showDetails ? 'Hide details' : 'Show details'}
           </button>
-          <button
-            onClick={handleRetry}
-            className={`${btnBg} px-3 py-1 rounded text-sm`}
-          >
+          <button onClick={handleRetry} className={`${btnBg} px-3 py-1 rounded text-sm`}>
             Retry
           </button>
           <button onClick={handleDismiss} className={`${textColor} hover:text-white text-sm`}>

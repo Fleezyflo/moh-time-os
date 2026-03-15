@@ -139,7 +139,8 @@ export function Scorecard({ scorecard, compact = false }: ScorecardProps) {
       {/* Computed timestamp with relative freshness */}
       {scorecard.computed_at && (
         <div className="text-xs text-[var(--grey-muted)] mt-4 pt-4 border-t border-[var(--grey)]">
-          Computed {freshnessLabel(scorecard.computed_at)} ({new Date(scorecard.computed_at).toLocaleString()})
+          Computed {freshnessLabel(scorecard.computed_at)} (
+          {new Date(scorecard.computed_at).toLocaleString()})
         </div>
       )}
     </div>

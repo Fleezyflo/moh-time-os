@@ -145,7 +145,11 @@ function ProjectEnrollment() {
   return (
     <PageLayout
       title="Project Enrollment"
-      subtitle={totalEnrolled != null && totalCandidates != null ? `${totalEnrolled} enrolled, ${totalCandidates} candidates` : 'Loading...'}
+      subtitle={
+        totalEnrolled != null && totalCandidates != null
+          ? `${totalEnrolled} enrolled, ${totalCandidates} candidates`
+          : 'Loading...'
+      }
       actions={
         <EnrollmentActionBar
           onSyncXero={handleSyncXero}
@@ -155,11 +159,21 @@ function ProjectEnrollment() {
       }
     >
       <SummaryGrid>
-        <MetricCard label="Enrolled" value={totalEnrolled ?? '--'} severity={totalEnrolled != null ? 'info' : undefined} />
+        <MetricCard
+          label="Enrolled"
+          value={totalEnrolled ?? '--'}
+          severity={totalEnrolled != null ? 'info' : undefined}
+        />
         <MetricCard
           label="Candidates"
           value={totalCandidates ?? '--'}
-          severity={totalCandidates != null && totalCandidates > 0 ? 'warning' : totalCandidates != null ? 'success' : undefined}
+          severity={
+            totalCandidates != null && totalCandidates > 0
+              ? 'warning'
+              : totalCandidates != null
+                ? 'success'
+                : undefined
+          }
         />
         <MetricCard
           label="Detected"
@@ -169,7 +183,15 @@ function ProjectEnrollment() {
         <MetricCard
           label="Link Rate"
           value={linkRate != null ? `${linkRate}%` : '--'}
-          severity={linkRate != null ? (linkRate >= 80 ? 'success' : linkRate >= 50 ? 'warning' : 'danger') : undefined}
+          severity={
+            linkRate != null
+              ? linkRate >= 80
+                ? 'success'
+                : linkRate >= 50
+                  ? 'warning'
+                  : 'danger'
+              : undefined
+          }
         />
       </SummaryGrid>
 
