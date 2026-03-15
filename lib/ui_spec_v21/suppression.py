@@ -8,7 +8,7 @@ Suppression prevents re-proposal of dismissed items.
 import hashlib
 import json
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 from uuid import uuid4
 
@@ -150,7 +150,7 @@ def get_expiry_date(item_type: str) -> str:
     Spec: 1.8 Suppression Expiry Defaults
     """
     days = SUPPRESSION_EXPIRY_DAYS.get(item_type, 30)
-    expiry = datetime.utcnow() + timedelta(days=days)
+    expiry = datetime.now(timezone.utc) + timedelta(days=days)
     return to_iso(expiry)
 
 

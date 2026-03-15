@@ -4,7 +4,7 @@ Tests for HealthUnifier — unified health score provider.
 
 import json
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -42,7 +42,7 @@ def test_db(tmp_path):
 
 def _insert_score(db_path, entity_type, entity_id, score, dims=None, days_ago=0):
     """Insert a score record days_ago days in the past."""
-    dt = datetime.now() - timedelta(days=days_ago)
+    dt = datetime.now(timezone.utc) - timedelta(days=days_ago)
     conn = sqlite3.connect(str(db_path))
     conn.execute(
         """INSERT OR REPLACE INTO score_history
@@ -132,7 +132,7 @@ class TestHealthUnifier:
         _insert_score(test_db, "client", "c1", 80, days_ago=0)
 
         hu = HealthUnifier(test_db)
-        target_date = (datetime.now() - timedelta(days=6)).strftime("%Y-%m-%d")
+        target_date = (datetime.now(timezone.utc) - timedelta(days=6)).strftime("%Y-%m-%d")
         health = hu.get_health_at_time("client", "c1", target_date)
 
         assert health is not None

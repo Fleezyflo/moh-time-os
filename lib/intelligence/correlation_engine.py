@@ -15,7 +15,7 @@ Domain definitions:
 import logging
 import sqlite3
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 from lib.intelligence.correlation_confidence import (
@@ -311,7 +311,7 @@ class CorrelationEngine:
         Runs all patterns and signals, correlates findings, identifies
         compound risks, and generates priority actions.
         """
-        scan_started = datetime.now().isoformat()
+        scan_started = datetime.now(timezone.utc).isoformat()
 
         # Run pattern detection
         try:
@@ -415,7 +415,7 @@ class CorrelationEngine:
                         ),
                         compound_severity=rule.get("severity", "operational"),
                         risk_narrative=rule["description"],
-                        detected_at=datetime.now().isoformat(),
+                        detected_at=datetime.now(timezone.utc).isoformat(),
                     )
                     compound_risks.append(risk)
 
@@ -446,7 +446,7 @@ class CorrelationEngine:
                     domains_affected=[domain],
                     compound_severity=rule.get("severity", "operational"),
                     risk_narrative=f"Multiple systemic issues in {domain.value}: {', '.join(pattern_ids)}",
-                    detected_at=datetime.now().isoformat(),
+                    detected_at=datetime.now(timezone.utc).isoformat(),
                 )
                 risks.append(risk)
 
@@ -507,7 +507,7 @@ class CorrelationEngine:
                         signal_key=sid,
                         signal_type=sid,
                         severity="WARNING",  # Default; full lookup deferred
-                        detected_at=datetime.now(),
+                        detected_at=datetime.now(timezone.utc),
                         is_present=True,
                     )
                     for sid in all_ids

@@ -7,7 +7,7 @@ Detects signals from Gmail messages.
 import logging
 import os
 import re
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from ..data_loader import get_data_loader
@@ -96,7 +96,7 @@ class GmailDetector(SignalDetector):
     def _parse_date(self, date_str: str) -> datetime:
         """Parse email date string."""
         if not date_str:
-            return datetime.now()
+            return datetime.now(timezone.utc)
         try:
             # Try common formats
             for fmt in [
@@ -111,10 +111,10 @@ class GmailDetector(SignalDetector):
             logger.debug(
                 f"Could not parse date string '{date_str}' with any known format"
             )
-            return datetime.now()
+            return datetime.now(timezone.utc)
         except Exception as e:
             logger.debug(f"Unexpected error parsing date '{date_str}': {e}")
-            return datetime.now()
+            return datetime.now(timezone.utc)
 
     def _detect_urgent(self) -> list[Signal]:
         """Detect emails with urgent keywords from external senders."""
@@ -172,7 +172,7 @@ class GmailDetector(SignalDetector):
         """Detect unread emails from external senders older than threshold."""
         signals = []
         messages = self._get_messages()
-        cutoff = datetime.now() - timedelta(days=self.UNANSWERED_DAYS)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=self.UNANSWERED_DAYS)
 
         for msg in messages:
             msg_id = msg.get("id")
@@ -201,7 +201,7 @@ class GmailDetector(SignalDetector):
             if self.signal_exists("email_unanswered", msg_id):
                 continue
 
-            days_old = (datetime.now() - msg_date.replace(tzinfo=None)).days
+            days_old = (datetime.now(timezone.utc) - msg_date.replace(tzinfo=None)).days
 
             signal = self.create_signal(
                 signal_type="email_unanswered",
@@ -234,7 +234,7 @@ class GmailDetector(SignalDetector):
         messages = self._get_messages()
 
         # Only look at last 3 days for active communication
-        cutoff = datetime.now() - timedelta(days=3)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=3)
 
         # Track senders we've already signaled
         signaled_senders = set()

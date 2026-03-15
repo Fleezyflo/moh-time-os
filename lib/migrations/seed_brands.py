@@ -19,9 +19,6 @@ from lib import paths
 logger = logging.getLogger(__name__)
 
 
-DB_PATH = paths.db_path()
-
-
 def slugify(name: str) -> str:
     """Convert name to slug."""
     # Remove special chars, lowercase, replace spaces with dashes
@@ -49,7 +46,8 @@ def extract_brand_name(project_name: str) -> str:
 
 def run_migration():
     """Create brands and link projects."""
-    conn = sqlite3.connect(DB_PATH)
+    db_path = str(paths.db_path())
+    conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 

@@ -15,7 +15,7 @@ All runtime code must use §12 column names.
 import logging
 import shutil
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from lib import paths
@@ -23,22 +23,24 @@ from lib import paths
 logger = logging.getLogger(__name__)
 
 
-DB_PATH = paths.db_path()
-BACKUP_DIR = paths.data_dir() / "backups"
+def _backup_dir():
+    return paths.data_dir() / "backups"
 
 
 def backup_db() -> Path:
     """Create timestamped backup."""
-    BACKUP_DIR.mkdir(exist_ok=True)
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_path = BACKUP_DIR / f"moh_time_os.db.pre_v12.{ts}"
-    shutil.copy(DB_PATH, backup_path)
+    db_path = str(paths.db_path())
+    _backup_dir().mkdir(exist_ok=True)
+    ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    backup_path = _backup_dir() / f"moh_time_os.db.pre_v12.{ts}"
+    shutil.copy(db_path, backup_path)
     logger.info(f"✓ Backup: {backup_path}")
     return backup_path
 
 
 def get_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(DB_PATH)
+    db_path = str(paths.db_path())
+    conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     return conn
 

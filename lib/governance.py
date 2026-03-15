@@ -7,7 +7,7 @@ import contextlib
 import json
 import sqlite3
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 import yaml
@@ -39,7 +39,7 @@ class GovernanceEngine:
         self.config = config or self._load_config()
 
         self._action_counts: dict[str, int] = defaultdict(int)
-        self._last_reset = datetime.now()
+        self._last_reset = datetime.now(timezone.utc)
         self._emergency_brake_active = False
 
     def _load_config(self) -> dict:
@@ -146,9 +146,9 @@ class GovernanceEngine:
     def _check_rate_limit(self, domain: str, action: str) -> bool:
         """Check if action is within rate limits."""
         # Reset counts every hour
-        if (datetime.now() - self._last_reset).total_seconds() > 3600:
+        if (datetime.now(timezone.utc) - self._last_reset).total_seconds() > 3600:
             self._action_counts.clear()
-            self._last_reset = datetime.now()
+            self._last_reset = datetime.now(timezone.utc)
 
         rate_limits = self.config.get("rate_limits", {})
 
@@ -212,11 +212,11 @@ class GovernanceEngine:
         self.store.insert(
             "cycle_logs",
             {
-                "id": f"emergency_{datetime.now().isoformat()}",
+                "id": f"emergency_{datetime.now(timezone.utc).isoformat()}",
                 "cycle_number": 0,
                 "phase": "emergency_brake",
                 "data": json.dumps({"reason": reason}),
-                "created_at": datetime.now().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             },
         )
 

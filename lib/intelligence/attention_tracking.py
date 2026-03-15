@@ -14,7 +14,7 @@ import logging
 import sqlite3
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -171,7 +171,7 @@ class AttentionTracker:
             event_type=event_type,
             duration_minutes=duration_minutes,
             notes=notes,
-            created_at=datetime.now().isoformat(),
+            created_at=datetime.now(timezone.utc).isoformat(),
         )
         conn = sqlite3.connect(str(self.db_path))
         try:
@@ -205,7 +205,7 @@ class AttentionTracker:
         conn = sqlite3.connect(str(self.db_path))
         conn.row_factory = sqlite3.Row
         try:
-            week_ago = (datetime.now() - timedelta(days=7)).isoformat()
+            week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
 
             # Count reviews in last week
             row = conn.execute(
@@ -241,7 +241,7 @@ class AttentionTracker:
             if latest:
                 try:
                     latest_dt = datetime.fromisoformat(latest)
-                    days_since = (datetime.now() - latest_dt).days
+                    days_since = (datetime.now(timezone.utc) - latest_dt).days
                 except (ValueError, TypeError):
                     pass
 
@@ -269,7 +269,7 @@ class AttentionTracker:
         conn = sqlite3.connect(str(self.db_path))
         conn.row_factory = sqlite3.Row
         try:
-            cutoff = (datetime.now() - timedelta(days=days_back)).isoformat()
+            cutoff = (datetime.now(timezone.utc) - timedelta(days=days_back)).isoformat()
 
             # Build query
             if entity_type:

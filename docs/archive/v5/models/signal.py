@@ -5,7 +5,7 @@ Core signal model with valence, magnitude, and lifecycle.
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 from lib.compat import StrEnum
@@ -368,7 +368,7 @@ class Signal(BaseModel):
         """Calculate signal age in days."""
         try:
             detected = datetime.fromisoformat(self.detected_at)
-            return (datetime.now() - detected).days
+            return (datetime.now(timezone.utc) - detected).days
         except (ValueError, TypeError):
             return 0
 
@@ -426,7 +426,7 @@ class Signal(BaseModel):
             return False
         try:
             expires = datetime.fromisoformat(self.expires_at)
-            return datetime.now() > expires
+            return datetime.now(timezone.utc) > expires
         except (ValueError, TypeError):
             return False
 

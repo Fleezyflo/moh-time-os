@@ -95,8 +95,13 @@ export function TeamDetail() {
     (t) => t.status !== 'done' && t.status !== 'cancelled'
   );
 
-  const load = getLoadLevel(member.open_tasks || 0, member.overdue_tasks || 0);
-  const hasOverdue = (member.overdue_tasks || 0) > 0;
+  const memberLoaded = member != null;
+  const openTasks = memberLoaded ? (member.open_tasks ?? null) : null;
+  const overdueTasks = memberLoaded ? (member.overdue_tasks ?? null) : null;
+  const dueToday = memberLoaded ? (member.due_today ?? null) : null;
+  const completedWeek = memberLoaded ? (member.completed_this_week ?? null) : null;
+  const load = getLoadLevel(openTasks ?? 0, overdueTasks ?? 0);
+  const hasOverdue = overdueTasks != null && overdueTasks > 0;
 
   const actions = (
     <Link to="/team" className="text-[var(--grey-light)] hover:text-[var(--white)]">
@@ -165,16 +170,16 @@ export function TeamDetail() {
   return (
     <PageLayout title={member.name} actions={actions}>
       <SummaryGrid>
-        <MetricCard label="Open Tasks" value={(member.open_tasks || 0).toString()} />
+        <MetricCard label="Open Tasks" value={openTasks != null ? openTasks.toString() : '--'} />
         <MetricCard
           label="Overdue"
-          value={(member.overdue_tasks || 0).toString()}
+          value={overdueTasks != null ? overdueTasks.toString() : '--'}
           severity={hasOverdue ? 'danger' : undefined}
         />
-        <MetricCard label="Due Today" value={(member.due_today || 0).toString()} />
+        <MetricCard label="Due Today" value={dueToday != null ? dueToday.toString() : '--'} />
         <MetricCard
           label="Done This Week"
-          value={(member.completed_this_week || 0).toString()}
+          value={completedWeek != null ? completedWeek.toString() : '--'}
           severity="success"
         />
       </SummaryGrid>
@@ -216,9 +221,9 @@ export function TeamDetail() {
               </div>
 
               {/* Due Today Alert */}
-              {(member.due_today || 0) > 0 && (
+              {dueToday != null && dueToday > 0 && (
                 <div className="mb-6 p-3 bg-amber-900/20 border border-amber-900/50 rounded-lg text-[var(--warning)] text-sm">
-                  ⚡ <strong>{member.due_today} tasks due today</strong> — requires immediate
+                  ⚡ <strong>{dueToday} tasks due today</strong> — requires immediate
                   attention
                 </div>
               )}
@@ -226,7 +231,7 @@ export function TeamDetail() {
               {/* Overdue Alert */}
               {hasOverdue && (
                 <div className="mb-6 p-3 bg-red-900/20 border border-[var(--danger)]/50 rounded-lg text-[var(--danger)] text-sm">
-                  🚨 <strong>{member.overdue_tasks} overdue tasks</strong> — escalation may be
+                  🚨 <strong>{overdueTasks} overdue tasks</strong> — escalation may be
                   needed
                 </div>
               )}

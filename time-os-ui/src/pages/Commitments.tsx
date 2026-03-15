@@ -60,9 +60,9 @@ export default function Commitments() {
   const untrackedCommitments = useMemo(() => untrackedData?.commitments ?? [], [untrackedData]);
   const dueCommitments = useMemo(() => dueData?.commitments ?? [], [dueData]);
 
-  const totalCount = commitmentsData?.total ?? 0;
-  const untrackedCount = untrackedData?.total ?? 0;
-  const dueCount = dueData?.total ?? 0;
+  const totalCount = commitmentsData != null ? (commitmentsData.total ?? 0) : null;
+  const untrackedCount = untrackedData != null ? (untrackedData.total ?? 0) : null;
+  const dueCount = dueData != null ? (dueData.total ?? 0) : null;
 
   // Derive summary stats
   const doneCount = useMemo(
@@ -101,7 +101,7 @@ export default function Commitments() {
   return (
     <PageLayout
       title="Commitments"
-      subtitle={`${totalCount} commitments tracked`}
+      subtitle={totalCount != null ? `${totalCount} commitments tracked` : 'Loading...'}
       actions={
         <div className="flex items-center gap-2">
           <select
@@ -124,7 +124,7 @@ export default function Commitments() {
       }
     >
       {/* Untracked alert */}
-      {untrackedCount > 0 && (
+      {untrackedCount != null && untrackedCount > 0 && (
         <div className="p-3 rounded-lg border border-[var(--warning)] bg-[var(--warning)]/10">
           <div className="text-sm font-medium" style={{ color: 'var(--warning)' }}>
             {untrackedCount} untracked commitment{untrackedCount !== 1 ? 's' : ''}
@@ -136,13 +136,13 @@ export default function Commitments() {
       )}
 
       <SummaryGrid>
-        <MetricCard label="Total" value={totalCount} />
+        <MetricCard label="Total" value={totalCount ?? '--'} />
         <MetricCard
           label="Untracked"
-          value={untrackedCount}
-          severity={untrackedCount > 0 ? 'warning' : undefined}
+          value={untrackedCount ?? '--'}
+          severity={untrackedCount != null && untrackedCount > 0 ? 'warning' : undefined}
         />
-        <MetricCard label="Due" value={dueCount} severity={dueCount > 0 ? 'danger' : undefined} />
+        <MetricCard label="Due" value={dueCount ?? '--'} severity={dueCount != null && dueCount > 0 ? 'danger' : undefined} />
         <MetricCard
           label="Done"
           value={doneCount}

@@ -8,7 +8,7 @@ Responsibilities:
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from lib.capacity_truth.calculator import CapacityCalculator
 from lib.state_store import get_store
@@ -39,8 +39,8 @@ class DebtTracker:
         Returns:
             debt_id
         """
-        debt_id = f"debt_{datetime.now().strftime('%Y%m%d%H%M%S')}_{lane}"
-        now = datetime.now().isoformat()
+        debt_id = f"debt_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M%S')}_{lane}"
+        now = datetime.now(timezone.utc).isoformat()
         data = {
             "id": debt_id,
             "lane": lane,
@@ -65,7 +65,7 @@ class DebtTracker:
         rows = self.store.query("SELECT * FROM time_debt WHERE id = ?", [debt_id])
         if not rows:
             return False, "Debt entry not found"
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         self.store.query("UPDATE time_debt SET resolved_at = ? WHERE id = ?", [now, debt_id])
         return True, "Debt resolved"
 

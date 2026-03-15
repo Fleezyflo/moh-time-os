@@ -10,7 +10,7 @@ Runs nightly to:
 
 import logging
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from lib.state_store import get_store
 from lib.time_truth.block_manager import BlockManager
@@ -99,7 +99,7 @@ class Rollover:
             rolled_over=rolled_count,
             failed=failed_count,
             items=items,
-            timestamp=datetime.now().isoformat(),
+            timestamp=datetime.now(timezone.utc).isoformat(),
         )
 
         # Log the rollover
@@ -175,7 +175,7 @@ class Rollover:
         self.store.insert(
             "cycle_logs",
             {
-                "id": f"rollover_{report.from_date}_{datetime.now().strftime('%H%M%S')}",
+                "id": f"rollover_{report.from_date}_{datetime.now(timezone.utc).strftime('%H%M%S')}",
                 "cycle_number": 0,
                 "phase": "rollover",
                 "data": json.dumps(

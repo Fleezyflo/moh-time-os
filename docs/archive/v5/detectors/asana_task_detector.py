@@ -5,7 +5,7 @@ Detects signals from Asana task data (collected JSON).
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ..data_loader import get_data_loader
 from ..database import Database
@@ -83,7 +83,7 @@ class AsanaTaskDetector(SignalDetector):
                 },
                 occurred_at=datetime.fromisoformat(task["due"])
                 if task.get("due")
-                else datetime.now(),
+                else datetime.now(timezone.utc),
                 scope_client_id=scope.get("client_id"),
                 scope_brand_id=scope.get("brand_id"),
                 scope_project_id=scope.get("project_id"),
@@ -131,7 +131,7 @@ class AsanaTaskDetector(SignalDetector):
                     "assignee": task.get("assignee"),
                     "days_stale": days_stale,
                 },
-                occurred_at=datetime.now(),
+                occurred_at=datetime.now(timezone.utc),
                 scope_client_id=scope.get("client_id"),
                 scope_brand_id=scope.get("brand_id"),
                 scope_project_id=scope.get("project_id"),

@@ -16,7 +16,7 @@ Target: 25+ tests
 """
 
 import tempfile
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -45,7 +45,7 @@ def intelligence_layer():
 def mock_pattern_results():
     """Mock pattern detection results."""
     return {
-        "detected_at": datetime.now().isoformat(),
+        "detected_at": datetime.now(timezone.utc).isoformat(),
         "success": True,
         "total_detected": 3,
         "total_patterns": 10,
@@ -137,7 +137,7 @@ def mock_trajectory():
 def mock_intelligence_brief():
     """Mock correlation engine brief."""
     brief = MagicMock(spec=IntelligenceBrief)
-    brief.generated_at = datetime.now().isoformat()
+    brief.generated_at = datetime.now(timezone.utc).isoformat()
     brief.pattern_results = {}
     brief.signal_results = {}
     brief.compound_risks = []
@@ -268,7 +268,7 @@ def test_run_intelligence_cycle_success(intelligence_layer, mock_pattern_results
 
         with patch.object(intelligence_layer, "_get_correlation_engine") as mock_corr:
             mock_brief = MagicMock(spec=IntelligenceBrief)
-            mock_brief.generated_at = datetime.now().isoformat()
+            mock_brief.generated_at = datetime.now(timezone.utc).isoformat()
             mock_brief.pattern_results = {}
             mock_brief.signal_results = {}
             mock_brief.compound_risks = []
@@ -370,7 +370,7 @@ def test_run_intelligence_cycle_all_components_mocked(
 
         with patch.object(intelligence_layer, "_get_correlation_engine") as mock_corr:
             mock_brief = MagicMock(spec=IntelligenceBrief)
-            mock_brief.generated_at = datetime.now().isoformat()
+            mock_brief.generated_at = datetime.now(timezone.utc).isoformat()
             mock_brief.pattern_results = {}
             mock_brief.signal_results = {}
             mock_brief.compound_risks = []

@@ -9,7 +9,7 @@ Covers:
 - Conversion to dictionaries
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -74,7 +74,7 @@ class TestCycleResult:
 
     def test_create_cycle_result(self):
         """Should create a cycle result with phases."""
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         phases = [
             PhaseResult("collect", True, duration_seconds=1.0),
             PhaseResult("analyze", True, duration_seconds=2.0),
@@ -92,7 +92,7 @@ class TestCycleResult:
 
     def test_cycle_duration_calculation(self):
         """Duration property should calculate elapsed time."""
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         cycle = CycleResult(
             cycle_number=1, started_at=now, completed_at=now + timedelta(seconds=5.5)
         )
@@ -109,7 +109,10 @@ class TestCycleResult:
         ]
 
         cycle = CycleResult(
-            cycle_number=1, started_at=datetime.now(), completed_at=datetime.now(), phases=phases
+            cycle_number=1,
+            started_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(timezone.utc),
+            phases=phases,
         )
 
         failed = cycle.failed_phases
@@ -127,7 +130,10 @@ class TestCycleResult:
         ]
 
         cycle = CycleResult(
-            cycle_number=1, started_at=datetime.now(), completed_at=datetime.now(), phases=phases
+            cycle_number=1,
+            started_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(timezone.utc),
+            phases=phases,
         )
 
         succeeded = cycle.succeeded_phases
@@ -137,7 +143,7 @@ class TestCycleResult:
 
     def test_cycle_result_to_dict(self):
         """to_dict should produce valid dictionary representation."""
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         phases = [
             PhaseResult("collect", True, duration_seconds=1.0, data={"items": 10}),
             PhaseResult("analyze", False, error="timeout", duration_seconds=5.0),
@@ -164,7 +170,7 @@ class TestCycleResult:
 
     def test_cycle_result_isoformat_timestamps(self):
         """to_dict should have ISO format timestamps."""
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         cycle = CycleResult(cycle_number=1, started_at=now, completed_at=now + timedelta(seconds=1))
 
         result_dict = cycle.to_dict()
@@ -182,8 +188,8 @@ class TestCycleResult:
 
         cycle = CycleResult(
             cycle_number=1,
-            started_at=datetime.now(),
-            completed_at=datetime.now(),
+            started_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(timezone.utc),
             phases=phases,
             overall_success=True,
         )
@@ -204,8 +210,8 @@ class TestCycleResult:
 
         cycle = CycleResult(
             cycle_number=10,
-            started_at=datetime.now(),
-            completed_at=datetime.now() + timedelta(seconds=6.5),
+            started_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(timezone.utc) + timedelta(seconds=6.5),
             phases=phases,
             overall_success=False,
         )
@@ -217,7 +223,11 @@ class TestCycleResult:
 
     def test_cycle_result_with_no_phases(self):
         """Should handle cycle with no phases."""
-        cycle = CycleResult(cycle_number=1, started_at=datetime.now(), completed_at=datetime.now())
+        cycle = CycleResult(
+            cycle_number=1,
+            started_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(timezone.utc),
+        )
 
         assert len(cycle.phases) == 0
         assert len(cycle.succeeded_phases) == 0
@@ -231,7 +241,10 @@ class TestCycleResult:
         ]
 
         cycle = CycleResult(
-            cycle_number=1, started_at=datetime.now(), completed_at=datetime.now(), phases=phases
+            cycle_number=1,
+            started_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(timezone.utc),
+            phases=phases,
         )
 
         result_dict = cycle.to_dict()
@@ -258,7 +271,11 @@ class TestCycleResultIntegration:
 
     def test_building_cycle_result_incrementally(self):
         """Should be able to build cycle result incrementally."""
-        cycle = CycleResult(cycle_number=1, started_at=datetime.now(), completed_at=datetime.now())
+        cycle = CycleResult(
+            cycle_number=1,
+            started_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(timezone.utc),
+        )
 
         # Add phases one by one
         cycle.phases.append(PhaseResult("phase1", True))
@@ -273,7 +290,7 @@ class TestCycleResultIntegration:
         """Should support JSON serialization via to_dict."""
         import json
 
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         phases = [
             PhaseResult("collect", True, duration_seconds=1.5),
             PhaseResult("analyze", False, error="Error", duration_seconds=2.0),

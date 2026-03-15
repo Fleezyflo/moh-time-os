@@ -25,7 +25,13 @@ export function PostureStrip({ health, size = 'sm' }: PostureStripProps) {
     );
   }
 
-  const config = healthConfig[health] || healthConfig.fair;
+  // Do not silently fall back to 'fair' for unrecognized values -- show actual state
+  const config = healthConfig[health] || {
+    icon: '?',
+    color: 'text-[var(--grey-light)]',
+    bg: 'bg-[var(--grey)]/10',
+    text: `${health}`,
+  };
 
   return (
     <span

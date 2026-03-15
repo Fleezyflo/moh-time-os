@@ -14,7 +14,7 @@ Brief 18 (ID), Task ID-2.1
 import logging
 import math
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -113,7 +113,7 @@ class ImprovedCostCalculator:
             CostComponents with total_effort_score.
         """
         if reference_date is None:
-            reference_date = datetime.now()
+            reference_date = datetime.now(timezone.utc)
 
         task_age = self._weighted_task_age_sum(tasks, reference_date)
         diversity = self._assignee_diversity_factor(assignees)

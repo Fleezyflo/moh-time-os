@@ -10,20 +10,18 @@ Run: python3 -m lib.v4.seed_identities
 
 import json
 import logging
-import os
 import sqlite3
+
+from lib import paths
 
 from .identity_service import get_identity_service
 
 logger = logging.getLogger(__name__)
 
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "moh_time_os.db")
-
-
 def seed_identities_from_clients():
     """Create org identity profiles from clients table."""
-    conn = sqlite3.connect(DB_PATH, timeout=30)
+    conn = sqlite3.connect(str(paths.db_path()), timeout=30)
     cursor = conn.cursor()
     ident = get_identity_service()
 
@@ -77,7 +75,7 @@ def seed_identities_from_clients():
 
 def seed_identities_from_people():
     """Create person identity profiles from people table."""
-    conn = sqlite3.connect(DB_PATH, timeout=30)
+    conn = sqlite3.connect(str(paths.db_path()), timeout=30)
     cursor = conn.cursor()
     ident = get_identity_service()
 

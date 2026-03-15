@@ -13,7 +13,7 @@ import logging
 import re
 import sqlite3
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +44,7 @@ class PatternAnalyzer:
                 'stale_tasks': [{id, title, days_stale}]
             }
         """
-        cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
         # Get tasks from period
         tasks = self.store.query(
@@ -100,7 +100,7 @@ class PatternAnalyzer:
         recurring.sort(key=lambda x: x["count"], reverse=True)
 
         # Find stale tasks
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         stale = []
         for task in tasks:
             if task["status"] not in ("completed", "done", "cancelled"):
@@ -158,7 +158,7 @@ class PatternAnalyzer:
                 'pending_responses': [{id, from, subject, age_hours}]
             }
         """
-        cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
         comms = self.store.query(
             """
@@ -194,7 +194,7 @@ class PatternAnalyzer:
         ]
 
         # Pending responses
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         pending = []
         for comm in comms:
             if comm.get("requires_response") and not comm.get("processed"):
@@ -235,7 +235,7 @@ class PatternAnalyzer:
                 'total_meeting_hours': float
             }
         """
-        cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
         events = self.store.query(
             """
@@ -334,10 +334,10 @@ class PatternAnalyzer:
         self.store.insert(
             "patterns",
             {
-                "id": f"{pattern_type}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                "id": f"{pattern_type}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}",
                 "type": pattern_type,
                 "data": json.dumps(data),
-                "detected_at": datetime.now().isoformat(),
+                "detected_at": datetime.now(timezone.utc).isoformat(),
             },
         )
 

@@ -4,7 +4,7 @@ Decision Maker - Creates decisions based on insights and anomalies.
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
 from ..governance import GovernanceEngine, get_governance
@@ -205,8 +205,8 @@ class DecisionMaker:
                 "confidence": confidence,
                 "requires_approval": 1 if decision.get("requires_approval") else 0,
                 "approved": approved,
-                "approved_at": datetime.now().isoformat() if approved else None,
-                "created_at": datetime.now().isoformat(),
+                "approved_at": datetime.now(timezone.utc).isoformat() if approved else None,
+                "created_at": datetime.now(timezone.utc).isoformat(),
             },
         )
 
@@ -239,7 +239,7 @@ class DecisionMaker:
         self.store.update(
             "decisions",
             decision_id,
-            {"approved": 1, "approved_at": datetime.now().isoformat()},
+            {"approved": 1, "approved_at": datetime.now(timezone.utc).isoformat()},
         )
 
         # Create action for execution
@@ -255,7 +255,7 @@ class DecisionMaker:
         self.store.update(
             "decisions",
             decision_id,
-            {"approved": 0, "approved_at": datetime.now().isoformat()},
+            {"approved": 0, "approved_at": datetime.now(timezone.utc).isoformat()},
         )
         return True
 
@@ -292,7 +292,7 @@ class DecisionMaker:
                 "payload": json.dumps(payload),
                 "status": "approved",
                 "requires_approval": 0,
-                "approved_at": datetime.now().isoformat(),
-                "created_at": datetime.now().isoformat(),
+                "approved_at": datetime.now(timezone.utc).isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             },
         )

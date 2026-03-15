@@ -8,16 +8,13 @@ Detects commitment-related signals from communications:
 """
 
 import json
-import os
 import re
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from ..artifact_service import decrypt_blob_payload
 from .base import BaseDetector
-
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "moh_time_os.db")
 
 
 class CommitmentDetector(BaseDetector):
@@ -145,7 +142,7 @@ class CommitmentDetector(BaseDetector):
 
         try:
             # Check for commitments in recent artifacts (messages AND tasks with notes)
-            since = scope.get("since", (datetime.now() - timedelta(days=7)).isoformat())
+            since = scope.get("since", (datetime.now(timezone.utc) - timedelta(days=7)).isoformat())
 
             cursor.execute(
                 """
@@ -245,7 +242,7 @@ class CommitmentDetector(BaseDetector):
                     WHERE status = 'open' AND due_at IS NOT NULL
                 """)
 
-                today = datetime.now().date()
+                today = datetime.now(timezone.utc).date()
 
                 for row in cursor.fetchall():
                     (

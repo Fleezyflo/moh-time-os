@@ -21,7 +21,8 @@ from lib.compat import UTC
 logger = logging.getLogger(__name__)
 
 
-GRAPH_FILE = paths.data_dir() / "delegation_graph.json"
+def _graph_file():
+    return paths.data_dir() / "delegation_graph.json"
 
 
 @dataclass
@@ -96,11 +97,11 @@ class Delegatee:
 
 def load_graph() -> dict[str, Delegatee]:
     """Load delegation graph from disk."""
-    if not GRAPH_FILE.exists():
+    if not _graph_file().exists():
         return {}
 
     try:
-        data = json.loads(GRAPH_FILE.read_text())
+        data = json.loads(_graph_file().read_text())
         return {did: Delegatee.from_dict(d) for did, d in data.items()}
     except (json.JSONDecodeError, TypeError) as e:
         logger.warning("Could not load delegation graph: %s", e)
@@ -110,7 +111,7 @@ def load_graph() -> dict[str, Delegatee]:
 def save_graph(graph: dict[str, Delegatee]) -> None:
     """Save delegation graph to disk."""
     data = {did: d.to_dict() for did, d in graph.items()}
-    GRAPH_FILE.write_text(json.dumps(data, indent=2))
+    _graph_file().write_text(json.dumps(data, indent=2))
 
 
 def get_delegatee(delegatee_id: str) -> Delegatee | None:

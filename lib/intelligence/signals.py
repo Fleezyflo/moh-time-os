@@ -32,9 +32,9 @@ class SignalEvaluationError:
 
     def __post_init__(self):
         if not self.timestamp:
-            from datetime import datetime
+            from datetime import datetime, timezone
 
-            self.timestamp = datetime.now().isoformat()
+            self.timestamp = datetime.now(timezone.utc).isoformat()
 
     def to_dict(self) -> dict:
         return {
@@ -890,7 +890,7 @@ apply_thresholds()
 
 import logging  # noqa: E402 — conditional import
 import statistics  # noqa: E402 — conditional import
-from datetime import datetime, timedelta  # noqa: E402 — conditional import
+from datetime import datetime, timedelta, timezone  # noqa: E402 — conditional import
 from pathlib import Path  # noqa: E402 — conditional import
 
 logger = logging.getLogger(__name__)
@@ -1075,9 +1075,9 @@ def _evaluate_threshold(
 
             if metric == "communications_count":
                 # Need period comparison for communication
-                since_30 = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
-                since_90 = (datetime.now() - timedelta(days=90)).strftime("%Y-%m-%d")
-                until = datetime.now().strftime("%Y-%m-%d")
+                since_30 = (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d")
+                since_90 = (datetime.now(timezone.utc) - timedelta(days=90)).strftime("%Y-%m-%d")
+                until = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
                 recent = cache.get_client_metrics(entity_id, since_30, until)
                 baseline_period = cache.get_client_metrics(entity_id, since_90, since_30)
@@ -1277,7 +1277,7 @@ def _evaluate_anomaly(
 
     try:
         # Get historical values for baseline
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         (now - timedelta(days=baseline_days)).strftime("%Y-%m-%d")
         (now - timedelta(days=measurement_days)).strftime("%Y-%m-%d")
         now.strftime("%Y-%m-%d")
@@ -1493,7 +1493,7 @@ def evaluate_signal(
         "evidence": evidence,
         "evidence_text": _format_evidence(signal_def, evidence),
         "implied_action": signal_def.implied_action,
-        "detected_at": datetime.now().isoformat(),
+        "detected_at": datetime.now(timezone.utc).isoformat(),
     }
 
     _evaluated[cache_key] = result
@@ -1735,7 +1735,7 @@ def detect_all_signals(
     errors = error_collector.get_all()
 
     return {
-        "detected_at": datetime.now().isoformat(),
+        "detected_at": datetime.now(timezone.utc).isoformat(),
         "success": len(errors) == 0,
         "total_signals": len(all_detected),
         "evaluation_errors": len(errors),
@@ -1783,7 +1783,7 @@ def _check_escalation(signal_record: dict, signal_def: SignalDefinition) -> str 
 
     try:
         first_dt = datetime.fromisoformat(first_detected)
-        days_active = (datetime.now() - first_dt).days
+        days_active = (datetime.now(timezone.utc) - first_dt).days
     except (ValueError, TypeError):
         return None
 
@@ -1823,7 +1823,7 @@ def update_signal_state(detected_signals: list[dict], db_path: Path | None = Non
     db = _get_db_path(db_path)
     conn = sqlite3.connect(db)
     conn.row_factory = sqlite3.Row
-    now = datetime.now().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     result = {
         "new_signals": [],
@@ -1940,7 +1940,7 @@ def update_signal_state(detected_signals: list[dict], db_path: Path | None = Non
                 last_eval = record["last_evaluated_at"]
                 try:
                     last_dt = datetime.fromisoformat(last_eval)
-                    hours_since = (datetime.now() - last_dt).total_seconds() / 3600
+                    hours_since = (datetime.now(timezone.utc) - last_dt).total_seconds() / 3600
                 except (ValueError, TypeError):
                     hours_since = 0
 
@@ -1958,7 +1958,8 @@ def update_signal_state(detected_signals: list[dict], db_path: Path | None = Non
                             "entity_type": record["entity_type"],
                             "entity_id": record["entity_id"],
                             "was_active_for_days": (
-                                datetime.now() - datetime.fromisoformat(record["first_detected_at"])
+                                datetime.now(timezone.utc)
+                                - datetime.fromisoformat(record["first_detected_at"])
                             ).days,
                         }
                     )
@@ -2046,7 +2047,7 @@ def acknowledge_signal(signal_state_id: int, db_path: Path | None = None) -> boo
     """
     db = _get_db_path(db_path)
     conn = sqlite3.connect(db)
-    now = datetime.now().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     try:
         cursor = conn.execute(
@@ -2072,7 +2073,7 @@ def get_signal_summary(db_path: Path | None = None) -> dict:
     conn.row_factory = sqlite3.Row
 
     # Time windows
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     last_24h = (now - timedelta(hours=24)).isoformat()
     last_7d = (now - timedelta(days=7)).isoformat()
 

@@ -7,17 +7,23 @@ import json
 import logging
 import os
 import socket
-from datetime import datetime, timedelta
-from pathlib import Path
+from datetime import datetime, timedelta, timezone
 from typing import Any
+
+from lib.credential_paths import google_sa_file
 
 from .base import BaseCollector
 from .resilience import COLLECTOR_ERRORS
 
 logger = logging.getLogger(__name__)
 
+
+def _sa_file():
+    """Resolve SA file at call time to respect env overrides."""
+    return google_sa_file()
+
+
 # Service account configuration
-SA_FILE = Path.home() / "Library/Application Support/gogcli/sa-bW9saGFtQGhybW55LmNv.json"
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 DEFAULT_USER = os.environ.get("MOH_ADMIN_EMAIL", "molham@hrmny.co")
 
@@ -51,7 +57,7 @@ class DriveCollector(BaseCollector):
             from googleapiclient.discovery import build
 
             creds = service_account.Credentials.from_service_account_file(
-                str(SA_FILE), scopes=SCOPES
+                str(_sa_file()), scopes=SCOPES
             )
             creds = creds.with_subject(user)
             self._service = build("drive", "v3", credentials=creds)
@@ -69,7 +75,7 @@ class DriveCollector(BaseCollector):
             days = self.config.get("lookback_days", 60)
             max_results = self.config.get("max_results", 300)
 
-            threshold = (datetime.utcnow() - timedelta(days=days)).isoformat() + "Z"
+            threshold = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat() + "Z"
 
             # Recent files
             recent_result = (
@@ -112,11 +118,11 @@ class DriveCollector(BaseCollector):
 
         except COLLECTOR_ERRORS as e:
             self.logger.error(f"Drive collection failed: {e}")
-            return {"files": []}
+            raise  # Propagate to sync() — never return empty data as success
 
     def transform(self, raw_data: dict) -> list[dict]:
         """Transform Drive files to canonical format."""
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         transformed = []
 
         for f in raw_data.get("files", []):

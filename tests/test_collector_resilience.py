@@ -424,7 +424,7 @@ class TestBaseCollectorResilience:
         assert collector.circuit_breaker.state == CircuitBreakerState.CLOSED
 
     def test_sync_with_partial_failure_stores_successful_items(self, mock_store):
-        """Sync should store successful items even if transform fails."""
+        """Sync should store empty list when transform fails (partial result)."""
         collector = MockCollector({}, mock_store)
 
         # Collect succeeds
@@ -436,8 +436,9 @@ class TestBaseCollectorResilience:
 
         result = collector.sync()
 
-        # Sync should still complete (partial success)
-        assert result["success"] is True
+        # Transform failure → PARTIAL status, success=False
+        assert result["status"] == "partial"
+        assert result["success"] is False
         assert collector.metrics["partial_failures"] == 1
         # Should attempt to store empty list
         mock_store.insert_many.assert_called()

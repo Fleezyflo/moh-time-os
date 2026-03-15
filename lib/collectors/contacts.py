@@ -7,17 +7,23 @@ import json
 import logging
 import os
 import socket
-from datetime import datetime
-from pathlib import Path
+from datetime import datetime, timezone
 from typing import Any
+
+from lib.credential_paths import google_sa_file
 
 from .base import BaseCollector
 from .resilience import COLLECTOR_ERRORS
 
 logger = logging.getLogger(__name__)
 
+
+def _sa_file():
+    """Resolve SA file at call time to respect env overrides."""
+    return google_sa_file()
+
+
 # Service account configuration
-SA_FILE = Path.home() / "Library/Application Support/gogcli/sa-bW9saGFtQGhybW55LmNv.json"
 SCOPES = [
     "https://www.googleapis.com/auth/contacts.readonly",
     "https://www.googleapis.com/auth/directory.readonly",
@@ -54,7 +60,7 @@ class ContactsCollector(BaseCollector):
             from googleapiclient.discovery import build
 
             creds = service_account.Credentials.from_service_account_file(
-                str(SA_FILE), scopes=SCOPES
+                str(_sa_file()), scopes=SCOPES
             )
             creds = creds.with_subject(user)
             self._service = build("people", "v1", credentials=creds)
@@ -112,7 +118,7 @@ class ContactsCollector(BaseCollector):
 
         except COLLECTOR_ERRORS as e:
             self.logger.error(f"Contacts collection failed: {e}")
-            return {"contacts": [], "directory": []}
+            raise  # Propagate to sync() — never return empty data as success
 
     def _extract_person(self, person: dict) -> dict:
         """Extract relevant info from a person resource."""
@@ -135,7 +141,7 @@ class ContactsCollector(BaseCollector):
 
     def transform(self, raw_data: dict) -> list[dict]:
         """Transform contacts to canonical format, deduplicated by email."""
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         seen_emails: set[str] = set()
         transformed = []
 

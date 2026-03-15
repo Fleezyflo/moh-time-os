@@ -23,9 +23,18 @@ from lib.compat import UTC
 
 logger = logging.getLogger(__name__)
 
-CONFIG_DIR = paths.data_dir()
-CONFIG_FILE = CONFIG_DIR / "config.json"
-CONFIG_HISTORY_FILE = CONFIG_DIR / "config_history.json"
+
+def _config_dir():
+    """Resolve config directory at call time to respect env overrides."""
+    return paths.data_dir()
+
+
+def _config_file():
+    return _config_dir() / "config.json"
+
+
+def _config_history_file():
+    return _config_dir() / "config_history.json"
 
 
 def _default_config() -> dict:
@@ -347,9 +356,9 @@ def _default_config() -> dict:
 
 def load_config() -> dict:
     """Load configuration from disk."""
-    if CONFIG_FILE.exists():
+    if _config_file().exists():
         try:
-            return json.loads(CONFIG_FILE.read_text())
+            return json.loads(_config_file().read_text())
         except json.JSONDecodeError:
             return _default_config()
 
@@ -366,7 +375,7 @@ def save_config(config: dict, reason: str = None) -> None:
     # Log change
     _log_config_change(config, reason)
 
-    CONFIG_FILE.write_text(json.dumps(config, indent=2))
+    _config_file().write_text(json.dumps(config, indent=2))
 
 
 def get(path: str, default: Any = None) -> Any:
@@ -429,9 +438,9 @@ def get_sensitivity_signals(category: str) -> dict:
 def _log_config_change(config: dict, reason: str = None) -> None:
     """Log config changes for audit."""
     history = []
-    if CONFIG_HISTORY_FILE.exists():
+    if _config_history_file().exists():
         try:
-            history = json.loads(CONFIG_HISTORY_FILE.read_text())
+            history = json.loads(_config_history_file().read_text())
         except (json.JSONDecodeError, OSError) as e:
             logger.warning(f"Could not load config history: {e}")
             history = []
@@ -447,7 +456,7 @@ def _log_config_change(config: dict, reason: str = None) -> None:
     # Keep last 500 entries
     history = history[-500:]
 
-    CONFIG_HISTORY_FILE.write_text(json.dumps(history, indent=2))
+    _config_history_file().write_text(json.dumps(history, indent=2))
 
 
 def validate_config(config: dict) -> tuple[bool, list[str]]:

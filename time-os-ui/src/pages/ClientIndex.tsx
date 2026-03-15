@@ -7,8 +7,7 @@ import type { ClientCard, ClientIndexResponse, Tier, ClientStatus } from '../typ
 import { PageLayout } from '../components/layout/PageLayout';
 import { SummaryGrid } from '../components/layout/SummaryGrid';
 import { MetricCard } from '../components/layout/MetricCard';
-
-const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v2';
+import { fetchClientIndex } from '../lib/api';
 
 // Tier badge colors
 const TIER_COLORS: Record<Tier, string> = {
@@ -62,26 +61,22 @@ export function ClientIndex() {
   const [hasOverdueFilter, setHasOverdueFilter] = useState(false);
 
   useEffect(() => {
-    async function fetchClients() {
+    async function loadClients() {
       setLoading(true);
       try {
-        const params = new URLSearchParams();
-        if (tierFilter !== 'all') params.set('tier', tierFilter);
-        if (hasIssuesFilter) params.set('has_issues', 'true');
-        if (hasOverdueFilter) params.set('has_overdue_ar', 'true');
-
-        const url = `${API_BASE}/clients${params.toString() ? '?' + params.toString() : ''}`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error('Failed to fetch clients');
-        const json = await res.json();
-        setData(json);
+        const json = await fetchClientIndex({
+          tier: tierFilter !== 'all' ? tierFilter : undefined,
+          has_issues: hasIssuesFilter || undefined,
+          has_overdue_ar: hasOverdueFilter || undefined,
+        });
+        setData(json as ClientIndexResponse);
       } catch (e) {
         setError(e instanceof Error ? e.message : 'Unknown error');
       } finally {
         setLoading(false);
       }
     }
-    fetchClients();
+    loadClients();
   }, [tierFilter, hasIssuesFilter, hasOverdueFilter]);
 
   const toggleSection = (section: string) => {
@@ -258,8 +253,9 @@ function ClientCardComponent({ client, status }: ClientCardProps) {
 
 // Active Client Card — Spec §2.2
 function ActiveClientCard({ client }: { client: ClientCard }) {
-  const healthScore = client.health_score ?? 0;
-  const healthPct = Math.min(100, Math.max(0, healthScore));
+  const healthScore = client.health_score;
+  const hasScore = healthScore != null;
+  const healthPct = hasScore ? Math.min(100, Math.max(0, healthScore)) : 0;
 
   return (
     <Link
@@ -279,16 +275,26 @@ function ActiveClientCard({ client }: { client: ClientCard }) {
       <div className="mb-3">
         <div className="flex items-center justify-between text-sm mb-1">
           <span className="text-[var(--grey-light)]">Health</span>
-          <span className={`font-medium ${getHealthColor(healthScore)}`}>
-            {healthScore} <span className="text-[var(--grey)]">(provisional)</span>
-          </span>
+          {hasScore ? (
+            <span className={`font-medium ${getHealthColor(healthScore)}`}>
+              {healthScore} <span className="text-[var(--grey)]">(provisional)</span>
+            </span>
+          ) : (
+            <span className="font-medium text-[var(--grey)]">
+              — <span className="text-xs">(not computed)</span>
+            </span>
+          )}
         </div>
-        <div className="h-2 bg-[var(--grey)] rounded-full overflow-hidden">
-          <div
-            className={`h-full ${getHealthBg(healthScore)}`}
-            style={{ width: `${healthPct}%` }}
-          />
-        </div>
+        {hasScore ? (
+          <div className="h-2 bg-[var(--grey)] rounded-full overflow-hidden">
+            <div
+              className={`h-full ${getHealthBg(healthScore)}`}
+              style={{ width: `${healthPct}%` }}
+            />
+          </div>
+        ) : (
+          <div className="h-2 bg-[var(--grey)] rounded-full overflow-hidden" />
+        )}
       </div>
 
       {/* Row 3-4: Issued / Paid */}

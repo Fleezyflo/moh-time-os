@@ -35,6 +35,7 @@ export default function ProjectIntel() {
   const {
     data: signals,
     loading: signalsLoading,
+    error: signalsError,
     refetch: refetchSignals,
   } = useActiveSignals('project', id);
 
@@ -49,10 +50,10 @@ export default function ProjectIntel() {
   }
 
   const combinedData: ProjectFullData | null = project
-    ? { ...project, signals: signals || [] }
+    ? { ...project, signals: signals ?? undefined }
     : null;
   const loading = projectLoading || signalsLoading;
-  const error = projectError;
+  const error = projectError || signalsError;
   const refetch = () => {
     refetchProject();
     refetchSignals();
@@ -82,8 +83,8 @@ export default function ProjectIntel() {
  */
 function mapProjectToHeader(data: ProjectFullData) {
   const healthScore = data.health_score;
-  const completionRate = data.completion_rate_pct || 0;
-  const overdueTasks = data.overdue_tasks || 0;
+  const completionRate = data.completion_rate_pct;
+  const overdueTasks = data.overdue_tasks;
 
   const primarySignal =
     data.signals && data.signals.length > 0
@@ -91,7 +92,7 @@ function mapProjectToHeader(data: ProjectFullData) {
           severity: data.signals[0].severity as 'critical' | 'warning' | 'watch',
           headline: data.signals[0].name || data.signals[0].evidence || 'Active signal detected',
         }
-      : overdueTasks > 0
+      : overdueTasks != null && overdueTasks > 0
         ? {
             severity: 'warning' as const,
             headline: `${overdueTasks} overdue task${overdueTasks > 1 ? 's' : ''}`,
@@ -105,10 +106,10 @@ function mapProjectToHeader(data: ProjectFullData) {
     primarySignal,
     quickStats: {
       Health: healthScore != null ? `${Math.round(healthScore)}` : '—',
-      Tasks: data.total_tasks ?? '—',
-      Complete: `${Math.round(completionRate)}%`,
-      Overdue: overdueTasks,
-      Team: data.assigned_people ?? '—',
+      Tasks: data.total_tasks != null ? data.total_tasks : '—',
+      Complete: completionRate != null ? `${Math.round(completionRate)}%` : '—',
+      Overdue: overdueTasks != null ? overdueTasks : '—',
+      Team: data.assigned_people != null ? data.assigned_people : '—',
     },
     trend: null,
   };

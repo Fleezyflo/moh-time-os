@@ -10,7 +10,7 @@ Per spec §10, snapshot structure: meta, tiles, portfolio, moves, right_column, 
 import logging
 import sqlite3
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -18,8 +18,6 @@ from lib import paths
 from lib.compat import StrEnum
 
 logger = logging.getLogger(__name__)
-
-DB_PATH = paths.db_path()
 
 
 # ==============================================================================
@@ -217,14 +215,14 @@ class Client360Page10Engine:
 
     def __init__(
         self,
-        db_path: Path = DB_PATH,
+        db_path: Path = None,
         mode: Mode = Mode.OPS_HEAD,
         horizon: Horizon = Horizon.TODAY,
     ):
-        self.db_path = db_path
+        self.db_path = db_path or str(paths.db_path())
         self.mode = mode
         self.horizon = horizon
-        self.now = datetime.now()
+        self.now = datetime.now(timezone.utc)
         self.today = date.today()
 
         # Trust state (set externally or computed)
@@ -1846,7 +1844,7 @@ class Client360Page10Engine:
             if p.get("next_due"):
                 try:
                     due_dt = datetime.fromisoformat(p["next_due"])
-                    time_to_slip = (due_dt - datetime.now()).total_seconds() / 3600
+                    time_to_slip = (due_dt - datetime.now(timezone.utc)).total_seconds() / 3600
                 except (ValueError, TypeError) as e:
                     logger.debug(f"Could not parse next_due for slip calc: {e}")
 

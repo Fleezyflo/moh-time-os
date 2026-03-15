@@ -24,8 +24,6 @@ try:
 except ImportError:
     HAS_ANTHROPIC = False
 
-DB_PATH = paths.db_path()
-
 EXTRACTION_PROMPT = """Extract any promises or commitments from this email/message.
 
 For each commitment found, identify:
@@ -52,7 +50,7 @@ JSON output (array only, no explanation):"""
 
 
 def get_conn():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(str(paths.db_path()))
     conn.row_factory = sqlite3.Row
     return conn
 

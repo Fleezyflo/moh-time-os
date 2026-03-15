@@ -21,7 +21,7 @@ import logging
 import sqlite3
 import time
 from dataclasses import asdict, dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from lib import paths
@@ -867,7 +867,7 @@ class AutoResolutionEngine:
                 )
             """)
 
-            escalation_id = f"esc_{item_id}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+            escalation_id = f"esc_{item_id}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
             conn.execute(
                 """INSERT INTO resolution_escalations
                    (id, item_id, issue_type, reason, entity_type, entity_id, escalated_at)
@@ -879,7 +879,7 @@ class AutoResolutionEngine:
                     reason,
                     item.get("entity_type", ""),
                     item.get("entity_id", ""),
-                    datetime.now().isoformat(),
+                    datetime.now(timezone.utc).isoformat(),
                 ),
             )
 
@@ -888,7 +888,7 @@ class AutoResolutionEngine:
                 """UPDATE resolution_queue
                    SET status = 'escalated', updated_at = ?
                    WHERE id = ?""",
-                (datetime.now().isoformat(), item_id),
+                (datetime.now(timezone.utc).isoformat(), item_id),
             )
 
             conn.commit()

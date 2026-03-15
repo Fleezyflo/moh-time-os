@@ -9,14 +9,14 @@ import logging
 import re
 import sqlite3
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
+
+from lib import paths
 
 logger = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).parent.parent
-DATA_DIR = REPO_ROOT / "data"
-DB_PATH = DATA_DIR / "moh_time_os.db"
 
 # Code directories to search
 CODE_DIRS = ["lib", "api", "engine"]
@@ -39,7 +39,7 @@ CORE_ENTITIES = [
 
 def load_baseline() -> dict:
     """Load the most recent baseline snapshot."""
-    snapshots = list(DATA_DIR.glob("baseline_snapshot_*.json"))
+    snapshots = list(paths.data_dir().glob("baseline_snapshot_*.json"))
     if not snapshots:
         raise FileNotFoundError("No baseline snapshot found")
 
@@ -177,7 +177,7 @@ def classify_tables(tables: list, py_content_index: dict) -> dict:
             version_groups[base_name].append((name, version, row_count))
 
         if obj_type == "view":
-            selects_from = get_view_definition(DB_PATH, name)
+            selects_from = get_view_definition(paths.db_path(), name)
             classifications["VIEW"].append({**table, "selects_from": selects_from})
             continue
 
@@ -246,7 +246,7 @@ def generate_report(
     total_views: int,
 ) -> str:
     """Generate markdown report."""
-    date_str = datetime.now().strftime("%Y-%m-%d")
+    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     # Calculate totals
     active_rows = sum(t.get("row_count", 0) for t in classifications["ACTIVE"])
@@ -430,8 +430,8 @@ def main():
     report = generate_report(classifications, version_groups, entity_map, total_tables, total_views)
 
     # Save
-    date_str = datetime.now().strftime("%Y%m%d")
-    output_file = DATA_DIR / f"schema_audit_{date_str}.md"
+    date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
+    output_file = paths.data_dir() / f"schema_audit_{date_str}.md"
     output_file.write_text(report)
 
     print(f"\n✓ Report saved to: {output_file}")

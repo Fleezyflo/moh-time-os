@@ -5,7 +5,7 @@ Detects signals from Xero AR data (collected JSON).
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ..data_loader import get_data_loader
 from ..database import Database
@@ -99,7 +99,7 @@ class XeroFinancialDetector(SignalDetector):
                 },
                 occurred_at=datetime.fromisoformat(inv["due_date"])
                 if inv.get("due_date")
-                else datetime.now(),
+                else datetime.now(timezone.utc),
                 scope_client_id=scope.get("client_id"),
                 detection_confidence=1.0,
                 attribution_confidence=0.9 if scope.get("client_id") else 0.5,

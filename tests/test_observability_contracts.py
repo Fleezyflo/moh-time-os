@@ -12,7 +12,7 @@ Run with: pytest tests/test_observability_contracts.py -v
 """
 
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class TestRequestIdInfrastructure:
@@ -130,7 +130,7 @@ class TestLogSchema:
         from lib.observability.log_schema import LogEntry, LogLevel
 
         entry = LogEntry(
-            timestamp=datetime.now(),
+            timestamp=datetime.now(timezone.utc),
             level=LogLevel.INFO,
             message="Test message",
             logger="test_logger",
@@ -146,7 +146,7 @@ class TestLogSchema:
         from lib.observability.log_schema import LogEntry, LogLevel
 
         entry = LogEntry(
-            timestamp=datetime.now(),
+            timestamp=datetime.now(timezone.utc),
             level=LogLevel.INFO,
             message="Test message",
             logger="test_logger",
@@ -162,7 +162,7 @@ class TestLogSchema:
         from lib.observability.log_schema import LogEntry, LogLevel
 
         entry = LogEntry(
-            timestamp=datetime.now(),
+            timestamp=datetime.now(timezone.utc),
             level=LogLevel.ERROR,
             message="Error occurred",
             logger="api.endpoint",

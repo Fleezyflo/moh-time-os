@@ -11,7 +11,7 @@ Enforces invariants:
 import logging
 import uuid
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from lib.state_store import get_store
 
@@ -166,7 +166,7 @@ class BlockManager:
             return False, f"Lane mismatch: task is {task_lane}, block is {block.lane}"
 
         # All checks passed - assign
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
 
         self.store.query(
             "UPDATE time_blocks SET task_id = ?, updated_at = ? WHERE id = ?",
@@ -187,7 +187,7 @@ class BlockManager:
         if not block_id:
             return False, "Task not scheduled"
 
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
 
         # Clear block
         self.store.query(
@@ -243,7 +243,7 @@ class BlockManager:
                 return None, f"Outside work hours ({self.WORK_START}-{self.WORK_END})"
 
         # Create block
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         block_id = f"block_{uuid.uuid4().hex[:12]}"
 
         self.store.insert(

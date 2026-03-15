@@ -75,7 +75,7 @@ class TeamCalendarIntelligence:
         Get calendar events for a specific user.
         Uses domain-wide delegation (superadmin).
         """
-        now = datetime.utcnow()
+        now = datetime.now()
         end = now + timedelta(days=days_ahead)
 
         # Impersonate user via domain-wide delegation
@@ -431,7 +431,7 @@ class GoogleWorkspaceCollector:
                 calendar_service = build('calendar', 'v3', credentials=user_creds)
 
                 # Fetch events
-                now = datetime.utcnow()
+                now = datetime.now()
                 events = calendar_service.events().list(
                     calendarId='primary',
                     timeMin=now.isoformat() + 'Z',

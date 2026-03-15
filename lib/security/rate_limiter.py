@@ -13,7 +13,7 @@ import logging
 import threading
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -72,13 +72,13 @@ class RateLimiter:
         Args:
             key: Identifier (IP address, API key, user ID, etc.)
             role: User role for determining limit tier
-            current_time: Current time (defaults to datetime.utcnow())
+            current_time: Current time (defaults to datetime.now(timezone.utc))
 
         Returns:
             RateLimitResult with allowed status, remaining requests, and reset time
         """
         if current_time is None:
-            current_time = datetime.utcnow()
+            current_time = datetime.now(timezone.utc)
 
         # Get limit for role, fallback to authenticated tier if role not found
         if role in self.rate_limits:
@@ -137,10 +137,10 @@ class RateLimiter:
         Clean up all expired entries across all keys.
 
         Args:
-            current_time: Current time (defaults to datetime.utcnow())
+            current_time: Current time (defaults to datetime.now(timezone.utc))
         """
         if current_time is None:
-            current_time = datetime.utcnow()
+            current_time = datetime.now(timezone.utc)
 
         cutoff_time = current_time - timedelta(seconds=WINDOW_DURATION)
 
@@ -161,13 +161,13 @@ class RateLimiter:
 
         Args:
             key: Identifier to check
-            current_time: Current time (defaults to datetime.utcnow())
+            current_time: Current time (defaults to datetime.now(timezone.utc))
 
         Returns:
             Dict with request_count and timestamps
         """
         if current_time is None:
-            current_time = datetime.utcnow()
+            current_time = datetime.now(timezone.utc)
 
         cutoff_time = current_time - timedelta(seconds=WINDOW_DURATION)
 

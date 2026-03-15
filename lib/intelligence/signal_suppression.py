@@ -16,7 +16,7 @@ import logging
 import sqlite3
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -89,7 +89,7 @@ class SignalSuppression:
         """Check if a signal is currently suppressed."""
         conn = sqlite3.connect(str(self.db_path))
         try:
-            now = datetime.now().isoformat()
+            now = datetime.now(timezone.utc).isoformat()
             row = conn.execute(
                 """
                 SELECT COUNT(*) as cnt
@@ -139,7 +139,7 @@ class SignalSuppression:
             else:
                 suppress_days = DEFAULT_SUPPRESS_DAYS
 
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             expires = now + timedelta(days=suppress_days)
 
             # Deactivate any existing suppression for this signal
@@ -219,7 +219,7 @@ class SignalSuppression:
                     signal_key,
                     entity_type,
                     entity_id,
-                    datetime.now().isoformat(),
+                    datetime.now(timezone.utc).isoformat(),
                 ),
             )
             conn.commit()
@@ -276,7 +276,7 @@ class SignalSuppression:
         """Deactivate expired suppressions. Returns count expired."""
         conn = sqlite3.connect(str(self.db_path))
         try:
-            now = datetime.now().isoformat()
+            now = datetime.now(timezone.utc).isoformat()
             cursor = conn.execute(
                 """
                 UPDATE signal_suppressions
@@ -299,7 +299,7 @@ class SignalSuppression:
         conn = sqlite3.connect(str(self.db_path))
         conn.row_factory = sqlite3.Row
         try:
-            now = datetime.now().isoformat()
+            now = datetime.now(timezone.utc).isoformat()
             if entity_type and entity_id:
                 rows = conn.execute(
                     """
@@ -329,7 +329,7 @@ class SignalSuppression:
         conn = sqlite3.connect(str(self.db_path))
         conn.row_factory = sqlite3.Row
         try:
-            now = datetime.now().isoformat()
+            now = datetime.now(timezone.utc).isoformat()
 
             active = conn.execute(
                 "SELECT COUNT(*) as cnt FROM signal_suppressions WHERE is_active = 1 AND expires_at > ?",

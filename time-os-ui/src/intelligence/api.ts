@@ -16,6 +16,7 @@ export interface ApiResponse<T> {
   computed_at: string;
   params?: Record<string, unknown>;
   error?: string;
+  error_code?: string;
 }
 
 export interface SignalSummary {
@@ -273,9 +274,33 @@ export interface TrajectoryData {
 async function fetchJson<T>(url: string): Promise<ApiResponse<T>> {
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error(`API error: ${response.status} ${response.statusText}`);
+    // Try to extract structured error from response body
+    let errorMessage = `API error: ${response.status} ${response.statusText}`;
+    let errorCode: string | undefined;
+    try {
+      const body = await response.json();
+      if (body.error) errorMessage = body.error;
+      if (body.error_code) errorCode = body.error_code;
+    } catch {
+      // Body not JSON
+    }
+    const err = new Error(errorMessage);
+    (err as Error & { errorCode?: string }).errorCode = errorCode;
+    throw err;
   }
-  return response.json();
+  const json: ApiResponse<T> = await response.json();
+  // Validate the response has the expected envelope structure
+  if (json.status === 'error') {
+    const err = new Error(json.error || 'Unknown intelligence API error');
+    (err as Error & { errorCode?: string }).errorCode = json.error_code;
+    throw err;
+  }
+  if (json.data === undefined || json.data === null) {
+    const err = new Error('API returned success but data is null');
+    (err as Error & { errorCode?: string }).errorCode = 'NULL_DATA';
+    throw err;
+  }
+  return json;
 }
 
 // Primary Endpoints

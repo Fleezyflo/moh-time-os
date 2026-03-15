@@ -13,9 +13,6 @@ from lib import paths
 
 logger = logging.getLogger(__name__)
 
-
-DB_PATH = paths.db_path()
-
 # Lane assignment rules (evaluated in order - first match wins)
 LANE_RULES = [
     # ===== MUSIC & PERSONAL (non-working hours) =====
@@ -119,7 +116,7 @@ LANE_RULES = [
 
 
 def get_conn():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(str(paths.db_path()))
     conn.row_factory = sqlite3.Row
     return conn
 

@@ -10,7 +10,7 @@ cannot contaminate each other.
 
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 
@@ -118,7 +118,7 @@ def setup_notifications(store):
     store.query("DELETE FROM notifications")
 
     # Add test notifications with unique IDs
-    now = datetime.now().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     id1 = str(uuid.uuid4())
     id2 = str(uuid.uuid4())
     id3 = str(uuid.uuid4())
@@ -221,7 +221,7 @@ class TestDigestEngine:
             user_id="user1",
             bucket="daily",
             digest=digest,
-            sent_time=datetime.now().isoformat(),
+            sent_time=datetime.now(timezone.utc).isoformat(),
         )
         assert success
 
@@ -325,7 +325,9 @@ class TestDigestIntegration:
         assert html
 
         # Record delivery
-        digest_engine.record_digest_sent("user1", "daily", digest, datetime.now().isoformat())
+        digest_engine.record_digest_sent(
+            "user1", "daily", digest, datetime.now(timezone.utc).isoformat()
+        )
 
         # Verify history recorded
         history = store.query("SELECT * FROM digest_history WHERE user_id = 'user1'")

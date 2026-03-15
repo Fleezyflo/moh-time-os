@@ -12,6 +12,7 @@ import json
 import logging
 import random
 import sqlite3
+import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -84,6 +85,8 @@ class CircuitBreaker:
     """
     Circuit breaker to prevent cascading failures.
 
+    Thread-safe: all state mutations are protected by a lock.
+
     States:
     - CLOSED: Normal operation, all calls allowed
     - OPEN: Failing, calls rejected immediately
@@ -98,6 +101,7 @@ class CircuitBreaker:
             failure_threshold: Number of consecutive failures before opening
             cooldown_seconds: Seconds to wait before attempting recovery
         """
+        self._lock = threading.Lock()
         self.failure_threshold = failure_threshold
         self.cooldown_seconds = cooldown_seconds
         self.failure_count = 0
@@ -111,36 +115,42 @@ class CircuitBreaker:
         Returns:
             True if call should be attempted, False if circuit is open
         """
-        if self.state == CircuitBreakerState.CLOSED:
+        with self._lock:
+            if self.state == CircuitBreakerState.CLOSED:
+                return True
+
+            if self.state == CircuitBreakerState.OPEN:
+                # Check if cooldown expired
+                if self.last_failure_time is not None:
+                    elapsed = time.time() - self.last_failure_time
+                    if elapsed >= self.cooldown_seconds:
+                        self.state = CircuitBreakerState.HALF_OPEN
+                        return True
+                return False
+
+            # HALF_OPEN - allow one attempt
             return True
-
-        if self.state == CircuitBreakerState.OPEN:
-            # Check if cooldown expired
-            if self.last_failure_time is not None:
-                elapsed = time.time() - self.last_failure_time
-                if elapsed >= self.cooldown_seconds:
-                    self.state = CircuitBreakerState.HALF_OPEN
-                    return True
-            return False
-
-        # HALF_OPEN - allow one attempt
-        return True
 
     def record_success(self):
         """Record a successful call - reset to CLOSED."""
-        self.failure_count = 0
-        self.state = CircuitBreakerState.CLOSED
+        with self._lock:
+            self.failure_count = 0
+            self.state = CircuitBreakerState.CLOSED
 
     def record_failure(self):
         """Record a failed call - move toward OPEN."""
-        self.failure_count += 1
-        self.last_failure_time = time.time()
-        if self.failure_count >= self.failure_threshold:
-            self.state = CircuitBreakerState.OPEN
+        with self._lock:
+            self.failure_count += 1
+            self.last_failure_time = time.time()
+            if self.failure_count >= self.failure_threshold:
+                self.state = CircuitBreakerState.OPEN
 
 
 class RateLimiter:
-    """Token bucket rate limiter for per-collector rate limiting."""
+    """Token bucket rate limiter for per-collector rate limiting.
+
+    Thread-safe: all state mutations are protected by a lock.
+    """
 
     def __init__(self, requests_per_minute: int = 60):
         """
@@ -149,6 +159,7 @@ class RateLimiter:
         Args:
             requests_per_minute: Maximum requests allowed per minute
         """
+        self._lock = threading.Lock()
         self.requests_per_minute = requests_per_minute
         self.tokens = float(requests_per_minute)
         self.last_update = time.time()
@@ -163,19 +174,20 @@ class RateLimiter:
         Returns:
             True if request allowed, False if rate limit exceeded
         """
-        now = time.time()
-        elapsed = now - self.last_update
-        self.last_update = now
+        with self._lock:
+            now = time.time()
+            elapsed = now - self.last_update
+            self.last_update = now
 
-        # Refill tokens based on elapsed time
-        refill_rate = self.requests_per_minute / 60.0  # tokens per second
-        self.tokens = min(self.max_tokens, self.tokens + elapsed * refill_rate)
+            # Refill tokens based on elapsed time
+            refill_rate = self.requests_per_minute / 60.0  # tokens per second
+            self.tokens = min(self.max_tokens, self.tokens + elapsed * refill_rate)
 
-        if self.tokens >= 1.0:
-            self.tokens -= 1.0
-            return True
+            if self.tokens >= 1.0:
+                self.tokens -= 1.0
+                return True
 
-        return False
+            return False
 
     def get_wait_time(self) -> float:
         """
@@ -184,12 +196,13 @@ class RateLimiter:
         Returns:
             Seconds to wait (0 if tokens available)
         """
-        if self.tokens >= 1.0:
-            return 0.0
+        with self._lock:
+            if self.tokens >= 1.0:
+                return 0.0
 
-        # tokens needed to reach 1.0, at refill_rate tokens/second
-        refill_rate = self.requests_per_minute / 60.0
-        return (1.0 - self.tokens) / refill_rate
+            # tokens needed to reach 1.0, at refill_rate tokens/second
+            refill_rate = self.requests_per_minute / 60.0
+            return (1.0 - self.tokens) / refill_rate
 
 
 def retry_with_backoff(

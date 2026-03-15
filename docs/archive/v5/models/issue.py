@@ -5,7 +5,7 @@ Issue model with balance tracking and lifecycle.
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from lib.compat import StrEnum
 from typing import Any
 
@@ -357,7 +357,7 @@ class Issue(BaseModel):
         self.resolved_at = now_iso()
 
         # Set monitoring period (90 days)
-        monitoring_end = datetime.now() + timedelta(days=90)
+        monitoring_end = datetime.now(timezone.utc) + timedelta(days=90)
         self.monitoring_until = monitoring_end.isoformat()
 
         # Move to monitoring state
@@ -432,7 +432,7 @@ class Issue(BaseModel):
             return False
         try:
             until = datetime.fromisoformat(self.monitoring_until)
-            return datetime.now() > until
+            return datetime.now(timezone.utc) > until
         except (ValueError, TypeError):
             return False
 

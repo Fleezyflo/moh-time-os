@@ -4,7 +4,7 @@ Tests for DataFreshnessTracker — freshness scoring and stale detection.
 Brief 27 (DQ), Task DQ-1.1
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -83,7 +83,7 @@ class TestEntityFreshness:
 
     def test_stale_source_detected(self, tracker):
         # Record old collection
-        old_time = datetime.now() - timedelta(hours=200)
+        old_time = datetime.now(timezone.utc) - timedelta(hours=200)
         tracker.record_collection("client", "c1", "harvest", collected_at=old_time)
         tracker.record_collection("client", "c1", "email")  # fresh
 
@@ -108,14 +108,14 @@ class TestStaleSources:
         assert len(stale) == 0
 
     def test_finds_stale(self, tracker):
-        old_time = datetime.now() - timedelta(hours=200)
+        old_time = datetime.now(timezone.utc) - timedelta(hours=200)
         tracker.record_collection("client", "c1", "harvest", collected_at=old_time)
         stale = tracker.get_stale_sources()
         assert len(stale) == 1
         assert stale[0].source == "harvest"
 
     def test_filter_by_entity_type(self, tracker):
-        old_time = datetime.now() - timedelta(hours=200)
+        old_time = datetime.now(timezone.utc) - timedelta(hours=200)
         tracker.record_collection("client", "c1", "harvest", collected_at=old_time)
         tracker.record_collection("project", "p1", "harvest", collected_at=old_time)
 
@@ -128,7 +128,7 @@ class TestFreshnessDashboard:
     def test_dashboard_with_data(self, tracker):
         tracker.record_collection("client", "c1", "harvest")
         tracker.record_collection("client", "c1", "email")
-        old_time = datetime.now() - timedelta(hours=200)
+        old_time = datetime.now(timezone.utc) - timedelta(hours=200)
         tracker.record_collection("client", "c2", "harvest", collected_at=old_time)
 
         dashboard = tracker.get_freshness_dashboard()

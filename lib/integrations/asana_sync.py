@@ -7,7 +7,7 @@ Maintains mappings, handles conflict detection, and batch sync operations.
 import logging
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 
 from lib.db import get_connection
 from lib.integrations.asana_writer import AsanaWriter
@@ -28,18 +28,44 @@ class SyncResult:
 
 
 class AsanaSyncManager:
-    """Manages bidirectional sync of tasks between local DB and Asana."""
+    """Manages bidirectional sync of tasks between local DB and Asana.
 
-    def __init__(self, writer: AsanaWriter | None = None, store=None):
+    IMPORTANT: Direct use of mutation methods is forbidden. Use SafeAsanaSyncManager
+    from lib.integrations.asana_sync_safe instead, which wraps every mutation
+    with the durable-intent outbox pattern.
+
+    To construct for direct use (tests only), pass _direct_call_allowed=True.
+    """
+
+    def __init__(
+        self,
+        writer: AsanaWriter | None = None,
+        store=None,
+        *,
+        _direct_call_allowed: bool = False,
+    ):
         """
         Initialize sync manager.
 
         Args:
             writer: AsanaWriter instance. If None, creates one from env.
             store: StateStore instance for local DB access.
+            _direct_call_allowed: If False (default), mutation methods raise RuntimeError.
+                Only SafeAsanaSyncManager and tests should set this to True.
         """
         self.writer = writer or AsanaWriter()
         self.store = store
+        self._direct_call_allowed = _direct_call_allowed
+
+    def _check_direct_call_guard(self, method_name: str) -> None:
+        """Raise RuntimeError if direct mutation calls are not allowed."""
+        if not self._direct_call_allowed:
+            raise RuntimeError(
+                f"Direct call to AsanaSyncManager.{method_name}() is forbidden. "
+                "Use SafeAsanaSyncManager from lib.integrations.asana_sync_safe "
+                "which wraps mutations with the durable-intent outbox pattern. "
+                "If you are writing a test, pass _direct_call_allowed=True to the constructor."
+            )
 
     def _ensure_mapping_table(self):
         """Create asana_task_mappings table if it doesn't exist."""
@@ -95,7 +121,7 @@ class AsanaSyncManager:
         local_updated_at: str | None = None,
     ) -> bool:
         """Save or update task mapping."""
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         try:
             conn = get_connection()
             cursor = conn.cursor()
@@ -143,6 +169,7 @@ class AsanaSyncManager:
         Returns:
             SyncResult with success status and Asana GID
         """
+        self._check_direct_call_guard("sync_task_to_asana")
         self._ensure_mapping_table()
 
         # Get local task
@@ -270,6 +297,7 @@ class AsanaSyncManager:
         Returns:
             SyncResult
         """
+        self._check_direct_call_guard("sync_completion")
         self._ensure_mapping_table()
 
         mapping = self._get_mapping(local_task_id)
@@ -310,6 +338,7 @@ class AsanaSyncManager:
         Returns:
             SyncResult
         """
+        self._check_direct_call_guard("post_status_comment")
         self._ensure_mapping_table()
 
         mapping = self._get_mapping(local_task_id)
@@ -349,6 +378,7 @@ class AsanaSyncManager:
         Returns:
             List of SyncResult objects
         """
+        self._check_direct_call_guard("bulk_sync")
         results = []
         for task_id in task_ids:
             result = self.sync_task_to_asana(task_id, project_gid)

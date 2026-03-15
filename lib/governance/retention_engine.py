@@ -23,7 +23,7 @@ import logging
 import sqlite3
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -157,7 +157,7 @@ class RetentionEngine:
 
         conn = self._get_connection()
         try:
-            now = datetime.utcnow().isoformat()
+            now = datetime.now(timezone.utc).isoformat()
             conn.execute(
                 """
                 INSERT OR REPLACE INTO retention_policies
@@ -263,7 +263,7 @@ class RetentionEngine:
 
     def _compute_cutoff_date(self, policy: RetentionPolicy) -> str:
         """Compute cutoff date for deletion (as ISO string for comparison)."""
-        cutoff = datetime.utcnow() - timedelta(days=policy.retention_days)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=policy.retention_days)
         return cutoff.isoformat()
 
     def preview_enforcement(self) -> RetentionReport:
@@ -404,7 +404,7 @@ class RetentionEngine:
                 action_type=ActionType.DELETE,
                 cutoff_date=cutoff_date,
                 dry_run=dry_run,
-                executed_at=datetime.utcnow().isoformat(),
+                executed_at=datetime.now(timezone.utc).isoformat(),
             )
 
             # Log to audit table
@@ -465,7 +465,7 @@ class RetentionEngine:
         conn = self._get_connection()
         try:
             # Define age buckets - work backwards from now
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             distribution = {}
 
             # < 1 day
@@ -560,7 +560,7 @@ class RetentionEngine:
                     continue
 
                 # Count rows older than 1 year
-                cutoff = (datetime.utcnow() - timedelta(days=365)).isoformat()
+                cutoff = (datetime.now(timezone.utc) - timedelta(days=365)).isoformat()
                 cursor = conn.execute(
                     safe_sql.select_count_bare(table, where=f"{safe_ts} < ?"),
                     (cutoff,),

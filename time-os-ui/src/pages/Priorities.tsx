@@ -48,8 +48,8 @@ export default function Priorities() {
   const items = useMemo(() => priorityData?.items ?? [], [priorityData]);
   const savedFilters = useMemo(() => savedFilterData?.filters ?? [], [savedFilterData]);
 
-  // Derive metrics
-  const totalCount = priorityData?.total || 0;
+  // Derive metrics — preserve null when data not yet loaded
+  const totalCount = priorityData != null ? (priorityData.total ?? 0) : null;
   const overdueCount = useMemo(
     () =>
       items.filter((item) => {
@@ -192,7 +192,7 @@ export default function Priorities() {
   return (
     <PageLayout
       title="Priorities"
-      subtitle={`${totalCount} priority items`}
+      subtitle={totalCount != null ? `${totalCount} priority items` : 'Loading...'}
       actions={
         <div className="flex items-center gap-2">
           <SavedFilterSelector
@@ -218,7 +218,7 @@ export default function Priorities() {
     >
       {/* Metrics */}
       <SummaryGrid>
-        <MetricCard label="Total Items" value={totalCount} />
+        <MetricCard label="Total Items" value={totalCount ?? '--'} />
         <MetricCard
           label="Overdue"
           value={overdueCount}

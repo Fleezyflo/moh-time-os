@@ -10,7 +10,7 @@ GAP-10-03: Calibration reporting
 import json
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 
 from lib.calibration import CalibrationEngine
 from lib.intelligence.threshold_adjuster import ThresholdAdjuster
@@ -24,7 +24,7 @@ class CalibrationReport:
     """Structured calibration report for API and briefing consumption."""
 
     report_type: str  # "weekly" | "effectiveness" | "history"
-    generated_at: str = field(default_factory=lambda: datetime.now().isoformat())
+    generated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     calibration_data: dict = field(default_factory=dict)
     threshold_data: dict = field(default_factory=dict)
     recommendations: list[str] = field(default_factory=list)
@@ -238,14 +238,14 @@ class CalibrationReporter:
             self._store.insert(
                 "insights",
                 {
-                    "id": f"calibration_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                    "id": f"calibration_report_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}",
                     "type": "calibration_report",
                     "domain": "system",
                     "title": f"Calibration Report ({report.report_type})",
                     "data": json.dumps(report.to_dict()),
                     "confidence": 1.0,
                     "actionable": 1 if report.recommendations else 0,
-                    "created_at": datetime.now().isoformat(),
+                    "created_at": datetime.now(timezone.utc).isoformat(),
                 },
             )
         except (ValueError, OSError) as e:

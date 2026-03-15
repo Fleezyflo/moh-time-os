@@ -1,6 +1,6 @@
 // Searchable team member dropdown picker
 import { useState, useEffect, useRef } from 'react';
-import { useAuth } from '../auth/AuthContext';
+import { fetchTeam } from '../../lib/api';
 
 interface TeamMember {
   id: string;
@@ -20,7 +20,6 @@ export function TeamMemberPicker({
   placeholder = 'Select team member...',
   disabled = false,
 }: TeamMemberPickerProps) {
-  const { token } = useAuth();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [filteredMembers, setFilteredMembers] = useState<TeamMember[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -30,30 +29,22 @@ export function TeamMemberPicker({
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const apiBase = import.meta.env.VITE_API_BASE_URL || '/api/v2';
-
-  // Fetch team members
+  // Fetch team members via centralized API client
   useEffect(() => {
-    if (!token) return;
-
-    const fetchMembers = async () => {
+    const loadMembers = async () => {
       setLoading(true);
       setError(null);
 
       try {
-        const response = await fetch(`${apiBase}/team`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch team members');
-        }
-
-        const data = await response.json();
-        // Handle both direct array and nested members array
-        const membersList = Array.isArray(data) ? data : data.members || [];
-        setMembers(membersList);
-        setFilteredMembers(membersList);
+        const data = await fetchTeam();
+        // Handle both direct array and nested members/items array
+        const membersList = Array.isArray(data)
+          ? data
+          : (data as unknown as Record<string, unknown>).items ||
+            (data as unknown as Record<string, unknown>).members ||
+            [];
+        setMembers(membersList as TeamMember[]);
+        setFilteredMembers(membersList as TeamMember[]);
       } catch (err) {
         if (err instanceof Error) {
           setError(err.message);
@@ -65,8 +56,8 @@ export function TeamMemberPicker({
       }
     };
 
-    fetchMembers();
-  }, [token, apiBase]);
+    loadMembers();
+  }, []);
 
   // Filter members based on search term
   useEffect(() => {

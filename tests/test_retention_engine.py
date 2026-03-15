@@ -20,7 +20,7 @@ Uses temporary SQLite databases for all tests.
 
 import sqlite3
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -82,7 +82,7 @@ def engine(temp_db):
 def sample_data(temp_db):
     """Insert sample data into test tables."""
     conn = sqlite3.connect(str(temp_db))
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     # Insert rows of varying ages
     for i in range(10):

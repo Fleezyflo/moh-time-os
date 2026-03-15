@@ -13,8 +13,9 @@ from typing import Any
 import httpx
 
 from lib.collectors.resilience import RateLimiter
+from lib.credential_paths import credentials_json
 
-_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", ".credentials.json")
+_CONFIG_PATH = str(credentials_json())
 ASANA_API_BASE = "https://app.asana.com/api/1.0"
 
 # Asana PAT rate limit: 150 requests/minute. Use 120 for safety margin.

@@ -15,7 +15,7 @@ raise RuntimeError(
 import json
 import logging
 import subprocess
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from .base import BaseCollector
@@ -58,7 +58,7 @@ class TeamCalendarCollector(BaseCollector):
 
     def collect(self) -> dict[str, Any]:
         """Fetch calendars for all team members."""
-        today = datetime.now()
+        today = datetime.now(timezone.utc)
         from_date = (today - timedelta(days=self.lookback_days)).strftime("%Y-%m-%d")
         to_date = (today + timedelta(days=self.lookahead_days)).strftime("%Y-%m-%d")
 
@@ -135,7 +135,7 @@ class TeamCalendarCollector(BaseCollector):
 
     def _filter_this_week(self, events: list[dict]) -> list[dict]:
         """Filter events to this week only."""
-        today = datetime.now()
+        today = datetime.now(timezone.utc)
         week_start = today
         week_end = today + timedelta(days=7)
 
@@ -218,7 +218,7 @@ class TeamCalendarCollector(BaseCollector):
 
     def transform(self, raw_data: dict) -> list[dict]:
         """Transform calendar events to canonical format."""
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         transformed = []
 
         for event in raw_data.get("events", []):
@@ -285,7 +285,7 @@ class TeamCalendarCollector(BaseCollector):
                         "external_hours": cap["external_hours"],
                         "available_hours": cap["available_hours"],
                         "utilization_pct": cap["utilization_pct"],
-                        "computed_at": datetime.now().isoformat(),
+                        "computed_at": datetime.now(timezone.utc).isoformat(),
                     },
                 )
             except Exception as e:

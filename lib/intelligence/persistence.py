@@ -15,7 +15,7 @@ import logging
 import sqlite3
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -533,7 +533,7 @@ class IntelligenceEventStore:
         """Mark an event as consumed by a downstream consumer."""
         conn = self._connect()
         try:
-            now = datetime.now().isoformat()
+            now = datetime.now(timezone.utc).isoformat()
             cursor = conn.execute(
                 """UPDATE intelligence_events
                    SET consumed_at = ?, consumer = ?
@@ -586,7 +586,7 @@ class IntelligenceEventStore:
                 return 0
 
             cutoff = f"-{days} days"
-            archived_at = datetime.now().isoformat()
+            archived_at = datetime.now(timezone.utc).isoformat()
 
             # Copy to archive
             conn.execute(
@@ -652,7 +652,7 @@ def snapshot_from_pattern_evidence(
     """Convert a PatternEvidence.to_dict() output to a PatternSnapshot for persistence."""
     return PatternSnapshot(
         id=make_id(),
-        detected_at=pattern_dict.get("detected_at", datetime.now().isoformat()),
+        detected_at=pattern_dict.get("detected_at", datetime.now(timezone.utc).isoformat()),
         pattern_id=pattern_dict["pattern_id"],
         pattern_name=pattern_dict["pattern_name"],
         pattern_type=pattern_dict.get("pattern_type", "unknown"),
@@ -679,7 +679,7 @@ def snapshot_from_cost_profile(
     """Convert a CostProfile.to_dict() output to a CostSnapshotRecord."""
     return CostSnapshotRecord(
         id=make_id(),
-        computed_at=datetime.now().isoformat(),
+        computed_at=datetime.now(timezone.utc).isoformat(),
         snapshot_type=snapshot_type,
         entity_id=entity_id,
         effort_score=cost_dict.get("effort_score"),
@@ -717,7 +717,7 @@ def event_from_signal_change(
             **(details or {}),
         },
         source_module="signals",
-        created_at=datetime.now().isoformat(),
+        created_at=datetime.now(timezone.utc).isoformat(),
     )
 
 
@@ -748,5 +748,5 @@ def event_from_pattern(
             "confidence": pattern_dict.get("confidence"),
         },
         source_module="patterns",
-        created_at=datetime.now().isoformat(),
+        created_at=datetime.now(timezone.utc).isoformat(),
     )

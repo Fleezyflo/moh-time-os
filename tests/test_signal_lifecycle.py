@@ -5,7 +5,7 @@ Brief 31 (TC), Task TC-4.1 + TC-5.1
 """
 
 import sqlite3
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -165,7 +165,7 @@ class TestPersistenceClassification:
                 "client",
                 "c1",
                 "watch",
-                datetime.now().isoformat(),
+                datetime.now(timezone.utc).isoformat(),
                 first_detected.isoformat(),
                 "watch",
                 "watch",
@@ -198,7 +198,7 @@ class TestPersistenceClassification:
                 "client",
                 "c1",
                 "watch",
-                datetime.now().isoformat(),
+                datetime.now(timezone.utc).isoformat(),
                 first_detected.isoformat(),
                 "watch",
                 "watch",
@@ -231,7 +231,7 @@ class TestPersistenceClassification:
                 "client",
                 "c1",
                 "warning",
-                datetime.now().isoformat(),
+                datetime.now(timezone.utc).isoformat(),
                 first_detected.isoformat(),
                 "watch",
                 "warning",  # initial=watch, current=warning → escalating
@@ -300,7 +300,7 @@ class TestAutoEscalation:
                 "client",
                 "c1",
                 "watch",
-                datetime.now().isoformat(),
+                datetime.now(timezone.utc).isoformat(),
                 first_detected.isoformat(),
                 "watch",
                 "watch",

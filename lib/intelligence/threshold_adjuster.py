@@ -17,7 +17,7 @@ GAP-10-02 (seasonal/contextual modifiers)
 
 import logging
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import yaml
@@ -229,7 +229,7 @@ class ThresholdAdjuster:
         frozen_signals = [h.to_dict() for h in self._history.values() if h.frozen]
 
         return {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "reference_date": ref_date.isoformat(),
             "season": season,
             "effectiveness": [e.to_dict() for e in effectiveness],
@@ -420,7 +420,7 @@ class ThresholdAdjuster:
         # Check cooldown
         if hist.last_adjusted_at:
             last = datetime.fromisoformat(hist.last_adjusted_at)
-            if datetime.now() - last < timedelta(days=self._cooldown_days):
+            if datetime.now(timezone.utc) - last < timedelta(days=self._cooldown_days):
                 return False
 
         return True
@@ -432,7 +432,7 @@ class ThresholdAdjuster:
             signals[adj.signal_id][adj.field] = adj.new_value
 
         adj.applied = True
-        adj.applied_at = datetime.now().isoformat()
+        adj.applied_at = datetime.now(timezone.utc).isoformat()
 
         # Update history
         if adj.signal_id not in self._history:

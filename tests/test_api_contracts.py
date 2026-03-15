@@ -9,7 +9,7 @@ Tests validate:
 - Field constraints (ranges, enums) are respected
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -75,7 +75,7 @@ class TestStandardEnvelope:
 
     def test_envelope_custom_computed_at(self):
         """Envelope should accept custom computed_at."""
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         env = StandardEnvelope(data={}, computed_at=now)
         assert env.computed_at == now
 
@@ -131,7 +131,7 @@ class TestClientMetric:
             total_outstanding=20000.0,
             health_score=75.0,
             trajectory="stable",
-            last_activity=datetime.now(),
+            last_activity=datetime.now(timezone.utc),
         )
         assert metric.client_id == "c1"
         assert metric.health_score == 75.0
@@ -152,7 +152,7 @@ class TestClientMetric:
                 total_outstanding=5000.0,
                 health_score=150.0,  # Invalid
                 trajectory="stable",
-                last_activity=datetime.now(),
+                last_activity=datetime.now(timezone.utc),
             )
 
     def test_client_metric_example_data(self):
@@ -205,7 +205,7 @@ class TestPortfolioDashboardResponse:
             total_outstanding=5000.0,
             health_score=70.0,
             trajectory="stable",
-            last_activity=datetime.now(),
+            last_activity=datetime.now(timezone.utc),
         )
         portfolio = PortfolioDashboardResponse(
             clients=[client],
@@ -239,7 +239,7 @@ class TestProject:
 
     def test_project_minimal(self):
         """Project should instantiate with required fields."""
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         project = Project(
             project_id="p1",
             name="Website",
@@ -256,7 +256,7 @@ class TestProject:
 
     def test_project_with_end_date(self):
         """Project should accept end_date."""
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         project = Project(
             project_id="p1",
             name="Website",
@@ -272,7 +272,7 @@ class TestProject:
 
     def test_project_progress_bounds(self):
         """Progress must be 0-100."""
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         with pytest.raises(ValueError):
             Project(
                 project_id="p1",
@@ -294,7 +294,7 @@ class TestCommunication:
         comm = Communication(
             communication_id="comm_1",
             type="email",
-            timestamp=datetime.now(),
+            timestamp=datetime.now(timezone.utc),
             subject="Update",
             participants=["john@example.com"],
         )
@@ -306,7 +306,7 @@ class TestCommunication:
         comm = Communication(
             communication_id="comm_1",
             type="meeting",
-            timestamp=datetime.now(),
+            timestamp=datetime.now(timezone.utc),
             subject="Status",
             participants=["alice@example.com", "bob@example.com"],
         )
@@ -318,7 +318,7 @@ class TestInvoice:
 
     def test_invoice_minimal(self):
         """Invoice should instantiate with required fields."""
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         invoice = Invoice(
             invoice_id="inv_1",
             number="INV-001",
@@ -333,7 +333,7 @@ class TestInvoice:
 
     def test_invoice_overdue_status(self):
         """Invoice can be overdue."""
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         invoice = Invoice(
             invoice_id="inv_1",
             number="INV-001",
@@ -359,7 +359,7 @@ class TestClientDetailResponse:
             industry=None,
             contact_email=None,
             contact_phone=None,
-            engagement_since=datetime.now(),
+            engagement_since=datetime.now(timezone.utc),
             total_projects=2,
             active_projects=[],
             total_communications=10,
@@ -379,7 +379,7 @@ class TestClientDetailResponse:
             project_id="p1",
             name="Website",
             status="active",
-            start_date=datetime.now(),
+            start_date=datetime.now(timezone.utc),
             end_date=None,
             progress=50.0,
             task_count=10,
@@ -392,7 +392,7 @@ class TestClientDetailResponse:
             industry=None,
             contact_email=None,
             contact_phone=None,
-            engagement_since=datetime.now(),
+            engagement_since=datetime.now(timezone.utc),
             total_projects=1,
             active_projects=[project],
             total_communications=0,
@@ -552,7 +552,7 @@ class TestScenarioModelResponse:
 
     def test_scenario_minimal(self):
         """ScenarioModelResponse should instantiate with required fields."""
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         scenario = ScenarioModelResponse(
             scenario_id="scen_1",
             name="Test scenario",
@@ -567,7 +567,7 @@ class TestScenarioModelResponse:
 
     def test_scenario_feasibility_bounds(self):
         """Feasibility must be 0-1."""
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         with pytest.raises(ValueError):
             ScenarioModelResponse(
                 scenario_id="scen_1",
@@ -589,7 +589,7 @@ class TestScenarioModelResponse:
             delta=33.0,
             delta_pct=33.0,
         )
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         scenario = ScenarioModelResponse(
             scenario_id="scen_1",
             name="Test",
@@ -622,7 +622,7 @@ class TestSignal:
             entity_name="Acme",
             title="Overdue",
             description="Invoice is overdue",
-            detected_at=datetime.now(),
+            detected_at=datetime.now(timezone.utc),
             resolved=False,
         )
         assert signal.severity == "high"
@@ -639,7 +639,7 @@ class TestSignal:
             entity_name="Acme",
             title="Overdue",
             description="Invoice is overdue",
-            detected_at=datetime.now(),
+            detected_at=datetime.now(timezone.utc),
             resolved=True,
         )
         assert signal.resolved is True
@@ -654,7 +654,7 @@ class TestNotificationFeedResponse:
             signals=[],
             total_unresolved=0,
             critical_count=0,
-            last_check=datetime.now(),
+            last_check=datetime.now(timezone.utc),
         )
         assert len(feed.signals) == 0
         assert feed.total_unresolved == 0
@@ -670,14 +670,14 @@ class TestNotificationFeedResponse:
             entity_name="Acme",
             title="Overdue",
             description="Test",
-            detected_at=datetime.now(),
+            detected_at=datetime.now(timezone.utc),
             resolved=False,
         )
         feed = NotificationFeedResponse(
             signals=[signal],
             total_unresolved=1,
             critical_count=1,
-            last_check=datetime.now(),
+            last_check=datetime.now(timezone.utc),
         )
         assert len(feed.signals) == 1
         assert feed.critical_count == 1
@@ -889,7 +889,7 @@ class TestDailyBriefingResponse:
     def test_briefing_empty(self):
         """Briefing should allow empty items."""
         briefing = DailyBriefingResponse(
-            date=datetime.now(),
+            date=datetime.now(timezone.utc),
             immediate_items=[],
             this_week_items=[],
             monitoring_items=[],
@@ -911,7 +911,7 @@ class TestDailyBriefingResponse:
             action_recommended=None,
         )
         briefing = DailyBriefingResponse(
-            date=datetime.now(),
+            date=datetime.now(timezone.utc),
             immediate_items=[item],
             this_week_items=[],
             monitoring_items=[],
@@ -956,7 +956,7 @@ class TestIntelligenceSnapshot:
             total_invoices_overdue=0,
         )
         briefing = DailyBriefingResponse(
-            date=datetime.now(),
+            date=datetime.now(timezone.utc),
             immediate_items=[],
             this_week_items=[],
             monitoring_items=[],
@@ -965,7 +965,7 @@ class TestIntelligenceSnapshot:
             key_metrics={},
         )
         snapshot = IntelligenceSnapshot(
-            timestamp=datetime.now(),
+            timestamp=datetime.now(timezone.utc),
             portfolio=portfolio,
             signals=[],
             patterns=[],
@@ -1034,7 +1034,7 @@ class TestMultipleClientMetrics:
                 total_outstanding=20000.0 * (i + 1),
                 health_score=70.0 + i * 5,
                 trajectory="stable",
-                last_activity=datetime.now(),
+                last_activity=datetime.now(timezone.utc),
             )
             for i in range(3)
         ]
@@ -1099,6 +1099,6 @@ class TestFieldConstraints:
                 total_outstanding=5000.0,
                 health_score=70.0,
                 trajectory=traj,
-                last_activity=datetime.now(),
+                last_activity=datetime.now(timezone.utc),
             )
             assert metric.trajectory == traj

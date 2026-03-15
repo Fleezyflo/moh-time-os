@@ -51,13 +51,13 @@ class TestChatInteractiveInit:
 
     def test_init_with_bot_token(self):
         """Can initialize with explicit bot token."""
-        chat = ChatInteractive(bot_token="test_token_123")
+        chat = ChatInteractive(bot_token="test_token_123", _direct_call_allowed=True)
         assert chat.bot_token == "test_token_123"
         assert chat.webhook_url is None
 
     def test_init_with_webhook_url(self):
         """Can initialize with webhook URL."""
-        chat = ChatInteractive(webhook_url="https://example.com/webhook")
+        chat = ChatInteractive(webhook_url="https://example.com/webhook", _direct_call_allowed=True)
         assert chat.webhook_url == "https://example.com/webhook"
         assert chat.bot_token is None
 
@@ -66,6 +66,7 @@ class TestChatInteractiveInit:
         chat = ChatInteractive(
             bot_token="token_123",
             webhook_url="https://example.com/webhook",
+            _direct_call_allowed=True,
         )
         assert chat.bot_token == "token_123"
         assert chat.webhook_url == "https://example.com/webhook"
@@ -73,7 +74,7 @@ class TestChatInteractiveInit:
     def test_init_with_env_vars(self, monkeypatch):
         """Can initialize with env vars."""
         monkeypatch.setenv("GOOGLE_CHAT_BOT_TOKEN", "env_token_456")
-        chat = ChatInteractive()
+        chat = ChatInteractive(_direct_call_allowed=True)
         assert chat.bot_token == "env_token_456"
 
     def test_init_without_credentials_raises(self, monkeypatch):
@@ -103,7 +104,7 @@ class TestChatInteractiveSendMessage:
         }
         mock_post.return_value = mock_response
 
-        chat = ChatInteractive(bot_token="token_123")
+        chat = ChatInteractive(bot_token="token_123", _direct_call_allowed=True)
         result = chat.send_message("spaces/AAAABBBB", "Hello world")
 
         assert result.success is True
@@ -124,7 +125,7 @@ class TestChatInteractiveSendMessage:
         }
         mock_post.return_value = mock_response
 
-        chat = ChatInteractive(bot_token="token_123")
+        chat = ChatInteractive(bot_token="token_123", _direct_call_allowed=True)
         result = chat.send_message(
             "AAAABBBB",
             "Reply",
@@ -143,7 +144,7 @@ class TestChatInteractiveSendMessage:
         mock_response.json.return_value = {"name": "spaces/X/messages/Y"}
         mock_post.return_value = mock_response
 
-        chat = ChatInteractive(bot_token="token_123")
+        chat = ChatInteractive(bot_token="token_123", _direct_call_allowed=True)
 
         # Without prefix
         chat.send_message("AAAABBBB", "text")
@@ -159,7 +160,7 @@ class TestChatInteractiveSendMessage:
 
     def test_send_message_requires_bot_token(self):
         """send_message requires bot_token, not just webhook_url."""
-        chat = ChatInteractive(webhook_url="https://example.com")
+        chat = ChatInteractive(webhook_url="https://example.com", _direct_call_allowed=True)
         result = chat.send_message("spaces/X", "text")
         assert result.success is False
         assert "bot_token" in result.error
@@ -172,7 +173,7 @@ class TestChatInteractiveSendMessage:
         mock_response.json.return_value = {"error": {"message": "Invalid space"}}
         mock_post.return_value = mock_response
 
-        chat = ChatInteractive(bot_token="token_123")
+        chat = ChatInteractive(bot_token="token_123", _direct_call_allowed=True)
         result = chat.send_message("spaces/INVALID", "text")
 
         assert result.success is False
@@ -183,7 +184,7 @@ class TestChatInteractiveSendMessage:
         """Handles network exceptions."""
         mock_post.side_effect = Exception("Network error")
 
-        chat = ChatInteractive(bot_token="token_123")
+        chat = ChatInteractive(bot_token="token_123", _direct_call_allowed=True)
         result = chat.send_message("spaces/X", "text")
 
         assert result.success is False
@@ -213,7 +214,7 @@ class TestChatInteractiveSendCard:
             "header": {"title": "Test Card"},
         }
 
-        chat = ChatInteractive(bot_token="token_123")
+        chat = ChatInteractive(bot_token="token_123", _direct_call_allowed=True)
         result = chat.send_card("spaces/X", card)
 
         assert result.success is True
@@ -228,7 +229,7 @@ class TestChatInteractiveSendCard:
         mock_response.json.return_value = {"name": "spaces/X/messages/Y"}
         mock_post.return_value = mock_response
 
-        chat = ChatInteractive(bot_token="token_123")
+        chat = ChatInteractive(bot_token="token_123", _direct_call_allowed=True)
         result = chat.send_card(
             "spaces/X",
             {"header": {"title": "Card"}},
@@ -259,7 +260,7 @@ class TestChatInteractiveUpdateMessage:
         }
         mock_patch.return_value = mock_response
 
-        chat = ChatInteractive(bot_token="token_123")
+        chat = ChatInteractive(bot_token="token_123", _direct_call_allowed=True)
         result = chat.update_message("spaces/X/messages/Y", text="Updated text")
 
         assert result.success is True
@@ -273,7 +274,7 @@ class TestChatInteractiveUpdateMessage:
         mock_response.json.return_value = {"name": "spaces/X/messages/Y"}
         mock_patch.return_value = mock_response
 
-        chat = ChatInteractive(bot_token="token_123")
+        chat = ChatInteractive(bot_token="token_123", _direct_call_allowed=True)
         card = {"header": {"title": "New Card"}}
         result = chat.update_message("spaces/X/messages/Y", card=card)
 
@@ -281,7 +282,7 @@ class TestChatInteractiveUpdateMessage:
 
     def test_update_message_requires_text_or_card(self):
         """update_message requires either text or card."""
-        chat = ChatInteractive(bot_token="token_123")
+        chat = ChatInteractive(bot_token="token_123", _direct_call_allowed=True)
         result = chat.update_message("spaces/X/messages/Y")
 
         assert result.success is False
@@ -303,7 +304,7 @@ class TestChatInteractiveDeleteMessage:
         mock_response.status_code = 204
         mock_delete.return_value = mock_response
 
-        chat = ChatInteractive(bot_token="token_123")
+        chat = ChatInteractive(bot_token="token_123", _direct_call_allowed=True)
         result = chat.delete_message("spaces/X/messages/Y")
 
         assert result.success is True
@@ -317,7 +318,7 @@ class TestChatInteractiveDeleteMessage:
         mock_response.json.return_value = {"error": {"message": "Message not found"}}
         mock_delete.return_value = mock_response
 
-        chat = ChatInteractive(bot_token="token_123")
+        chat = ChatInteractive(bot_token="token_123", _direct_call_allowed=True)
         result = chat.delete_message("spaces/X/messages/Y")
 
         assert result.success is False
@@ -343,7 +344,7 @@ class TestChatInteractiveCreateSpace:
         }
         mock_post.return_value = mock_response
 
-        chat = ChatInteractive(bot_token="token_123")
+        chat = ChatInteractive(bot_token="token_123", _direct_call_allowed=True)
         result = chat.create_space("Test Room", space_type="ROOM")
 
         assert result.success is True
@@ -361,7 +362,7 @@ class TestChatInteractiveCreateSpace:
         }
         mock_post.return_value = mock_response
 
-        chat = ChatInteractive(bot_token="token_123")
+        chat = ChatInteractive(bot_token="token_123", _direct_call_allowed=True)
         result = chat.create_space("DM Name", space_type="DM")
 
         assert result.success is True
@@ -389,7 +390,7 @@ class TestChatInteractiveAddMember:
         }
         mock_post.return_value = mock_response
 
-        chat = ChatInteractive(bot_token="token_123")
+        chat = ChatInteractive(bot_token="token_123", _direct_call_allowed=True)
         result = chat.add_member("spaces/X", "user@example.com")
 
         assert result.success is True
@@ -402,7 +403,7 @@ class TestChatInteractiveAddMember:
         mock_response.json.return_value = {"name": "spaces/X/members/Y"}
         mock_post.return_value = mock_response
 
-        chat = ChatInteractive(bot_token="token_123")
+        chat = ChatInteractive(bot_token="token_123", _direct_call_allowed=True)
         chat.add_member("X", "user@example.com")
 
         url = mock_post.call_args[0][0]
@@ -826,7 +827,7 @@ class TestIntegration:
         mock_post.return_value = mock_response
 
         # Send the card
-        chat = ChatInteractive(bot_token="token_123")
+        chat = ChatInteractive(bot_token="token_123", _direct_call_allowed=True)
         result = chat.send_card("spaces/X", card)
 
         assert result.success is True
@@ -850,7 +851,7 @@ class TestIntegration:
         mock_post.return_value = mock_response
 
         # Send response back
-        chat = ChatInteractive(bot_token="token_123")
+        chat = ChatInteractive(bot_token="token_123", _direct_call_allowed=True)
         result = chat.send_card("spaces/X", card_response)
 
         assert result.success is True

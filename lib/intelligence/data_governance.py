@@ -14,7 +14,7 @@ import io
 import json
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -187,7 +187,7 @@ class ExportRequest:
 
     def __post_init__(self):
         if not self.requested_at:
-            self.requested_at = datetime.now().isoformat()
+            self.requested_at = datetime.now(timezone.utc).isoformat()
 
     def to_dict(self) -> dict:
         return {
@@ -213,7 +213,7 @@ class ExportResult:
 
     def __post_init__(self):
         if not self.completed_at:
-            self.completed_at = datetime.now().isoformat()
+            self.completed_at = datetime.now(timezone.utc).isoformat()
 
     def to_dict(self) -> dict:
         return {
@@ -317,7 +317,7 @@ class SubjectSearchResult:
 
     def __post_init__(self):
         if not self.searched_at:
-            self.searched_at = datetime.now().isoformat()
+            self.searched_at = datetime.now(timezone.utc).isoformat()
 
     def to_dict(self) -> dict:
         return {
@@ -345,7 +345,7 @@ class DeletionCertificate:
 
     def __post_init__(self):
         if not self.executed_at:
-            self.executed_at = datetime.now().isoformat()
+            self.executed_at = datetime.now(timezone.utc).isoformat()
 
     def to_dict(self) -> dict:
         return {
@@ -438,7 +438,7 @@ class SubjectAccessManager:
         import hashlib
 
         verification = hashlib.sha256(
-            f"{subject_identifier}:{datetime.now().isoformat()}".encode()
+            f"{subject_identifier}:{datetime.now(timezone.utc).isoformat()}".encode()
         ).hexdigest()[:16]
 
         cert = DeletionCertificate(
@@ -500,7 +500,7 @@ class RetentionResult:
 
     def __post_init__(self):
         if not self.enforced_at:
-            self.enforced_at = datetime.now().isoformat()
+            self.enforced_at = datetime.now(timezone.utc).isoformat()
 
     def to_dict(self) -> dict:
         return {
@@ -563,7 +563,7 @@ class RetentionEnforcer:
                 records_evaluated=len(records),
             )
 
-        cutoff = datetime.now() - timedelta(days=policy.retention_days)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=policy.retention_days)
         cutoff_str = cutoff.isoformat()
 
         expired_count = 0
@@ -584,7 +584,7 @@ class RetentionEnforcer:
         else:
             result.records_archived = expired_count
 
-        policy.last_enforced_at = datetime.now().isoformat()
+        policy.last_enforced_at = datetime.now(timezone.utc).isoformat()
         self.enforcement_log.append(result)
         return result
 
@@ -612,7 +612,7 @@ class ComplianceReport:
 
     def __post_init__(self):
         if not self.generated_at:
-            self.generated_at = datetime.now().isoformat()
+            self.generated_at = datetime.now(timezone.utc).isoformat()
 
     def to_dict(self) -> dict:
         return {

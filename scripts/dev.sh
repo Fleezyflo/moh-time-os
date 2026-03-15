@@ -180,9 +180,9 @@ CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:$API_PORT/api/he
 [ "$CODE" = "200" ] || { echo "  FAIL: /api/health → HTTP $CODE"; dump_logs; exit 1; }
 echo "  OK: /api/health (HTTP 200)"
 
-CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:$API_PORT/api/v2/inbox" || true)
-[ "$CODE" = "200" ] || { echo "  FAIL: /api/v2/inbox → HTTP $CODE"; dump_logs; exit 1; }
-echo "  OK: /api/v2/inbox (HTTP 200)"
+CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://127.0.0.1:$API_PORT/api/auth/mode" || true)
+[ "$CODE" = "200" ] || { echo "  FAIL: /api/auth/mode → HTTP $CODE"; dump_logs; exit 1; }
+echo "  OK: /api/auth/mode (HTTP 200)"
 
 BODY=$(curl -s "http://127.0.0.1:$UI_PORT" || true)
 echo "$BODY" | grep -qi "<!doctype html" || { echo "  FAIL: UI not returning HTML"; dump_logs; exit 1; }

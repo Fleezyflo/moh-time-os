@@ -5,7 +5,7 @@ Models for Xero invoices, payments, and sync state.
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from lib.compat import StrEnum
 
 from .base import BaseModel, generate_id, now_iso
@@ -116,7 +116,7 @@ class XeroInvoice(BaseModel):
 
         try:
             due = datetime.fromisoformat(self.due_date[:10])
-            today = datetime.now().date()
+            today = datetime.now(timezone.utc).date()
             if today > due.date():
                 return (today - due.date()).days
             return 0

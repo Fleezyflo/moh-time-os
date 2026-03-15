@@ -9,19 +9,22 @@ GUARDRAILS: Document before delete. Every change observable.
 import logging
 import re
 import subprocess
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 REPO_ROOT = Path(__file__).parent.parent
-DATA_DIR = REPO_ROOT / "data"
+
+
+def _data_dir():
+    return REPO_ROOT / "data"
 
 
 def load_orphans() -> list:
     """Load orphaned modules from dead code audit."""
     # Find latest audit
-    audits = list(DATA_DIR.glob("dead_code_audit_*.md"))
+    audits = list(_data_dir().glob("dead_code_audit_*.md"))
     if not audits:
         raise FileNotFoundError("No dead code audit found")
 
@@ -189,9 +192,9 @@ def main():
         total_lines += orphan.get("lines", 0)
 
     # Generate report
-    date_str = datetime.now().strftime("%Y%m%d")
+    date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
     report_lines = [
-        f"# Module Removal Log — {datetime.now().strftime('%Y-%m-%d')}",
+        f"# Module Removal Log — {datetime.now(timezone.utc).strftime('%Y-%m-%d')}",
         "",
         "## Summary",
         f"- Attempted: {len(orphans)}",
@@ -229,7 +232,7 @@ def main():
         report_lines.append(f"| `{s['path']}` | {s.get('lines', 0)} | {reason} |")
 
     report = "\n".join(report_lines)
-    output_file = DATA_DIR / f"module_removal_log_{date_str}.md"
+    output_file = _data_dir() / f"module_removal_log_{date_str}.md"
     output_file.write_text(report)
 
     print("\n" + "=" * 60)

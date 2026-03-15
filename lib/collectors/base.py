@@ -11,7 +11,7 @@ import json
 import logging
 import subprocess
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from ..state_store import StateStore, get_store
@@ -99,7 +99,7 @@ class BaseCollector(ABC):
 
         Returns a CollectorResult.to_dict() — typed, never ambiguous.
         """
-        cycle_start = datetime.now()
+        cycle_start = datetime.now(timezone.utc)
 
         # Check circuit breaker first
         if not self.circuit_breaker.can_execute():
@@ -140,7 +140,7 @@ class BaseCollector(ABC):
                     error=str(e),
                     error_type=err_type,
                     circuit_breaker_state=self.circuit_breaker.state,
-                    duration_ms=(datetime.now() - cycle_start).total_seconds() * 1000,
+                    duration_ms=(datetime.now(timezone.utc) - cycle_start).total_seconds() * 1000,
                 )
                 return result.to_dict()
 
@@ -160,7 +160,7 @@ class BaseCollector(ABC):
             stored = self.store.insert_many(self.target_table, transformed)
 
             # Step 4: Determine status, update sync state, record success
-            self.last_sync = datetime.now()
+            self.last_sync = datetime.now(timezone.utc)
             # Transform failure means we collected but couldn't process —
             # that's PARTIAL (primary data lost), not SUCCESS.
             status = CollectorStatus.PARTIAL if transform_failed else CollectorStatus.SUCCESS
@@ -173,7 +173,7 @@ class BaseCollector(ABC):
             )
             self.circuit_breaker.record_success()
 
-            duration_ms = (datetime.now() - cycle_start).total_seconds() * 1000
+            duration_ms = (datetime.now(timezone.utc) - cycle_start).total_seconds() * 1000
 
             result = CollectorResult(
                 source=self.source_name,
@@ -206,7 +206,7 @@ class BaseCollector(ABC):
                 error=str(e),
                 error_type=classify_error(e),
                 circuit_breaker_state=self.circuit_breaker.state,
-                duration_ms=(datetime.now() - cycle_start).total_seconds() * 1000,
+                duration_ms=(datetime.now(timezone.utc) - cycle_start).total_seconds() * 1000,
             )
             return result.to_dict()
 
@@ -214,7 +214,7 @@ class BaseCollector(ABC):
         """Check if this collector needs to sync."""
         if not self.last_sync:
             return True
-        elapsed = (datetime.now() - self.last_sync).total_seconds()
+        elapsed = (datetime.now(timezone.utc) - self.last_sync).total_seconds()
         return elapsed >= self.sync_interval
 
     def health_check(self) -> bool:

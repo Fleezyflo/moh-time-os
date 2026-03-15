@@ -12,7 +12,7 @@ import logging
 import sqlite3
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -152,7 +152,7 @@ class EntityMemory:
             interaction_type=interaction_type,
             summary=summary,
             details=details or {},
-            created_at=datetime.now().isoformat(),
+            created_at=datetime.now(timezone.utc).isoformat(),
             source=source,
         )
 
@@ -232,7 +232,7 @@ class EntityMemory:
             if latest_any:
                 try:
                     latest_dt = datetime.fromisoformat(latest_any)
-                    days_since = (datetime.now() - latest_dt).days
+                    days_since = (datetime.now(timezone.utc) - latest_dt).days
                 except (ValueError, TypeError):
                     pass
 
@@ -299,7 +299,7 @@ class EntityMemory:
         conn = sqlite3.connect(str(self.db_path))
         conn.row_factory = sqlite3.Row
         try:
-            cutoff = (datetime.now() - timedelta(days=days_threshold)).isoformat()
+            cutoff = (datetime.now(timezone.utc) - timedelta(days=days_threshold)).isoformat()
             rows = conn.execute(
                 """
                 SELECT entity_type, entity_id,
@@ -330,7 +330,7 @@ class EntityMemory:
         conn = sqlite3.connect(str(self.db_path))
         conn.row_factory = sqlite3.Row
         try:
-            cutoff = (datetime.now() - timedelta(days=days_back)).isoformat()
+            cutoff = (datetime.now(timezone.utc) - timedelta(days=days_back)).isoformat()
 
             if entity_type:
                 rows = conn.execute(

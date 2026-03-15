@@ -34,17 +34,25 @@ export function DegradedModeBanner() {
     clearFailures();
   };
 
+  // Use red for offline (system broken), amber for partial failures
+  const isOffline = state.isOffline;
+  const borderColor = isOffline ? 'border-red-400' : 'border-amber-400';
+  const bgColor = isOffline ? 'bg-red-500/10' : 'bg-amber-500/10';
+  const textColor = isOffline ? 'text-red-300' : 'text-amber-300';
+  const detailBg = isOffline ? 'bg-red-900/20' : 'bg-amber-900/20';
+  const btnBg = isOffline ? 'bg-red-500/20 hover:bg-red-500/30 text-red-300' : 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300';
+
   return (
-    <div className="bg-yellow-50 border-b border-yellow-200 px-4 py-3">
+    <div className={`${bgColor} border-b ${borderColor} px-4 py-3`}>
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          {state.isOffline ? (
-            <span className="text-yellow-800">
-              📡 You&apos;re offline. Showing last known data.
+          {isOffline ? (
+            <span className={textColor}>
+              🔴 Offline — all data below is stale. Decisions may be based on outdated information.
             </span>
           ) : (
-            <span className="text-yellow-800">
-              ⚠️ Some requests failed. Showing last known data.
+            <span className={textColor}>
+              ⚠️ {state.failedRequests.length} request{state.failedRequests.length !== 1 ? 's' : ''} failed — some data below may be stale.
             </span>
           )}
         </div>
@@ -52,35 +60,35 @@ export function DegradedModeBanner() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowDetails(!showDetails)}
-            className="text-yellow-700 hover:text-yellow-900 text-sm underline"
+            className={`${textColor} hover:text-white text-sm underline`}
           >
             {showDetails ? 'Hide details' : 'Show details'}
           </button>
           <button
             onClick={handleRetry}
-            className="bg-yellow-200 hover:bg-yellow-300 text-yellow-800 px-3 py-1 rounded text-sm"
+            className={`${btnBg} px-3 py-1 rounded text-sm`}
           >
             Retry
           </button>
-          <button onClick={handleDismiss} className="text-yellow-600 hover:text-yellow-800 text-sm">
+          <button onClick={handleDismiss} className={`${textColor} hover:text-white text-sm`}>
             Dismiss
           </button>
         </div>
       </div>
 
       {showDetails && state.failedRequests.length > 0 && (
-        <div className="mt-3 bg-yellow-100 rounded p-3 text-sm">
-          <div className="font-medium text-yellow-800 mb-2">Failed Requests:</div>
+        <div className={`mt-3 ${detailBg} rounded p-3 text-sm`}>
+          <div className={`font-medium ${textColor} mb-2`}>Failed Requests:</div>
           <ul className="space-y-1">
             {state.failedRequests.map((req, i) => (
-              <li key={i} className="text-yellow-700 font-mono text-xs">
+              <li key={i} className="text-[var(--grey-light)] font-mono text-xs">
                 [{req.errorCode}] {req.url}
-                <span className="text-yellow-500 ml-2">request_id: {req.requestId}</span>
+                <span className="text-[var(--grey)] ml-2">request_id: {req.requestId}</span>
               </li>
             ))}
           </ul>
           {state.lastSuccessfulSync && (
-            <div className="mt-2 text-yellow-600">
+            <div className="mt-2 text-[var(--grey-light)]">
               Last successful sync: {new Date(state.lastSuccessfulSync).toLocaleString()}
             </div>
           )}

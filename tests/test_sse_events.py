@@ -8,7 +8,7 @@ and error handling.
 import asyncio
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
 import pytest
@@ -119,9 +119,9 @@ class TestCreateEventHelper:
 
     def test_creates_event_with_timestamp(self):
         """Test that _create_event adds current timestamp."""
-        before = datetime.now().isoformat()
+        before = datetime.now(timezone.utc).isoformat()
         event = _create_event("signal_new", {"message": "Test"})
-        after = datetime.now().isoformat()
+        after = datetime.now(timezone.utc).isoformat()
         assert before <= event.timestamp <= after
 
     def test_creates_different_ids(self):
@@ -555,9 +555,9 @@ class TestEventTimestamps:
 
     def test_event_timestamp_current_time(self):
         """Test that created event has current timestamp."""
-        before = datetime.now()
+        before = datetime.now(timezone.utc)
         event = _create_event("signal_new", {"msg": "test"})
-        after = datetime.now()
+        after = datetime.now(timezone.utc)
 
         event_time = datetime.fromisoformat(event.timestamp.replace("Z", "+00:00"))
         assert before <= event_time <= after

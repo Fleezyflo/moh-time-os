@@ -7,7 +7,7 @@ import logging
 import os
 import sqlite3
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from lib.compat import UTC
@@ -83,7 +83,7 @@ class HumanFormatter(logging.Formatter):
     """Human-readable formatter for local development."""
 
     def format(self, record: logging.LogRecord) -> str:
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
         request_id = get_request_id()
         rid_str = f"[{request_id[:12]}] " if request_id else ""
         return f"{timestamp} [{record.levelname}] {record.name}: {rid_str}{record.getMessage()}"

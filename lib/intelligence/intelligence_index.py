@@ -12,7 +12,7 @@ Single entry point: "give me everything the dashboard needs."
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -290,7 +290,7 @@ class IntelligenceIndex:
                 if c.get("health_score", 50) < 50 or c.get("critical_signals", 0) > 0
             ),
             last_cycle_at=last_cycle_at,
-            generated_at=datetime.now().isoformat(),
+            generated_at=datetime.now(timezone.utc).isoformat(),
         )
 
     def build_client_cards(
@@ -360,7 +360,7 @@ class IntelligenceIndex:
     ) -> FinancialOverview:
         """Build financial overview from client data."""
         if not clients:
-            return FinancialOverview(generated_at=datetime.now().isoformat())
+            return FinancialOverview(generated_at=datetime.now(timezone.utc).isoformat())
 
         total_rev = sum(c.get("monthly_revenue", 0) for c in clients)
         total_cost = sum(c.get("monthly_cost", 0) for c in clients)
@@ -436,7 +436,7 @@ class IntelligenceIndex:
             if at_risk > growing
             else "stable",
             alerts=alerts,
-            generated_at=datetime.now().isoformat(),
+            generated_at=datetime.now(timezone.utc).isoformat(),
         )
 
     def build_resolution_queue(
@@ -501,5 +501,5 @@ class IntelligenceIndex:
             resolution_queue=self.build_resolution_queue(
                 resolution_items or [],
             ),
-            generated_at=datetime.now().isoformat(),
+            generated_at=datetime.now(timezone.utc).isoformat(),
         )

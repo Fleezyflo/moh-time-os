@@ -9,7 +9,7 @@ Hard rule: no invoice list browsing. Default surface is ranked moves + top debto
 import logging
 import sqlite3
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -17,8 +17,6 @@ from lib import paths
 from lib.compat import StrEnum
 
 logger = logging.getLogger(__name__)
-
-DB_PATH = paths.db_path()
 
 
 # ==============================================================================
@@ -203,14 +201,14 @@ class CashARPage12Engine:
 
     def __init__(
         self,
-        db_path: Path = DB_PATH,
+        db_path: Path = None,
         mode: Mode = Mode.OPS_HEAD,
         horizon: Horizon = Horizon.TODAY,
     ):
-        self.db_path = db_path
+        self.db_path = db_path or str(paths.db_path())
         self.mode = mode
         self.horizon = horizon
-        self.now = datetime.now()
+        self.now = datetime.now(timezone.utc)
         self.today = date.today()
 
         # Trust state

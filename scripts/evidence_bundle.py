@@ -14,7 +14,7 @@ Produces a comprehensive artifact for PR review:
 import json
 import subprocess
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 # Add repo root to path
@@ -52,7 +52,7 @@ def get_git_diff(path: str) -> str:
 def generate_evidence() -> dict:
     """Generate all evidence artifacts."""
     evidence = {
-        "generated_at": datetime.utcnow().isoformat() + "Z",
+        "generated_at": datetime.now(timezone.utc).isoformat() + "Z",
         "git_sha": "",
         "git_branch": "",
         "sections": {},

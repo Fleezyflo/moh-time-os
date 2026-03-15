@@ -7,7 +7,7 @@ Implements DESIGN_V4_SURGICAL.md scoring algorithm.
 
 import json
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 import yaml
 
@@ -22,7 +22,7 @@ def days_until_date(date_str: str) -> int:
     """Calculate days until a date string (YYYY-MM-DD)."""
     try:
         due = datetime.strptime(date_str[:10], "%Y-%m-%d").date()
-        return (due - datetime.now().date()).days
+        return (due - datetime.now(timezone.utc).date()).days
     except (ValueError, TypeError):
         return 999  # Far future if can't parse
 

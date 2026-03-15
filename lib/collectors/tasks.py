@@ -6,17 +6,23 @@ Uses direct Google API with service account for domain-wide delegation.
 import json
 import logging
 import os
-from datetime import datetime
-from pathlib import Path
+from datetime import datetime, timezone
 from typing import Any
+
+from lib.credential_paths import google_sa_file
 
 from .base import BaseCollector
 from .resilience import COLLECTOR_ERRORS
 
 logger = logging.getLogger(__name__)
 
+
+def _sa_file():
+    """Resolve SA file at call time to respect env overrides."""
+    return google_sa_file()
+
+
 # Service account configuration
-SA_FILE = Path.home() / "Library/Application Support/gogcli/sa-bW9saGFtQGhybW55LmNv.json"
 SCOPES = ["https://www.googleapis.com/auth/tasks.readonly"]
 DEFAULT_USER = os.environ.get("MOH_ADMIN_EMAIL", "molham@hrmny.co")
 
@@ -41,7 +47,7 @@ class TasksCollector(BaseCollector):
             from googleapiclient.discovery import build
 
             creds = service_account.Credentials.from_service_account_file(
-                str(SA_FILE), scopes=SCOPES
+                str(_sa_file()), scopes=SCOPES
             )
             creds = creds.with_subject(user)
             self._service = build("tasks", "v1", credentials=creds)
@@ -122,7 +128,7 @@ class TasksCollector(BaseCollector):
 
     def transform(self, raw_data: dict) -> list[dict]:
         """Transform Google Tasks to canonical format."""
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         transformed = []
 
         for task in raw_data.get("tasks", []):
@@ -184,7 +190,7 @@ class TasksCollector(BaseCollector):
         if due:
             try:
                 due_date = datetime.strptime(due, "%Y-%m-%d")
-                days_until = (due_date - datetime.now()).days
+                days_until = (due_date - datetime.now(timezone.utc)).days
 
                 if days_until < 0:
                     score += min(40, 40 + abs(days_until) * 2)  # Overdue

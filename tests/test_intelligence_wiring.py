@@ -9,7 +9,7 @@ Verifies end-to-end data flow through the intelligence pipeline:
 """
 
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -140,7 +140,7 @@ class TestPatternCycleRoundtrip:
         pp = PatternPersistence(integration_db)
         snapshot = PatternSnapshot(
             id=make_id(),
-            detected_at=datetime.now().isoformat(),
+            detected_at=datetime.now(timezone.utc).isoformat(),
             pattern_id="PAT_CONC_001",
             pattern_name="Revenue Concentration",
             pattern_type="concentration",
@@ -168,7 +168,7 @@ class TestPatternCycleRoundtrip:
                 pp.record_pattern(
                     PatternSnapshot(
                         id=make_id(),
-                        detected_at=datetime.now().isoformat(),
+                        detected_at=datetime.now(timezone.utc).isoformat(),
                         pattern_id=f"PAT_{i}_{j}",
                         pattern_name=f"Pattern {i}-{j}",
                         pattern_type="dependency",
@@ -206,7 +206,7 @@ class TestEventLifecycle:
             entity_id="c1",
             event_data={"signal_id": "SIG_001", "change_type": "new"},
             source_module="signals",
-            created_at=datetime.now().isoformat(),
+            created_at=datetime.now(timezone.utc).isoformat(),
         )
         es.publish(event)
 
@@ -224,7 +224,7 @@ class TestEventLifecycle:
 
         # Backdate consumed_at for archival
         conn = sqlite3.connect(str(integration_db))
-        old_date = (datetime.now() - timedelta(days=60)).isoformat()
+        old_date = (datetime.now(timezone.utc) - timedelta(days=60)).isoformat()
         conn.execute(
             "UPDATE intelligence_events SET consumed_at = ? WHERE id = ?",
             (old_date, event.id),
@@ -265,7 +265,7 @@ class TestEventLifecycle:
                     entity_id="c1",
                     event_data={"test": True},
                     source_module="signals",
-                    created_at=datetime.now().isoformat(),
+                    created_at=datetime.now(timezone.utc).isoformat(),
                 )
             )
 
@@ -287,7 +287,7 @@ class TestEventLifecycle:
             entity_id="c1",
             event_data={},
             source_module="patterns",
-            created_at=datetime.now().isoformat(),
+            created_at=datetime.now(timezone.utc).isoformat(),
         )
         es.publish(event)
 
@@ -308,7 +308,7 @@ class TestCostSnapshotRoundtrip:
 
         snapshot = CostSnapshotRecord(
             id=make_id(),
-            computed_at=datetime.now().isoformat(),
+            computed_at=datetime.now(timezone.utc).isoformat(),
             snapshot_type="client",
             entity_id="c1",
             effort_score=42.5,
@@ -330,7 +330,7 @@ class TestCostSnapshotRoundtrip:
 
         portfolio = CostSnapshotRecord(
             id=make_id(),
-            computed_at=datetime.now().isoformat(),
+            computed_at=datetime.now(timezone.utc).isoformat(),
             snapshot_type="portfolio",
             entity_id=None,
             effort_score=500.0,
@@ -436,7 +436,7 @@ class TestParameterizedQueries:
         pp = PatternPersistence(integration_db)
         snapshot = PatternSnapshot(
             id=make_id(),
-            detected_at=datetime.now().isoformat(),
+            detected_at=datetime.now(timezone.utc).isoformat(),
             pattern_id="PAT_INJECT",
             pattern_name="Robert'); DROP TABLE pattern_snapshots;--",
             pattern_type="test",
@@ -463,7 +463,7 @@ class TestParameterizedQueries:
             entity_id="'; DROP TABLE intelligence_events;--",
             event_data={"malicious": "'; DROP TABLE intelligence_events;--"},
             source_module="test",
-            created_at=datetime.now().isoformat(),
+            created_at=datetime.now(timezone.utc).isoformat(),
         )
         es.publish(event)
 

@@ -18,9 +18,6 @@ from lib import paths
 logger = logging.getLogger(__name__)
 
 
-DB_PATH = paths.db_path()
-
-
 def column_exists(cursor, table: str, column: str) -> bool:
     cursor.execute(f"PRAGMA table_info({table})")
     columns = [row[1] for row in cursor.fetchall()]
@@ -423,8 +420,9 @@ def verify_schema(cursor):
 
 def run_migration():
     """Run the full migration."""
-    logger.info(f"Connecting to {DB_PATH}")
-    conn = sqlite3.connect(DB_PATH)
+    db_path = str(paths.db_path())
+    logger.info(f"Connecting to {db_path}")
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
     try:

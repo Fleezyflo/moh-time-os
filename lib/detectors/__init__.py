@@ -14,7 +14,7 @@ import hashlib
 import json
 import logging
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from .bottleneck import BottleneckDetector
@@ -93,7 +93,7 @@ def _store_findings(
     sql = _SQL[table]
     inserted = 0
     updated = 0
-    now = datetime.now().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     for group in groups:
         primary = group.primary_finding
@@ -262,7 +262,7 @@ def run_all_detectors(
     import time
 
     start = time.time()
-    cycle_id = cycle_id or datetime.now().strftime("cycle_%Y%m%d_%H%M%S")
+    cycle_id = cycle_id or datetime.now(timezone.utc).strftime("cycle_%Y%m%d_%H%M%S")
     table = "detection_findings_preview" if dry_run else "detection_findings"
 
     results: dict[str, Any] = {
@@ -352,7 +352,7 @@ def run_all_detectors(
     try:
         conn = sqlite3.connect(db_path)
         try:
-            now = datetime.now().isoformat()
+            now = datetime.now(timezone.utc).isoformat()
             conn.execute(
                 """INSERT INTO sync_state (source, last_sync, last_success, items_synced)
                    VALUES ('detection_last_run', ?, ?, ?)

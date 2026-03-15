@@ -1,0 +1,55 @@
+session: 22
+date: "2026-03-12"
+phase: post-audit
+description: "Hostile review -- structural defect repair in DigestEngine, StateStore, BaseCollector, StateTracker"
+status: complete
+branch: fix/data-loss-write-safety
+
+tasks_completed:
+  - id: HOSTILE-01
+    description: "Remove _ensure_tables() constructor side-effect from DigestEngine"
+    files_modified:
+      - lib/notifier/digest.py
+
+  - id: HOSTILE-02
+    description: "Register digest indexes in lib/schema.py (moved from constructor)"
+    files_modified:
+      - lib/schema.py
+
+  - id: HOSTILE-03
+    description: "Fix mark_as_processed write-lock bypass -- route UPDATEs through store.update()"
+    files_modified:
+      - lib/notifier/digest.py
+
+  - id: HOSTILE-04
+    description: "Fix _FixtureStore semantic mismatch -- INSERT OR REPLACE, add update(), per-test isolation"
+    files_modified:
+      - tests/test_digest_engine.py
+
+  - id: HOSTILE-05
+    description: "Hoist deferred imports to module level (engine.py timedelta, state_tracker.py get_store, base.py os/shutil)"
+    files_modified:
+      - lib/notifier/engine.py
+      - lib/state_tracker.py
+      - lib/collectors/base.py
+
+  - id: PRIOR-SESSION
+    description: "Prior session fixes carried forward -- store DI wiring, _write_lock, base.py transform failure, state_tracker bracket access"
+    files_modified:
+      - lib/notifier/engine.py
+      - lib/state_store.py
+      - lib/collectors/base.py
+      - lib/state_tracker.py
+      - tests/test_action_integration.py
+      - tests/test_collector_resilience.py
+
+gaps_found:
+  - "DigestEngine generate_digest/get_pending_count use raw SQL via store.query() -- no store CRUD equivalent for complex SELECTs. Separate refactor."
+  - "NotificationEngine muting/analytics tests use Mock store -- should be converted to fixture DB for same reasons as digest tests. Separate PR."
+
+lessons:
+  - "Constructor side-effects (_ensure_tables) survived the DI refactor because nobody checked whether the work was already done elsewhere. Schema ownership must live in exactly one place."
+  - "store.query() for UPDATE SQL bypasses _write_lock -- any write must go through store.insert/update/delete. This is a concurrency bug, not a style issue."
+  - "Test fixture INSERT INTO vs production INSERT OR REPLACE is a semantic mismatch that tests can't catch because no test triggers duplicate keys. Latent bugs survive when fixtures diverge from production."
+  - "Deferred imports inside function bodies are justified only for circular dependency breaking or graceful degradation (try/except). Lazy stdlib imports (os, shutil, timedelta) are unjustified clutter."
+  - "Session-scoped test DB fixtures create shared mutable state across tests. Function-scoped tmp_path isolates each test."

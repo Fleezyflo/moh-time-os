@@ -14,19 +14,16 @@ Run with: python3 lib/migrations/v29_full_schema.py
 
 import logging
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 
 from lib import paths
 
 logger = logging.getLogger(__name__)
 
 
-DB_PATH = paths.db_path()
-
-
 def get_utc_now_iso() -> str:
     """Returns current UTC time in canonical 24-char format."""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     return now.strftime("%Y-%m-%dT%H:%M:%S.") + f"{now.microsecond // 1000:03d}Z"
 
 
@@ -215,12 +212,13 @@ CREATE INDEX IF NOT EXISTS idx_suppression_v29_expires ON inbox_suppression_rule
 
 def run_migration():
     """Execute the full schema migration."""
-    logger.info(f"Database: {DB_PATH}")
-    if not DB_PATH.exists():
-        logger.info(f"ERROR: Database not found at {DB_PATH}")
+    db_path = paths.db_path()
+    logger.info(f"Database: {db_path}")
+    if not db_path.exists():
+        logger.info(f"ERROR: Database not found at {db_path}")
         return False
 
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = sqlite3.connect(str(db_path))
     try:
         conn.executescript(SCHEMA_SQL)
         conn.commit()

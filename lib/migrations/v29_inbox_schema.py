@@ -20,20 +20,16 @@ Run with: python -m lib.migrations.v29_inbox_schema
 
 import logging
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 
 from lib import paths
 
 logger = logging.getLogger(__name__)
 
 
-# Database path
-DB_PATH = paths.db_path()
-
-
 def get_utc_now_iso() -> str:
     """Returns current UTC time in canonical 24-char format per §0.1."""
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     return now.strftime("%Y-%m-%dT%H:%M:%S.") + f"{now.microsecond // 1000:03d}Z"
 
 
@@ -363,15 +359,16 @@ def verify_migration(cursor) -> bool:
 
 def run_migration():
     """Run the full v2.9 inbox schema migration."""
+    db_path = paths.db_path()
     logger.info("=" * 60)
     logger.info("v2.9 Inbox Schema Migration")
     logger.info("=" * 60)
-    logger.info(f"\nDatabase: {DB_PATH}")
-    if not DB_PATH.exists():
-        logger.info(f"ERROR: Database not found at {DB_PATH}")
+    logger.info(f"\nDatabase: {db_path}")
+    if not db_path.exists():
+        logger.info(f"ERROR: Database not found at {db_path}")
         return False
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(str(db_path))
     cursor = conn.cursor()
 
     try:

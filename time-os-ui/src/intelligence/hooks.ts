@@ -31,6 +31,12 @@ interface UseDataResult<T> {
   data: T | null;
   loading: boolean;
   error: Error | null;
+  /** True if data was loaded at least once (even if stale/errored since) */
+  hasLoaded: boolean;
+  /** Error code from backend, if available */
+  errorCode: string | undefined;
+  /** ISO timestamp from the API response envelope (when the backend computed this data) */
+  computedAt: string | null;
   refetch: () => void;
 }
 
@@ -48,7 +54,7 @@ interface UseDataOptions {
 // =============================================================================
 
 function useData<T>(
-  fetchFn: () => Promise<{ data: T }>,
+  fetchFn: () => Promise<{ data: T; computed_at?: string }>,
   deps: unknown[] = [],
   options: UseDataOptions = {}
 ): UseDataResult<T> {
@@ -56,6 +62,8 @@ function useData<T>(
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(enabled);
   const [error, setError] = useState<Error | null>(null);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [computedAt, setComputedAt] = useState<string | null>(null);
 
   // Memoize fetchFn with its deps to create a stable reference
   // This avoids the spread dependency array pattern that ESLint can't verify
@@ -67,6 +75,7 @@ function useData<T>(
       setData(null);
       setLoading(false);
       setError(null);
+      setComputedAt(null);
       return;
     }
     setLoading(true);
@@ -74,8 +83,14 @@ function useData<T>(
     try {
       const result = await stableFetchFn();
       setData(result.data);
+      // Preserve computed_at from the API response envelope
+      if (result.computed_at) {
+        setComputedAt(result.computed_at);
+      }
+      setHasLoaded(true);
     } catch (e) {
       setError(e instanceof Error ? e : new Error(String(e)));
+      // Keep last-good data and computedAt on error (stale indicator)
     } finally {
       setLoading(false);
     }
@@ -91,7 +106,9 @@ function useData<T>(
     }
   }, [enabled, fetchData]);
 
-  return { data, loading, error, refetch };
+  const errorCode = error ? (error as Error & { errorCode?: string }).errorCode : undefined;
+
+  return { data, loading, error, hasLoaded, errorCode, computedAt, refetch };
 }
 
 // =============================================================================

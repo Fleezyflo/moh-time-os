@@ -5,7 +5,7 @@ Core business entity models: Client, Brand, Project, Retainer, Task, Person.
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 
 from .base import (
     ArchivableModel,
@@ -430,7 +430,7 @@ class Task(BaseModel):
             return False
         try:
             due = datetime.fromisoformat(self.due_date[:10])
-            return datetime.now().date() > due.date()
+            return datetime.now(timezone.utc).date() > due.date()
         except (ValueError, TypeError):
             return False
 
@@ -440,7 +440,7 @@ class Task(BaseModel):
             return 0
         try:
             due = datetime.fromisoformat(self.due_date[:10])
-            return (datetime.now().date() - due.date()).days
+            return (datetime.now(timezone.utc).date() - due.date()).days
         except (ValueError, TypeError):
             return 0
 

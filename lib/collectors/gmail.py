@@ -8,9 +8,10 @@ import hashlib
 import json
 import logging
 import os
-from datetime import datetime, timedelta
-from pathlib import Path
+from datetime import datetime, timedelta, timezone
 from typing import Any
+
+from lib.credential_paths import google_sa_file
 
 from .base import BaseCollector
 from .resilience import COLLECTOR_ERRORS
@@ -18,8 +19,13 @@ from .result import CollectorResult, CollectorStatus, classify_error
 
 logger = logging.getLogger(__name__)
 
+
+def _sa_file():
+    """Resolve SA file at call time to respect env overrides."""
+    return google_sa_file()
+
+
 # Service account configuration
-SA_FILE = Path.home() / "Library/Application Support/gogcli/sa-bW9saGFtQGhybW55LmNv.json"
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 DEFAULT_USER = os.environ.get("MOH_ADMIN_EMAIL", "molham@hrmny.co")
 
@@ -47,7 +53,7 @@ class GmailCollector(BaseCollector):
             from googleapiclient.discovery import build
 
             creds = service_account.Credentials.from_service_account_file(
-                str(SA_FILE), scopes=SCOPES
+                str(_sa_file()), scopes=SCOPES
             )
             creds = creds.with_subject(user)
             self._service = build("gmail", "v1", credentials=creds)
@@ -263,7 +269,7 @@ class GmailCollector(BaseCollector):
     def _parse_date(self, date_str: str) -> str:
         """Parse date string to ISO format."""
         if not date_str:
-            return datetime.now().isoformat()
+            return datetime.now(timezone.utc).isoformat()
 
         # Try common formats
         for fmt in ["%a, %d %b %Y %H:%M:%S %z", "%Y-%m-%d %H:%M"]:
@@ -273,7 +279,7 @@ class GmailCollector(BaseCollector):
             except ValueError:
                 continue
 
-        return datetime.now().isoformat()
+        return datetime.now(timezone.utc).isoformat()
 
     def _compute_priority(self, thread: dict) -> int:
         """Compute email priority 0-100."""
@@ -586,7 +592,7 @@ class GmailCollector(BaseCollector):
         """
         from datetime import datetime
 
-        cycle_start = datetime.now()
+        cycle_start = datetime.now(timezone.utc)
 
         # Check circuit breaker first
         if not self.circuit_breaker.can_execute():
@@ -631,7 +637,7 @@ class GmailCollector(BaseCollector):
                     error=str(e),
                     error_type=err_type,
                     circuit_breaker_state=self.circuit_breaker.state,
-                    duration_ms=(datetime.now() - cycle_start).total_seconds() * 1000,
+                    duration_ms=(datetime.now(timezone.utc) - cycle_start).total_seconds() * 1000,
                 )
                 return result.to_dict()
 
@@ -701,8 +707,8 @@ class GmailCollector(BaseCollector):
                     result.add_secondary("labels", error=str(e))
 
             # Step 5: Finalize status, update sync state, record success
-            self.last_sync = datetime.now()
-            result.duration_ms = (datetime.now() - cycle_start).total_seconds() * 1000
+            self.last_sync = datetime.now(timezone.utc)
+            result.duration_ms = (datetime.now(timezone.utc) - cycle_start).total_seconds() * 1000
             result.timestamp = self.last_sync.isoformat()
 
             # Escalate to PARTIAL if any secondary table failed
@@ -735,6 +741,6 @@ class GmailCollector(BaseCollector):
                 error=str(e),
                 error_type=err_type,
                 circuit_breaker_state=self.circuit_breaker.state,
-                duration_ms=(datetime.now() - cycle_start).total_seconds() * 1000,
+                duration_ms=(datetime.now(timezone.utc) - cycle_start).total_seconds() * 1000,
             )
             return result.to_dict()

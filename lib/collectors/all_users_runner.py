@@ -21,6 +21,7 @@ from typing import Any
 from lib import paths
 from lib.collectors.resilience import COLLECTOR_ERRORS
 from lib.compat import UTC
+from lib.credential_paths import google_sa_file
 
 logging.basicConfig(
     level=logging.INFO,
@@ -29,8 +30,13 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+def _sa_file():
+    """Resolve SA file at call time to respect env overrides."""
+    return google_sa_file()
+
+
 # Service account configuration
-SA_FILE = Path.home() / "Library/Application Support/gogcli/sa-bW9saGFtQGhybW55LmNv.json"
 GMAIL_SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 CALENDAR_SCOPES = ["https://www.googleapis.com/auth/calendar"]
 CHAT_SCOPES = [
@@ -162,13 +168,15 @@ def get_gmail_service(user: str):
     from googleapiclient.discovery import build
 
     if AUTH_DEBUG:
-        with open(SA_FILE) as f:
+        with open(_sa_file()) as f:
             sa_data = json.load(f)
         debug_print(f"SA_EMAIL: {sa_data.get('client_email')}")
         debug_print(f"SUBJECT: {user}")
         debug_print(f"SCOPES: {GMAIL_SCOPES}")
 
-    creds = service_account.Credentials.from_service_account_file(str(SA_FILE), scopes=GMAIL_SCOPES)
+    creds = service_account.Credentials.from_service_account_file(
+        str(_sa_file()), scopes=GMAIL_SCOPES
+    )
     creds = creds.with_subject(user)
     return build("gmail", "v1", credentials=creds)
 
@@ -179,14 +187,14 @@ def get_calendar_service(user: str):
     from googleapiclient.discovery import build
 
     if AUTH_DEBUG:
-        with open(SA_FILE) as f:
+        with open(_sa_file()) as f:
             sa_data = json.load(f)
         debug_print(f"SA_EMAIL: {sa_data.get('client_email')}")
         debug_print(f"SUBJECT: {user}")
         debug_print(f"SCOPES: {CALENDAR_SCOPES}")
 
     creds = service_account.Credentials.from_service_account_file(
-        str(SA_FILE), scopes=CALENDAR_SCOPES
+        str(_sa_file()), scopes=CALENDAR_SCOPES
     )
     creds = creds.with_subject(user)
     return build("calendar", "v3", credentials=creds)
@@ -198,13 +206,15 @@ def get_chat_service(user: str):
     from googleapiclient.discovery import build
 
     if AUTH_DEBUG:
-        with open(SA_FILE) as f:
+        with open(_sa_file()) as f:
             sa_data = json.load(f)
         debug_print(f"SA_EMAIL: {sa_data.get('client_email')}")
         debug_print(f"SUBJECT: {user}")
         debug_print(f"SCOPES: {CHAT_SCOPES}")
 
-    creds = service_account.Credentials.from_service_account_file(str(SA_FILE), scopes=CHAT_SCOPES)
+    creds = service_account.Credentials.from_service_account_file(
+        str(_sa_file()), scopes=CHAT_SCOPES
+    )
     creds = creds.with_subject(user)
     return build("chat", "v1", credentials=creds)
 
@@ -215,13 +225,15 @@ def get_drive_service(user: str):
     from googleapiclient.discovery import build
 
     if AUTH_DEBUG:
-        with open(SA_FILE) as f:
+        with open(_sa_file()) as f:
             sa_data = json.load(f)
         debug_print(f"SA_EMAIL: {sa_data.get('client_email')}")
         debug_print(f"SUBJECT: {user}")
         debug_print(f"SCOPES: {DRIVE_SCOPES}")
 
-    creds = service_account.Credentials.from_service_account_file(str(SA_FILE), scopes=DRIVE_SCOPES)
+    creds = service_account.Credentials.from_service_account_file(
+        str(_sa_file()), scopes=DRIVE_SCOPES
+    )
     creds = creds.with_subject(user)
     return build("drive", "v3", credentials=creds)
 

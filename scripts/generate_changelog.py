@@ -18,7 +18,7 @@ import re
 import subprocess
 import sys
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timezone
 
 COMMIT_PATTERN = re.compile(
     r"^(?P<type>feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)"
@@ -106,7 +106,7 @@ def format_changelog(grouped: dict[str, list[dict]], version: str = "Unreleased"
     """Format grouped commits as markdown."""
     lines = [
         "# Changelog\n",
-        f"## [{version}] - {datetime.now().strftime('%Y-%m-%d')}\n",
+        f"## [{version}] - {datetime.now(timezone.utc).strftime('%Y-%m-%d')}\n",
     ]
 
     # Breaking changes first

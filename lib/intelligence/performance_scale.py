@@ -14,7 +14,7 @@ import logging
 import time
 from collections import OrderedDict
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -262,7 +262,7 @@ class QueryOptimizer:
                 "duration_ms": duration_ms,
                 "rows_returned": rows_returned,
                 "source": source,
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             }
         )
         # Keep last 1000

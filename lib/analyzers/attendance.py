@@ -17,7 +17,7 @@ import logging
 import os
 import re
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +75,7 @@ class AttendanceAnalyzer:
             - team_summary: Overall team metrics
             - flags: Issues requiring attention
         """
-        cutoff = (datetime.now() - timedelta(days=days_back)).strftime("%Y-%m-%d")
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days_back)).strftime("%Y-%m-%d")
 
         # Get calendar meetings
         meetings = self._get_meetings(cutoff)

@@ -81,14 +81,15 @@ export function Team() {
     }
   });
 
-  // Summary stats
-  const internalCount = team.filter((m: TeamMember) => m.type === 'internal').length;
-  const totalOpenTasks = team.reduce((sum: number, m: TeamMember) => sum + (m.open_tasks || 0), 0);
-  const totalOverdue = team.reduce((sum: number, m: TeamMember) => sum + (m.overdue_tasks || 0), 0);
-  const overloadedCount = team.filter((m: TeamMember) => {
+  // Summary stats — preserve null when data not yet loaded
+  const teamLoaded = apiTeam != null;
+  const internalCount = teamLoaded ? team.filter((m: TeamMember) => m.type === 'internal').length : null;
+  const totalOpenTasks = teamLoaded ? team.reduce((sum: number, m: TeamMember) => sum + (m.open_tasks || 0), 0) : null;
+  const totalOverdue = teamLoaded ? team.reduce((sum: number, m: TeamMember) => sum + (m.overdue_tasks || 0), 0) : null;
+  const overloadedCount = teamLoaded ? team.filter((m: TeamMember) => {
     const load = getLoadLevel(m.open_tasks || 0, m.overdue_tasks || 0);
     return load === loadLevels.overloaded || load === loadLevels.high;
-  }).length;
+  }).length : null;
 
   return (
     <PageLayout
@@ -125,17 +126,17 @@ export function Team() {
     >
       {/* Summary Grid */}
       <SummaryGrid>
-        <MetricCard label="Team Size" value={internalCount} />
-        <MetricCard label="Open Tasks" value={totalOpenTasks} severity="info" />
+        <MetricCard label="Team Size" value={internalCount ?? '--'} />
+        <MetricCard label="Open Tasks" value={totalOpenTasks ?? '--'} severity={totalOpenTasks != null ? 'info' : undefined} />
         <MetricCard
           label="Overdue"
-          value={totalOverdue}
-          severity={totalOverdue > 0 ? 'danger' : undefined}
+          value={totalOverdue ?? '--'}
+          severity={totalOverdue != null && totalOverdue > 0 ? 'danger' : undefined}
         />
         <MetricCard
           label="Overloaded"
-          value={overloadedCount}
-          severity={overloadedCount > 0 ? 'warning' : undefined}
+          value={overloadedCount ?? '--'}
+          severity={overloadedCount != null && overloadedCount > 0 ? 'warning' : undefined}
         />
       </SummaryGrid>
 

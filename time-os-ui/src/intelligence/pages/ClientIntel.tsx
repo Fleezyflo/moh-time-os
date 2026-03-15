@@ -93,10 +93,10 @@ function mapClientToHeader(data: ClientFullData) {
     classification: classifyScore(compositeScore),
     primarySignal,
     quickStats: {
-      Health: compositeScore ? `${Math.round(compositeScore)}` : '—',
-      Signals: data.active_signals?.length ?? 0,
-      Projects: profile?.project_count ?? '—',
-      Tasks: profile?.total_tasks ?? '—',
+      Health: compositeScore != null ? `${Math.round(compositeScore)}` : '—',
+      Signals: data.active_signals != null ? data.active_signals.length : '—',
+      Projects: profile?.project_count != null ? profile.project_count : '—',
+      Tasks: profile?.total_tasks != null ? profile.total_tasks : '—',
     },
     trend: null,
   };

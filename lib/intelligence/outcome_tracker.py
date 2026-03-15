@@ -16,7 +16,7 @@ import logging
 import sqlite3
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -152,7 +152,7 @@ class OutcomeTracker:
             health_improved=improved,
             actions_taken=actions_taken,
             resolution_type=resolution,
-            created_at=datetime.now().isoformat(),
+            created_at=datetime.now(timezone.utc).isoformat(),
         )
 
         conn = sqlite3.connect(str(self.db_path))

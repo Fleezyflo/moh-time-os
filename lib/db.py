@@ -17,6 +17,7 @@ the codebase calls.
 import logging
 import re
 import sqlite3
+import threading
 from collections.abc import Generator
 from contextlib import contextmanager
 from pathlib import Path
@@ -157,87 +158,93 @@ def run_migrations(conn: sqlite3.Connection) -> dict:
 # ============================================================
 
 _migrations_run = False
+_migrations_lock = threading.Lock()
 
 
 def run_startup_migrations() -> dict:
     """
     Run schema convergence at startup. Safe to call multiple times.
+    Thread-safe: acquires _migrations_lock to prevent concurrent migration runs.
     Logs comprehensive startup info.
     """
     global _migrations_run  # noqa: PLW0603
 
-    db_path = get_db_path()
+    with _migrations_lock:
+        db_path = get_db_path()
 
-    # Log startup info
-    logger.info("=" * 50)
-    logger.info("MOH TIME OS Database Startup")
-    logger.info("=" * 50)
-    logger.info("Resolved DB path: %s", db_path)
-    logger.info("DB exists: %s", db_path.exists())
-    logger.info("Target SCHEMA_VERSION: %s", schema.SCHEMA_VERSION)
-
-    # Ensure parent directory exists
-    db_path.parent.mkdir(parents=True, exist_ok=True)
-
-    with get_connection() as conn:
-        version_before = get_schema_version(conn)
-        logger.info("Current user_version: %s", version_before)
-
-        if version_before >= schema.SCHEMA_VERSION and _migrations_run:
-            logger.info("Schema already converged, skipping")
-            return {"status": "skipped", "version": version_before}
-
-        # Run convergence
-        results = run_migrations(conn)
-
-        # Log what happened
-        if results.get("tables_created"):
-            logger.info("Tables created: %s", results["tables_created"])
-        if results.get("columns_added"):
-            logger.info("Columns added: %s", results["columns_added"])
-        if results.get("indexes_created"):
-            logger.info("Indexes created: %d", len(results["indexes_created"]))
-        if results.get("data_migrations_run"):
-            logger.info("Data migrations: %s", results["data_migrations_run"])
-        if results.get("skipped_views"):
-            logger.info("Skipped views: %s", results["skipped_views"])
-        if results.get("errors"):
-            logger.warning("Convergence errors: %s", results["errors"])
-
-        if (
-            not results.get("tables_created")
-            and not results.get("columns_added")
-            and not results.get("indexes_created")
-        ):
-            logger.info("No changes needed, schema up to date")
-
-        # Confirm critical tables present
-        for critical in (
-            "clients",
-            "tasks",
-            "communications",
-            "projects",
-            "invoices",
-            "inbox_items_v29",
-        ):
-            if table_exists(conn, critical):
-                logger.info("OK %s present", critical)
-            else:
-                logger.error("MISSING %s", critical)
-
-        logger.info("Final user_version: %s", results.get("schema_version"))
+        # Log startup info
         logger.info("=" * 50)
+        logger.info("MOH TIME OS Database Startup")
+        logger.info("=" * 50)
+        logger.info("Resolved DB path: %s", db_path)
+        logger.info("DB exists: %s", db_path.exists())
+        logger.info("Target SCHEMA_VERSION: %s", schema.SCHEMA_VERSION)
 
-        _migrations_run = True
-        return results
+        # Ensure parent directory exists
+        db_path.parent.mkdir(parents=True, exist_ok=True)
+
+        with get_connection() as conn:
+            version_before = get_schema_version(conn)
+            logger.info("Current user_version: %s", version_before)
+
+            if version_before >= schema.SCHEMA_VERSION and _migrations_run:
+                logger.info("Schema already converged, skipping")
+                return {"status": "skipped", "version": version_before}
+
+            # Run convergence
+            results = run_migrations(conn)
+
+            # Log what happened
+            if results.get("tables_created"):
+                logger.info("Tables created: %s", results["tables_created"])
+            if results.get("columns_added"):
+                logger.info("Columns added: %s", results["columns_added"])
+            if results.get("indexes_created"):
+                logger.info("Indexes created: %d", len(results["indexes_created"]))
+            if results.get("data_migrations_run"):
+                logger.info("Data migrations: %s", results["data_migrations_run"])
+            if results.get("skipped_views"):
+                logger.info("Skipped views: %s", results["skipped_views"])
+            if results.get("errors"):
+                logger.warning("Convergence errors: %s", results["errors"])
+
+            if (
+                not results.get("tables_created")
+                and not results.get("columns_added")
+                and not results.get("indexes_created")
+            ):
+                logger.info("No changes needed, schema up to date")
+
+            # Confirm critical tables present
+            for critical in (
+                "clients",
+                "tasks",
+                "communications",
+                "projects",
+                "invoices",
+                "inbox_items_v29",
+            ):
+                if table_exists(conn, critical):
+                    logger.info("OK %s present", critical)
+                else:
+                    logger.error("MISSING %s", critical)
+
+            logger.info("Final user_version: %s", results.get("schema_version"))
+            logger.info("=" * 50)
+
+            _migrations_run = True
+            return results
 
 
 def ensure_migrations():
-    """Ensure schema has converged. Called by StateStore and other entry points."""
-    global _migrations_run  # noqa: PLW0603
-    if not _migrations_run:
-        run_startup_migrations()
-        _migrations_run = True
+    """Ensure schema has converged. Called by StateStore and other entry points.
+
+    Thread-safe: calls run_startup_migrations() which acquires the lock internally.
+    Fast path: skips lock acquisition if migrations already ran.
+    """
+    if _migrations_run:
+        return
+    run_startup_migrations()
 
 
 # ============================================================

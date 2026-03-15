@@ -5,7 +5,7 @@ No AI required. Direct control.
 """
 
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 from lib.analyzers import AnalyzerOrchestrator
 from lib.autonomous_loop import AutonomousLoop
@@ -59,11 +59,27 @@ def score_color(score: float) -> str:
     return "\033[0m"  # Default
 
 
+def _format_staleness(ts) -> str:
+    """Format a cache timestamp into a human-readable staleness label."""
+    if ts is None:
+        return "unknown age"
+    age = (datetime.now(timezone.utc) - ts).total_seconds()
+    if age < 60:
+        return "just now"
+    if age < 3600:
+        return f"{int(age / 60)}m ago"
+    if age < 86400:
+        return f"{int(age / 3600)}h ago"
+    return f"{int(age / 86400)}d ago"
+
+
 def cmd_priorities(args):
     """Show priority queue."""
     store = get_store()
     queue = store.get_cache("priority_queue")
+    cache_ts = store.get_cache_timestamp("priority_queue")
 
+    from_cache = queue is not None
     if not queue:
         print("Priority queue not computed. Running analysis...")
         analyzers = AnalyzerOrchestrator(store=store)
@@ -72,6 +88,13 @@ def cmd_priorities(args):
     limit = int(args[0]) if args else 10
 
     print_header("PRIORITY QUEUE")
+
+    # Show data freshness
+    if from_cache:
+        staleness = _format_staleness(cache_ts)
+        print(f"  (cached data -- last computed {staleness})")
+    else:
+        print("  (freshly computed)")
 
     if not queue:
         print("No items in queue.")
@@ -131,10 +154,16 @@ def cmd_today(args):
 
     # Top priorities
     print("\n🎯 TOP PRIORITIES")
-    queue = store.get_cache("priority_queue") or []
-    for i, item in enumerate(queue[:5], 1):
-        score = item.get("score", 0)
-        print(f"  {i}. [{score:.0f}] {item.get('title', '')[:45]}")
+    queue = store.get_cache("priority_queue")
+    cache_ts = store.get_cache_timestamp("priority_queue")
+    if queue:
+        staleness = _format_staleness(cache_ts)
+        print(f"  (cached -- last computed {staleness})")
+        for i, item in enumerate(queue[:5], 1):
+            score = item.get("score", 0)
+            print(f"  {i}. [{score:.0f}] {item.get('title', '')[:45]}")
+    else:
+        print("  No priority data available (cache empty or expired).")
 
 
 def cmd_insights(args):
@@ -190,7 +219,7 @@ def cmd_approve(args):
     store.update(
         "decisions",
         decision_id,
-        {"approved": 1, "approved_at": datetime.now().isoformat()},
+        {"approved": 1, "approved_at": datetime.now(timezone.utc).isoformat()},
     )
 
     print(f"✅ Approved: {decision.get('description', decision_id)}")
@@ -213,7 +242,7 @@ def cmd_reject(args):
     store.update(
         "decisions",
         decision_id,
-        {"approved": 0, "approved_at": datetime.now().isoformat()},
+        {"approved": 0, "approved_at": datetime.now(timezone.utc).isoformat()},
     )
 
     print(f"❌ Rejected: {decision.get('description', decision_id)}")
@@ -338,7 +367,7 @@ def cmd_complete(args):
         store.update(
             "tasks",
             item_id,
-            {"status": "done", "updated_at": datetime.now().isoformat()},
+            {"status": "done", "updated_at": datetime.now(timezone.utc).isoformat()},
         )
         print(f"✓ Completed: {item_id}")
     elif item_id.startswith("gmail_"):
@@ -528,17 +557,22 @@ def cmd_ops_brief(args):
 
     print("=" * 70)
     print("EXECUTIVE BRIEF")
-    print(f"Generated: {brief['generated_at']}")
+    print(f"Generated: {brief.get('generated_at', 'unknown')}")
     print("=" * 70)
 
-    s = brief["summary"]
+    s = brief.get("summary", {})
     print("\n📊 SUMMARY")
     print(
-        f"   Active Signals: {s['active_signals']} "
-        f"({s['critical_signals']} critical, {s['high_signals']} high)"
+        f"   Active Signals: {s.get('active_signals', '?')} "
+        f"({s.get('critical_signals', '?')} critical, {s.get('high_signals', '?')} high)"
     )
-    print(f"   Open Proposals: {s['open_proposals']} ({s['surfaceable_proposals']} surfaceable)")
-    print(f"   Open Issues: {s['open_issues']} (watchers: {s['active_watchers']})")
+    print(
+        f"   Open Proposals: {s.get('open_proposals', '?')} "
+        f"({s.get('surfaceable_proposals', '?')} surfaceable)"
+    )
+    print(
+        f"   Open Issues: {s.get('open_issues', '?')} (watchers: {s.get('active_watchers', '?')})"
+    )
 
     if brief["proposals"]:
         print(f"\n📋 TOP PROPOSALS ({len(brief['proposals'])})")

@@ -10,7 +10,7 @@ Brief 27 (DQ), Task DQ-1.1
 import logging
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -134,7 +134,7 @@ class DataFreshnessTracker:
         record_count: int = 1,
     ) -> None:
         """Record that data was collected for an entity from a source."""
-        ts = (collected_at or datetime.now()).isoformat()
+        ts = (collected_at or datetime.now(timezone.utc)).isoformat()
         conn = sqlite3.connect(str(self.db_path))
         try:
             conn.execute(
@@ -172,7 +172,7 @@ class DataFreshnessTracker:
                     (entity_type, entity_id),
                 ).fetchall()
 
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             records = []
             for row in rows:
                 try:
@@ -249,7 +249,7 @@ class DataFreshnessTracker:
             else:
                 rows = conn.execute("SELECT * FROM data_freshness").fetchall()
 
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             stale = []
             for row in rows:
                 try:
@@ -287,7 +287,7 @@ class DataFreshnessTracker:
         try:
             rows = conn.execute("SELECT * FROM data_freshness").fetchall()
 
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             total = 0
             stale_count = 0
             fresh_count = 0

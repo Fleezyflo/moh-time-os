@@ -11,7 +11,7 @@ Reference: data/scoring_model_20260213.md
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from lib.intelligence.scoring import (
@@ -54,8 +54,8 @@ def score_client(client_id: str, db_path: Path | None = None) -> dict:
     task_summary = engine.client_task_summary(client_id)
 
     # Get 30-day metrics
-    since = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
-    until = datetime.now().strftime("%Y-%m-%d")
+    since = (datetime.now(timezone.utc) - timedelta(days=30)).strftime("%Y-%m-%d")
+    until = datetime.now(timezone.utc).strftime("%Y-%m-%d")
     period_metrics = engine.client_metrics_in_period(client_id, since, until)
 
     # Get trajectory (expensive - skip for bulk)
@@ -464,7 +464,7 @@ def _build_scorecard(
         "composite_score": round(composite_score, 1),
         "composite_classification": classify_score(composite_score),
         "dimensions": dimension_scores,
-        "scored_at": datetime.now().isoformat(),
+        "scored_at": datetime.now(timezone.utc).isoformat(),
         "data_completeness": round(data_completeness, 2),
     }
 
@@ -478,7 +478,7 @@ def _empty_scorecard(entity_type: EntityType, entity_id: str, entity_name: str) 
         "composite_score": None,
         "composite_classification": "data_unavailable",
         "dimensions": [],
-        "scored_at": datetime.now().isoformat(),
+        "scored_at": datetime.now(timezone.utc).isoformat(),
         "data_completeness": 0,
     }
 
@@ -579,7 +579,7 @@ def record_score(scorecard: dict, db_path: Path | None = None) -> bool:
         return False
 
     db = db_path or paths.db_path()
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
 
     try:
         conn = sqlite3.connect(str(db))
@@ -685,7 +685,7 @@ def get_score_trend(
         - period_low: lowest score in period
     """
     db = db_path or paths.db_path()
-    cutoff = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
 
     try:
         conn = sqlite3.connect(str(db))

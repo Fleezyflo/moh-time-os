@@ -15,17 +15,23 @@ from lib import paths
 
 logger = logging.getLogger(__name__)
 
-# Default paths
-OUT_DIR = paths.out_dir()
-MAIN_DB = paths.db_path()
+
+def _get_out_dir() -> Path:
+    """Get the output directory path."""
+    return paths.out_dir()
+
+
+def _get_main_db() -> Path:
+    """Get the main database path."""
+    return paths.db_path()
 
 
 class DataLoader:
     """Loads collected data from JSON files and provides scope lookups."""
 
-    def __init__(self, out_dir: Path = OUT_DIR, main_db: Path = MAIN_DB):
-        self.out_dir = out_dir
-        self.main_db = main_db
+    def __init__(self, out_dir: Path = None, main_db: Path = None):
+        self.out_dir = out_dir or _get_out_dir()
+        self.main_db = main_db or _get_main_db()
         self._scope_cache: dict[str, dict[str, Any]] = {}
         self._project_name_cache: dict[str, str] = {}  # name → project_id
         self._conn: sqlite3.Connection | None = None

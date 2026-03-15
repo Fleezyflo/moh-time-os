@@ -3,7 +3,7 @@ Reasoner Engine - Main orchestrator for decision-making.
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from ..governance import GovernanceEngine, get_governance
@@ -34,7 +34,7 @@ class ReasonerEngine:
         logger.info("Running reasoning cycle")
 
         results = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "decisions_created": 0,
             "decisions_auto_approved": 0,
             "decisions_pending": 0,
@@ -66,5 +66,5 @@ class ReasonerEngine:
         return {
             "pending_decisions": self.get_pending_count(),
             "governance_status": self.governance.get_status(),
-            "last_cycle": datetime.now().isoformat(),
+            "last_cycle": datetime.now(timezone.utc).isoformat(),
         }

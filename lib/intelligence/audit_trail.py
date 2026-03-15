@@ -12,7 +12,7 @@ import logging
 import sqlite3
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -114,7 +114,7 @@ class AuditTrail:
             inputs_summary=inputs_summary or {},
             outputs_summary=outputs_summary or {},
             duration_ms=duration_ms,
-            created_at=datetime.now().isoformat(),
+            created_at=datetime.now(timezone.utc).isoformat(),
             status=status,
             error_message=error_message,
         )

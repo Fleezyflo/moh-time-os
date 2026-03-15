@@ -15,9 +15,6 @@ from lib import paths
 
 logger = logging.getLogger(__name__)
 
-
-DB_PATH = paths.db_path()
-
 # Gate-to-domain mapping (duplicated from aggregator for independence)
 DOMAIN_GATES = {
     "delivery": {
@@ -39,8 +36,8 @@ DOMAIN_PRIORITY = {"cash": 10, "delivery": 8, "clients": 7, "comms": 5, "capacit
 class MovesEngine:
     """Generate exec moves from snapshot."""
 
-    def __init__(self, db_path: Path = DB_PATH):
-        self.db_path = db_path
+    def __init__(self, db_path: Path = None):
+        self.db_path = db_path or str(paths.db_path())
         self.today = date.today()
 
     def _get_conn(self) -> sqlite3.Connection:

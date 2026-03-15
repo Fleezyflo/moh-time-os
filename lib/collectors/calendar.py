@@ -8,11 +8,11 @@ DWD allowlist has `calendar.readonly` authorized (verified from admin CSV export
 import json
 import logging
 import os
-from datetime import datetime, timedelta
-from pathlib import Path
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from lib.compat import UTC
+from lib.credential_paths import google_sa_file
 
 from .base import BaseCollector
 from .resilience import COLLECTOR_ERRORS
@@ -20,8 +20,13 @@ from .result import CollectorResult, CollectorStatus, classify_error
 
 logger = logging.getLogger(__name__)
 
+
+def _sa_file():
+    """Resolve SA file at call time to respect env overrides."""
+    return google_sa_file()
+
+
 # Service account configuration
-SA_FILE = Path.home() / "Library/Application Support/gogcli/sa-bW9saGFtQGhybW55LmNv.json"
 # DWD allowlist has calendar.readonly (verified from admin CSV 2026-03-09)
 SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
 DEFAULT_USER = os.environ.get("MOH_ADMIN_EMAIL", "molham@hrmny.co")
@@ -47,7 +52,7 @@ class CalendarCollector(BaseCollector):
             from googleapiclient.discovery import build
 
             creds = service_account.Credentials.from_service_account_file(
-                str(SA_FILE), scopes=SCOPES
+                str(_sa_file()), scopes=SCOPES
             )
             creds = creds.with_subject(user)
             self._service = build("calendar", "v3", credentials=creds)
@@ -123,7 +128,7 @@ class CalendarCollector(BaseCollector):
 
     def transform(self, raw_data: dict) -> list[dict]:
         """Transform Calendar events to canonical format."""
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         transformed = []
 
         for event in raw_data.get("events", []):
@@ -346,7 +351,7 @@ class CalendarCollector(BaseCollector):
 
         Returns CollectorResult.to_dict() with status indicating health.
         """
-        cycle_start = datetime.now()
+        cycle_start = datetime.now(timezone.utc)
 
         # Check circuit breaker first
         if not self.circuit_breaker.can_execute():
@@ -389,7 +394,7 @@ class CalendarCollector(BaseCollector):
                     error=str(e),
                     error_type=err_type,
                     circuit_breaker_state=self.circuit_breaker.state,
-                    duration_ms=(datetime.now() - cycle_start).total_seconds() * 1000,
+                    duration_ms=(datetime.now(timezone.utc) - cycle_start).total_seconds() * 1000,
                 )
                 return cr.to_dict()
 
@@ -451,8 +456,8 @@ class CalendarCollector(BaseCollector):
                         cr.add_secondary("recurrence", error=str(e))
 
             # Step 5: Finalize status, update sync state, record success
-            self.last_sync = datetime.now()
-            cr.duration_ms = (datetime.now() - cycle_start).total_seconds() * 1000
+            self.last_sync = datetime.now(timezone.utc)
+            cr.duration_ms = (datetime.now(timezone.utc) - cycle_start).total_seconds() * 1000
             cr.timestamp = self.last_sync.isoformat()
             cr.escalate_to_partial()
             self.store.update_sync_state(
@@ -482,7 +487,7 @@ class CalendarCollector(BaseCollector):
                 error=str(e),
                 error_type=err_type,
                 circuit_breaker_state=self.circuit_breaker.state,
-                duration_ms=(datetime.now() - cycle_start).total_seconds() * 1000,
+                duration_ms=(datetime.now(timezone.utc) - cycle_start).total_seconds() * 1000,
             )
             return cr.to_dict()
 
@@ -500,14 +505,14 @@ if __name__ == "__main__":
     from google.oauth2 import service_account
     from googleapiclient.discovery import build
 
-    with open(SA_FILE) as f:
+    with open(_sa_file()) as f:
         sa_data = json.load(f)
 
     print(f"[AUTH_DEBUG] SA_EMAIL: {sa_data.get('client_email')}", file=sys.stderr)
     print(f"[AUTH_DEBUG] SUBJECT: {args.user}", file=sys.stderr)
     print(f"[AUTH_DEBUG] SCOPES: {SCOPES}", file=sys.stderr)
 
-    creds = service_account.Credentials.from_service_account_file(str(SA_FILE), scopes=SCOPES)
+    creds = service_account.Credentials.from_service_account_file(str(_sa_file()), scopes=SCOPES)
     creds = creds.with_subject(args.user)
     service = build("calendar", "v3", credentials=creds)
 

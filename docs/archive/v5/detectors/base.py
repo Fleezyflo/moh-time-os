@@ -6,7 +6,7 @@ Abstract base class for all signal detectors.
 
 import logging
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from ..database import Database
@@ -144,7 +144,7 @@ class SignalDetector(ABC):
             source_excerpt=source_excerpt,
             detection_confidence=detection_confidence,
             attribution_confidence=attribution_confidence,
-            occurred_at=(occurred_at or datetime.now()).isoformat(),
+            occurred_at=(occurred_at or datetime.now(timezone.utc)).isoformat(),
             detected_at=now_iso(),
             expires_at=expires_at.isoformat() if expires_at else None,
             detector_id=self.detector_id,

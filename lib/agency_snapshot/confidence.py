@@ -159,7 +159,7 @@ class ConfidenceModel:
 
     def _get_collector_staleness(self) -> dict[str, float]:
         """Get hours since last sync for each collector."""
-        from datetime import datetime
+        from datetime import datetime, timezone
 
         staleness = {}
         sources = ["gmail", "calendar", "asana", "xero"]
@@ -176,7 +176,7 @@ class ConfidenceModel:
             if row and row.get("last_sync"):
                 try:
                     last_sync = datetime.fromisoformat(row["last_sync"])
-                    hours = (datetime.now() - last_sync).total_seconds() / 3600
+                    hours = (datetime.now(timezone.utc) - last_sync).total_seconds() / 3600
                     staleness[f"{source}_hours"] = round(hours, 1)
                 except (ValueError, TypeError) as e:
                     # Internal metadata - malformed value indicates bug

@@ -9,7 +9,7 @@ Handles:
 
 import json
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class NotificationHandler:
@@ -60,7 +60,7 @@ class NotificationHandler:
         notif_id = self.store.insert(
             "notifications",
             {
-                "id": f"notif_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}",
+                "id": f"notif_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S_%f')}",
                 "type": data.get("type", "alert"),
                 "priority": data.get("priority", "normal"),
                 "title": data["title"],
@@ -70,7 +70,7 @@ class NotificationHandler:
                 if data.get("action_data")
                 else None,
                 "channels": json.dumps(data.get("channels")) if data.get("channels") else None,
-                "created_at": datetime.now().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             },
         )
 
@@ -148,12 +148,12 @@ class NotificationHandler:
         self.store.insert(
             "actions",
             {
-                "id": f"action_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}",
+                "id": f"action_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S_%f')}",
                 "type": action.get("action_type", "notification"),
                 "target_system": "notifications",
                 "payload": json.dumps(action.get("data", {})),
                 "result": json.dumps(result),
                 "status": "completed" if result.get("success") else "failed",
-                "created_at": datetime.now().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             },
         )

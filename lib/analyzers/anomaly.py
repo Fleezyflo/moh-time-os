@@ -9,7 +9,7 @@ Monitors:
 """
 
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 
 class AnomalyDetector:
@@ -72,7 +72,7 @@ class AnomalyDetector:
     def check_overdue_tasks(self) -> list[dict]:
         """Check for overdue tasks."""
         anomalies = []
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         today = now.strftime("%Y-%m-%d")
 
         overdue = self.store.query(
@@ -145,7 +145,7 @@ class AnomalyDetector:
     def check_deadline_risk(self) -> list[dict]:
         """Check for tasks at risk of missing deadline."""
         anomalies = []
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         lookahead = now + timedelta(days=self.thresholds["deadline_miss_lookahead_days"])
         today = now.strftime("%Y-%m-%d")
         lookahead_str = lookahead.strftime("%Y-%m-%d")
@@ -183,7 +183,7 @@ class AnomalyDetector:
     def check_stale_items(self) -> list[dict]:
         """Check for stale tasks and decisions."""
         anomalies = []
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         stale_cutoff = (now - timedelta(days=self.thresholds["stale_task_days"])).isoformat()
 
         stale_tasks = self.store.query(
@@ -240,7 +240,7 @@ class AnomalyDetector:
     def check_response_sla(self) -> list[dict]:
         """Check for SLA breaches on communications."""
         anomalies = []
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         sla_cutoff = (now - timedelta(hours=self.thresholds["overdue_response_hours"])).isoformat()
 
         overdue_comms = self.store.query(
@@ -290,7 +290,7 @@ class AnomalyDetector:
     def check_calendar_conflicts(self) -> list[dict]:
         """Check for calendar conflicts."""
         anomalies = []
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
 
         # Get upcoming events with conflicts
         conflicts = self.store.query("""
@@ -321,7 +321,7 @@ class AnomalyDetector:
     def check_team_blocked(self) -> list[dict]:
         """Check for team members with blocked tasks."""
         anomalies = []
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
 
         blocked_by_assignee = self.store.query("""
             SELECT assignee, COUNT(*) as blocked_count
@@ -356,7 +356,7 @@ class AnomalyDetector:
     def check_priority_queue_health(self) -> list[dict]:
         """Check priority queue for concerning patterns."""
         anomalies = []
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
 
         # Count critical priority items
         critical_count = self.store.count(
@@ -380,7 +380,7 @@ class AnomalyDetector:
     def check_workload_spike(self) -> list[dict]:
         """Check for unusual workload spikes."""
         anomalies = []
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
 
         # Compare today's new items to 7-day average
         today_start = now.replace(hour=0, minute=0, second=0).isoformat()
@@ -416,7 +416,7 @@ class AnomalyDetector:
         self.store.insert(
             "insights",
             {
-                "id": f"anomaly_{anomaly['type']}_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                "id": f"anomaly_{anomaly['type']}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}",
                 "type": "anomaly",
                 "source": "anomaly_detector",
                 "title": anomaly["message"],
@@ -425,6 +425,6 @@ class AnomalyDetector:
                     anomaly["severity"], 50
                 ),
                 "status": "active",
-                "created_at": datetime.now().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             },
         )

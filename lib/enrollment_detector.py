@@ -12,7 +12,7 @@ import logging
 import os
 import sqlite3
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from .state_store import get_store
 
@@ -43,7 +43,7 @@ def detect_task_prefixes(store, test_mode: bool = False) -> list[dict]:
             WHERE status = 'pending' AND title LIKE '%:%'
         """)
     else:
-        cutoff = (datetime.now() - timedelta(days=TIME_WINDOW_DAYS)).isoformat()
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=TIME_WINDOW_DAYS)).isoformat()
         tasks = store.query(
             """
             SELECT title, project, client_id FROM tasks
@@ -117,7 +117,7 @@ def detect_task_prefixes(store, test_mode: bool = False) -> list[dict]:
 def detect_email_clusters(store) -> list[dict]:
     """Detect email thread clusters that might indicate new projects."""
 
-    cutoff = (datetime.now() - timedelta(days=TIME_WINDOW_DAYS)).isoformat()
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=TIME_WINDOW_DAYS)).isoformat()
     emails = store.query(
         """
         SELECT subject, from_email, from_domain, thread_id FROM communications
@@ -162,7 +162,7 @@ def detect_email_clusters(store) -> list[dict]:
 def detect_calendar_series(store) -> list[dict]:
     """Detect recurring meeting series that might indicate new projects."""
 
-    cutoff = (datetime.now() - timedelta(days=TIME_WINDOW_DAYS)).isoformat()
+    cutoff = (datetime.now(timezone.utc) - timedelta(days=TIME_WINDOW_DAYS)).isoformat()
     events = store.query(
         """
         SELECT title, attendees FROM events
@@ -322,7 +322,7 @@ def run_detection(store=None, test_mode: bool = False) -> dict:
         "new_candidates": len([c for c in unique if not c.get("is_enrolled")]),
         "enrolled_patterns": len([c for c in unique if c.get("is_enrolled")]),
         "test_mode": test_mode,
-        "detected_at": datetime.now().isoformat(),
+        "detected_at": datetime.now(timezone.utc).isoformat(),
     }
 
 

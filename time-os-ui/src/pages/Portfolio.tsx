@@ -41,9 +41,10 @@ export function Portfolio() {
   const asanaContext = useAsanaPortfolioContext();
 
   // Derive signal count and structural pattern count from intelligence data
-  const signalCount = portfolioIntel.data?.signal_summary?.total_active ?? 0;
+  // Use null (not 0) when data isn't available to distinguish "no data" from "zero"
+  const signalCount = portfolioIntel.data?.signal_summary?.total_active ?? null;
   const structuralPatterns =
-    portfolioIntel.data?.structural_patterns?.filter((p) => p.severity === 'structural') ?? [];
+    portfolioIntel.data?.structural_patterns?.filter((p) => p.severity === 'structural') ?? null;
 
   const isLoading =
     portfolioScore.loading ||
@@ -78,10 +79,13 @@ export function Portfolio() {
         />
         <MetricCard
           label="Active Signals"
-          value={signalCount || '--'}
-          severity={signalCount > 5 ? 'warning' : undefined}
+          value={signalCount != null ? signalCount : '--'}
+          severity={signalCount != null && signalCount > 5 ? 'warning' : undefined}
         />
-        <MetricCard label="Structural Patterns" value={structuralPatterns.length || '--'} />
+        <MetricCard
+          label="Structural Patterns"
+          value={structuralPatterns != null ? structuralPatterns.length : '--'}
+        />
       </SummaryGrid>
 
       {/* Loading state */}
@@ -221,7 +225,13 @@ export function Portfolio() {
                 )}
               </summary>
               <div className="mt-4 space-y-6">
-                {!financialDetail.data ||
+                {financialDetail.error ? (
+                  <div className="p-4 text-center bg-red-500/10 border border-red-500/30 rounded-lg">
+                    <p className="text-red-400">
+                      Failed to load financial detail: {financialDetail.error.message}
+                    </p>
+                  </div>
+                ) : !financialDetail.data ||
                 (!financialDetail.data.contacts &&
                   !financialDetail.data.transactions &&
                   !financialDetail.data.tax_rates) ? (
@@ -404,7 +414,13 @@ export function Portfolio() {
                 )}
               </summary>
               <div className="mt-4 space-y-6">
-                {!asanaContext.data ||
+                {asanaContext.error ? (
+                  <div className="p-4 text-center bg-red-500/10 border border-red-500/30 rounded-lg">
+                    <p className="text-red-400">
+                      Failed to load Asana context: {asanaContext.error.message}
+                    </p>
+                  </div>
+                ) : !asanaContext.data ||
                 (!asanaContext.data.portfolios && !asanaContext.data.goals) ? (
                   <div className="p-4 text-center">
                     <p className="text-[var(--grey-light)]">

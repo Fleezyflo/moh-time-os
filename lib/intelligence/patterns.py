@@ -36,9 +36,9 @@ class PatternDetectionError:
 
     def __post_init__(self):
         if not self.timestamp:
-            from datetime import datetime
+            from datetime import datetime, timezone
 
-            self.timestamp = datetime.now().isoformat()
+            self.timestamp = datetime.now(timezone.utc).isoformat()
 
     def to_dict(self) -> dict:
         return {
@@ -671,7 +671,7 @@ if _validation_errors:
 import logging  # noqa: E402 — conditional import
 import math  # noqa: E402 — conditional import
 import statistics  # noqa: E402 — conditional import
-from datetime import datetime  # noqa: E402 — conditional import
+from datetime import datetime, timezone  # noqa: E402 — conditional import
 from pathlib import Path  # noqa: E402 — conditional import
 
 logger = logging.getLogger(__name__)
@@ -894,7 +894,7 @@ def _detect_concentration(
                 pattern_name=pattern_def.name,
                 pattern_type=pattern_def.pattern_type.value,
                 severity=severity,
-                detected_at=datetime.now().isoformat(),
+                detected_at=datetime.now(timezone.utc).isoformat(),
                 entities_involved=[
                     {
                         "type": "client",
@@ -952,7 +952,7 @@ def _detect_concentration(
                 pattern_name=pattern_def.name,
                 pattern_type=pattern_def.pattern_type.value,
                 severity=pattern_def.severity.value,
-                detected_at=datetime.now().isoformat(),
+                detected_at=datetime.now(timezone.utc).isoformat(),
                 entities_involved=[
                     {
                         "type": "person",
@@ -1004,7 +1004,7 @@ def _detect_concentration(
                 pattern_name=pattern_def.name,
                 pattern_type=pattern_def.pattern_type.value,
                 severity=pattern_def.severity.value,
-                detected_at=datetime.now().isoformat(),
+                detected_at=datetime.now(timezone.utc).isoformat(),
                 entities_involved=[
                     {
                         "type": "person",
@@ -1049,7 +1049,7 @@ def _detect_concentration(
                         pattern_name=pattern_def.name,
                         pattern_type=pattern_def.pattern_type.value,
                         severity=pattern_def.severity.value,
-                        detected_at=datetime.now().isoformat(),
+                        detected_at=datetime.now(timezone.utc).isoformat(),
                         entities_involved=[
                             {
                                 "type": "client",
@@ -1135,7 +1135,7 @@ def _detect_cascade(
                 pattern_name=pattern_def.name,
                 pattern_type=pattern_def.pattern_type.value,
                 severity=pattern_def.severity.value,
-                detected_at=datetime.now().isoformat(),
+                detected_at=datetime.now(timezone.utc).isoformat(),
                 entities_involved=[
                     {
                         "type": "person",
@@ -1180,7 +1180,7 @@ def _detect_cascade(
                     pattern_name=pattern_def.name,
                     pattern_type=pattern_def.pattern_type.value,
                     severity=pattern_def.severity.value,
-                    detected_at=datetime.now().isoformat(),
+                    detected_at=datetime.now(timezone.utc).isoformat(),
                     entities_involved=[
                         {
                             "type": "person",
@@ -1233,7 +1233,7 @@ def _detect_cascade(
                 pattern_name=pattern_def.name,
                 pattern_type=pattern_def.pattern_type.value,
                 severity=severity,
-                detected_at=datetime.now().isoformat(),
+                detected_at=datetime.now(timezone.utc).isoformat(),
                 entities_involved=[
                     {"type": "client", "id": cid, "name": cid, "role": "at-risk"}
                     for cid in list(clients_with_signals.keys())[:5]
@@ -1282,7 +1282,7 @@ def _detect_degradation(
                 pattern_name=pattern_def.name,
                 pattern_type=pattern_def.pattern_type.value,
                 severity=pattern_def.severity.value,
-                detected_at=datetime.now().isoformat(),
+                detected_at=datetime.now(timezone.utc).isoformat(),
                 entities_involved=[
                     {
                         "type": "client",
@@ -1323,7 +1323,7 @@ def _detect_degradation(
                 pattern_name=pattern_def.name,
                 pattern_type=pattern_def.pattern_type.value,
                 severity=pattern_def.severity.value,
-                detected_at=datetime.now().isoformat(),
+                detected_at=datetime.now(timezone.utc).isoformat(),
                 entities_involved=[
                     {
                         "type": "client",
@@ -1366,7 +1366,7 @@ def _detect_degradation(
                 pattern_name=pattern_def.name,
                 pattern_type=pattern_def.pattern_type.value,
                 severity=pattern_def.severity.value,
-                detected_at=datetime.now().isoformat(),
+                detected_at=datetime.now(timezone.utc).isoformat(),
                 entities_involved=[
                     {
                         "type": "person",
@@ -1424,7 +1424,7 @@ def _detect_drift(
                 pattern_name=pattern_def.name,
                 pattern_type=pattern_def.pattern_type.value,
                 severity=pattern_def.severity.value,
-                detected_at=datetime.now().isoformat(),
+                detected_at=datetime.now(timezone.utc).isoformat(),
                 entities_involved=[
                     {
                         "type": "person",
@@ -1464,7 +1464,7 @@ def _detect_drift(
                 pattern_name=pattern_def.name,
                 pattern_type=pattern_def.pattern_type.value,
                 severity=pattern_def.severity.value,
-                detected_at=datetime.now().isoformat(),
+                detected_at=datetime.now(timezone.utc).isoformat(),
                 entities_involved=[
                     {
                         "type": "client",
@@ -1547,7 +1547,7 @@ def _detect_correlation(
                 pattern_name=pattern_def.name,
                 pattern_type=pattern_def.pattern_type.value,
                 severity=pattern_def.severity.value,
-                detected_at=datetime.now().isoformat(),
+                detected_at=datetime.now(timezone.utc).isoformat(),
                 entities_involved=[
                     {
                         "type": "person",
@@ -1594,7 +1594,7 @@ def _detect_correlation(
                 pattern_name=pattern_def.name,
                 pattern_type=pattern_def.pattern_type.value,
                 severity=pattern_def.severity.value,
-                detected_at=datetime.now().isoformat(),
+                detected_at=datetime.now(timezone.utc).isoformat(),
                 entities_involved=[
                     {"type": "client", "id": cid, "name": cid, "role": "comm+payment-issue"}
                     for cid in list(overlap)[:5]
@@ -1688,7 +1688,7 @@ def detect_all_patterns(db_path: Path | None = None) -> dict:
     errors = error_collector.get_all()
 
     return {
-        "detected_at": datetime.now().isoformat(),
+        "detected_at": datetime.now(timezone.utc).isoformat(),
         "success": len(errors) == 0,
         "total_detected": len(all_detected),
         "total_patterns": len(PATTERN_LIBRARY),

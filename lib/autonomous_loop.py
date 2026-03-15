@@ -8,7 +8,7 @@ import json
 import logging
 import sqlite3
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -87,7 +87,7 @@ class AutonomousLoop:
         Run one complete autonomous cycle.
         This is what runs every N minutes.
         """
-        cycle_start = datetime.now()
+        cycle_start = datetime.now(timezone.utc)
         self.cycle_count += 1
 
         logger.info("═══════════════════════════════════════")
@@ -112,7 +112,7 @@ class AutonomousLoop:
             collected_count = sum(
                 r.get("stored", 0)
                 for r in collect_results.values()
-                if isinstance(r, dict) and r.get("success")
+                if isinstance(r, dict) and r.get("status") in ("success", "partial")
             )
             logger.info(f"  Collected {collected_count} items from {len(collect_results)} sources")
 
@@ -454,8 +454,8 @@ class AutonomousLoop:
             results["error"] = str(e)
 
         # Calculate duration
-        results["completed_at"] = datetime.now().isoformat()
-        results["duration_ms"] = (datetime.now() - cycle_start).total_seconds() * 1000
+        results["completed_at"] = datetime.now(timezone.utc).isoformat()
+        results["duration_ms"] = (datetime.now(timezone.utc) - cycle_start).total_seconds() * 1000
 
         # Record cycle timing in PerformanceMonitor
         self.perf_monitor.record_timing("cycle_total", results["duration_ms"])
@@ -621,7 +621,7 @@ class AutonomousLoop:
                 entity_id="autonomous_loop",
                 inputs_summary={
                     "cycle": self.cycle_count,
-                    "started_at": datetime.now().isoformat(),
+                    "started_at": datetime.now(timezone.utc).isoformat(),
                 },
             )
             results["audit_entries_recorded"] += 1
@@ -874,7 +874,7 @@ class AutonomousLoop:
                                     signal_type=s.get("signal_type", ""),
                                     severity=s.get("severity", "WATCH"),
                                     detected_at=datetime.fromisoformat(
-                                        s.get("detected_at", datetime.now().isoformat())
+                                        s.get("detected_at", datetime.now(timezone.utc).isoformat())
                                     ),
                                     is_present=s.get("is_active", True),
                                 )
@@ -1343,7 +1343,7 @@ class AutonomousLoop:
         Send one-time staleness alert if detection hasn't run in 2+ hours
         during business hours (9-21). Resets on next successful detection run.
         """
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
 
         # Only alert during business hours (9-21)
         if now.hour < 9 or now.hour >= 21:
@@ -1394,7 +1394,14 @@ class AutonomousLoop:
         message = f"Detection system has not run in {hours_stale} hours. Findings may be outdated."
 
         try:
-            result = channel.send_sync(message, title="Staleness Warning")
+            from lib.notifier.channels.safe_send import safe_send_sync
+
+            result = safe_send_sync(
+                channel=channel,
+                message=message,
+                title="Staleness Warning",
+                caller="autonomous_loop",
+            )
         except (ValueError, OSError) as e:
             logger.error("Failed to send staleness alert: %s", e)
             return {"status": "error", "error": str(e)}
@@ -1554,7 +1561,7 @@ class AutonomousLoop:
                 "body": body,
                 "action_data": json.dumps(data),
                 "channels": json.dumps(["push"]),
-                "created_at": datetime.now().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             },
         )
 

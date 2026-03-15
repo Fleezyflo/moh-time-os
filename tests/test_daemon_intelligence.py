@@ -10,7 +10,7 @@ Validates that the intelligence phase:
 
 import sqlite3
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from types import ModuleType
 from unittest.mock import MagicMock, patch
 
@@ -187,7 +187,7 @@ class TestScoringPersistence:
                     {"dimension": "comms", "score": 65},
                 ],
                 "data_completeness": 0.85,
-                "scored_at": datetime.now().isoformat(),
+                "scored_at": datetime.now(timezone.utc).isoformat(),
             },
             {
                 "entity_type": "client",
@@ -196,7 +196,7 @@ class TestScoringPersistence:
                 "composite_score": 55.0,
                 "dimensions": [{"dimension": "delivery", "score": 55}],
                 "data_completeness": 0.5,
-                "scored_at": datetime.now().isoformat(),
+                "scored_at": datetime.now(timezone.utc).isoformat(),
             },
         ]
 
@@ -232,7 +232,7 @@ class TestScoringPersistence:
                 "composite_score": None,
                 "composite_classification": "data_unavailable",
                 "dimensions": [],
-                "scored_at": datetime.now().isoformat(),
+                "scored_at": datetime.now(timezone.utc).isoformat(),
             },
         ]
 
@@ -303,7 +303,7 @@ class TestPatternPersistence:
                     "pattern_name": "Revenue Concentration",
                     "pattern_type": "concentration",
                     "severity": "structural",
-                    "detected_at": datetime.now().isoformat(),
+                    "detected_at": datetime.now(timezone.utc).isoformat(),
                     "entities_involved": [{"type": "client", "id": "c1"}],
                     "metrics": {"hhi": 0.3},
                     "evidence_narrative": "High concentration",
@@ -383,7 +383,7 @@ class TestEventEmission:
                     "pattern_name": "Single Point of Failure",
                     "pattern_type": "dependency",
                     "severity": "warning",
-                    "detected_at": datetime.now().isoformat(),
+                    "detected_at": datetime.now(timezone.utc).isoformat(),
                     "entities_involved": [{"type": "person", "id": "p1"}],
                     "metrics": {},
                     "evidence_narrative": "Person handles all design",
@@ -489,7 +489,7 @@ class TestIsolation:
                     "pattern_name": "Test",
                     "pattern_type": "concentration",
                     "severity": "structural",
-                    "detected_at": datetime.now().isoformat(),
+                    "detected_at": datetime.now(timezone.utc).isoformat(),
                     "entities_involved": [{"type": "client", "id": "c1"}],
                     "metrics": {},
                     "evidence_narrative": "test",

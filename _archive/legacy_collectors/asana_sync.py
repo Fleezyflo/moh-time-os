@@ -18,9 +18,6 @@ raise RuntimeError(
     "Use collectors/scheduled_collect.py instead. "
     "See COLLECTOR_AUDIT.md for migration details."
 )
-    python3 -m lib.collectors.asana_sync tasks       # Sync tasks only
-    python3 -m lib.collectors.asana_sync map         # Show unmapped projects
-"""
 
 import logging
 import re
@@ -34,7 +31,11 @@ logger = logging.getLogger(__name__)
 
 # Config
 WORKSPACE_GID = "1148006162435561"  # hrmny
-DB_PATH = paths.db_path()
+
+
+def _db_path() -> str:
+    """Get database path."""
+    return paths.db_path()
 
 # Team classification
 INTERNAL_TEAMS = {"Admin", "HR", "Majeed Board"}
@@ -65,7 +66,7 @@ CLIENT_PATTERNS = [
 
 def get_db():
     """Get database connection."""
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(_db_path())
     conn.row_factory = sqlite3.Row
     return conn
 

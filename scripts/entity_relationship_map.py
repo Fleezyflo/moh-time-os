@@ -5,14 +5,12 @@ Task: SYSPREP 2.1 — Entity Relationship Map
 """
 
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
-from lib import safe_sql
+from lib import paths, safe_sql
 
 REPO_ROOT = Path(__file__).parent.parent
-DATA_DIR = REPO_ROOT / "data"
-DB_PATH = DATA_DIR / "moh_time_os.db"
 
 # Core entities from schema audit
 CORE_ENTITIES = {
@@ -226,7 +224,7 @@ def analyze_relationships(conn: sqlite3.Connection, entity_tables: dict) -> dict
 
 def generate_report(entity_tables: dict, relationships: dict, table_info: dict) -> str:
     """Generate the relationship map report."""
-    date_str = datetime.now().strftime("%Y-%m-%d")
+    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     lines = [
         f"# Entity Relationship Map — {date_str}",
@@ -376,7 +374,7 @@ def generate_report(entity_tables: dict, relationships: dict, table_info: dict) 
 def main():
     print("Generating Entity Relationship Map...")
 
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = sqlite3.connect(str(paths.db_path()))
 
     # Find entity tables
     print("Finding entity tables...")
@@ -397,8 +395,8 @@ def main():
     report = generate_report(entity_tables, relationships, table_info)
 
     # Save
-    date_str = datetime.now().strftime("%Y%m%d")
-    output_file = DATA_DIR / f"entity_relationship_map_{date_str}.md"
+    date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
+    output_file = paths.data_dir() / f"entity_relationship_map_{date_str}.md"
     output_file.write_text(report)
 
     conn.close()

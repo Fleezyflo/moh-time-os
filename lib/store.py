@@ -3,13 +3,17 @@
 import logging
 import sqlite3
 from contextlib import contextmanager
-from datetime import datetime
 
 from lib import paths, safe_sql
+from lib.clock import now_iso
 
 log = logging.getLogger("moh_time_os")
 
-DB_PATH = paths.db_path()
+
+def _db_path():
+    """Resolve DB path at call time to respect env overrides (MOH_TIME_OS_DB)."""
+    return paths.db_path()
+
 
 SCHEMA = """
 -- Clients
@@ -162,20 +166,21 @@ CREATE INDEX IF NOT EXISTS idx_history_item ON item_history(item_id);
 
 def init_db() -> None:
     """Initialize database with schema. Safe to call multiple times."""
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    db = _db_path()
+    db.parent.mkdir(parents=True, exist_ok=True)
 
     with get_connection() as conn:
         conn.executescript(SCHEMA)
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA foreign_keys=ON")
 
-    log.info(f"Database initialized at {DB_PATH}")
+    log.info(f"Database initialized at {db}")
 
 
 @contextmanager
 def get_connection():
     """Get database connection with auto-commit/rollback."""
-    conn = sqlite3.connect(DB_PATH, timeout=30.0)
+    conn = sqlite3.connect(_db_path(), timeout=30.0)
     conn.row_factory = sqlite3.Row
     try:
         yield conn
@@ -188,14 +193,20 @@ def get_connection():
         conn.close()
 
 
-def now_iso() -> str:
-    """Current UTC time in ISO format."""
-    return datetime.utcnow().isoformat() + "Z"
+def now_iso() -> str:  # noqa: F811
+    """Current UTC time in canonical ISO format (24-char, 3-digit ms, Z suffix).
+
+    Delegates to lib.clock.now_iso() which is the single source of truth.
+    Kept here for backward compatibility — new code should import from lib.clock.
+    """
+    from lib.clock import now_iso as _now_iso
+
+    return _now_iso()
 
 
 def db_exists() -> bool:
     """Check if database file exists."""
-    return DB_PATH.exists()
+    return _db_path().exists()
 
 
 def table_counts() -> dict:

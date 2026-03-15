@@ -10,7 +10,7 @@ Handles:
 
 import json
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class DelegationHandler:
@@ -82,11 +82,11 @@ class DelegationHandler:
                 "assignee": delegate_to,
                 "waiting_for": delegate_to,
                 "status": "delegated",
-                "updated_at": datetime.now().isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
                 "context": json.dumps(
                     {
                         **json.loads(task.get("context") or "{}"),
-                        "delegated_at": datetime.now().isoformat(),
+                        "delegated_at": datetime.now(timezone.utc).isoformat(),
                         "delegated_to": delegate_to,
                         "delegated_by": "moh",
                     }
@@ -135,11 +135,11 @@ class DelegationHandler:
                 "assignee": next_target,
                 "priority": min((task.get("priority") or 50) + 20, 100),  # Bump priority
                 "status": "escalated",
-                "updated_at": datetime.now().isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
                 "context": json.dumps(
                     {
                         **json.loads(task.get("context") or "{}"),
-                        "escalated_at": datetime.now().isoformat(),
+                        "escalated_at": datetime.now(timezone.utc).isoformat(),
                         "escalation_reason": reason,
                         "escalated_from": current_assignee,
                     }
@@ -151,12 +151,12 @@ class DelegationHandler:
         self.store.insert(
             "notifications",
             {
-                "id": f"notif_escalate_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                "id": f"notif_escalate_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}",
                 "type": "alert",
                 "priority": "high",
                 "title": f"Escalation: {task.get('title')}",
                 "body": f"Task escalated from {current_assignee}. Reason: {reason}",
-                "created_at": datetime.now().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             },
         )
 
@@ -205,11 +205,11 @@ class DelegationHandler:
                 "assignee": "moh",
                 "waiting_for": None,
                 "status": "pending",
-                "updated_at": datetime.now().isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
                 "context": json.dumps(
                     {
                         **json.loads(task.get("context") or "{}"),
-                        "recalled_at": datetime.now().isoformat(),
+                        "recalled_at": datetime.now(timezone.utc).isoformat(),
                         "recalled_from": previous_assignee,
                     }
                 ),
@@ -233,12 +233,12 @@ class DelegationHandler:
         self.store.insert(
             "notifications",
             {
-                "id": f"notif_handoff_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                "id": f"notif_handoff_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}",
                 "type": "alert",
                 "priority": "normal",
                 "title": f"Delegated to {recipient_name}",
                 "body": body,
-                "created_at": datetime.now().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             },
         )
 
@@ -273,12 +273,12 @@ class DelegationHandler:
         self.store.insert(
             "actions",
             {
-                "id": f"action_{datetime.now().strftime('%Y%m%d_%H%M%S_%f')}",
+                "id": f"action_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S_%f')}",
                 "type": action.get("action_type", "delegation"),
                 "target_system": "delegation",
                 "payload": json.dumps(action.get("data", {})),
                 "result": json.dumps(result),
                 "status": "completed" if result.get("success") else "failed",
-                "created_at": datetime.now().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             },
         )
