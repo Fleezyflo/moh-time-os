@@ -12,7 +12,12 @@ from engine.gogcli import run_gog
 from lib import paths
 from lib.compat import UTC
 
-KB_PATH = str(paths.config_dir() / "knowledge_base.json")
+
+def _kb_path() -> str:
+    """Resolve knowledge base path at call time to respect env overrides."""
+    return str(paths.config_dir() / "knowledge_base.json")
+
+
 FORECAST_SHEET_ID = "1iTWOo77r1l-65AwDh2KAnhKg1ch7X1XLqxtWQQgorVI"
 
 
@@ -69,10 +74,10 @@ class KnowledgeBase:
 
 
 def load_kb() -> KnowledgeBase | None:
-    if not os.path.exists(KB_PATH):
+    if not os.path.exists(_kb_path()):
         return None
     try:
-        with open(KB_PATH) as f:
+        with open(_kb_path()) as f:
             return KnowledgeBase.from_dict(json.load(f))
     except (json.JSONDecodeError, OSError, TypeError, KeyError) as e:
         logging.getLogger(__name__).warning("Could not load knowledge base: %s", e)
@@ -80,8 +85,8 @@ def load_kb() -> KnowledgeBase | None:
 
 
 def save_kb(kb: KnowledgeBase) -> None:
-    os.makedirs(os.path.dirname(KB_PATH), exist_ok=True)
-    with open(KB_PATH, "w") as f:
+    os.makedirs(os.path.dirname(_kb_path()), exist_ok=True)
+    with open(_kb_path(), "w") as f:
         json.dump(kb.to_dict(), f, indent=2, ensure_ascii=False)
 
 
@@ -330,7 +335,7 @@ def build_knowledge_base(account: str = "molham@hrmny.co") -> KnowledgeBase:
     )
 
     save_kb(kb)
-    print(f"\nKnowledge base saved to {KB_PATH}")
+    print(f"\nKnowledge base saved to {_kb_path()}")
 
     return kb
 

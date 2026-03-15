@@ -14,8 +14,6 @@ from lib import paths as _paths
 
 logger = logging.getLogger(__name__)
 
-# Default DB path from central paths module
-DEFAULT_DB = _paths.db_path()
 
 COLUMNS_TO_ADD = [
     ("from_domain", "TEXT", None),
@@ -35,7 +33,7 @@ def run(db_path: str | Path | None = None) -> int:
 
     Returns number of columns added (0 if all already exist).
     """
-    db_path = str(db_path or DEFAULT_DB)
+    db_path = str(db_path or _paths.db_path())
     conn = sqlite3.connect(db_path)
     added = 0
 

@@ -3,12 +3,12 @@
 import logging
 import os
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
+from . import paths
 from .store import (
-    DB_PATH,
     checkpoint_wal,
     db_exists,
     get_connection,
@@ -18,7 +18,9 @@ from .store import (
 
 log = logging.getLogger("moh_time_os")
 
-BACKUP_DIR = DB_PATH.parent / "backups"
+
+def _backup_dir():
+    return paths.db_path().parent / "backups"
 
 
 class HealthStatus(Enum):
@@ -90,12 +92,14 @@ def health_check() -> tuple[HealthStatus, dict[str, Any]]:
     checks["backup_recent"] = False
     checks["last_backup"] = None
 
-    if BACKUP_DIR.exists():
-        backups = sorted(BACKUP_DIR.glob("*.db"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if _backup_dir().exists():
+        backups = sorted(_backup_dir().glob("*.db"), key=lambda p: p.stat().st_mtime, reverse=True)
         if backups:
-            last_backup_time = datetime.fromtimestamp(backups[0].stat().st_mtime)
+            last_backup_time = datetime.fromtimestamp(backups[0].stat().st_mtime, tz=timezone.utc)
             checks["last_backup"] = last_backup_time.isoformat()
-            checks["backup_age_hours"] = (datetime.now() - last_backup_time).total_seconds() / 3600
+            checks["backup_age_hours"] = (
+                datetime.now(timezone.utc) - last_backup_time
+            ).total_seconds() / 3600
             checks["backup_recent"] = checks["backup_age_hours"] < 48
 
     if not checks["backup_recent"]:
@@ -107,7 +111,7 @@ def health_check() -> tuple[HealthStatus, dict[str, Any]]:
 
     # 6. Disk space
     try:
-        stat = os.statvfs(DB_PATH.parent)
+        stat = os.statvfs(paths.db_path().parent)
         free_mb = (stat.f_bavail * stat.f_frsize) / (1024 * 1024)
         checks["disk_free_mb"] = round(free_mb, 1)
         checks["disk_ok"] = free_mb > 100
@@ -133,8 +137,8 @@ def self_heal() -> list[str]:
     actions = []
 
     # Ensure directories exist
-    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    BACKUP_DIR.mkdir(parents=True, exist_ok=True)
+    paths.db_path().parent.mkdir(parents=True, exist_ok=True)
+    _backup_dir().mkdir(parents=True, exist_ok=True)
 
     # Initialize DB if missing
     if not db_exists():
@@ -167,8 +171,8 @@ def self_heal() -> list[str]:
         log.error(f"Failed to enable foreign keys: {e}")
 
     # Prune old backups (keep 7)
-    if BACKUP_DIR.exists():
-        backups = sorted(BACKUP_DIR.glob("*.db"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if _backup_dir().exists():
+        backups = sorted(_backup_dir().glob("*.db"), key=lambda p: p.stat().st_mtime, reverse=True)
         for old_backup in backups[7:]:
             try:
                 old_backup.unlink()

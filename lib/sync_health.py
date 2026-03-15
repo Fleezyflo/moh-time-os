@@ -24,7 +24,10 @@ from lib.paths import project_root
 
 logger = logging.getLogger(__name__)
 
-SCHEDULE_PATH = project_root() / "config" / "sync_schedule.yaml"
+
+def _schedule_path():
+    """Resolve schedule path at call time."""
+    return project_root() / "config" / "sync_schedule.yaml"
 
 
 def load_schedule(path: str | None = None) -> dict:
@@ -43,7 +46,7 @@ def load_schedule(path: str | None = None) -> dict:
         FileNotFoundError if config file doesn't exist.
         yaml.YAMLError if config is invalid YAML.
     """
-    config_path = Path(path) if path else SCHEDULE_PATH
+    config_path = Path(path) if path else _schedule_path()
     if not config_path.exists():
         raise FileNotFoundError(f"Sync schedule not found: {config_path}")
 

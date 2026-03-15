@@ -7,19 +7,18 @@ Wraps existing collectors and ensures proper artifact/identity/link creation.
 
 import json
 import logging
-import os
 import sqlite3
-from datetime import datetime
+import threading
+from datetime import datetime, timezone
 from typing import Any
+
+from lib import paths
 
 from .artifact_service import get_artifact_service
 from .entity_link_service import get_entity_link_service
 from .identity_service import get_identity_service
 
 logger = logging.getLogger(__name__)
-
-
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "moh_time_os.db")
 
 
 class IngestPipeline:
@@ -36,7 +35,7 @@ class IngestPipeline:
     """
 
     def __init__(self, db_path: str = None):
-        self.db_path = db_path or DB_PATH
+        self.db_path = db_path or str(paths.db_path())
         self.artifact_svc = get_artifact_service()
         self.identity_svc = get_identity_service()
         self.link_svc = get_entity_link_service()
@@ -145,7 +144,7 @@ class IngestPipeline:
             source="gmail",
             source_id=msg_id,
             artifact_type="message",
-            occurred_at=message_data.get("date", datetime.now().isoformat()),
+            occurred_at=message_data.get("date", datetime.now(timezone.utc).isoformat()),
             payload=message_data,
             actor_person_id=actor_id,
             visibility_tags=message_data.get("labels", []),
@@ -258,7 +257,7 @@ class IngestPipeline:
             source="calendar",
             source_id=event_id,
             artifact_type="calendar_event",
-            occurred_at=event_data.get("start", datetime.now().isoformat()),
+            occurred_at=event_data.get("start", datetime.now(timezone.utc).isoformat()),
             payload=event_data,
             actor_person_id=actor_id,
         )
@@ -351,7 +350,7 @@ class IngestPipeline:
             source_id=task_gid,
             artifact_type="task",
             occurred_at=task_data.get(
-                "modified_at", task_data.get("created_at", datetime.now().isoformat())
+                "modified_at", task_data.get("created_at", datetime.now(timezone.utc).isoformat())
             ),
             payload=task_data,
             actor_person_id=actor_id,
@@ -441,7 +440,7 @@ class IngestPipeline:
             source="xero",
             source_id=invoice_id,
             artifact_type="invoice",
-            occurred_at=invoice_data.get("DateString", datetime.now().isoformat()),
+            occurred_at=invoice_data.get("DateString", datetime.now(timezone.utc).isoformat()),
             payload=invoice_data,
         )
 
@@ -534,9 +533,9 @@ class IngestPipeline:
                     artifact_type = artifact_type_map.get(surface, "note")
 
                     occurred_at = (
-                        datetime.fromtimestamp(captured_at_ms / 1000).isoformat()
+                        datetime.fromtimestamp(captured_at_ms / 1000, tz=timezone.utc).isoformat()
                         if captured_at_ms
-                        else datetime.now().isoformat()
+                        else datetime.now(timezone.utc).isoformat()
                     )
 
                     result = self.artifact_svc.create_artifact(
@@ -574,10 +573,13 @@ class IngestPipeline:
 
 # Singleton
 _ingest_pipeline = None
+_ingest_pipeline_lock = threading.Lock()
 
 
 def get_ingest_pipeline() -> IngestPipeline:
     global _ingest_pipeline
     if _ingest_pipeline is None:
-        _ingest_pipeline = IngestPipeline()
+        with _ingest_pipeline_lock:
+            if _ingest_pipeline is None:
+                _ingest_pipeline = IngestPipeline()
     return _ingest_pipeline

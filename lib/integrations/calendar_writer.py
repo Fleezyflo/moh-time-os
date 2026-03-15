@@ -10,13 +10,20 @@ import os
 import sqlite3
 from dataclasses import dataclass
 from datetime import datetime
-from pathlib import Path
+
+from lib.credential_paths import google_sa_file
 
 logger = logging.getLogger(__name__)
 
 # Service account configuration
-DEFAULT_SA_FILE = Path.home() / "Library/Application Support/gogcli/sa-bW9saGFtQGhybW55LmNv.json"
 SCOPES = ["https://www.googleapis.com/auth/calendar"]
+
+
+def _sa_file():
+    """Resolve SA file at call time to respect env overrides."""
+    return google_sa_file()
+
+
 DEFAULT_USER = "molham@hrmny.co"
 
 
@@ -54,7 +61,7 @@ class CalendarWriter:
             dry_run: If True, validate without sending.
         """
         self.credentials_path = credentials_path or os.environ.get(
-            "CALENDAR_SA_FILE", str(DEFAULT_SA_FILE)
+            "CALENDAR_SA_FILE", str(_sa_file())
         )
         self.delegated_user = delegated_user or os.environ.get("CALENDAR_USER", DEFAULT_USER)
         self.dry_run = dry_run

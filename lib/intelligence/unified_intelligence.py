@@ -23,7 +23,7 @@ import logging
 import sqlite3
 import time
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from lib.intelligence.correlation_engine import CorrelationEngine
@@ -213,7 +213,7 @@ class IntelligenceLayer:
             IntelligenceCycleResult with all intelligence components
         """
         cycle_start = time.time()
-        timestamp = datetime.now().isoformat()
+        timestamp = datetime.now(timezone.utc).isoformat()
 
         try:
             # Step 1: Pattern detection

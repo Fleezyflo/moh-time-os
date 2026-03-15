@@ -13,7 +13,11 @@ import httpx
 
 from lib import paths
 
-CONFIG_PATH = str(paths.config_dir() / ".credentials.json")
+
+def _config_path() -> str:
+    """Resolve config path at call time to respect env overrides."""
+    return str(paths.config_dir() / ".credentials.json")
+
 
 XERO_AUTH_URL = "https://login.xero.com/identity/connect/authorize"
 XERO_OAUTH_ENDPOINT = "https://identity.xero.com/connect/token"
@@ -68,7 +72,7 @@ def main():
     print("Xero OAuth2 Authorization")
     print("=" * 50)
 
-    with open(CONFIG_PATH) as f:
+    with open(_config_path()) as f:
         creds = json.load(f)
 
     client_id = creds["xero"]["client_id"]
@@ -141,10 +145,10 @@ def main():
     creds["xero"]["refresh_token"] = tokens["refresh_token"]
     creds["xero"]["tenant_id"] = tenant_id
 
-    with open(CONFIG_PATH, "w") as f:
+    with open(_config_path(), "w") as f:
         json.dump(creds, f, indent=2)
 
-    cache_path = CONFIG_PATH.replace(".credentials.json", ".xero_token_cache.json")
+    cache_path = _config_path().replace(".credentials.json", ".xero_token_cache.json")
     with open(cache_path, "w") as f:
         json.dump({"access_token": tokens["access_token"]}, f)
 

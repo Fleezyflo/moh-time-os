@@ -15,7 +15,7 @@ Notification types:
 import logging
 import sqlite3
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 
@@ -61,15 +61,11 @@ class Notification:
         }
 
 
-# Default DB path from lib.paths
-DEFAULT_DB = get_db_path_from_lib()
-
-
 def _get_db_path(db_path: Path | None = None) -> Path:
-    """Get database path."""
+    """Get database path, resolving at call time to respect env overrides."""
     if db_path:
         return Path(db_path)
-    return DEFAULT_DB
+    return get_db_path_from_lib()
 
 
 def ensure_notification_table(db_path: Path | None = None) -> None:
@@ -229,7 +225,7 @@ def mark_delivered(notification_id: str, db_path: Path | None = None) -> None:
             SET delivered_at = ?
             WHERE notification_id = ?
         """,
-            (datetime.now().isoformat(), notification_id),
+            (datetime.now(timezone.utc).isoformat(), notification_id),
         )
         conn.commit()
     finally:
@@ -244,7 +240,7 @@ def mark_delivered(notification_id: str, db_path: Path | None = None) -> None:
 def notify_critical_signal(signal: dict, db_path: Path | None = None) -> str:
     """Create notification for a critical signal."""
     notification = Notification(
-        id=f"sig_{signal.get('signal_id', '')}_{datetime.now().strftime('%Y%m%d%H%M')}",
+        id=f"sig_{signal.get('signal_id', '')}_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M')}",
         type=NotificationType.CRITICAL_SIGNAL,
         priority=NotificationPriority.HIGH,
         title=f"🚨 Critical: {signal.get('name', 'Unknown signal')}",
@@ -252,7 +248,7 @@ def notify_critical_signal(signal: dict, db_path: Path | None = None) -> str:
         entity_type=signal.get("entity_type"),
         entity_id=signal.get("entity_id"),
         data=signal,
-        created_at=datetime.now().isoformat(),
+        created_at=datetime.now(timezone.utc).isoformat(),
     )
     return queue_notification(notification, db_path)
 
@@ -260,7 +256,7 @@ def notify_critical_signal(signal: dict, db_path: Path | None = None) -> str:
 def notify_escalation(signal: dict, from_severity: str, db_path: Path | None = None) -> str:
     """Create notification for a signal escalation."""
     notification = Notification(
-        id=f"esc_{signal.get('signal_id', '')}_{datetime.now().strftime('%Y%m%d%H%M')}",
+        id=f"esc_{signal.get('signal_id', '')}_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M')}",
         type=NotificationType.ESCALATION,
         priority=NotificationPriority.HIGH,
         title=f"⬆️ Escalated: {signal.get('name', 'Unknown')} ({from_severity} → {signal.get('severity')})",
@@ -268,7 +264,7 @@ def notify_escalation(signal: dict, from_severity: str, db_path: Path | None = N
         entity_type=signal.get("entity_type"),
         entity_id=signal.get("entity_id"),
         data={**signal, "escalated_from": from_severity},
-        created_at=datetime.now().isoformat(),
+        created_at=datetime.now(timezone.utc).isoformat(),
     )
     return queue_notification(notification, db_path)
 
@@ -284,7 +280,7 @@ def notify_score_drop(
     """Create notification for a significant score drop."""
     delta = new_score - old_score
     notification = Notification(
-        id=f"score_{entity_type}_{entity_id}_{datetime.now().strftime('%Y%m%d%H%M')}",
+        id=f"score_{entity_type}_{entity_id}_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M')}",
         type=NotificationType.SCORE_DROP,
         priority=NotificationPriority.MEDIUM if delta > -20 else NotificationPriority.HIGH,
         title=f"📉 Score Drop: {entity_name} ({old_score:.0f} → {new_score:.0f})",
@@ -292,7 +288,7 @@ def notify_score_drop(
         entity_type=entity_type,
         entity_id=entity_id,
         data={"old_score": old_score, "new_score": new_score, "delta": delta},
-        created_at=datetime.now().isoformat(),
+        created_at=datetime.now(timezone.utc).isoformat(),
     )
     return queue_notification(notification, db_path)
 
@@ -309,7 +305,7 @@ def notify_pattern_detected(pattern: dict, db_path: Path | None = None) -> str:
     )
 
     notification = Notification(
-        id=f"pat_{pattern.get('pattern_id', '')}_{datetime.now().strftime('%Y%m%d%H%M')}",
+        id=f"pat_{pattern.get('pattern_id', '')}_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M')}",
         type=NotificationType.PATTERN_DETECTED,
         priority=priority,
         title=f"🔺 Pattern: {pattern.get('name', 'Unknown')}",
@@ -317,7 +313,7 @@ def notify_pattern_detected(pattern: dict, db_path: Path | None = None) -> str:
         entity_type="portfolio",
         entity_id=None,
         data=pattern,
-        created_at=datetime.now().isoformat(),
+        created_at=datetime.now(timezone.utc).isoformat(),
     )
     return queue_notification(notification, db_path)
 
@@ -335,7 +331,7 @@ def notify_proposal(proposal: dict, db_path: Path | None = None) -> str:
 
     entity = proposal.get("entity", {})
     notification = Notification(
-        id=f"prop_{proposal.get('id', '')}_{datetime.now().strftime('%Y%m%d%H%M')}",
+        id=f"prop_{proposal.get('id', '')}_{datetime.now(timezone.utc).strftime('%Y%m%d%H%M')}",
         type=NotificationType.PROPOSAL_GENERATED,
         priority=priority,
         title=f"💡 {proposal.get('headline', 'New proposal')}",
@@ -343,7 +339,7 @@ def notify_proposal(proposal: dict, db_path: Path | None = None) -> str:
         entity_type=entity.get("type"),
         entity_id=entity.get("id"),
         data=proposal,
-        created_at=datetime.now().isoformat(),
+        created_at=datetime.now(timezone.utc).isoformat(),
     )
     return queue_notification(notification, db_path)
 
