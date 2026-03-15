@@ -12,7 +12,9 @@ GAP-10-12: Proposal-to-Asana pipeline
 import json
 import logging
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
+
+from lib.outbox import get_outbox
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +96,22 @@ class AsanaActionHandler:
         if not project_gid:
             return {"success": False, "error": "project_gid is required"}
 
+        outbox = get_outbox()
+        proposal_id = data.get("proposal_id", "")
+        idem_key = f"asana_create_{name}_{project_gid}_{proposal_id}"
+
+        # Check if already fulfilled (idempotent retry)
+        fulfilled = outbox.get_fulfilled_intent(idempotency_key=idem_key)
+        if fulfilled:
+            logger.info(
+                "Asana task already created (gid=%s)", fulfilled.get("external_resource_id")
+            )
+            return {
+                "success": True,
+                "gid": fulfilled.get("external_resource_id"),
+                "already_executed": True,
+            }
+
         writer = self._get_writer()
 
         task_data = {
@@ -113,28 +131,39 @@ class AsanaActionHandler:
             task_data["custom_fields"] = data["custom_fields"]
 
         # Add proposal reference in notes if available
-        proposal_id = data.get("proposal_id")
         if proposal_id:
             note_suffix = f"\n\n---\nCreated by MOH Time OS (proposal: {proposal_id})"
             task_data["notes"] = task_data.get("notes", "") + note_suffix
 
+        # Record durable intent BEFORE calling Asana API
+        intent_id = outbox.record_intent(
+            handler="asana",
+            action="create_task",
+            payload=data,
+            idempotency_key=idem_key,
+        )
+
         result = writer.create_task(task_data)
 
         if result.success:
+            # Mark outbox fulfilled with Asana GID for reconciliation
+            outbox.mark_fulfilled(intent_id, external_resource_id=result.gid)
+
             # Track in local store
             self.store.insert(
                 "action_log",
                 {
-                    "id": f"asana_create_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                    "id": f"asana_create_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}",
                     "action_type": "asana_create_task",
                     "target_id": result.gid,
                     "payload": json.dumps(data),
                     "result": json.dumps({"gid": result.gid}),
-                    "created_at": datetime.now().isoformat(),
+                    "created_at": datetime.now(timezone.utc).isoformat(),
                 },
             )
             return {"success": True, "gid": result.gid, "data": result.data}
 
+        outbox.mark_failed(intent_id, error=result.error or "create_task failed")
         return {"success": False, "error": result.error}
 
     def _add_comment(self, action: dict) -> dict:
@@ -155,11 +184,39 @@ class AsanaActionHandler:
         if not text:
             return {"success": False, "error": "Comment text is required"}
 
+        outbox = get_outbox()
+        # Idempotency key includes text hash to allow distinct comments
+        text_hash = hash(text) & 0xFFFFFFFF  # 32-bit positive hash
+        idem_key = f"asana_comment_{task_gid}_{text_hash}"
+
+        # Check if already fulfilled
+        fulfilled = outbox.get_fulfilled_intent(idempotency_key=idem_key)
+        if fulfilled:
+            logger.info(
+                "Asana comment already added (gid=%s)", fulfilled.get("external_resource_id")
+            )
+            return {
+                "success": True,
+                "gid": fulfilled.get("external_resource_id"),
+                "already_executed": True,
+            }
+
+        # Record intent BEFORE calling Asana API
+        intent_id = outbox.record_intent(
+            handler="asana",
+            action="add_comment",
+            payload={"task_gid": task_gid, "text_hash": str(text_hash)},
+            idempotency_key=idem_key,
+        )
+
         writer = self._get_writer()
         result = writer.add_comment(task_gid, text, is_pinned=data.get("is_pinned", False))
 
         if result.success:
+            outbox.mark_fulfilled(intent_id, external_resource_id=result.gid)
             return {"success": True, "gid": result.gid}
+
+        outbox.mark_failed(intent_id, error=result.error or "add_comment failed")
         return {"success": False, "error": result.error}
 
     def _update_status(self, action: dict) -> dict:
@@ -179,7 +236,6 @@ class AsanaActionHandler:
         if not task_gid:
             return {"success": False, "error": "task_gid is required"}
 
-        writer = self._get_writer()
         updates = {}
 
         if "completed" in data:
@@ -194,8 +250,38 @@ class AsanaActionHandler:
         if not updates:
             return {"success": False, "error": "No updates provided"}
 
+        outbox = get_outbox()
+        # Include update content hash for idempotency
+        updates_hash = hash(json.dumps(updates, sort_keys=True, default=str)) & 0xFFFFFFFF
+        idem_key = f"asana_update_{task_gid}_{updates_hash}"
+
+        # Check if already fulfilled
+        fulfilled = outbox.get_fulfilled_intent(idempotency_key=idem_key)
+        if fulfilled:
+            logger.info(
+                "Asana status update already fulfilled (gid=%s)",
+                fulfilled.get("external_resource_id"),
+            )
+            return {
+                "success": True,
+                "gid": fulfilled.get("external_resource_id"),
+                "already_executed": True,
+            }
+
+        # Record intent BEFORE calling Asana API
+        intent_id = outbox.record_intent(
+            handler="asana",
+            action="update_status",
+            payload={"task_gid": task_gid, "updates": updates},
+            idempotency_key=idem_key,
+        )
+
+        writer = self._get_writer()
         result = writer.update_task(task_gid, updates)
 
         if result.success:
+            outbox.mark_fulfilled(intent_id, external_resource_id=result.gid)
             return {"success": True, "gid": result.gid}
+
+        outbox.mark_failed(intent_id, error=result.error or "update_status failed")
         return {"success": False, "error": result.error}

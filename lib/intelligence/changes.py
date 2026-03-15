@@ -13,7 +13,7 @@ import json
 import logging
 import sqlite3
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from lib.paths import data_dir
@@ -102,12 +102,13 @@ class ChangeReport:
 
 
 # Storage path for snapshots
-SNAPSHOT_DIR = data_dir() / "snapshots"
+def _snapshot_dir():
+    return data_dir() / "snapshots"
 
 
 def _ensure_snapshot_dir():
     """Ensure snapshot directory exists."""
-    SNAPSHOT_DIR.mkdir(parents=True, exist_ok=True)
+    _snapshot_dir().mkdir(parents=True, exist_ok=True)
 
 
 SNAPSHOT_RETENTION = 5  # Keep last N snapshots
@@ -118,7 +119,7 @@ def save_snapshot(snapshot: IntelligenceSnapshot) -> Path:
     _ensure_snapshot_dir()
 
     filename = f"snapshot_{snapshot.timestamp.replace(':', '-').replace('.', '-')}.json"
-    path = SNAPSHOT_DIR / filename
+    path = _snapshot_dir() / filename
 
     with open(path, "w") as f:
         json.dump(asdict(snapshot), f, indent=2)
@@ -131,7 +132,7 @@ def save_snapshot(snapshot: IntelligenceSnapshot) -> Path:
 
 def _cleanup_old_snapshots():
     """Remove old snapshots, keeping only the most recent N."""
-    snapshots = sorted(SNAPSHOT_DIR.glob("snapshot_*.json"), reverse=True)
+    snapshots = sorted(_snapshot_dir().glob("snapshot_*.json"), reverse=True)
 
     for old in snapshots[SNAPSHOT_RETENTION:]:
         try:
@@ -145,7 +146,7 @@ def load_latest_snapshot() -> IntelligenceSnapshot | None:
     """Load the most recent snapshot."""
     _ensure_snapshot_dir()
 
-    snapshots = sorted(SNAPSHOT_DIR.glob("snapshot_*.json"), reverse=True)
+    snapshots = sorted(_snapshot_dir().glob("snapshot_*.json"), reverse=True)
 
     if not snapshots:
         return None
@@ -188,7 +189,7 @@ def create_snapshot_from_intelligence(intel_data: dict) -> IntelligenceSnapshot:
     critical_count = len(by_urgency.get("immediate", []))
 
     return IntelligenceSnapshot(
-        timestamp=datetime.now().isoformat(),
+        timestamp=datetime.now(timezone.utc).isoformat(),
         signal_count=signals.get("total_active", 0),
         signal_ids=signal_ids,
         proposal_count=proposals.get("total", 0),

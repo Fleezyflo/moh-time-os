@@ -5,11 +5,15 @@ Task: SYSPREP 0.2 — Dead Code Audit
 """
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent
-DATA_DIR = REPO_ROOT / "data"
+
+
+def _data_dir():
+    return REPO_ROOT / "data"
+
 
 # Production code paths - imports from these are considered ACTIVE
 PRODUCTION_PATHS = [
@@ -27,7 +31,7 @@ TEST_PATHS = ["tests/"]
 
 def load_baseline() -> dict:
     """Load the most recent baseline snapshot."""
-    snapshots = list(DATA_DIR.glob("baseline_snapshot_*.json"))
+    snapshots = list(_data_dir().glob("baseline_snapshot_*.json"))
     if not snapshots:
         raise FileNotFoundError("No baseline snapshot found")
 
@@ -198,7 +202,7 @@ def classify_modules(modules: list) -> dict:
 
 def generate_report(classifications: dict, total_modules: int) -> str:
     """Generate markdown report."""
-    date_str = datetime.now().strftime("%Y-%m-%d")
+    date_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     lines = [
         f"# Dead Code Audit — {date_str}",
@@ -307,8 +311,8 @@ def main():
     report = generate_report(classifications, total)
 
     # Save
-    date_str = datetime.now().strftime("%Y%m%d")
-    output_file = DATA_DIR / f"dead_code_audit_{date_str}.md"
+    date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
+    output_file = _data_dir() / f"dead_code_audit_{date_str}.md"
     output_file.write_text(report)
 
     print(f"\n✓ Report saved to: {output_file}")

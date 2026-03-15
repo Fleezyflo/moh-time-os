@@ -4,7 +4,7 @@ Tests for EntityMemory — interaction tracking and timeline.
 Brief 22 (SM), Task SM-2.1
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -148,7 +148,7 @@ class TestStaleEntities:
         import sqlite3
 
         memory.record_interaction("client", "c1", "review", "Old review")
-        old_date = (datetime.now() - timedelta(days=60)).isoformat()
+        old_date = (datetime.now(timezone.utc) - timedelta(days=60)).isoformat()
         conn = sqlite3.connect(str(memory.db_path))
         conn.execute(
             "UPDATE entity_interactions SET created_at = ? WHERE entity_id = 'c1'",

@@ -18,14 +18,17 @@ import hashlib
 import json
 import logging
 import re
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from lib import paths
 
 logger = logging.getLogger(__name__)
 
+
 # Storage
-PROMISES_FILE = paths.data_dir() / "promises.json"
+def _promises_file():
+    return paths.data_dir() / "promises.json"
+
 
 # Commitment signal phrases
 COMMITMENT_SIGNALS = [
@@ -66,10 +69,10 @@ WEEKDAYS = [
 
 def load_promises() -> list:
     """Load promises from storage."""
-    if not PROMISES_FILE.exists():
+    if not _promises_file().exists():
         return []
     try:
-        with open(PROMISES_FILE) as f:
+        with open(_promises_file()) as f:
             return json.load(f)
     except (json.JSONDecodeError, OSError) as e:
         logger.warning(f"Could not load promises file: {e}")
@@ -78,8 +81,8 @@ def load_promises() -> list:
 
 def save_promises(promises: list) -> None:
     """Save promises to storage."""
-    PROMISES_FILE.parent.mkdir(parents=True, exist_ok=True)
-    with open(PROMISES_FILE, "w") as f:
+    _promises_file().parent.mkdir(parents=True, exist_ok=True)
+    with open(_promises_file(), "w") as f:
         json.dump(promises, f, indent=2, default=str)
 
 
@@ -103,7 +106,7 @@ def parse_due_date(text: str) -> date | None:
     if "end of week" in text_lower or "eow" in text_lower:
         # Find next Friday
         days_until_friday = (4 - today.weekday()) % 7
-        if days_until_friday == 0 and datetime.now().hour >= 17:
+        if days_until_friday == 0 and datetime.now(timezone.utc).hour >= 17:
             days_until_friday = 7
         return today + timedelta(days=days_until_friday)
 
@@ -204,7 +207,7 @@ def capture_promise(
     if not force and not detect_commitment(text):
         return None
 
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     due_date = parse_due_date(text)
     recipient = extract_recipient(text)
     action = extract_action(text)
@@ -283,7 +286,7 @@ def complete_promise(promise_id: str) -> bool:
     for p in promises:
         if p.get("id") == promise_id:
             p["status"] = "done"
-            p["completed_at"] = datetime.now().isoformat()
+            p["completed_at"] = datetime.now(timezone.utc).isoformat()
             save_promises(promises)
             return True
     return False
@@ -295,7 +298,7 @@ def cancel_promise(promise_id: str, reason: str = "") -> bool:
     for p in promises:
         if p.get("id") == promise_id:
             p["status"] = "cancelled"
-            p["cancelled_at"] = datetime.now().isoformat()
+            p["cancelled_at"] = datetime.now(timezone.utc).isoformat()
             p["cancel_reason"] = reason
             save_promises(promises)
             return True

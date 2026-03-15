@@ -6,7 +6,7 @@ Ensures consistent, parseable log output across the application.
 """
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
 
@@ -67,7 +67,7 @@ class LogEntry:
     ) -> "LogEntry":
         """Create a log entry with current timestamp."""
         return cls(
-            timestamp=datetime.utcnow().isoformat() + "Z",
+            timestamp=datetime.now(timezone.utc).isoformat() + "Z",
             level=level,
             message=message,
             logger=logger,

@@ -20,7 +20,7 @@ Column mapping (dataclass -> DB):
 import logging
 import uuid
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from lib.commitment_truth.detector import extract_all
 from lib.state_store import get_store
@@ -136,7 +136,7 @@ class CommitmentManager:
         confidence: float = 0.8,
     ) -> Commitment | None:
         """Create a single commitment."""
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         commitment_id = f"commit_{uuid.uuid4().hex[:12]}"
 
         # Map to actual DB columns
@@ -197,7 +197,7 @@ class CommitmentManager:
         if commitment.task_id:
             return False, f"Commitment already linked to task {commitment.task_id}"
 
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         self.store.query(
             "UPDATE commitments SET task_id = ?, status = 'linked', updated_at = ? WHERE commitment_id = ?",
             [task_id, now, commitment_id],
@@ -217,7 +217,7 @@ class CommitmentManager:
         if not commitment:
             return False, "Commitment not found"
 
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         self.store.query(
             "UPDATE commitments SET task_id = NULL, status = 'open', updated_at = ? WHERE commitment_id = ?",
             [now, commitment_id],
@@ -227,7 +227,7 @@ class CommitmentManager:
 
     def mark_done(self, commitment_id: str) -> tuple[bool, str]:
         """Mark a commitment as done."""
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         self.store.query(
             "UPDATE commitments SET status = 'done', updated_at = ? WHERE commitment_id = ?",
             [now, commitment_id],
@@ -236,7 +236,7 @@ class CommitmentManager:
 
     def mark_broken(self, commitment_id: str) -> tuple[bool, str]:
         """Mark a commitment as broken (not fulfilled)."""
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         self.store.query(
             "UPDATE commitments SET status = 'broken', updated_at = ? WHERE commitment_id = ?",
             [now, commitment_id],

@@ -16,9 +16,11 @@ export default function Notifications() {
   const { data: statsData, refetch: refetchStats } = useNotificationStats();
 
   const notifications = useMemo(() => notifData?.notifications ?? [], [notifData]);
-  const totalCount = statsData?.total ?? 0;
-  const unreadCount = statsData?.unread ?? 0;
-  const dismissedCount = totalCount - unreadCount;
+  const statsLoaded = statsData != null;
+  const totalCount = statsLoaded ? (statsData.total ?? 0) : null;
+  const unreadCount = statsLoaded ? (statsData.unread ?? 0) : null;
+  const dismissedCount =
+    totalCount != null && unreadCount != null ? totalCount - unreadCount : null;
 
   const handleDismiss = useCallback(
     async (id: string) => {
@@ -43,7 +45,7 @@ export default function Notifications() {
   return (
     <PageLayout
       title="Notifications"
-      subtitle={`${unreadCount} unread`}
+      subtitle={unreadCount != null ? `${unreadCount} unread` : 'Loading...'}
       actions={
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-2 text-sm cursor-pointer">
@@ -55,7 +57,7 @@ export default function Notifications() {
             />
             Show dismissed
           </label>
-          {unreadCount > 0 && (
+          {unreadCount != null && unreadCount > 0 && (
             <button
               onClick={handleDismissAll}
               className="text-xs px-3 py-1.5 rounded-lg bg-[var(--grey)] hover:bg-[var(--grey-light)] transition-colors"
@@ -67,13 +69,13 @@ export default function Notifications() {
       }
     >
       <SummaryGrid>
-        <MetricCard label="Total" value={totalCount} />
+        <MetricCard label="Total" value={totalCount ?? '--'} />
         <MetricCard
           label="Unread"
-          value={unreadCount}
-          severity={unreadCount > 0 ? 'warning' : undefined}
+          value={unreadCount ?? '--'}
+          severity={unreadCount != null && unreadCount > 0 ? 'warning' : undefined}
         />
-        <MetricCard label="Dismissed" value={dismissedCount} />
+        <MetricCard label="Dismissed" value={dismissedCount ?? '--'} />
       </SummaryGrid>
 
       <NotificationList notifications={notifications} onDismiss={handleDismiss} />

@@ -15,25 +15,20 @@ Usage in server.py:
 
 import logging
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query
 from fastapi import Path as PathParam
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from api.auth import require_auth
 from api.response_models import IntelligenceResponse
 from lib.cache import cache_invalidate, cached
 from lib.query_engine import QueryEngine
 
 logger = logging.getLogger(__name__)
 
-# Router - ALL endpoints require authentication
-intelligence_router = APIRouter(
-    tags=["Intelligence"],
-    dependencies=[Depends(require_auth)],  # Auth required for all endpoints
-)
+intelligence_router = APIRouter(tags=["Intelligence"])
 
 # Singleton query engine
 _engine: QueryEngine | None = None
@@ -52,7 +47,7 @@ def _wrap_response(data: dict | list, params: dict | None = None) -> dict:
     return {
         "status": "ok",
         "data": data,
-        "computed_at": datetime.now().isoformat(),
+        "computed_at": datetime.now(timezone.utc).isoformat(),
         "params": params or {},
     }
 

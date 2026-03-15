@@ -10,7 +10,7 @@ Provides insights on:
 
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ class TimeAnalyzer:
             }
         """
         if date is None:
-            date = datetime.now().strftime("%Y-%m-%d")
+            date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
         # Get events for the day
         day_start = f"{date}T00:00:00"
@@ -145,7 +145,7 @@ class TimeAnalyzer:
             Weekly summary with daily breakdowns and lane utilization vs budget
         """
         if start_date is None:
-            today = datetime.now()
+            today = datetime.now(timezone.utc)
             monday = today - timedelta(days=today.weekday())
             start_date = monday.strftime("%Y-%m-%d")
 
@@ -198,7 +198,7 @@ class TimeAnalyzer:
             {date: available_minutes} for each day
         """
         forecast = {}
-        today = datetime.now()
+        today = datetime.now(timezone.utc)
 
         for i in range(days):
             day = today + timedelta(days=i)

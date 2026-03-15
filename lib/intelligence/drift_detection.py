@@ -11,7 +11,7 @@ import logging
 import sqlite3
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from math import sqrt
 from pathlib import Path
 from typing import Any
@@ -116,7 +116,7 @@ class DriftDetector:
                     mean,
                     stddev,
                     len(values),
-                    datetime.now().isoformat(),
+                    datetime.now(timezone.utc).isoformat(),
                 ),
             )
             conn.commit()
@@ -179,7 +179,7 @@ class DriftDetector:
                 deviation_sigma=sigma,
                 direction=direction,
                 severity=severity,
-                detected_at=datetime.now().isoformat(),
+                detected_at=datetime.now(timezone.utc).isoformat(),
                 explanation=explanation,
             )
 

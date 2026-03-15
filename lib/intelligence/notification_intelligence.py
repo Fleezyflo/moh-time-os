@@ -12,7 +12,7 @@ whether to batch or send immediately.
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +106,7 @@ class FatigueState:
 
 def is_work_hours(dt: datetime | None = None) -> bool:
     """Check if current time is within UAE work hours."""
-    dt = dt or datetime.now()
+    dt = dt or datetime.now(timezone.utc)
     weekday = dt.weekday()
     hour = dt.hour
     return weekday in UAE_WORK_DAYS and UAE_WORK_START <= hour < UAE_WORK_END
@@ -142,7 +142,7 @@ class NotificationIntelligence:
         current_time: datetime | None = None,
     ) -> NotificationDecision:
         """Decide how to handle a notification."""
-        now = current_time or datetime.now()
+        now = current_time or datetime.now(timezone.utc)
         work_time = is_work_hours(now)
         channel = select_channel(urgency, work_time)
 
@@ -222,7 +222,7 @@ class NotificationIntelligence:
         current_time: datetime | None = None,
     ) -> FatigueState:
         """Get current notification fatigue state."""
-        now = current_time or datetime.now()
+        now = current_time or datetime.now(timezone.utc)
         return FatigueState(
             notifications_last_hour=self._sent_count_hour,
             notifications_today=self._sent_count_day,

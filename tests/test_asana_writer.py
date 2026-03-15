@@ -470,13 +470,13 @@ class TestAsanaSyncManagerInit:
     def test_init_with_writer(self):
         """Can initialize with explicit writer."""
         mock_writer = MagicMock(spec=AsanaWriter)
-        manager = AsanaSyncManager(writer=mock_writer)
+        manager = AsanaSyncManager(writer=mock_writer, _direct_call_allowed=True)
         assert manager.writer == mock_writer
 
     def test_init_without_writer(self):
         """Can initialize without writer (creates from env)."""
         with patch.dict(os.environ, {"ASANA_PAT": "test_token"}):
-            manager = AsanaSyncManager()
+            manager = AsanaSyncManager(_direct_call_allowed=True)
             assert isinstance(manager.writer, AsanaWriter)
 
 
@@ -492,7 +492,7 @@ class TestAsanaSyncManagerMappingTable:
         mock_get_conn.return_value = mock_conn
 
         mock_writer = MagicMock(spec=AsanaWriter)
-        manager = AsanaSyncManager(writer=mock_writer)
+        manager = AsanaSyncManager(writer=mock_writer, _direct_call_allowed=True)
         manager._ensure_mapping_table()
 
         # Verify CREATE TABLE was called
@@ -512,7 +512,7 @@ class TestAsanaSyncManagerMappingTable:
         mock_cursor.fetchone.return_value = ("asana_456", "proj_789", None)
 
         mock_writer = MagicMock(spec=AsanaWriter)
-        manager = AsanaSyncManager(writer=mock_writer)
+        manager = AsanaSyncManager(writer=mock_writer, _direct_call_allowed=True)
 
         # Save mapping
         success = manager._save_mapping(
@@ -547,7 +547,7 @@ class TestAsanaSyncCompletion:
             gid="asana_456",
         )
 
-        manager = AsanaSyncManager(writer=mock_writer)
+        manager = AsanaSyncManager(writer=mock_writer, _direct_call_allowed=True)
         result = manager.sync_completion("local_123")
 
         assert result.success
@@ -564,7 +564,7 @@ class TestAsanaSyncCompletion:
         mock_get_conn.return_value = mock_conn
 
         mock_writer = MagicMock(spec=AsanaWriter)
-        manager = AsanaSyncManager(writer=mock_writer)
+        manager = AsanaSyncManager(writer=mock_writer, _direct_call_allowed=True)
 
         result = manager.sync_completion("unmapped_123")
 
@@ -590,7 +590,7 @@ class TestAsanaSyncComment:
             gid="story_789",
         )
 
-        manager = AsanaSyncManager(writer=mock_writer)
+        manager = AsanaSyncManager(writer=mock_writer, _direct_call_allowed=True)
         result = manager.post_status_comment("local_123", "Status update")
 
         assert result.success
@@ -613,7 +613,7 @@ class TestAsanaSyncBulk:
         mock_cursor.fetchone.return_value = None  # No mapping found
 
         mock_writer = MagicMock(spec=AsanaWriter)
-        manager = AsanaSyncManager(writer=mock_writer)
+        manager = AsanaSyncManager(writer=mock_writer, _direct_call_allowed=True)
 
         results = manager.bulk_sync(
             ["local_0", "local_1", "local_2"],

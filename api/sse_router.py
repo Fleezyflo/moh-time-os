@@ -23,22 +23,17 @@ import logging
 import sqlite3
 from collections.abc import AsyncGenerator
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
-from api.auth import require_auth
 from api.response_models import DetailResponse
 
 logger = logging.getLogger(__name__)
 
-# Router - ALL endpoints require authentication
-sse_router = APIRouter(
-    tags=["Events"],
-    dependencies=[Depends(require_auth)],  # Auth required for all endpoints
-)
+sse_router = APIRouter(tags=["Events"])
 
 
 @dataclass
@@ -130,7 +125,7 @@ def _create_event(event_type: str, data: dict) -> Event:
         id=str(uuid4()),
         event_type=event_type,
         data=data,
-        timestamp=datetime.now().isoformat(),
+        timestamp=datetime.now(timezone.utc).isoformat(),
     )
 
 
@@ -238,7 +233,7 @@ def get_event_history(limit: int = Query(100, description="Maximum events to ret
             "status": "ok",
             "data": [event.to_dict() for event in events],
             "count": len(events),
-            "computed_at": datetime.now().isoformat(),
+            "computed_at": datetime.now(timezone.utc).isoformat(),
         }
     except HTTPException:
         raise

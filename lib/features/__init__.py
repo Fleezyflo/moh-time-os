@@ -9,6 +9,7 @@ Production-grade feature flag management:
 """
 
 import os
+import threading
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
@@ -56,35 +57,38 @@ class FlagRegistry:
 
     _definitions: dict[str, FlagDefinition] = field(default_factory=dict)
     _overrides: dict[str, Any] = field(default_factory=dict)
+    _lock: threading.RLock = field(default_factory=threading.RLock)
 
     def register(self, definition: FlagDefinition) -> None:
         """Register a flag definition."""
-        self._definitions[definition.name] = definition
+        with self._lock:
+            self._definitions[definition.name] = definition
 
     def get(self, name: str) -> Any:
-        """Get a flag value with full resolution."""
-        if name not in self._definitions:
-            raise ValueError(f"Unknown flag: {name}")
+        """Get a flag value with full resolution. Thread-safe."""
+        with self._lock:
+            if name not in self._definitions:
+                raise ValueError(f"Unknown flag: {name}")
 
-        definition = self._definitions[name]
+            definition = self._definitions[name]
 
-        # 1. Check kill switch (env always wins)
-        if definition.kill_switch:
+            # 1. Check kill switch (env always wins)
+            if definition.kill_switch:
+                env_value = self._get_env_value(name, definition)
+                if env_value is not None:
+                    return env_value
+
+            # 2. Check runtime override
+            if name in self._overrides:
+                return self._overrides[name]
+
+            # 3. Check environment
             env_value = self._get_env_value(name, definition)
             if env_value is not None:
                 return env_value
 
-        # 2. Check runtime override
-        if name in self._overrides:
-            return self._overrides[name]
-
-        # 3. Check environment
-        env_value = self._get_env_value(name, definition)
-        if env_value is not None:
-            return env_value
-
-        # 4. Return default
-        return definition.default
+            # 4. Return default
+            return definition.default
 
     def _get_env_value(self, name: str, definition: FlagDefinition) -> Any | None:
         """Get value from environment variable."""
@@ -113,36 +117,41 @@ class FlagRegistry:
             return value
 
     def set_override(self, name: str, value: Any) -> None:
-        """Set a runtime override (for dev/testing)."""
-        if name not in self._definitions:
-            raise ValueError(f"Unknown flag: {name}")
-        self._overrides[name] = value
+        """Set a runtime override (for dev/testing). Thread-safe."""
+        with self._lock:
+            if name not in self._definitions:
+                raise ValueError(f"Unknown flag: {name}")
+            self._overrides[name] = value
 
     def clear_override(self, name: str) -> None:
-        """Clear a runtime override."""
-        self._overrides.pop(name, None)
+        """Clear a runtime override. Thread-safe."""
+        with self._lock:
+            self._overrides.pop(name, None)
 
     def clear_all_overrides(self) -> None:
-        """Clear all runtime overrides."""
-        self._overrides.clear()
+        """Clear all runtime overrides. Thread-safe."""
+        with self._lock:
+            self._overrides.clear()
 
     def get_all(self) -> dict[str, Any]:
-        """Get all flag values."""
-        return {name: self.get(name) for name in self._definitions}
+        """Get all flag values. Thread-safe (RLock allows re-entrant get())."""
+        with self._lock:
+            return {name: self.get(name) for name in self._definitions}
 
     def get_definitions(self) -> list[dict]:
-        """Get all flag definitions for API response."""
-        return [
-            {
-                "name": d.name,
-                "description": d.description,
-                "type": d.flag_type.value,
-                "default": d.default,
-                "current": self.get(d.name),
-                "kill_switch": d.kill_switch,
-            }
-            for d in self._definitions.values()
-        ]
+        """Get all flag definitions for API response. Thread-safe."""
+        with self._lock:
+            return [
+                {
+                    "name": d.name,
+                    "description": d.description,
+                    "type": d.flag_type.value,
+                    "default": d.default,
+                    "current": self.get(d.name),
+                    "kill_switch": d.kill_switch,
+                }
+                for d in self._definitions.values()
+            ]
 
 
 # ============================================================================

@@ -20,7 +20,10 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 # LOCKFILE GUARD — Prevents double execution
 # ============================================================================
-LOCK_DIR = paths.data_dir()
+
+
+def _lock_dir():
+    return paths.data_dir()
 
 
 class CollectorLock:
@@ -49,7 +52,7 @@ class CollectorLock:
     HEARTBEAT_INTERVAL = 20  # Touch lock file every 20 seconds
 
     def __init__(self, name: str = "global"):
-        self.lock_file = LOCK_DIR / f".collector.{name}.lock"
+        self.lock_file = _lock_dir() / f".collector.{name}.lock"
         self.name = name
         self.acquired = False
         self._stop_heartbeat = threading.Event()
@@ -164,7 +167,7 @@ class CollectorLock:
     def break_all(cls) -> int:
         """Remove all collector lock files. Returns count of locks broken."""
         count = 0
-        for lock_file in LOCK_DIR.glob(".collector.*.lock"):
+        for lock_file in _lock_dir().glob(".collector.*.lock"):
             try:
                 pid_text = lock_file.read_text().strip()
                 logger.warning("Breaking lock %s (PID=%s)", lock_file.name, pid_text)

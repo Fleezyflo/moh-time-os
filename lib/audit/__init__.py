@@ -11,7 +11,7 @@ Supports:
 import json
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from lib.observability import get_request_id
@@ -108,7 +108,7 @@ class AuditStore:
             entity_type=entity_type,
             entity_id=entity_id,
             payload=payload,
-            timestamp=datetime.utcnow().isoformat() + "Z",
+            timestamp=datetime.now(timezone.utc).isoformat() + "Z",
             request_id=get_request_id(),
             trace_id=get_trace_id(),
             actor=actor,

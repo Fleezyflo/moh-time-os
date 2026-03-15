@@ -13,7 +13,7 @@ Multiple signals + scores + patterns assembled into one actionable item.
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 
@@ -98,7 +98,7 @@ import uuid  # noqa: E402 — conditional import
 
 def _generate_proposal_id() -> str:
     """Generate a unique proposal ID."""
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     unique = uuid.uuid4().hex[:6]
     return f"prop_{now.strftime('%Y%m%d')}_{unique}"
 
@@ -445,7 +445,7 @@ def _assemble_client_proposal(
         active_signals=[s.get("signal_id") for s in signals],
         active_patterns=[p.get("pattern_id") for p in patterns],
         scores={"composite": scorecard.get("composite_score")} if scorecard else {},
-        first_detected=datetime.now().isoformat(),
+        first_detected=datetime.now(timezone.utc).isoformat(),
         trend=trend,
         confidence=_determine_confidence(scorecard, signals, patterns),
     )
@@ -484,7 +484,7 @@ def _assemble_resource_proposal(
         active_signals=[s.get("signal_id") for s in signals],
         active_patterns=[p.get("pattern_id") for p in patterns],
         scores={"composite": scorecard.get("composite_score")} if scorecard else {},
-        first_detected=datetime.now().isoformat(),
+        first_detected=datetime.now(timezone.utc).isoformat(),
         trend=trend,
         confidence=_determine_confidence(scorecard, signals, patterns),
     )
@@ -523,7 +523,7 @@ def _assemble_project_proposal(
         active_signals=[s.get("signal_id") for s in signals],
         active_patterns=[p.get("pattern_id") for p in patterns],
         scores={"composite": scorecard.get("composite_score")} if scorecard else {},
-        first_detected=datetime.now().isoformat(),
+        first_detected=datetime.now(timezone.utc).isoformat(),
         trend=trend,
         confidence=_determine_confidence(scorecard, signals, patterns),
     )
@@ -564,7 +564,7 @@ def _assemble_portfolio_proposal(pattern: dict, supporting_signals: list[dict] =
         active_signals=[s.get("signal_id") for s in supporting_signals],
         active_patterns=[pattern.get("pattern_id")],
         related_entities=pattern.get("entities_involved", []),
-        first_detected=datetime.now().isoformat(),
+        first_detected=datetime.now(timezone.utc).isoformat(),
         trend="new",
         confidence=pattern.get("confidence", "medium"),
     )
@@ -778,7 +778,7 @@ def generate_proposals_from_live_data(db_path: Path | None = None) -> dict:
         by_type[ptype] += 1
 
     return {
-        "generated_at": datetime.now().isoformat(),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
         "total_proposals": len(proposals),
         "by_urgency": by_urgency,
         "by_type": by_type,
@@ -1104,7 +1104,7 @@ def generate_daily_briefing(proposals: list[Proposal], db_path: Path | None = No
     overall_score = max(0, 100 - (len(immediate) * 10 + len(this_week) * 3))
 
     return {
-        "generated_at": datetime.now().isoformat(),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
         "summary": {
             "total_proposals": len(proposals),
             "immediate_count": len(immediate),

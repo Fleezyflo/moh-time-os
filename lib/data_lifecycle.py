@@ -17,7 +17,7 @@ Safety guards:
 
 import logging
 import sqlite3
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import TypedDict
 
 from . import safe_sql
@@ -279,7 +279,7 @@ class DataLifecycleManager:
                 rows_deleted=0,
                 rows_archived=0,
                 estimated_space_freed_kb=0.0,
-                timestamp=datetime.now().isoformat(),
+                timestamp=datetime.now(timezone.utc).isoformat(),
             )
 
         if dry_run:
@@ -289,7 +289,7 @@ class DataLifecycleManager:
                 rows_deleted=0,
                 rows_archived=count,
                 estimated_space_freed_kb=count * 1.5,  # Rough estimate
-                timestamp=datetime.now().isoformat(),
+                timestamp=datetime.now(timezone.utc).isoformat(),
             )
 
         # Create backup before archival
@@ -316,7 +316,7 @@ class DataLifecycleManager:
             rows_deleted=0,
             rows_archived=archived,
             estimated_space_freed_kb=archived * 1.5,
-            timestamp=datetime.now().isoformat(),
+            timestamp=datetime.now(timezone.utc).isoformat(),
         )
 
     def enforce_retention(self, dry_run: bool = False) -> list[RetentionStats]:
@@ -389,7 +389,7 @@ class DataLifecycleManager:
                         rows_deleted=delete_count,
                         rows_archived=0,
                         estimated_space_freed_kb=delete_count * 0.5,
-                        timestamp=datetime.now().isoformat(),
+                        timestamp=datetime.now(timezone.utc).isoformat(),
                     )
                 )
                 continue
@@ -409,7 +409,7 @@ class DataLifecycleManager:
                     rows_deleted=deleted,
                     rows_archived=0,
                     estimated_space_freed_kb=deleted * 0.5,
-                    timestamp=datetime.now().isoformat(),
+                    timestamp=datetime.now(timezone.utc).isoformat(),
                 )
             )
 
@@ -442,7 +442,7 @@ class DataLifecycleManager:
                 return {
                     "success": False,
                     "error": str(e),
-                    "timestamp": datetime.now().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                 }
 
             # Get page count after vacuum
@@ -461,7 +461,7 @@ class DataLifecycleManager:
             "size_before_mb": round(size_before_mb, 1),
             "size_after_mb": round(size_after_mb, 1),
             "space_freed_mb": round(size_before_mb - size_after_mb, 1),
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
     def get_lifecycle_report(self) -> dict:
@@ -471,7 +471,7 @@ class DataLifecycleManager:
         Returns dict with per-table statistics.
         """
         report = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "retention_policies": self._retention_policies.copy(),
             "tables": {},
             "protected_tables": list(PROTECTED_TABLES),

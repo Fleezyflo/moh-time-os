@@ -11,6 +11,7 @@ Provides endpoints for:
 
 import logging
 import sqlite3
+import threading
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -26,11 +27,12 @@ export_router = APIRouter(
     tags=["Governance"],
 )
 
-# Get database path
+# Get database path — use lib.db for centralized resolution
 db_path = data_dir() / "moh_time_os.db"
 
-# Export instances by request ID
-_exports = {}
+# Export instances by request ID — protected by lock for concurrent request safety
+_exports: dict = {}
+_exports_lock = threading.Lock()
 
 
 @export_router.post("/export", response_model=DetailResponse)
@@ -70,8 +72,9 @@ def request_data_export(
         # Export
         result = exporter.export_tables(request)
 
-        # Store result
-        _exports[result.request_id] = result
+        # Store result — protected against concurrent request handlers
+        with _exports_lock:
+            _exports[result.request_id] = result
 
         return {
             "status": "ok",
@@ -95,10 +98,10 @@ def get_export_status(request_id: str) -> dict:
     Check export status and get download link.
     """
     try:
-        if request_id not in _exports:
-            raise HTTPException(status_code=404, detail="Export not found")
-
-        result = _exports[request_id]
+        with _exports_lock:
+            if request_id not in _exports:
+                raise HTTPException(status_code=404, detail="Export not found")
+            result = _exports[request_id]
 
         return {
             "status": "ok",

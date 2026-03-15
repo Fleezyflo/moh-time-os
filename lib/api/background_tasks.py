@@ -16,7 +16,7 @@ import uuid
 from collections.abc import Callable
 from concurrent.futures import Future, ThreadPoolExecutor
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from lib.compat import StrEnum
@@ -82,7 +82,7 @@ class TaskManager:
             Task ID (UUID)
         """
         task_id = str(uuid.uuid4())
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
 
         with self._lock:
             self._tasks[task_id] = {
@@ -118,21 +118,21 @@ class TaskManager:
                 return None
 
             task["status"] = TaskStatusEnum.RUNNING
-            task["started_at"] = datetime.now()
+            task["started_at"] = datetime.now(timezone.utc)
 
         try:
             result = task["func"](*task["args"], **task["kwargs"])
             with self._lock:
                 self._tasks[task_id]["result"] = result
                 self._tasks[task_id]["status"] = TaskStatusEnum.COMPLETED
-                self._tasks[task_id]["completed_at"] = datetime.now()
+                self._tasks[task_id]["completed_at"] = datetime.now(timezone.utc)
             logger.info(f"Task {task_id} completed successfully")
             return result
         except (sqlite3.Error, ValueError, OSError) as e:
             with self._lock:
                 self._tasks[task_id]["error"] = str(e)
                 self._tasks[task_id]["status"] = TaskStatusEnum.FAILED
-                self._tasks[task_id]["completed_at"] = datetime.now()
+                self._tasks[task_id]["completed_at"] = datetime.now(timezone.utc)
             logger.error(f"Task {task_id} failed: {e}")
             raise
 
@@ -208,14 +208,14 @@ class TaskManager:
             cancelled = future.cancel()
             if cancelled:
                 self._tasks[task_id]["status"] = TaskStatusEnum.CANCELLED
-                self._tasks[task_id]["completed_at"] = datetime.now()
+                self._tasks[task_id]["completed_at"] = datetime.now(timezone.utc)
                 logger.info(f"Task {task_id} cancelled")
 
             return cancelled
 
     def _cleanup_old_tasks(self) -> None:
         """Remove completed tasks older than TTL. Must be called with lock held."""
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         expired = [
             task_id
             for task_id, task in self._tasks.items()

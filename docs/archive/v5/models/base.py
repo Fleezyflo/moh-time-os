@@ -7,7 +7,7 @@ Base classes and common enums for all models.
 import json
 import uuid
 from dataclasses import asdict, dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from lib.compat import StrEnum
 from typing import Any
 
@@ -146,8 +146,8 @@ class BaseModel:
     """Base class for all models."""
 
     id: str = field(default_factory=lambda: generate_id())
-    created_at: str = field(default_factory=lambda: datetime.now().isoformat())
-    updated_at: str = field(default_factory=lambda: datetime.now().isoformat())
+    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    updated_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def to_dict(self) -> dict[str, Any]:
         """Convert model to dictionary."""
@@ -172,7 +172,7 @@ class BaseModel:
 
     def update_timestamp(self) -> None:
         """Update the updated_at timestamp."""
-        self.updated_at = datetime.now().isoformat()
+        self.updated_at = datetime.now(timezone.utc).isoformat()
 
 
 @dataclass
@@ -183,7 +183,7 @@ class ArchivableModel(BaseModel):
 
     def archive(self) -> None:
         """Mark as archived."""
-        self.archived_at = datetime.now().isoformat()
+        self.archived_at = datetime.now(timezone.utc).isoformat()
         self.update_timestamp()
 
     def unarchive(self) -> None:
@@ -226,7 +226,7 @@ def json_dumps_safe(data: Any) -> str | None:
 
 def now_iso() -> str:
     """Get current datetime as ISO string."""
-    return datetime.now().isoformat()
+    return datetime.now(timezone.utc).isoformat()
 
 
 def parse_datetime(dt_str: str | None) -> datetime | None:
@@ -253,7 +253,7 @@ def days_from_now(date_str: str) -> int:
     dt = parse_datetime(date_str)
     if dt is None:
         return 0
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     if dt.tzinfo is not None:
         now = now.replace(tzinfo=dt.tzinfo)
     return (dt - now).days

@@ -10,7 +10,7 @@ Brief 22 (SM), Task SM-4.1
 import logging
 import sqlite3
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -123,7 +123,7 @@ class BehavioralPatternAnalyzer:
         """Find frequently taken actions by decision type."""
         conn = self._connect()
         try:
-            cutoff = (datetime.now() - timedelta(days=days_back)).isoformat()
+            cutoff = (datetime.now(timezone.utc) - timedelta(days=days_back)).isoformat()
             rows = conn.execute(
                 """
                 SELECT decision_type, action_taken, COUNT(*) as cnt
@@ -181,7 +181,7 @@ class BehavioralPatternAnalyzer:
         """Find entities that receive disproportionate attention."""
         conn = self._connect()
         try:
-            cutoff = (datetime.now() - timedelta(days=days_back)).isoformat()
+            cutoff = (datetime.now(timezone.utc) - timedelta(days=days_back)).isoformat()
             rows = conn.execute(
                 """
                 SELECT entity_type, entity_id, COUNT(*) as cnt
@@ -231,7 +231,7 @@ class BehavioralPatternAnalyzer:
         """Find entities/types with recurring escalations."""
         conn = self._connect()
         try:
-            cutoff = (datetime.now() - timedelta(days=days_back)).isoformat()
+            cutoff = (datetime.now(timezone.utc) - timedelta(days=days_back)).isoformat()
             rows = conn.execute(
                 """
                 SELECT entity_type, entity_id, COUNT(*) as cnt
@@ -421,7 +421,7 @@ class BehavioralPatternAnalyzer:
         """
         conn = self._connect()
         try:
-            cutoff = (datetime.now() - timedelta(days=days_back)).isoformat()
+            cutoff = (datetime.now(timezone.utc) - timedelta(days=days_back)).isoformat()
 
             if decision_type:
                 rows = conn.execute(
@@ -483,7 +483,7 @@ class BehavioralPatternAnalyzer:
         """Get distribution of decisions by type, action, and source."""
         conn = self._connect()
         try:
-            cutoff = (datetime.now() - timedelta(days=days_back)).isoformat()
+            cutoff = (datetime.now(timezone.utc) - timedelta(days=days_back)).isoformat()
 
             by_type = conn.execute(
                 """

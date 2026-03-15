@@ -4,7 +4,7 @@ import importlib
 import json
 import sys
 import types
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
 import pytest
@@ -67,8 +67,8 @@ def collector():
 @pytest.fixture
 def sample_raw_data():
     """Sample raw data from Google Tasks."""
-    tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%dT00:00:00.000Z")
-    yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%dT00:00:00.000Z")
+    tomorrow = (datetime.now(timezone.utc) + timedelta(days=1)).strftime("%Y-%m-%dT00:00:00.000Z")
+    yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%dT00:00:00.000Z")
     return {
         "tasks": [
             {
@@ -212,16 +212,20 @@ class TestComputePriority:
         assert score == 55
 
     def test_overdue_high_priority(self, collector):
-        yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%dT00:00:00.000Z")
+        yesterday = (datetime.now(timezone.utc) - timedelta(days=1)).strftime(
+            "%Y-%m-%dT00:00:00.000Z"
+        )
         score = collector._compute_priority({"due": yesterday})
         assert score > 80
 
     def test_due_today_high_priority(self, collector):
-        today = datetime.now().strftime("%Y-%m-%dT00:00:00.000Z")
+        today = datetime.now(timezone.utc).strftime("%Y-%m-%dT00:00:00.000Z")
         score = collector._compute_priority({"due": today})
         assert score >= 85
 
     def test_priority_capped_at_100(self, collector):
-        long_overdue = (datetime.now() - timedelta(days=100)).strftime("%Y-%m-%dT00:00:00.000Z")
+        long_overdue = (datetime.now(timezone.utc) - timedelta(days=100)).strftime(
+            "%Y-%m-%dT00:00:00.000Z"
+        )
         score = collector._compute_priority({"due": long_overdue, "notes": "Urgent"})
         assert score <= 100

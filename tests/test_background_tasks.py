@@ -13,7 +13,7 @@ Tests cover:
 """
 
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 
@@ -135,7 +135,7 @@ class TestTaskManager:
         def task():
             return "done"
 
-        submitted_time = datetime.now()
+        submitted_time = datetime.now(timezone.utc)
         task_id = task_manager.submit(task)
         time.sleep(0.3)
         status = task_manager.get_status(task_id)
@@ -329,14 +329,14 @@ class TestTaskManager:
 
     def test_submitted_at_is_set(self, task_manager):
         """Test that submitted_at is set immediately."""
-        before = datetime.now()
+        before = datetime.now(timezone.utc)
 
         def task():
             return "result"
 
         task_id = task_manager.submit(task)
         status = task_manager.get_status(task_id)
-        after = datetime.now()
+        after = datetime.now(timezone.utc)
 
         assert status.submitted_at >= before
         assert status.submitted_at <= after

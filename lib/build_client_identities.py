@@ -8,14 +8,11 @@ This enables the normalizer to link communications to clients.
 import logging
 import sqlite3
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from lib import paths
 
 logger = logging.getLogger(__name__)
-
-
-DB_PATH = paths.db_path()
 
 # Known domain → client mappings
 KNOWN_DOMAINS = {
@@ -52,7 +49,7 @@ KNOWN_EMAILS = {
 
 
 def get_conn():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(str(paths.db_path()))
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -80,7 +77,7 @@ def build_from_known_mappings(conn) -> int:
     """Build identities from known domain mappings."""
     cursor = conn.cursor()
     inserted = 0
-    now = datetime.now().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     for domain, client_name in KNOWN_DOMAINS.items():
         client_id = get_client_id_by_name(conn, client_name)
@@ -118,7 +115,7 @@ def build_from_invoice_contacts(conn) -> int:
     """Build identities by matching invoice contacts to communication domains."""
     cursor = conn.cursor()
     inserted = 0
-    now = datetime.now().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     # Get clients with invoices
     cursor.execute("""
@@ -196,7 +193,7 @@ def build_from_project_names(conn) -> int:
     """Build identities by matching project names to communication domains."""
     cursor = conn.cursor()
     inserted = 0
-    now = datetime.now().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     # Get projects with client_id
     cursor.execute("""

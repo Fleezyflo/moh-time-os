@@ -22,8 +22,11 @@ from lib.compat import UTC, StrEnum
 
 logger = logging.getLogger(__name__)
 
-BUNDLES_DIR = paths.data_dir() / "bundles"
-BUNDLES_DIR.mkdir(parents=True, exist_ok=True)
+
+def _bundles_dir():
+    bundles_dir = paths.data_dir() / "bundles"
+    bundles_dir.mkdir(parents=True, exist_ok=True)
+    return bundles_dir
 
 
 class ChangeType(StrEnum):
@@ -76,7 +79,7 @@ def create_bundle(
     }
 
     # Save to disk
-    bundle_file = BUNDLES_DIR / f"{bundle_id}.json"
+    bundle_file = _bundles_dir() / f"{bundle_id}.json"
     bundle_file.write_text(json.dumps(bundle, indent=2))
 
     return bundle
@@ -144,7 +147,7 @@ def _generate_rollback_steps(changes: list[dict], pre_images: dict) -> list[dict
 
 def get_bundle(bundle_id: str) -> dict | None:
     """Load a bundle by ID."""
-    bundle_file = BUNDLES_DIR / f"{bundle_id}.json"
+    bundle_file = _bundles_dir() / f"{bundle_id}.json"
     if bundle_file.exists():
         try:
             return json.loads(bundle_file.read_text())
@@ -163,7 +166,7 @@ def mark_applied(bundle_id: str) -> dict:
     bundle["status"] = BundleStatus.APPLIED.value
     bundle["applied_at"] = datetime.now(UTC).isoformat()
 
-    bundle_file = BUNDLES_DIR / f"{bundle_id}.json"
+    bundle_file = _bundles_dir() / f"{bundle_id}.json"
     bundle_file.write_text(json.dumps(bundle, indent=2))
 
     return bundle
@@ -178,7 +181,7 @@ def mark_failed(bundle_id: str, error: str) -> dict:
     bundle["status"] = BundleStatus.FAILED.value
     bundle["error"] = error
 
-    bundle_file = BUNDLES_DIR / f"{bundle_id}.json"
+    bundle_file = _bundles_dir() / f"{bundle_id}.json"
     bundle_file.write_text(json.dumps(bundle, indent=2))
 
     return bundle
@@ -252,7 +255,7 @@ def rollback_bundle(bundle_id: str) -> dict:
     bundle["rolled_back_at"] = datetime.now(UTC).isoformat()
     bundle["rollback_results"] = rollback_results
 
-    bundle_file = BUNDLES_DIR / f"{bundle_id}.json"
+    bundle_file = _bundles_dir() / f"{bundle_id}.json"
     bundle_file.write_text(json.dumps(bundle, indent=2))
 
     return bundle
@@ -266,7 +269,7 @@ def list_bundles(
     """List bundles with optional filters."""
     bundles = []
 
-    for bundle_file in sorted(BUNDLES_DIR.glob("*.json"), reverse=True):
+    for bundle_file in sorted(_bundles_dir().glob("*.json"), reverse=True):
         try:
             bundle = json.loads(bundle_file.read_text())
         except json.JSONDecodeError as e:
@@ -303,7 +306,7 @@ def cleanup_old_bundles(days: int = 30) -> int:
     cutoff = datetime.now(UTC) - timedelta(days=days)
     removed = 0
 
-    for bundle_file in BUNDLES_DIR.glob("*.json"):
+    for bundle_file in _bundles_dir().glob("*.json"):
         try:
             bundle = json.loads(bundle_file.read_text())
             created = datetime.fromisoformat(bundle["created_at"].replace("Z", "+00:00"))

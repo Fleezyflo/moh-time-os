@@ -116,7 +116,14 @@ async function fetchJson<T>(url: string): Promise<T> {
     }
     throw new ApiError(res.status, res.statusText, message);
   }
-  return res.json();
+  const json = await res.json();
+  // Guard against body-level error envelopes returned as HTTP 200.
+  // Some backend endpoints wrap errors in {status: "error", error: "..."}.
+  if (json && typeof json === 'object' && json.status === 'error') {
+    const errorMsg = json.error || json.detail || 'Backend returned error status';
+    throw new ApiError(200, 'Body Error', errorMsg);
+  }
+  return json as T;
 }
 
 export async function fetchProposals(
@@ -190,6 +197,19 @@ export async function fetchCouplings(
 
 export async function fetchClients(): Promise<ApiListResponse<Client>> {
   return fetchJson(`${API_BASE}/clients`);
+}
+
+export async function fetchClientIndex(params?: {
+  tier?: string;
+  has_issues?: boolean;
+  has_overdue_ar?: boolean;
+}): Promise<unknown> {
+  const searchParams = new URLSearchParams();
+  if (params?.tier) searchParams.set('tier', params.tier);
+  if (params?.has_issues) searchParams.set('has_issues', 'true');
+  if (params?.has_overdue_ar) searchParams.set('has_overdue_ar', 'true');
+  const qs = searchParams.toString();
+  return fetchJson(`${API_BASE}/clients${qs ? '?' + qs : ''}`);
 }
 
 export async function fetchTeam(): Promise<ApiListResponse<TeamMember>> {

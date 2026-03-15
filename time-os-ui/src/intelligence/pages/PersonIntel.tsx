@@ -129,10 +129,10 @@ function mapPersonToHeader(data: PersonFullData) {
     classification: null,
     primarySignal,
     quickStats: {
-      Tasks: profile?.active_tasks ?? '—',
-      Projects: profile?.projects?.length ?? '—',
-      Clients: profile?.clients?.length ?? '—',
-      Signals: data.active_signals?.length ?? 0,
+      Tasks: profile?.active_tasks != null ? profile.active_tasks : '—',
+      Projects: profile?.projects != null ? profile.projects.length : '—',
+      Clients: profile?.clients != null ? profile.clients.length : '—',
+      Signals: data.active_signals != null ? data.active_signals.length : '—',
     },
     trend: null,
   };

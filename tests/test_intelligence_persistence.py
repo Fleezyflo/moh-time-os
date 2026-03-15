@@ -6,7 +6,7 @@ are correctly stored, queried, and lifecycle-managed.
 """
 
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -108,7 +108,7 @@ class TestPatternPersistence:
     def _make_pattern(self, pattern_id: str = "PAT_001", cycle_id: str = None) -> PatternSnapshot:
         return PatternSnapshot(
             id=make_id(),
-            detected_at=datetime.now().isoformat(),
+            detected_at=datetime.now(timezone.utc).isoformat(),
             pattern_id=pattern_id,
             pattern_name="Revenue Concentration",
             pattern_type="concentration",
@@ -188,7 +188,7 @@ class TestCostPersistence:
     def _make_cost(self, entity_id: str = "client-1") -> CostSnapshotRecord:
         return CostSnapshotRecord(
             id=make_id(),
-            computed_at=datetime.now().isoformat(),
+            computed_at=datetime.now(timezone.utc).isoformat(),
             snapshot_type="client",
             entity_id=entity_id,
             effort_score=42.5,
@@ -233,7 +233,7 @@ class TestCostPersistence:
         cp = CostPersistence(test_db)
         portfolio = CostSnapshotRecord(
             id=make_id(),
-            computed_at=datetime.now().isoformat(),
+            computed_at=datetime.now(timezone.utc).isoformat(),
             snapshot_type="portfolio",
             entity_id=None,
             effort_score=500.0,
@@ -269,7 +269,7 @@ class TestIntelligenceEvents:
             entity_id="client-1",
             event_data={"signal_id": "SIG_001", "change_type": "new"},
             source_module="signals",
-            created_at=datetime.now().isoformat(),
+            created_at=datetime.now(timezone.utc).isoformat(),
         )
 
     def test_publish_and_retrieve(self, test_db):
@@ -366,7 +366,7 @@ class TestIntelligenceEvents:
 
         # Backdate consumed_at to 60 days ago
         conn = sqlite3.connect(str(test_db))
-        old_date = (datetime.now() - timedelta(days=60)).isoformat()
+        old_date = (datetime.now(timezone.utc) - timedelta(days=60)).isoformat()
         conn.execute(
             "UPDATE intelligence_events SET consumed_at = ? WHERE id = ?",
             (old_date, event.id),

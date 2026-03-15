@@ -16,7 +16,7 @@ Brief contents:
 import json
 import logging
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -131,7 +131,7 @@ def send_if_changed(
     Returns:
         Dict with status and details
     """
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
 
     # Timing gate: only send after configured hour
     if now.hour < morning_brief_hour:
@@ -208,14 +208,21 @@ def send_if_changed(
     message = "\n".join(sections)
     title = f"Morning Brief -- {now.strftime('%A %b %d')}"
 
-    # Send via Google Chat channel
+    # Send via Google Chat channel (outbox-safe path)
     channel = getattr(notifier, "channels", {}).get("google_chat")
     if not channel:
         logger.warning("No Google Chat channel configured -- brief not sent")
         return {"status": "error", "error": "no_google_chat_channel"}
 
     try:
-        result = channel.send_sync(message, title=title)
+        from lib.notifier.channels.safe_send import safe_send_sync
+
+        result = safe_send_sync(
+            channel=channel,
+            message=message,
+            title=title,
+            caller="morning_brief",
+        )
     except (ValueError, OSError) as e:
         logger.error("Failed to send morning brief: %s", e)
         return {"status": "error", "error": str(e)}

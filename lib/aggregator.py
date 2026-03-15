@@ -14,7 +14,7 @@ Single artifact containing all dashboard data:
 import json
 import logging
 import sqlite3
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -24,8 +24,10 @@ from .gates import GateEvaluator
 
 logger = logging.getLogger(__name__)
 
-DB_PATH = paths.db_path()
-OUTPUT_PATH = paths.out_dir()
+
+def _output_path():
+    return paths.out_dir()
+
 
 # Gate-to-domain mapping per §15.4
 DOMAIN_GATES = {
@@ -46,8 +48,8 @@ DOMAIN_GATES = {
 class SnapshotAggregator:
     """Aggregates all data into unified snapshot.json."""
 
-    def __init__(self, db_path: Path = DB_PATH):
-        self.db_path = db_path
+    def __init__(self, db_path: Path = None):
+        self.db_path = db_path or str(paths.db_path())
         self.gate_evaluator = GateEvaluator(db_path)
         self.today = date.today()
         self._gates_cache = None
@@ -83,7 +85,7 @@ class SnapshotAggregator:
 
     def generate(self, started_at: datetime = None) -> dict:
         """Generate complete snapshot."""
-        started_at = started_at or datetime.now()
+        started_at = started_at or datetime.now(timezone.utc)
 
         # Evaluate gates first (needed for confidence labels)
         gates_result = self.gate_evaluator.evaluate_all()
@@ -98,8 +100,10 @@ class SnapshotAggregator:
             "deltas": self._build_deltas(),
         }
 
-        snapshot["meta"]["finished_at"] = datetime.now().isoformat()
-        snapshot["meta"]["duration_seconds"] = (datetime.now() - started_at).total_seconds()
+        snapshot["meta"]["finished_at"] = datetime.now(timezone.utc).isoformat()
+        snapshot["meta"]["duration_seconds"] = (
+            datetime.now(timezone.utc) - started_at
+        ).total_seconds()
 
         return snapshot
 
@@ -820,7 +824,7 @@ class SnapshotAggregator:
 
     def _build_deltas(self) -> dict:
         """Build deltas by comparing to previous snapshot."""
-        prev_path = OUTPUT_PATH / "previous_snapshot.json"
+        prev_path = _output_path() / "previous_snapshot.json"
 
         if not prev_path.exists():
             return {
@@ -845,10 +849,10 @@ class SnapshotAggregator:
 
     def save(self, snapshot: dict) -> Path:
         """Save snapshot and compute deltas."""
-        OUTPUT_PATH.mkdir(parents=True, exist_ok=True)
+        _output_path().mkdir(parents=True, exist_ok=True)
 
-        current_path = OUTPUT_PATH / "snapshot.json"
-        prev_path = OUTPUT_PATH / "previous_snapshot.json"
+        current_path = _output_path() / "snapshot.json"
+        prev_path = _output_path() / "previous_snapshot.json"
 
         # Load previous for delta computation
         prev = None

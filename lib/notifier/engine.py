@@ -10,7 +10,9 @@ import logging
 import os
 import sqlite3
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+
+from lib.outbox import get_outbox
 
 logger = logging.getLogger(__name__)
 
@@ -42,13 +44,15 @@ class NotificationEngine:
         self._notification_intel = None
         self._digest_engine = None
 
+        self._intelligence_degraded = False
         try:
             from lib.intelligence.notification_intelligence import NotificationIntelligence
 
             self._notification_intel = NotificationIntelligence()
             logger.info("NotificationEngine: notification intelligence enabled")
         except (ImportError, ValueError, OSError) as e:
-            logger.error(f"NotificationEngine: notification intelligence init failed: {e}")
+            self._intelligence_degraded = True
+            logger.error("NotificationEngine: notification intelligence init failed: %s", e)
 
         try:
             from lib.notifier.digest import DigestEngine
@@ -57,6 +61,25 @@ class NotificationEngine:
             logger.info("NotificationEngine: digest engine enabled")
         except (ImportError, sqlite3.Error, ValueError, OSError) as e:
             logger.error("NotificationEngine: digest engine init failed: %s", e)
+
+    @property
+    def is_degraded(self) -> bool:
+        """True if any subsystem (intelligence, digest) failed to initialize.
+
+        Callers should check this and include degradation context when
+        presenting notification results to users/operators.
+        """
+        return self._intelligence_degraded or self._digest_engine is None
+
+    @property
+    def degradation_reasons(self) -> list[str]:
+        """Human-readable list of degraded subsystems."""
+        reasons = []
+        if self._intelligence_degraded:
+            reasons.append("notification intelligence disabled -- default routing in use")
+        if self._digest_engine is None:
+            reasons.append("digest engine unavailable -- batched delivery disabled")
+        return reasons
 
     def _load_channels(self):
         """Load configured notification channels."""
@@ -195,28 +218,64 @@ class NotificationEngine:
                     continue
 
                 try:
+                    outbox = get_outbox()
+                    idem_key = f"notif_{notif_id}_{channel_name}"
+
+                    # Check if already sent (prevents duplicate delivery on retry)
+                    fulfilled = outbox.get_fulfilled_intent(idempotency_key=idem_key)
+                    if fulfilled:
+                        logger.info(
+                            "Notification %s already sent via %s (message_id=%s)",
+                            notif_id,
+                            channel_name,
+                            fulfilled.get("external_resource_id"),
+                        )
+                        results.append(
+                            {
+                                "id": notif_id,
+                                "channel": channel_name,
+                                "status": "already_sent",
+                                "message_id": fulfilled.get("external_resource_id"),
+                            }
+                        )
+                        continue
+
+                    # Record durable intent BEFORE sending
+                    intent_id = outbox.record_intent(
+                        handler="notification",
+                        action="send",
+                        payload={"notif_id": notif_id, "channel": channel_name},
+                        idempotency_key=idem_key,
+                    )
+
                     channel = self.channels[channel_name]
                     result = await channel.send(message, priority=priority)
 
                     if result.get("success"):
-                        # Mark as sent — if DB update fails after channel send
-                        # succeeded, log the orphan so we can detect duplicates
-                        # on next cycle (audit re-review: async path was missed
-                        # in first remediation, only sync path was fixed).
+                        message_id = result.get("message_id")
+
+                        # Mark outbox fulfilled with external message ID
+                        outbox.mark_fulfilled(intent_id, external_resource_id=message_id)
+
+                        # Update local notification record
                         try:
                             self.store.update(
                                 "notifications",
                                 notif_id,
                                 {
-                                    "sent_at": datetime.now().isoformat(),
+                                    "sent_at": datetime.now(timezone.utc).isoformat(),
                                     "delivery_channel": channel_name,
-                                    "delivery_id": result.get("message_id"),
+                                    "delivery_id": message_id,
                                 },
                             )
                         except (sqlite3.Error, ValueError, OSError) as db_err:
+                            # External send succeeded and outbox is fulfilled —
+                            # next retry will see the fulfilled outbox entry and
+                            # skip re-sending. The notification DB record is stale
+                            # but no duplicate delivery will occur.
                             logger.error(
-                                "Notification %s sent via %s but DB update failed: %s. "
-                                "May cause duplicate on next cycle.",
+                                "Notification %s sent via %s (outbox fulfilled) "
+                                "but notifications table update failed: %s",
                                 notif_id,
                                 channel_name,
                                 db_err,
@@ -236,10 +295,14 @@ class NotificationEngine:
                                 "id": notif_id,
                                 "channel": channel_name,
                                 "status": "sent",
-                                "message_id": result.get("message_id"),
+                                "message_id": message_id,
                             }
                         )
                     else:
+                        outbox.mark_failed(
+                            intent_id,
+                            error=result.get("error", "Unknown error"),
+                        )
                         results.append(
                             {
                                 "id": notif_id,
@@ -386,29 +449,59 @@ class NotificationEngine:
                     continue
 
                 try:
+                    outbox = get_outbox()
+                    idem_key = f"notif_{notif_id}_{channel_name}"
+
+                    # Check if already sent (prevents duplicate on retry)
+                    fulfilled = outbox.get_fulfilled_intent(idempotency_key=idem_key)
+                    if fulfilled:
+                        logger.info(
+                            "Notification %s already sent via %s (message_id=%s)",
+                            notif_id,
+                            channel_name,
+                            fulfilled.get("external_resource_id"),
+                        )
+                        results.append(
+                            {
+                                "id": notif_id,
+                                "channel": channel_name,
+                                "status": "already_sent",
+                                "message_id": fulfilled.get("external_resource_id"),
+                            }
+                        )
+                        continue
+
+                    # Record durable intent BEFORE sending
+                    intent_id = outbox.record_intent(
+                        handler="notification",
+                        action="send_sync",
+                        payload={"notif_id": notif_id, "channel": channel_name},
+                        idempotency_key=idem_key,
+                    )
+
                     channel = self.channels[channel_name]
-                    # Use sync method
                     result = channel.send_sync(message, priority=priority)
 
                     if result.get("success"):
-                        # Mark as sent — if DB update fails after channel send
-                        # succeeded, log the orphan so we can detect duplicates
-                        # on next cycle (audit finding: notification transaction
-                        # boundary missing).
+                        message_id = result.get("message_id")
+                        # Mark outbox fulfilled with external message ID
+                        outbox.mark_fulfilled(intent_id, external_resource_id=message_id)
+
                         try:
                             self.store.update(
                                 "notifications",
                                 notif_id,
                                 {
-                                    "sent_at": datetime.now().isoformat(),
+                                    "sent_at": datetime.now(timezone.utc).isoformat(),
                                     "delivery_channel": channel_name,
-                                    "delivery_id": result.get("message_id"),
+                                    "delivery_id": message_id,
                                 },
                             )
                         except (sqlite3.Error, ValueError, OSError) as db_err:
+                            # Outbox is fulfilled — next retry will skip re-sending
                             logger.error(
-                                "Notification %s sent via %s but DB update failed: %s. "
-                                "May cause duplicate on next cycle.",
+                                "Notification %s sent via %s (outbox fulfilled) "
+                                "but notifications table update failed: %s",
                                 notif_id,
                                 channel_name,
                                 db_err,
@@ -425,6 +518,10 @@ class NotificationEngine:
 
                         results.append({"id": notif_id, "channel": channel_name, "status": "sent"})
                     else:
+                        outbox.mark_failed(
+                            intent_id,
+                            error=result.get("error", "Unknown error"),
+                        )
                         results.append(
                             {
                                 "id": notif_id,
@@ -471,7 +568,7 @@ class NotificationEngine:
             notification_id
         """
         notif_id = str(uuid.uuid4())
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
 
         self.store.insert(
             "notifications",
@@ -510,7 +607,7 @@ class NotificationEngine:
         limit = limits.get(priority, 10)
 
         # Count sent today
-        today_start = datetime.now().replace(hour=0, minute=0, second=0).isoformat()
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0).isoformat()
 
         count = self.store.count(
             "notifications",
@@ -526,7 +623,7 @@ class NotificationEngine:
         if not quiet_config.get("enabled", True):
             return False
 
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         hour = now.hour
 
         start_hour = int(quiet_config.get("start", "23:00").split(":")[0])
@@ -549,7 +646,7 @@ class NotificationEngine:
 
     def get_sent_today(self) -> dict:
         """Get count of sent notifications today by priority."""
-        today_start = datetime.now().replace(hour=0, minute=0, second=0).isoformat()
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0).isoformat()
 
         results = self.store.query(
             """
@@ -602,7 +699,7 @@ class NotificationEngine:
         Returns:
             True if a mute was found and cleared, False otherwise.
         """
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         active = self.store.query(
             """
             SELECT id FROM notification_mutes
@@ -625,7 +722,7 @@ class NotificationEngine:
 
     def is_muted(self, entity_id: str) -> bool:
         """Check if an entity is currently muted."""
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         count = self.store.count(
             "notification_mutes",
             where="entity_id = ? AND mute_until > ?",
@@ -635,7 +732,7 @@ class NotificationEngine:
 
     def get_active_mutes(self) -> list[dict]:
         """Return all currently active mutes."""
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         return self.store.query(
             """
             SELECT id, entity_id, created_at, mute_until, mute_reason
@@ -668,7 +765,7 @@ class NotificationEngine:
             analytics_id
         """
         analytics_id = str(uuid.uuid4())
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
 
         data = {
             "id": analytics_id,
@@ -709,7 +806,7 @@ class NotificationEngine:
                 "action_rate": float
             }
         """
-        cutoff = (datetime.now() - timedelta(days=days)).isoformat()
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat()
 
         rows = self.store.query(
             """

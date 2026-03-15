@@ -9,14 +9,12 @@ Adds:
 """
 
 import logging
-import os
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
+
+from lib import paths
 
 logger = logging.getLogger(__name__)
-
-
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "moh_time_os.db")
 MIGRATION_VERSION = 4004
 
 SCHEMA_SQL = """
@@ -111,7 +109,8 @@ CREATE INDEX IF NOT EXISTS idx_redaction_markers_excerpt ON redaction_markers(ex
 
 
 def run_migration():
-    conn = sqlite3.connect(DB_PATH)
+    db_path = str(paths.db_path())
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
     # Check version
@@ -128,7 +127,7 @@ def run_migration():
     cursor.executescript(SCHEMA_SQL)
     cursor.execute(
         "INSERT INTO _schema_version (version, applied_at) VALUES (?, ?)",
-        (MIGRATION_VERSION, datetime.now().isoformat()),
+        (MIGRATION_VERSION, datetime.now(timezone.utc).isoformat()),
     )
     conn.commit()
     conn.close()

@@ -37,21 +37,22 @@ export function Operations() {
   const { data: healthData } = useHealth();
   const { data: chatAnalytics } = useChatAnalytics();
 
-  // Derive counts
-  const identityCount = fixData?.identity_conflicts?.length || 0;
-  const linkCount = fixData?.ambiguous_links?.length || 0;
-  const totalFixItems = identityCount + linkCount;
-  const watcherCount = watcherData?.items?.length || 0;
-  const couplingCount = couplingData?.items?.length || 0;
+  // Derive counts — preserve null when data not yet loaded
+  const identityCount = fixData != null ? (fixData.identity_conflicts?.length ?? 0) : null;
+  const linkCount = fixData != null ? (fixData.ambiguous_links?.length ?? 0) : null;
+  const totalFixItems =
+    identityCount != null && linkCount != null ? identityCount + linkCount : null;
+  const watcherCount = watcherData != null ? (watcherData.items?.length ?? 0) : null;
+  const couplingCount = couplingData != null ? (couplingData.items?.length ?? 0) : null;
   const systemStatus = healthData?.status || 'unknown';
 
   // Update tab badges
-  const spaceCount = chatAnalytics?.spaces?.length || 0;
+  const spaceCount = chatAnalytics != null ? (chatAnalytics.spaces?.length ?? 0) : null;
   const tabsWithBadges: TabDef<OpsTab>[] = TABS.map((tab) => {
-    if (tab.id === 'data-quality') return { ...tab, badge: totalFixItems };
-    if (tab.id === 'watchers') return { ...tab, badge: watcherCount };
-    if (tab.id === 'couplings') return { ...tab, badge: couplingCount };
-    if (tab.id === 'chat-analytics') return { ...tab, badge: spaceCount };
+    if (tab.id === 'data-quality') return { ...tab, badge: totalFixItems ?? 0 };
+    if (tab.id === 'watchers') return { ...tab, badge: watcherCount ?? 0 };
+    if (tab.id === 'couplings') return { ...tab, badge: couplingCount ?? 0 };
+    if (tab.id === 'chat-analytics') return { ...tab, badge: spaceCount ?? 0 };
     return tab;
   });
 
@@ -85,15 +86,37 @@ export function Operations() {
       <SummaryGrid>
         <MetricCard
           label="Fix Items"
-          value={totalFixItems}
-          severity={totalFixItems > 0 ? 'warning' : 'success'}
+          value={totalFixItems ?? '--'}
+          severity={
+            totalFixItems != null && totalFixItems > 0
+              ? 'warning'
+              : totalFixItems != null
+                ? 'success'
+                : undefined
+          }
         />
-        <MetricCard label="Active Watchers" value={watcherCount} />
-        <MetricCard label="Couplings" value={couplingCount} />
+        <MetricCard label="Active Watchers" value={watcherCount ?? '--'} />
+        <MetricCard label="Couplings" value={couplingCount ?? '--'} />
         <MetricCard
           label="System Health"
-          value={systemStatus === 'healthy' ? '✓ Healthy' : '✗ Unhealthy'}
-          severity={systemStatus === 'healthy' ? 'success' : 'danger'}
+          value={
+            systemStatus === 'healthy'
+              ? '✓ Healthy'
+              : systemStatus === 'degraded'
+                ? '◐ Degraded'
+                : systemStatus === 'unknown'
+                  ? '? Unknown'
+                  : '✗ Unhealthy'
+          }
+          severity={
+            systemStatus === 'healthy'
+              ? 'success'
+              : systemStatus === 'degraded'
+                ? 'warning'
+                : systemStatus === 'unknown'
+                  ? undefined
+                  : 'danger'
+          }
         />
       </SummaryGrid>
 
@@ -153,7 +176,12 @@ function DataQualityTab({
   if (allItems.length === 0) {
     return (
       <div className="p-8 text-center">
-        <p className="text-[var(--success)]">✓ No data issues — everything looks clean</p>
+        <p className="text-[var(--grey-light)]">No data quality issues detected in last scan</p>
+        {!fixData && (
+          <p className="text-xs text-[var(--grey)] mt-1">
+            Note: data quality scan may not have run yet
+          </p>
+        )}
       </div>
     );
   }

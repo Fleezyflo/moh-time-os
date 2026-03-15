@@ -29,11 +29,7 @@ from lib.api.pagination import PaginatedResponse, PaginationParams, paginate, pa
 
 logger = logging.getLogger(__name__)
 
-# Router
 paginated_router = APIRouter(tags=["Pagination"])
-
-# Database path
-DB_PATH = paths.db_path()
 
 
 # ==== Database Helpers ====
@@ -42,11 +38,13 @@ DB_PATH = paths.db_path()
 def _get_connection() -> sqlite3.Connection:
     """Get a DB connection or raise."""
     try:
-        conn = sqlite3.connect(str(DB_PATH))
+        db_path = str(paths.db_path())
+        conn = sqlite3.connect(db_path)
         conn.row_factory = sqlite3.Row
         return conn
     except sqlite3.Error as e:
-        logger.error("Failed to connect to database at %s: %s", DB_PATH, e)
+        db_path = str(paths.db_path())
+        logger.error("Failed to connect to database at %s: %s", db_path, e)
         raise HTTPException(
             status_code=503,
             detail=f"Database unavailable: {e}",

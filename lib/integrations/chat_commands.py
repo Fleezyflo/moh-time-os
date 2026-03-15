@@ -199,10 +199,62 @@ class CardBuilder:
 class SlashCommandHandler:
     """Register and handle slash commands for Google Chat."""
 
-    def __init__(self):
-        """Initialize command handler."""
+    # Commands that mutate state and require sender verification
+    PRIVILEGED_COMMANDS = frozenset({"approve", "reject"})
+
+    def __init__(self, authorized_emails: list[str] | None = None):
+        """
+        Initialize command handler.
+
+        Args:
+            authorized_emails: Email addresses allowed to run privileged
+                commands (approve, reject). If None or empty, reads from
+                MOH_TIME_OS_CHAT_AUTHORIZED_EMAILS env var (comma-separated).
+                If still empty, defaults to the system owner only.
+        """
+        import os
+
+        if authorized_emails:
+            self._authorized_emails = {e.lower().strip() for e in authorized_emails}
+        else:
+            env_val = os.environ.get("MOH_TIME_OS_CHAT_AUTHORIZED_EMAILS", "")
+            if env_val.strip():
+                self._authorized_emails = {
+                    e.lower().strip() for e in env_val.split(",") if e.strip()
+                }
+            else:
+                # Default: only the system owner
+                self._authorized_emails = {"by.cream.co@gmail.com"}
+
         self.commands = {}  # {command_name: {"handler": callable, "description": str, "usage": str}}
         self._register_builtins()
+
+    def _verify_sender(self, event: dict, command_name: str) -> str | None:
+        """
+        Verify sender is authorized for privileged commands.
+
+        Returns sender email on success, None on failure.
+        Logs unauthorized attempts.
+        """
+        sender = event.get("message", {}).get("sender", {})
+        sender_email = sender.get("email", "").lower().strip()
+
+        if not sender_email:
+            logger.warning(
+                "Chat command /%s rejected: no sender email in event",
+                command_name,
+            )
+            return None
+
+        if sender_email not in self._authorized_emails:
+            logger.warning(
+                "Chat command /%s rejected: sender %s not in authorized list",
+                command_name,
+                sender_email,
+            )
+            return None
+
+        return sender_email
 
     def register_command(
         self,
@@ -344,6 +396,8 @@ class SlashCommandHandler:
         """
         Handle /approve command to approve a pending action.
 
+        Requires sender to be in authorized_emails list.
+
         Params:
             [0]: action_id (required)
         """
@@ -354,17 +408,33 @@ class SlashCommandHandler:
                 ]
             }
 
+        # Verify sender authorization
+        sender_email = self._verify_sender(event, "approve")
+        if sender_email is None:
+            return {
+                "sections": [
+                    {
+                        "widgets": [
+                            {
+                                "textParagraph": {
+                                    "text": "⛔ Unauthorized: your email is not "
+                                    "authorized to approve actions."
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+
         action_id = params[0]
-        sender = event.get("message", {}).get("sender", {})
-        approved_by = sender.get("email", sender.get("displayName", "chat_user"))
 
         try:
             from lib.actions.action_framework import ActionFramework
 
             framework = ActionFramework()
-            success = framework.approve_action(action_id, approved_by=approved_by)
+            success = framework.approve_action(action_id, approved_by=sender_email)
             if success:
-                msg = f"✓ Action {action_id} approved by {approved_by}"
+                msg = f"✓ Action {action_id} approved by {sender_email}"
             else:
                 msg = f"Could not approve action {action_id} (not found or not in pending state)"
         except (sqlite3.Error, ValueError, OSError, KeyError) as e:
@@ -376,6 +446,8 @@ class SlashCommandHandler:
     def _handle_reject(self, event: dict, params: list) -> dict:
         """
         Handle /reject command to reject a pending action.
+
+        Requires sender to be in authorized_emails list.
 
         Params:
             [0]: action_id (required)
@@ -392,18 +464,38 @@ class SlashCommandHandler:
                 ]
             }
 
+        # Verify sender authorization
+        sender_email = self._verify_sender(event, "reject")
+        if sender_email is None:
+            return {
+                "sections": [
+                    {
+                        "widgets": [
+                            {
+                                "textParagraph": {
+                                    "text": "⛔ Unauthorized: your email is not "
+                                    "authorized to reject actions."
+                                }
+                            }
+                        ]
+                    }
+                ]
+            }
+
         action_id = params[0]
         reason = " ".join(params[1:]) if len(params) > 1 else "No reason provided"
-        sender = event.get("message", {}).get("sender", {})
-        rejected_by = sender.get("email", sender.get("displayName", "chat_user"))
 
         try:
             from lib.actions.action_framework import ActionFramework
 
             framework = ActionFramework()
-            success = framework.reject_action(action_id, rejected_by=rejected_by, reason=reason)
+            success = framework.reject_action(
+                action_id,
+                rejected_by=sender_email,
+                reason=reason,
+            )
             if success:
-                msg = f"✓ Action {action_id} rejected by {rejected_by}: {reason}"
+                msg = f"✓ Action {action_id} rejected by {sender_email}: {reason}"
             else:
                 msg = f"Could not reject action {action_id} (not found or not in pending state)"
         except (sqlite3.Error, ValueError, OSError, KeyError) as e:

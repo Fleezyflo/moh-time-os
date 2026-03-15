@@ -23,9 +23,6 @@ from lib.compat import UTC
 logger = logging.getLogger(__name__)
 
 
-DB_PATH = paths.db_path()
-
-
 # =============================================================================
 # Configuration: Client → Brand mappings
 # =============================================================================
@@ -139,7 +136,7 @@ def detect_engagement_type(project_name: str) -> str:
 
 def get_connection():
     """Get database connection."""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = sqlite3.connect(str(paths.db_path()))
     conn.row_factory = sqlite3.Row
     return conn
 

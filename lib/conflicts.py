@@ -20,7 +20,8 @@ from lib.compat import UTC, StrEnum
 logger = logging.getLogger(__name__)
 
 
-CONFLICTS_FILE = paths.data_dir() / "conflicts.json"
+def _conflicts_file():
+    return paths.data_dir() / "conflicts.json"
 
 
 class ConflictStatus(StrEnum):
@@ -106,11 +107,11 @@ class Conflict:
 
 def load_conflicts() -> dict[str, Conflict]:
     """Load all conflicts from disk."""
-    if not CONFLICTS_FILE.exists():
+    if not _conflicts_file().exists():
         return {}
 
     try:
-        data = json.loads(CONFLICTS_FILE.read_text())
+        data = json.loads(_conflicts_file().read_text())
         return {cid: Conflict.from_dict(c) for cid, c in data.items()}
     except (json.JSONDecodeError, TypeError) as e:
         logger.warning("Could not load conflicts file: %s", e)
@@ -120,7 +121,7 @@ def load_conflicts() -> dict[str, Conflict]:
 def save_conflicts(conflicts: dict[str, Conflict]) -> None:
     """Save all conflicts to disk."""
     data = {cid: c.to_dict() for cid, c in conflicts.items()}
-    CONFLICTS_FILE.write_text(json.dumps(data, indent=2))
+    _conflicts_file().write_text(json.dumps(data, indent=2))
 
 
 def get_conflict(conflict_id: str) -> Conflict | None:

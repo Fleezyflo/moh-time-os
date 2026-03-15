@@ -12,7 +12,7 @@ Makes the autonomous loop survive failures without manual intervention.
 import logging
 import time
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 
 logger = logging.getLogger(__name__)
@@ -326,7 +326,7 @@ class AutonomousOperations:
             health.consecutive_failures = 0
             health.consecutive_successes += 1
             health.status = "healthy"
-            health.last_run_at = datetime.now().isoformat()
+            health.last_run_at = datetime.now(timezone.utc).isoformat()
             health.last_success_at = health.last_run_at
             health.run_count += 1
             health.circuit_breaker_state = cb.state.value if cb else "closed"
@@ -350,7 +350,7 @@ class AutonomousOperations:
         if health:
             health.consecutive_failures += 1
             health.consecutive_successes = 0
-            health.last_run_at = datetime.now().isoformat()
+            health.last_run_at = datetime.now(timezone.utc).isoformat()
             health.last_error = error
             health.run_count += 1
             health.circuit_breaker_state = cb.state.value if cb else "closed"
@@ -395,14 +395,14 @@ class AutonomousOperations:
             active_circuit_breakers=active_cbs,
             total_cycles=len(self.cycle_history),
             recent_error_rate=error_rate,
-            generated_at=datetime.now().isoformat(),
+            generated_at=datetime.now(timezone.utc).isoformat(),
         )
 
     def start_cycle(self, cycle_id: str) -> LoopCycleReport:
         """Start a new autonomous loop cycle."""
         report = LoopCycleReport(
             cycle_id=cycle_id,
-            started_at=datetime.now().isoformat(),
+            started_at=datetime.now(timezone.utc).isoformat(),
         )
         self.cycle_history.append(report)
         # Keep only last 100 cycles
@@ -412,7 +412,7 @@ class AutonomousOperations:
 
     def complete_cycle(self, report: LoopCycleReport) -> None:
         """Complete a cycle with final stats."""
-        report.completed_at = datetime.now().isoformat()
+        report.completed_at = datetime.now(timezone.utc).isoformat()
         if report.jobs_failed == 0:
             report.status = "completed"
         elif report.jobs_succeeded > 0:

@@ -20,7 +20,7 @@ import json
 import logging
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from lib import paths
@@ -133,7 +133,7 @@ class HealthUnifier:
         """Get health scores over time, ordered chronologically."""
         conn = self._connect()
         try:
-            since = (datetime.now() - timedelta(days=days)).strftime("%Y-%m-%d")
+            since = (datetime.now(timezone.utc) - timedelta(days=days)).strftime("%Y-%m-%d")
             rows = conn.execute(
                 """SELECT * FROM score_history
                    WHERE entity_type = ? AND entity_id = ?
@@ -182,7 +182,7 @@ class HealthUnifier:
         """
         conn = self._connect()
         try:
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             conn.execute(
                 """INSERT OR REPLACE INTO score_history
                    (entity_type, entity_id, composite_score,
@@ -227,7 +227,7 @@ class HealthUnifier:
                     composite_score=result["composite_score"],
                     dimensions=result.get("dimensions", {}),
                     data_completeness=result.get("data_completeness", 0.0),
-                    recorded_at=result.get("scored_at", datetime.now().isoformat()),
+                    recorded_at=result.get("scored_at", datetime.now(timezone.utc).isoformat()),
                     classification=classify_score(result["composite_score"]),
                 )
 
@@ -244,7 +244,7 @@ class HealthUnifier:
                     composite_score=result["composite_score"],
                     dimensions=result.get("dimensions", {}),
                     data_completeness=result.get("data_completeness", 0.0),
-                    recorded_at=result.get("scored_at", datetime.now().isoformat()),
+                    recorded_at=result.get("scored_at", datetime.now(timezone.utc).isoformat()),
                     classification=classify_score(result["composite_score"]),
                 )
 
@@ -261,7 +261,7 @@ class HealthUnifier:
                     composite_score=result["composite_score"],
                     dimensions=result.get("dimensions", {}),
                     data_completeness=result.get("data_completeness", 0.0),
-                    recorded_at=result.get("scored_at", datetime.now().isoformat()),
+                    recorded_at=result.get("scored_at", datetime.now(timezone.utc).isoformat()),
                     classification=classify_score(result["composite_score"]),
                 )
 

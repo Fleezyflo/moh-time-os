@@ -1529,7 +1529,7 @@ def get_connection(db_path: Path = None):
 
 def now_iso() -> str:
     """Current UTC time in ISO format."""
-    return datetime.utcnow().isoformat() + "Z"
+    return datetime.now().isoformat() + "Z"
 
 
 def generate_id() -> str:

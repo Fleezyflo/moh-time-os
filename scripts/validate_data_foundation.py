@@ -497,7 +497,7 @@ def print_report(results: list[ValidationResult]) -> int:
 
     print("=" * 72)
     print("  DATA FOUNDATION VALIDATION REPORT")
-    print("  " + datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    print("  " + datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"))
     print("=" * 72)
 
     current_domain = None

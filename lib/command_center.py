@@ -12,7 +12,7 @@ calendar_attendees, commitments, signals, communications, sync_state).
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from lib.state_store import StateStore, get_store
 
@@ -48,8 +48,8 @@ class ClientHealthView:
         Returns:
             List of client dicts sorted by overdue_tasks (descending).
         """
-        cutoff_date = (datetime.now() - timedelta(days=days_lookback)).isoformat()
-        today = datetime.now().isoformat()[:10]
+        cutoff_date = (datetime.now(timezone.utc) - timedelta(days=days_lookback)).isoformat()
+        today = datetime.now(timezone.utc).isoformat()[:10]
 
         # Query all clients
         clients = self.store.query(
@@ -92,7 +92,7 @@ class ClientHealthView:
                 )
 
                 # Get tasks completed this week
-                week_ago = (datetime.now() - timedelta(days=7)).isoformat()
+                week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
                 completed_week = self.store.query(
                     """
                     SELECT COUNT(*) as c FROM tasks t
@@ -120,7 +120,7 @@ class ClientHealthView:
                     try:
                         meeting_dt = datetime.fromisoformat(last_meeting.replace("Z", "+00:00"))
                         days_since_last_meeting = max(
-                            0, (datetime.now() - meeting_dt.replace(tzinfo=None)).days
+                            0, (datetime.now(timezone.utc) - meeting_dt.replace(tzinfo=None)).days
                         )
                     except (ValueError, AttributeError):
                         days_since_last_meeting = None
@@ -207,7 +207,7 @@ class ClientHealthView:
             team_list = [dict(tm) for tm in team_members]
 
             # Recent activity (last 10 days)
-            ten_days_ago = (datetime.now() - timedelta(days=10)).isoformat()
+            ten_days_ago = (datetime.now(timezone.utc) - timedelta(days=10)).isoformat()
             recent = self.store.query(
                 """
                 SELECT t.id, t.title, t.status, t.updated_at
@@ -270,9 +270,13 @@ class TeamLoadView:
             List of team member dicts sorted by overdue_tasks (desc),
             then active_tasks (desc).
         """
-        today = datetime.now().isoformat()[:10]
-        week_start = (datetime.now() - timedelta(days=datetime.now().weekday())).isoformat()[:10]
-        week_end = (datetime.now() + timedelta(days=6 - datetime.now().weekday())).isoformat()[:10]
+        today = datetime.now(timezone.utc).isoformat()[:10]
+        week_start = (
+            datetime.now(timezone.utc) - timedelta(days=datetime.now(timezone.utc).weekday())
+        ).isoformat()[:10]
+        week_end = (
+            datetime.now(timezone.utc) + timedelta(days=6 - datetime.now(timezone.utc).weekday())
+        ).isoformat()[:10]
 
         # Get all team members
         team_members = self.store.query(
@@ -386,16 +390,17 @@ class TeamLoadView:
                 tasks_by_project[project_name].append(task)
 
             # Get overdue items
-            today = datetime.now().isoformat()[:10]
+            today = datetime.now(timezone.utc).isoformat()[:10]
             overdue = [t for t in all_tasks_list if t.get("due_date") and t["due_date"] < today]
 
             # Get calendar events this week
-            week_start = (datetime.now() - timedelta(days=datetime.now().weekday())).isoformat()[
-                :10
-            ]
-            week_end = (datetime.now() + timedelta(days=6 - datetime.now().weekday())).isoformat()[
-                :10
-            ]
+            week_start = (
+                datetime.now(timezone.utc) - timedelta(days=datetime.now(timezone.utc).weekday())
+            ).isoformat()[:10]
+            week_end = (
+                datetime.now(timezone.utc)
+                + timedelta(days=6 - datetime.now(timezone.utc).weekday())
+            ).isoformat()[:10]
             email = member_dict.get("email", "")
             calendar_events = []
             if email:
@@ -485,7 +490,7 @@ class DecisionQueueView:
         }
         """
         try:
-            today = datetime.now().isoformat()[:10]
+            today = datetime.now(timezone.utc).isoformat()[:10]
 
             # My tasks (active)
             my_tasks = self.store.query(

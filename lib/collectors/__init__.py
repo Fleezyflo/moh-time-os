@@ -11,6 +11,7 @@ from .contacts import ContactsCollector
 from .drive import DriveCollector
 from .gmail import GmailCollector
 from .orchestrator import CollectorOrchestrator
+from .result import CollectorResult, CollectorStatus
 from .tasks import TasksCollector
 from .xero import XeroCollector
 
@@ -20,6 +21,8 @@ __all__ = [
     "CalendarCollector",
     "ChatCollector",
     "CollectorOrchestrator",
+    "CollectorResult",
+    "CollectorStatus",
     "ContactsCollector",
     "DriveCollector",
     "GmailCollector",

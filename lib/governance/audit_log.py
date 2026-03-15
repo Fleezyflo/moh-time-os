@@ -14,7 +14,7 @@ Entries are immutable (cannot be deleted or modified after creation).
 import logging
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -104,7 +104,7 @@ class AuditLog:
             import uuid
 
             entry_id = str(uuid.uuid4())
-            timestamp = datetime.utcnow().isoformat()
+            timestamp = datetime.now(timezone.utc).isoformat()
 
             conn = self._get_connection()
             conn.execute(

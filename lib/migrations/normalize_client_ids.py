@@ -10,16 +10,16 @@ Run: python -m lib.migrations.normalize_client_ids
 import logging
 import re
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 
-from lib.store import DB_PATH
+from lib import paths
 
 logger = logging.getLogger(__name__)
 
 
 def get_db():
     """Get a direct database connection."""
-    conn = sqlite3.connect(DB_PATH, timeout=30.0)
+    conn = sqlite3.connect(str(paths.db_path()), timeout=30.0)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -107,8 +107,8 @@ def run_migration():
                     (
                         new_slug,
                         potential_name,
-                        datetime.now().isoformat(),
-                        datetime.now().isoformat(),
+                        datetime.now(timezone.utc).isoformat(),
+                        datetime.now(timezone.utc).isoformat(),
                     ),
                 )
                 results["clients_created"] += 1

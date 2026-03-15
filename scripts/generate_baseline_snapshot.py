@@ -11,16 +11,15 @@ import sqlite3
 import subprocess
 import sys
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
-from lib import safe_sql
+from lib import paths, safe_sql
 
 logger = logging.getLogger(__name__)
 
 # Paths
 REPO_ROOT = Path(__file__).parent.parent
-DB_PATH = REPO_ROOT / "data" / "moh_time_os.db"
 LIB_DIRS = ["lib", "api", "engine", "collectors"]
 UI_DIR = REPO_ROOT / "time-os-ui" / "src"
 OUTPUT_DIR = REPO_ROOT / "data"
@@ -352,14 +351,15 @@ def main():
     print("Generating baseline snapshot...")
 
     # Step 1: Verify DB
-    if not DB_PATH.exists():
-        print(f"ERROR: Database not found at {DB_PATH}")
+    db_path = paths.db_path()
+    if not db_path.exists():
+        print(f"ERROR: Database not found at {db_path}")
         sys.exit(1)
-    print(f"✓ Database found: {DB_PATH}")
+    print(f"✓ Database found: {db_path}")
 
     # Step 2: Table inventory
     print("Collecting table inventory...")
-    database = get_table_inventory(DB_PATH)
+    database = get_table_inventory(db_path)
     print(
         f"✓ Found {database['total_tables']} tables, {database['total_views']} views, {database['total_rows']:,} total rows"
     )
@@ -397,7 +397,7 @@ def main():
 
     # Step 7: Assemble snapshot
     snapshot = {
-        "generated": datetime.now().astimezone().isoformat(),
+        "generated": datetime.now(timezone.utc).astimezone().isoformat(),
         "database": database,
         "modules": modules,
         "endpoints": endpoints,
@@ -406,7 +406,7 @@ def main():
     }
 
     # Save
-    date_str = datetime.now().strftime("%Y%m%d")
+    date_str = datetime.now(timezone.utc).strftime("%Y%m%d")
     output_file = OUTPUT_DIR / f"baseline_snapshot_{date_str}.json"
 
     with open(output_file, "w") as f:

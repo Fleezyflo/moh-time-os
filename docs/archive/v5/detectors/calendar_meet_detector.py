@@ -5,7 +5,7 @@ Detects signals from Calendar events (collected JSON).
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ..data_loader import get_data_loader
 from ..database import Database
@@ -112,11 +112,11 @@ class CalendarMeetDetector(SignalDetector):
     def _parse_time(self, time_str: str) -> datetime:
         """Parse timestamp string to datetime."""
         if not time_str:
-            return datetime.now()
+            return datetime.now(timezone.utc)
         try:
             if "T" in time_str:
                 return datetime.fromisoformat(time_str.replace("Z", "+00:00"))
             return datetime.fromisoformat(time_str)
         except (ValueError, TypeError) as e:
             logger.debug(f"Could not parse time string '{time_str}': {e}")
-            return datetime.now()
+            return datetime.now(timezone.utc)

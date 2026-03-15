@@ -17,7 +17,7 @@ import logging
 import sqlite3
 import time
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -36,7 +36,7 @@ class StageError:
     component: str
     error_type: str
     message: str
-    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
+    timestamp: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def to_dict(self) -> dict:
         return {
@@ -460,7 +460,7 @@ def generate_intelligence_snapshot(db_path: Path | None = None) -> dict:
     generation_time = end_time - start_time
 
     return {
-        "generated_at": datetime.now().isoformat(),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
         "generation_time_seconds": round(generation_time, 2),
         "pipeline_success": True,
         "pipeline_partial": False,
@@ -532,7 +532,7 @@ def get_client_intelligence(client_id: str, db_path: Path | None = None) -> dict
 
     result = {
         "client_id": client_id,
-        "generated_at": datetime.now().isoformat(),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
         "success": True,
         "errors": [],
         "scorecard": {},
@@ -620,7 +620,7 @@ def get_person_intelligence(person_id: str, db_path: Path | None = None) -> dict
 
     result = {
         "person_id": person_id,
-        "generated_at": datetime.now().isoformat(),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
         "success": True,
         "errors": [],
         "scorecard": {},
@@ -709,7 +709,7 @@ def get_portfolio_intelligence(db_path: Path | None = None) -> dict:
     errors: list[StageError] = []
 
     result = {
-        "generated_at": datetime.now().isoformat(),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
         "success": True,
         "errors": [],
         "portfolio_score": {},

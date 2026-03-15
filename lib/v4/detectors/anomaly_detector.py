@@ -8,13 +8,10 @@ Detects anomalous patterns:
 """
 
 import json
-import os
 import sqlite3
 from typing import Any
 
 from .base import BaseDetector
-
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "moh_time_os.db")
 
 
 class AnomalyDetector(BaseDetector):

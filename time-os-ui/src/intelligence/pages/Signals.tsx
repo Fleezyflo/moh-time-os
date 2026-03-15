@@ -2,6 +2,7 @@
  * Signals — Active Signals List
  *
  * Shows all detected signals with filtering by severity and entity type.
+ * Includes freshness indicator from API computed_at timestamp.
  */
 
 import { useSignals } from '../hooks';
@@ -12,10 +13,22 @@ import { PageLayout } from '../../components/layout/PageLayout';
 import { SummaryGrid } from '../../components/layout/SummaryGrid';
 import { MetricCard } from '../../components/layout/MetricCard';
 
+/** Format an ISO timestamp into a human-readable freshness label */
+function freshnessLabel(isoStr: string): string {
+  const diff = Date.now() - new Date(isoStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
 export default function Signals() {
   const { severity, entityType, setSeverity, setEntityType, resetFilters } = useSignalFilters();
 
-  const { data, loading, error, refetch } = useSignals(true);
+  const { data, loading, error, hasLoaded, computedAt, refetch } = useSignals(true);
 
   // Show error state if we have an error and no data
   if (error && !data) {
@@ -30,18 +43,21 @@ export default function Signals() {
     return <SkeletonSignalsPage />;
   }
 
-  const signals = data?.signals ?? [];
+  // Distinguish "data loaded but empty" from "data never loaded / failed"
+  const signals = data?.signals;
+  const hasSignals = signals != null;
+  const signalList = signals ?? [];
 
   // Apply filters
-  const filtered = signals.filter((s) => {
+  const filtered = signalList.filter((s) => {
     if (severity !== 'all' && s.severity !== severity) return false;
     if (entityType !== 'all' && s.entity_type !== entityType) return false;
     return true;
   });
 
   // Get unique values for filters
-  const severities = ['all', ...new Set(signals.map((s) => s.severity))];
-  const entityTypes = ['all', ...new Set(signals.map((s) => s.entity_type))];
+  const severities = ['all', ...new Set(signalList.map((s) => s.severity))];
+  const entityTypes = ['all', ...new Set(signalList.map((s) => s.entity_type))];
 
   const filterControls = (
     <div className="flex flex-wrap gap-4 bg-[var(--grey-dim)] rounded-lg p-4">
@@ -75,7 +91,7 @@ export default function Signals() {
       </div>
       <div className="flex items-end gap-2">
         <span className="text-sm text-[var(--grey-muted)]">
-          Showing {filtered.length} of {signals.length}
+          Showing {filtered.length} of {signalList.length}
         </span>
         {(severity !== 'all' || entityType !== 'all') && (
           <button
@@ -91,12 +107,23 @@ export default function Signals() {
 
   return (
     <PageLayout title="Active Signals" actions={filterControls}>
+      {/* Freshness indicator */}
+      {computedAt && (
+        <div className="text-xs text-[var(--grey)] mb-2">
+          Data computed {freshnessLabel(computedAt)}
+          {error && hasLoaded && ' (showing last known data)'}
+        </div>
+      )}
+
       {/* Error banner when we have stale data */}
       {error && data && <ErrorState error={error} onRetry={refetch} hasData />}
 
       {/* Summary Grid */}
       <SummaryGrid>
-        <MetricCard label="Total Signals" value={data?.total_signals ?? signals.length} />
+        <MetricCard
+          label="Total Signals"
+          value={hasSignals ? (data?.total_signals ?? signalList.length) : '--'}
+        />
         {(severity !== 'all' || entityType !== 'all') && (
           <MetricCard label="Filtered" value={filtered.length} />
         )}
@@ -104,7 +131,11 @@ export default function Signals() {
 
       {/* Signal List */}
       <div className="space-y-4">
-        {filtered.length === 0 ? (
+        {!hasSignals ? (
+          <div className="p-6 text-center text-[var(--grey-light)]">
+            {hasLoaded ? 'Signal data could not be loaded.' : 'Loading signals...'}
+          </div>
+        ) : filtered.length === 0 ? (
           severity !== 'all' || entityType !== 'all' ? (
             <NoResults query={`severity: ${severity}, type: ${entityType}`} />
           ) : (

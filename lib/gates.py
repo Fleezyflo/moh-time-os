@@ -24,14 +24,11 @@ from lib import paths
 logger = logging.getLogger(__name__)
 
 
-DB_PATH = paths.db_path()
-
-
 class GateEvaluator:
     """Evaluates all gates per MASTER_SPEC.md §6."""
 
-    def __init__(self, db_path: Path = DB_PATH):
-        self.db_path = db_path
+    def __init__(self, db_path: Path = None):
+        self.db_path = db_path or str(paths.db_path())
 
     def _get_conn(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)

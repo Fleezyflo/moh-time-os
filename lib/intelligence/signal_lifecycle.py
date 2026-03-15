@@ -14,7 +14,7 @@ import json
 import logging
 import sqlite3
 from dataclasses import dataclass, field
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from enum import Enum
 from pathlib import Path
 
@@ -150,14 +150,16 @@ class SignalLifecycleTracker:
         esc_json = row.get("escalation_history_json", "[]")
 
         try:
-            first_dt = datetime.fromisoformat(first_det) if first_det else datetime.now()
+            first_dt = (
+                datetime.fromisoformat(first_det) if first_det else datetime.now(timezone.utc)
+            )
         except (ValueError, TypeError):
-            first_dt = datetime.now()
+            first_dt = datetime.now(timezone.utc)
 
         try:
-            last_dt = datetime.fromisoformat(last_det) if last_det else datetime.now()
+            last_dt = datetime.fromisoformat(last_det) if last_det else datetime.now(timezone.utc)
         except (ValueError, TypeError):
-            last_dt = datetime.now()
+            last_dt = datetime.now(timezone.utc)
 
         try:
             esc_history = json.loads(esc_json) if esc_json else []
@@ -272,7 +274,7 @@ class SignalLifecycleTracker:
                 (signal_key,),
             ).fetchone()
 
-            now_iso = datetime.now().isoformat()
+            now_iso = datetime.now(timezone.utc).isoformat()
 
             if row is None:
                 # First detection — insert new row
@@ -370,7 +372,7 @@ class SignalLifecycleTracker:
                     consecutive_cycles = 0
                 WHERE signal_key = ?
                 """,
-                (datetime.now().isoformat(), resolution_type, signal_key),
+                (datetime.now(timezone.utc).isoformat(), resolution_type, signal_key),
             )
             conn.commit()
         finally:

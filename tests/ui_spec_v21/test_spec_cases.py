@@ -7,7 +7,7 @@ Each test is named: spec_<number>_<short_name>
 
 import json
 import sqlite3
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
@@ -275,7 +275,7 @@ def test_spec_1_dismiss_suppression_expiry(db):
     assert check_suppression(db, sk)
 
     # Manually expire the rule
-    past_date = to_iso(datetime.utcnow() - timedelta(days=31))
+    past_date = to_iso(datetime.now(timezone.utc) - timedelta(days=31))
     db.execute("UPDATE inbox_suppression_rules SET expires_at = ?", (past_date,))
     db.commit()
 
@@ -511,7 +511,7 @@ def test_spec_5_issue_snooze_expiry_transition(db):
     issue_id = create_test_issue(db, state="snoozed")
 
     # Set snooze_until to past
-    past = to_iso(datetime.utcnow() - timedelta(hours=1))
+    past = to_iso(datetime.now(timezone.utc) - timedelta(hours=1))
     db.execute("UPDATE issues SET snoozed_until = ? WHERE id = ?", (past, issue_id))
     db.commit()
 

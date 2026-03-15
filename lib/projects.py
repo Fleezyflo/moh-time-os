@@ -26,7 +26,8 @@ from lib.compat import UTC
 logger = logging.getLogger(__name__)
 
 
-PROJECTS_FILE = paths.data_dir() / "projects.json"
+def _projects_file():
+    return paths.data_dir() / "projects.json"
 
 
 @dataclass
@@ -95,11 +96,11 @@ class Project:
 
 def load_projects() -> dict[str, Project]:
     """Load all projects from disk."""
-    if not PROJECTS_FILE.exists():
+    if not _projects_file().exists():
         return {}
 
     try:
-        data = json.loads(PROJECTS_FILE.read_text())
+        data = json.loads(_projects_file().read_text())
         return {pid: Project.from_dict(p) for pid, p in data.items()}
     except (json.JSONDecodeError, TypeError) as e:
         logger.warning("Could not load projects file: %s", e)
@@ -109,7 +110,7 @@ def load_projects() -> dict[str, Project]:
 def save_projects(projects: dict[str, Project]) -> None:
     """Save all projects to disk."""
     data = {pid: p.to_dict() for pid, p in projects.items()}
-    PROJECTS_FILE.write_text(json.dumps(data, indent=2))
+    _projects_file().write_text(json.dumps(data, indent=2))
 
 
 def get_project(project_id: str) -> Project | None:

@@ -8,17 +8,14 @@ Detects deadline-related signals:
 """
 
 import logging
-import os
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from ..artifact_service import get_artifact_service
 from .base import BaseDetector
 
 logger = logging.getLogger(__name__)
-
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "moh_time_os.db")
 
 # Legacy filter: tasks overdue more than this many days are considered archived/legacy noise
 # and excluded from signal generation to keep proposals clean
@@ -67,7 +64,7 @@ class DeadlineDetector(BaseDetector):
         cursor = conn.cursor()
 
         try:
-            today = datetime.now().date()
+            today = datetime.now(timezone.utc).date()
             approaching_cutoff = (today + timedelta(days=self.APPROACHING_DAYS)).isoformat()
 
             # Find overdue tasks (excluding legacy tasks > LEGACY_OVERDUE_THRESHOLD_DAYS old)

@@ -8,7 +8,7 @@ import logging
 import sqlite3
 import threading
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -155,20 +155,20 @@ class StateStore:
     def set_cache(self, key: str, value: Any, ttl_seconds: int = 300):
         """Set cache value."""
         self._cache[key] = value
-        self._cache_timestamps[key] = datetime.now()
+        self._cache_timestamps[key] = datetime.now(timezone.utc)
 
         # Also persist to disk for recovery
         cache_path = Path(self.db_path).parent / "cache" / f"{key}.json"
         cache_path.parent.mkdir(exist_ok=True)
         with open(cache_path, "w") as f:
-            json.dump({"value": value, "timestamp": datetime.now().isoformat()}, f)
+            json.dump({"value": value, "timestamp": datetime.now(timezone.utc).isoformat()}, f)
 
     def get_cache(self, key: str, max_age_seconds: int = 300) -> Any | None:
         """Get cache value if not expired."""
         if key in self._cache:
             timestamp = self._cache_timestamps.get(key)
             if timestamp:
-                age = (datetime.now() - timestamp).total_seconds()
+                age = (datetime.now(timezone.utc) - timestamp).total_seconds()
                 if age < max_age_seconds:
                     return self._cache[key]
 
@@ -178,12 +178,28 @@ class StateStore:
             with open(cache_path) as f:
                 data = json.load(f)
                 timestamp = datetime.fromisoformat(data["timestamp"])
-                age = (datetime.now() - timestamp).total_seconds()
+                age = (datetime.now(timezone.utc) - timestamp).total_seconds()
                 if age < max_age_seconds:
                     self._cache[key] = data["value"]
                     self._cache_timestamps[key] = timestamp
                     return data["value"]
 
+        return None
+
+    def get_cache_timestamp(self, key: str) -> datetime | None:
+        """Get the timestamp when a cache key was last set.
+
+        Returns None if the key has no recorded timestamp.
+        """
+        ts = self._cache_timestamps.get(key)
+        if ts:
+            return ts
+        # Try disk cache metadata
+        cache_path = Path(self.db_path).parent / "cache" / f"{key}.json"
+        if cache_path.exists():
+            with open(cache_path) as f:
+                data = json.load(f)
+                return datetime.fromisoformat(data["timestamp"])
         return None
 
     def clear_cache(self, key: str = None):
@@ -250,7 +266,7 @@ class StateStore:
             error_type: Classified error category (auth, transport, etc.).
             status: Collector status string (success, partial, stale, failed).
         """
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         with self._get_conn() as conn:
             conn.execute(
                 """INSERT INTO sync_state

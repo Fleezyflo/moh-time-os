@@ -13,8 +13,10 @@ from typing import Any
 
 import httpx
 
-_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "..", "config", ".credentials.json")
-TOKEN_CACHE_PATH = os.path.join(os.path.dirname(__file__), "..", "config", ".xero_token_cache.json")
+from lib.credential_paths import credentials_json, xero_token_cache
+
+_CONFIG_PATH = str(credentials_json())
+TOKEN_CACHE_PATH = str(xero_token_cache())
 
 XERO_OAUTH_ENDPOINT = "https://identity.xero.com/connect/token"
 XERO_API_BASE = "https://api.xero.com/api.xro/2.0"

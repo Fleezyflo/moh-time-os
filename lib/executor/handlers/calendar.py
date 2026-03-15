@@ -5,13 +5,18 @@ Supports two modes:
 1. Local-only: stores events in local SQLite "events" table
 2. Google Calendar: delegates to CalendarWriter for Google Calendar API calls
 
+Side-effect safety: All Google Calendar API calls go through the outbox pattern.
+Intent is recorded BEFORE the external call. If the call succeeds but local
+state update fails, the outbox entry tracks the Google event ID for reconciliation.
+Retries check the outbox first to avoid duplicate Google events.
+
 GAP-10-08: CalendarWriter integration for bidirectional calendar sync.
 """
 
 import json
 import logging
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +72,35 @@ class CalendarHandler:
         # Try Google Calendar first
         writer = self._get_writer()
         if writer is not None:
+            from lib.outbox import get_outbox
+
+            outbox = get_outbox()
+
+            # Build idempotency key from action content
+            idem_key = f"cal_create_{data.get('title', '')}_{data.get('start_time', '')}"
+
+            # Check if already fulfilled (idempotent retry)
+            fulfilled = outbox.get_fulfilled_intent(idempotency_key=idem_key)
+            if fulfilled:
+                logger.info(
+                    "Calendar create already fulfilled (google_event_id=%s)",
+                    fulfilled.get("external_resource_id"),
+                )
+                return {
+                    "success": True,
+                    "event_id": fulfilled.get("external_resource_id"),
+                    "google_event_id": fulfilled.get("external_resource_id"),
+                    "already_executed": True,
+                }
+
+            # Record durable intent BEFORE calling Google Calendar API
+            intent_id = outbox.record_intent(
+                handler="calendar",
+                action="create_event",
+                payload=data,
+                idempotency_key=idem_key,
+            )
+
             event_body = {
                 "summary": data["title"],
                 "start": {"dateTime": data["start_time"]},
@@ -81,8 +115,11 @@ class CalendarHandler:
             result = writer.create_event(calendar_id, event_body)
 
             if result.success:
+                # Mark fulfilled with external resource ID for reconciliation
+                outbox.mark_fulfilled(intent_id, external_resource_id=result.event_id)
+
                 # Also store locally for tracking
-                local_id = f"event_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                local_id = f"event_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
                 self.store.insert(
                     "events",
                     {
@@ -93,8 +130,8 @@ class CalendarHandler:
                         "end_time": data.get("end_time"),
                         "location": data.get("location"),
                         "context": json.dumps({"google_event_id": result.event_id}),
-                        "created_at": datetime.now().isoformat(),
-                        "updated_at": datetime.now().isoformat(),
+                        "created_at": datetime.now(timezone.utc).isoformat(),
+                        "updated_at": datetime.now(timezone.utc).isoformat(),
                     },
                 )
                 return {
@@ -104,11 +141,13 @@ class CalendarHandler:
                     "html_link": result.data.get("htmlLink") if result.data else None,
                 }
 
+            # External call failed — mark outbox as failed
+            outbox.mark_failed(intent_id, error=result.error or "create_event failed")
             logger.error("CalendarWriter.create_event failed: %s", result.error)
             return {"success": False, "error": result.error}
 
         # Fallback to local-only
-        local_id = f"event_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        local_id = f"event_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
         self.store.insert(
             "events",
             {
@@ -119,8 +158,8 @@ class CalendarHandler:
                 "end_time": data.get("end_time"),
                 "location": data.get("location"),
                 "context": json.dumps(data.get("context", {})),
-                "created_at": datetime.now().isoformat(),
-                "updated_at": datetime.now().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
             },
         )
         return {"success": True, "event_id": local_id}
@@ -132,26 +171,47 @@ class CalendarHandler:
         # Check if this event has a Google Calendar counterpart
         writer = self._get_writer()
         if writer is not None and data.get("google_event_id"):
-            calendar_id = data.get("calendar_id", "primary")
-            google_event_id = data.pop("google_event_id")
-            update_body = {}
-            if "title" in data:
-                update_body["summary"] = data["title"]
-            if "start_time" in data:
-                update_body["start"] = {"dateTime": data["start_time"]}
-            if "end_time" in data:
-                update_body["end"] = {"dateTime": data["end_time"]}
-            if "location" in data:
-                update_body["location"] = data["location"]
+            from lib.outbox import get_outbox
 
-            if update_body:
-                result = writer.update_event(calendar_id, google_event_id, update_body)
-                if not result.success:
-                    logger.error("CalendarWriter.update_event failed: %s", result.error)
-                    return {"success": False, "error": result.error}
+            outbox = get_outbox()
+            google_event_id = data.pop("google_event_id")
+            calendar_id = data.get("calendar_id", "primary")
+            idem_key = f"cal_update_{event_id}_{google_event_id}"
+
+            # Check if already fulfilled (idempotent retry)
+            fulfilled = outbox.get_fulfilled_intent(idempotency_key=idem_key)
+            if not fulfilled:
+                update_body = {}
+                if "title" in data:
+                    update_body["summary"] = data["title"]
+                if "start_time" in data:
+                    update_body["start"] = {"dateTime": data["start_time"]}
+                if "end_time" in data:
+                    update_body["end"] = {"dateTime": data["end_time"]}
+                if "location" in data:
+                    update_body["location"] = data["location"]
+
+                if update_body:
+                    # Record intent BEFORE external call
+                    intent_id = outbox.record_intent(
+                        handler="calendar",
+                        action="update_event",
+                        payload={"event_id": event_id, "google_event_id": google_event_id},
+                        idempotency_key=idem_key,
+                    )
+
+                    result = writer.update_event(calendar_id, google_event_id, update_body)
+                    if result.success:
+                        outbox.mark_fulfilled(intent_id, external_resource_id=google_event_id)
+                    else:
+                        outbox.mark_failed(intent_id, error=result.error or "update_event failed")
+                        logger.error("CalendarWriter.update_event failed: %s", result.error)
+                        return {"success": False, "error": result.error}
+            else:
+                logger.info("Calendar update already fulfilled for event %s", google_event_id)
 
         # Always update local record
-        data["updated_at"] = datetime.now().isoformat()
+        data["updated_at"] = datetime.now(timezone.utc).isoformat()
         self.store.update("events", event_id, data)
         return {"success": True, "event_id": event_id}
 
@@ -162,11 +222,33 @@ class CalendarHandler:
         writer = self._get_writer()
         data = action.get("data", {})
         if writer is not None and data.get("google_event_id"):
+            from lib.outbox import get_outbox
+
+            outbox = get_outbox()
+            google_event_id = data["google_event_id"]
             calendar_id = data.get("calendar_id", "primary")
-            result = writer.delete_event(calendar_id, data["google_event_id"])
-            if not result.success:
-                logger.error("CalendarWriter.delete_event failed: %s", result.error)
-                return {"success": False, "error": result.error}
+            idem_key = f"cal_delete_{event_id}_{google_event_id}"
+
+            # Check if already fulfilled (idempotent retry)
+            fulfilled = outbox.get_fulfilled_intent(idempotency_key=idem_key)
+            if not fulfilled:
+                # Record intent BEFORE external call
+                intent_id = outbox.record_intent(
+                    handler="calendar",
+                    action="delete_event",
+                    payload={"event_id": event_id, "google_event_id": google_event_id},
+                    idempotency_key=idem_key,
+                )
+
+                result = writer.delete_event(calendar_id, google_event_id)
+                if result.success:
+                    outbox.mark_fulfilled(intent_id, external_resource_id=google_event_id)
+                else:
+                    outbox.mark_failed(intent_id, error=result.error or "delete_event failed")
+                    logger.error("CalendarWriter.delete_event failed: %s", result.error)
+                    return {"success": False, "error": result.error}
+            else:
+                logger.info("Calendar delete already fulfilled for event %s", google_event_id)
 
         self.store.delete("events", event_id)
         return {"success": True, "event_id": event_id}
@@ -178,17 +260,45 @@ class CalendarHandler:
         # Reschedule on Google Calendar if linked
         writer = self._get_writer()
         if writer is not None and data.get("google_event_id"):
-            calendar_id = data.get("calendar_id", "primary")
-            update_body = {
-                "start": {"dateTime": data["start_time"]},
-            }
-            if data.get("end_time"):
-                update_body["end"] = {"dateTime": data["end_time"]}
+            from lib.outbox import get_outbox
 
-            result = writer.update_event(calendar_id, data["google_event_id"], update_body)
-            if not result.success:
-                logger.error("CalendarWriter.update_event (reschedule) failed: %s", result.error)
-                return {"success": False, "error": result.error}
+            outbox = get_outbox()
+            google_event_id = data["google_event_id"]
+            calendar_id = data.get("calendar_id", "primary")
+            idem_key = f"cal_reschedule_{event_id}_{google_event_id}_{data.get('start_time', '')}"
+
+            # Check if already fulfilled (idempotent retry)
+            fulfilled = outbox.get_fulfilled_intent(idempotency_key=idem_key)
+            if not fulfilled:
+                # Record intent BEFORE external call
+                intent_id = outbox.record_intent(
+                    handler="calendar",
+                    action="reschedule_event",
+                    payload={
+                        "event_id": event_id,
+                        "google_event_id": google_event_id,
+                        "start_time": data.get("start_time"),
+                    },
+                    idempotency_key=idem_key,
+                )
+
+                update_body = {
+                    "start": {"dateTime": data["start_time"]},
+                }
+                if data.get("end_time"):
+                    update_body["end"] = {"dateTime": data["end_time"]}
+
+                result = writer.update_event(calendar_id, google_event_id, update_body)
+                if result.success:
+                    outbox.mark_fulfilled(intent_id, external_resource_id=google_event_id)
+                else:
+                    outbox.mark_failed(intent_id, error=result.error or "reschedule failed")
+                    logger.error(
+                        "CalendarWriter.update_event (reschedule) failed: %s", result.error
+                    )
+                    return {"success": False, "error": result.error}
+            else:
+                logger.info("Calendar reschedule already fulfilled for event %s", google_event_id)
 
         self.store.update(
             "events",
@@ -196,7 +306,7 @@ class CalendarHandler:
             {
                 "start_time": data["start_time"],
                 "end_time": data.get("end_time"),
-                "updated_at": datetime.now().isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
             },
         )
         return {"success": True, "event_id": event_id}

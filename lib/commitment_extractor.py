@@ -9,14 +9,11 @@ import hashlib
 import logging
 import re
 import sqlite3
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from lib import paths
 
 logger = logging.getLogger(__name__)
-
-
-DB_PATH = paths.db_path()
 
 # Commitment signal phrases
 COMMITMENT_PATTERNS = [
@@ -64,7 +61,7 @@ TIME_PATTERNS = {
 
 
 def get_conn():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(str(paths.db_path()))
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -146,7 +143,7 @@ def extract_from_communications(limit: int = 100) -> dict:
     """Extract commitments from unprocessed communications with body_text."""
     conn = get_conn()
     cursor = conn.cursor()
-    now = datetime.now().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     # Get communications with body_text that haven't been fully processed
     cursor.execute(

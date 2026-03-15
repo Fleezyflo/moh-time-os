@@ -10,6 +10,7 @@ import functools
 import hashlib
 import logging
 import sqlite3
+import threading
 from collections.abc import Callable
 from typing import Any
 
@@ -17,16 +18,23 @@ from .cache_manager import CacheManager
 
 logger = logging.getLogger(__name__)
 
-# Global cache instance
+# Global cache instance with thread-safe initialization
 _cache_instance: CacheManager | None = None
+_cache_lock = threading.Lock()
 
 
 def get_cache() -> CacheManager:
-    """Get or create global cache instance."""
+    """Get or create global cache instance.
+
+    Thread-safe: uses double-checked locking.
+    """
     global _cache_instance
-    if _cache_instance is None:
-        _cache_instance = CacheManager()
-    return _cache_instance
+    if _cache_instance is not None:
+        return _cache_instance
+    with _cache_lock:
+        if _cache_instance is None:
+            _cache_instance = CacheManager()
+        return _cache_instance
 
 
 def _generate_cache_key(func_name: str, args: tuple, kwargs: dict) -> str:

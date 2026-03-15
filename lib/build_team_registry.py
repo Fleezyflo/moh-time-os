@@ -8,18 +8,15 @@ This enables capacity calculations.
 import logging
 import sqlite3
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from lib import paths
 
 logger = logging.getLogger(__name__)
 
 
-DB_PATH = paths.db_path()
-
-
 def get_conn():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(str(paths.db_path()))
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -28,7 +25,7 @@ def build_team_registry() -> dict:
     """Build team member registry from task assignees."""
     conn = get_conn()
     cursor = conn.cursor()
-    now = datetime.now().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     # Get distinct assignees with their most common lane
     cursor.execute("""

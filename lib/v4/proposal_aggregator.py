@@ -11,14 +11,13 @@ Hierarchy: Client → Brand → Project/Retainer → Task → Signal
 
 import json
 import logging
-import os
 import sqlite3
 from collections import defaultdict
 from typing import Any
 
-logger = logging.getLogger(__name__)
+from lib import paths
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "moh_time_os.db")
+logger = logging.getLogger(__name__)
 
 # Legacy filter: tasks overdue more than this many days are considered archived/legacy
 # Signals from these tasks are excluded from proposals to avoid noise pollution
@@ -27,7 +26,7 @@ LEGACY_OVERDUE_THRESHOLD_DAYS = 365
 
 def get_db_connection(db_path: str = None) -> sqlite3.Connection:
     """Get database connection with row factory."""
-    conn = sqlite3.connect(db_path or DB_PATH, timeout=30)
+    conn = sqlite3.connect(db_path or str(paths.db_path()), timeout=30)
     conn.row_factory = sqlite3.Row
     return conn
 

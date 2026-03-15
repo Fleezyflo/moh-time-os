@@ -7,7 +7,7 @@ Per Page 0 §6.1 and Page 1 §6.
 import logging
 import sqlite3
 from dataclasses import dataclass, field
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -140,7 +140,7 @@ class DeliveryEngine:
     def __init__(self, db_path: Path):
         self.db_path = db_path
         self.today = date.today()
-        self.now = datetime.now()
+        self.now = datetime.now(timezone.utc)
 
     def _get_conn(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path)

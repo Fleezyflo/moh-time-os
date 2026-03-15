@@ -77,8 +77,14 @@ export default function Governance() {
           value={brakeActive ? 'ON' : 'OFF'}
           severity={brakeActive ? 'danger' : undefined}
         />
-        <MetricCard label="Total Bundles" value={summaryData?.total_bundles ?? 0} />
-        <MetricCard label="Rollbackable" value={summaryData?.rollbackable_count ?? 0} />
+        <MetricCard
+          label="Total Bundles"
+          value={summaryData != null ? (summaryData.total_bundles ?? 0) : '--'}
+        />
+        <MetricCard
+          label="Rollbackable"
+          value={summaryData != null ? (summaryData.rollbackable_count ?? 0) : '--'}
+        />
       </SummaryGrid>
 
       <EmergencyBrakeToggle active={brakeActive} onRefresh={refreshAll} />

@@ -13,7 +13,7 @@ import json
 import logging
 import sqlite3
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from lib import safe_sql
 
@@ -50,6 +50,9 @@ class DigestEngine:
                    and .update(table, id, data)).
         """
         self.store = store
+        # Track items that failed to queue so digest can report degradation
+        self._dropped_count: int = 0
+        self._dropped_high_severity: int = 0
 
     def queue_notification(
         self,
@@ -74,7 +77,7 @@ class DigestEngine:
         """
         try:
             category = self._categorize_event(event_type)
-            now = datetime.now().isoformat()
+            now = datetime.now(timezone.utc).isoformat()
 
             self.store.insert(
                 "digest_queue",
@@ -91,7 +94,18 @@ class DigestEngine:
             )
             return True
         except (sqlite3.Error, ValueError, OSError) as e:
-            log.error("Failed to queue notification: %s", e)
+            # Track drops for degradation reporting in generated digests
+            self._dropped_count += 1
+            if severity in ("critical", "high"):
+                self._dropped_high_severity += 1
+                log.error(
+                    "DIGEST DROP: Failed to queue %s-severity notification %s: %s",
+                    severity,
+                    notification_id,
+                    e,
+                )
+            else:
+                log.warning("Failed to queue notification %s: %s", notification_id, e)
             return False
 
     def _categorize_event(self, event_type: str) -> str:
@@ -169,12 +183,18 @@ class DigestEngine:
                 summary[category] = {"count": len(items)}
                 total_items += len(items)
 
-            return {
+            # Include degradation info if any items were dropped
+            result: dict = {
                 "total": total_items,
                 "categories": categories,
                 "summary": summary,
                 "bucket": bucket,
             }
+            if self._dropped_count > 0:
+                result["degraded"] = True
+                result["dropped_count"] = self._dropped_count
+                result["dropped_high_severity"] = self._dropped_high_severity
+            return result
         except (sqlite3.Error, ValueError, OSError) as e:
             log.error("Failed to generate digest: %s", e)
             return None
@@ -195,7 +215,7 @@ class DigestEngine:
             True on success, False on failure
         """
         try:
-            now = datetime.now().isoformat()
+            now = datetime.now(timezone.utc).isoformat()
 
             for notif_id in notification_ids:
                 # Look up row IDs matching this notification in this bucket
@@ -293,6 +313,17 @@ class DigestEngine:
         lines.append("=" * 50)
         lines.append("")
 
+        # Surface degradation to the user — not just in logs
+        if digest.get("degraded"):
+            dropped = digest.get("dropped_count", 0)
+            dropped_high = digest.get("dropped_high_severity", 0)
+            lines.append(
+                f"WARNING: {dropped} notification(s) could not be included in this digest."
+            )
+            if dropped_high > 0:
+                lines.append(f"  {dropped_high} of these were high/critical severity.")
+            lines.append("")
+
         categories = digest.get("categories", {})
         if not categories:
             lines.append("No notifications")
@@ -340,11 +371,24 @@ class DigestEngine:
             ".high { color: #ff6c00; }",
             ".medium { color: #ffc107; }",
             ".low { color: #28a745; }",
+            ".degraded-warning { background: #fff3cd; border: 1px solid #ffc107; "
+            "border-radius: 4px; padding: 12px; margin-bottom: 16px; color: #856404; }",
             "</style>",
             "</head>",
             "<body>",
             f"<h1>{bucket} Digest</h1>",
         ]
+
+        # Surface degradation to the user in HTML digests
+        if digest.get("degraded"):
+            dropped = digest.get("dropped_count", 0)
+            dropped_high = digest.get("dropped_high_severity", 0)
+            warning_text = f"{dropped} notification(s) could not be included in this digest."
+            if dropped_high > 0:
+                warning_text += f" {dropped_high} of these were high/critical severity."
+            html_parts.append(
+                f'<div class="degraded-warning"><strong>Warning:</strong> {warning_text}</div>'
+            )
 
         if not categories:
             html_parts.append("<p>No notifications</p>")

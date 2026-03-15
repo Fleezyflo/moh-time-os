@@ -6,7 +6,7 @@ unified insights for the autonomous loop.
 """
 
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 
 from .anomaly import AnomalyDetector
 from .patterns import PatternAnalyzer
@@ -72,7 +72,7 @@ class AnalyzerOrchestrator:
                 'recommendations': [...]
             }
         """
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
 
         # Run time analysis
         time_today = self.time_analyzer.analyze_day()
@@ -126,7 +126,7 @@ class AnalyzerOrchestrator:
 
         Returns minimal analysis for fast cycles.
         """
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
 
         # Only anomalies and today's time
         anomalies = self.anomaly_detector.run_all_checks()
@@ -288,13 +288,13 @@ class AnalyzerOrchestrator:
         self.store.insert(
             "insights",
             {
-                "id": f"analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                "id": f"analysis_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}",
                 "type": "full_analysis",
                 "source": "orchestrator",
                 "title": "Periodic Analysis",
                 "data": json.dumps(analysis),
                 "priority": 50,
                 "status": "active",
-                "created_at": datetime.now().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             },
         )

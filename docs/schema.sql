@@ -650,7 +650,9 @@ CREATE TABLE IF NOT EXISTS [sync_state] (
     last_sync TEXT,
     last_success TEXT,
     items_synced INTEGER DEFAULT 0,
-    error TEXT
+    error TEXT,
+    error_type TEXT,
+    status TEXT
 )
 
 CREATE TABLE IF NOT EXISTS [client_projects] (
@@ -972,14 +974,15 @@ CREATE TABLE IF NOT EXISTS [governance_audit_log] (
 
 CREATE TABLE IF NOT EXISTS [api_keys] (
     id TEXT PRIMARY KEY,
-    key_hash TEXT,
-    name TEXT,
-    role TEXT,
-    created_at TEXT,
+    key_hash TEXT NOT NULL,
+    name TEXT NOT NULL,
+    role TEXT NOT NULL CHECK(role IN ('viewer', 'operator', 'admin')),
+    created_at TEXT NOT NULL,
     expires_at TEXT,
     last_used_at TEXT,
-    is_active INTEGER DEFAULT 1,
-    created_by TEXT
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_by TEXT,
+    UNIQUE(key_hash)
 )
 
 CREATE TABLE IF NOT EXISTS [subject_access_requests] (

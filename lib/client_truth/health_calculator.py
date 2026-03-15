@@ -11,7 +11,7 @@ Health score (0-100) based on:
 import json
 import logging
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 from lib import safe_sql
 from lib.state_store import get_store
@@ -339,7 +339,7 @@ class HealthCalculator:
         """Log health computation for trend tracking."""
         import uuid
 
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
 
         self.store.insert(
             "client_health_log",

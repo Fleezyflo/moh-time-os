@@ -10,7 +10,7 @@ Runs weekly to:
 
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from .state_store import StateStore, get_store
 
@@ -30,7 +30,7 @@ class CalibrationEngine:
         Returns calibration report.
         """
         report = {
-            "timestamp": datetime.now().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "period": "weekly",
             "feedback_analysis": self._analyze_feedback(),
             "priority_accuracy": self._analyze_priority_accuracy(),
@@ -48,7 +48,7 @@ class CalibrationEngine:
 
     def _analyze_feedback(self) -> dict:
         """Analyze user feedback from the past week."""
-        week_ago = (datetime.now() - timedelta(days=7)).isoformat()
+        week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
 
         feedback = self.store.query(
             "SELECT feedback_type, COUNT(*) as count FROM feedback WHERE created_at > ? GROUP BY feedback_type",
@@ -67,7 +67,7 @@ class CalibrationEngine:
 
     def _analyze_priority_accuracy(self) -> dict:
         """Analyze how well priorities matched actual completion order."""
-        week_ago = (datetime.now() - timedelta(days=7)).isoformat()
+        week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
 
         # Get completed tasks with their original priority
         completed = self.store.query(
@@ -100,7 +100,7 @@ class CalibrationEngine:
 
     def _analyze_completion_patterns(self) -> dict:
         """Analyze task completion patterns."""
-        week_ago = (datetime.now() - timedelta(days=7)).isoformat()
+        week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
 
         # Count by day of week
         by_day = self.store.query(
@@ -154,14 +154,14 @@ class CalibrationEngine:
         self.store.insert(
             "insights",
             {
-                "id": f"calibration_{datetime.now().strftime('%Y%m%d')}",
+                "id": f"calibration_{datetime.now(timezone.utc).strftime('%Y%m%d')}",
                 "type": "calibration",
                 "domain": "system",
                 "title": "Weekly Calibration Report",
                 "data": json.dumps(report),
                 "confidence": 1.0,
                 "actionable": 1 if report.get("recommendations") else 0,
-                "created_at": datetime.now().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             },
         )
 

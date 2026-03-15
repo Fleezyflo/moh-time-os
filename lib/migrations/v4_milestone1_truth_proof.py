@@ -15,16 +15,12 @@ Run: python -m lib.migrations.v4_milestone1_truth_proof
 """
 
 import logging
-import os
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 
-from lib import safe_sql
+from lib import paths, safe_sql
 
 logger = logging.getLogger(__name__)
-
-
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "data", "moh_time_os.db")
 
 MIGRATION_VERSION = 4001  # V4, Milestone 1
 
@@ -237,13 +233,11 @@ def add_column_if_not_exists(cursor, table, column, column_def):
 
 def run_migration():
     """Execute the migration."""
+    db_path = str(paths.db_path())
     logger.info("Running V4 Milestone 1 Migration...")
-    logger.info(f"Database: {DB_PATH}")
-    if not os.path.exists(DB_PATH):
-        logger.info(f"ERROR: Database not found at {DB_PATH}")
-        return False
+    logger.info(f"Database: {db_path}")
 
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
     try:
@@ -278,7 +272,7 @@ def run_migration():
         # Record migration version
         cursor.execute(
             "INSERT INTO _schema_version (version, applied_at) VALUES (?, ?)",
-            (MIGRATION_VERSION, datetime.now().isoformat()),
+            (MIGRATION_VERSION, datetime.now(timezone.utc).isoformat()),
         )
 
         conn.commit()
@@ -316,7 +310,8 @@ def run_migration():
 def verify_migration():
     """Verify the migration was successful."""
     logger.info("\n=== Verifying Migration ===")
-    conn = sqlite3.connect(DB_PATH)
+    db_path = str(paths.db_path())
+    conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
     try:

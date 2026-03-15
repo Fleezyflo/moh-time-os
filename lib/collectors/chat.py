@@ -13,9 +13,10 @@ import json
 import logging
 import os
 import socket
-from datetime import datetime
-from pathlib import Path
+from datetime import datetime, timezone
 from typing import Any
+
+from lib.credential_paths import google_sa_file
 
 from .base import BaseCollector
 from .resilience import COLLECTOR_ERRORS
@@ -23,8 +24,13 @@ from .result import CollectorResult, CollectorStatus, classify_error
 
 logger = logging.getLogger(__name__)
 
+
+def _sa_file():
+    """Resolve SA file at call time to respect env overrides."""
+    return google_sa_file()
+
+
 # Service account configuration
-SA_FILE = Path.home() / "Library/Application Support/gogcli/sa-bW9saGFtQGhybW55LmNv.json"
 SCOPES = [
     "https://www.googleapis.com/auth/chat.spaces.readonly",
     "https://www.googleapis.com/auth/chat.messages.readonly",
@@ -53,7 +59,7 @@ class ChatCollector(BaseCollector):
             from googleapiclient.discovery import build
 
             creds = service_account.Credentials.from_service_account_file(
-                str(SA_FILE), scopes=SCOPES
+                str(_sa_file()), scopes=SCOPES
             )
             creds = creds.with_subject(user)
             self._service = build("chat", "v1", credentials=creds)
@@ -160,7 +166,7 @@ class ChatCollector(BaseCollector):
 
     def transform(self, raw_data: dict) -> list[dict]:
         """Transform raw Chat API data to canonical format for chat_messages."""
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         transformed = []
 
         for msg in raw_data.get("messages", []):
@@ -294,8 +300,8 @@ class ChatCollector(BaseCollector):
             "space_type": space.get("spaceType", "UNKNOWN"),
             "threaded": 1 if space.get("threaded") else 0,
             "member_count": space.get("memberCount", 0),
-            "created_time": space.get("createTime", datetime.now().isoformat()),
-            "last_synced": datetime.now().isoformat(),
+            "created_time": space.get("createTime", datetime.now(timezone.utc).isoformat()),
+            "last_synced": datetime.now(timezone.utc).isoformat(),
         }
 
     def _transform_members(self, space_name: str, members: list) -> list[dict]:
@@ -347,7 +353,7 @@ class ChatCollector(BaseCollector):
         """
         from datetime import datetime
 
-        cycle_start = datetime.now()
+        cycle_start = datetime.now(timezone.utc)
 
         # Check circuit breaker first
         if not self.circuit_breaker.can_execute():
@@ -385,7 +391,7 @@ class ChatCollector(BaseCollector):
                     error=str(e),
                     error_type=err_type,
                     circuit_breaker_state=self.circuit_breaker.state,
-                    duration_ms=(datetime.now() - cycle_start).total_seconds() * 1000,
+                    duration_ms=(datetime.now(timezone.utc) - cycle_start).total_seconds() * 1000,
                 )
                 return cr.to_dict()
 
@@ -476,8 +482,8 @@ class ChatCollector(BaseCollector):
                     cr.add_secondary("space_members", error=str(e))
 
             # Step 5: Finalize status, update sync state, record success
-            self.last_sync = datetime.now()
-            cr.duration_ms = (datetime.now() - cycle_start).total_seconds() * 1000
+            self.last_sync = datetime.now(timezone.utc)
+            cr.duration_ms = (datetime.now(timezone.utc) - cycle_start).total_seconds() * 1000
             cr.timestamp = self.last_sync.isoformat()
             cr.escalate_to_partial()
             self.store.update_sync_state(
@@ -507,6 +513,6 @@ class ChatCollector(BaseCollector):
                 error=str(e),
                 error_type=err_type,
                 circuit_breaker_state=self.circuit_breaker.state,
-                duration_ms=(datetime.now() - cycle_start).total_seconds() * 1000,
+                duration_ms=(datetime.now(timezone.utc) - cycle_start).total_seconds() * 1000,
             )
             return cr.to_dict()

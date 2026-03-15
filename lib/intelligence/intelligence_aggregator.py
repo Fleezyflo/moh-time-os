@@ -12,7 +12,7 @@ modules into actionable portfolio-level intelligence.
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -331,7 +331,7 @@ class IntelligenceAggregator:
                 attention.append(f"{s.entity_type}:{s.entity_id}")
 
         return PortfolioRollup(
-            generated_at=datetime.now().isoformat(),
+            generated_at=datetime.now(timezone.utc).isoformat(),
             total_clients=len(clients),
             total_projects=len(projects),
             total_persons=len(persons),

@@ -14,7 +14,7 @@ import logging
 import secrets
 import time
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -61,7 +61,7 @@ class APIKey:
         if self.expires_at:
             try:
                 exp = datetime.fromisoformat(self.expires_at)
-                if datetime.now() > exp:
+                if datetime.now(timezone.utc) > exp:
                     return False
             except ValueError:
                 return False
@@ -264,14 +264,14 @@ class APIKeyManager:
 
         expires_at = None
         if expires_in_days:
-            expires_at = (datetime.now() + timedelta(days=expires_in_days)).isoformat()
+            expires_at = (datetime.now(timezone.utc) + timedelta(days=expires_in_days)).isoformat()
 
         api_key = APIKey(
             key_id=key_id,
             key_hash=key_h,
             name=name,
             role=role,
-            created_at=datetime.now().isoformat(),
+            created_at=datetime.now(timezone.utc).isoformat(),
             expires_at=expires_at,
         )
 
@@ -300,7 +300,7 @@ class APIKeyManager:
             return AuthResult(authenticated=False, key_id=key_id, error="key expired")
 
         # Update usage
-        api_key.last_used_at = datetime.now().isoformat()
+        api_key.last_used_at = datetime.now(timezone.utc).isoformat()
         api_key.request_count += 1
 
         return AuthResult(
@@ -316,7 +316,7 @@ class APIKeyManager:
         if not api_key:
             return False
         api_key.revoked = True
-        api_key.revoked_at = datetime.now().isoformat()
+        api_key.revoked_at = datetime.now(timezone.utc).isoformat()
         return True
 
     def rotate_key(self, key_id: str) -> tuple | None:

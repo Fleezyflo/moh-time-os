@@ -6,7 +6,7 @@ Confirms links above a confidence threshold and flags low-confidence ones for re
 
 import logging
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ def auto_confirm_links(
         Summary dict with counts.
     """
     conn = sqlite3.connect(db_path)
-    now = datetime.now().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     try:
         # Count how many would be confirmed

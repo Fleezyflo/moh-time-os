@@ -5,7 +5,7 @@ Executor Engine - Processes and executes approved actions.
 import json
 import logging
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 
 from lib import paths
 
@@ -197,7 +197,7 @@ class ExecutorEngine:
         }
 
         if status == "done":
-            update["executed_at"] = datetime.now().isoformat()
+            update["executed_at"] = datetime.now(timezone.utc).isoformat()
         if result:
             update["result"] = json.dumps(result)
         if error:
@@ -229,7 +229,7 @@ class ExecutorEngine:
                 "payload": json.dumps(payload),
                 "status": status,
                 "requires_approval": 1 if requires_approval else 0,
-                "created_at": datetime.now().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             },
         )
 
@@ -249,7 +249,7 @@ class ExecutorEngine:
             {
                 "status": "approved",
                 "approved_by": approved_by,
-                "approved_at": datetime.now().isoformat(),
+                "approved_at": datetime.now(timezone.utc).isoformat(),
             },
         )
 

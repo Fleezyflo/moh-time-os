@@ -5,7 +5,7 @@ Coordinates all V5 components: detection, balancing, issue formation, resolution
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -91,7 +91,7 @@ class TimeOSOrchestrator:
         Returns:
             Dict with stats from each stage
         """
-        start_time = datetime.now()
+        start_time = datetime.now(timezone.utc)
         results = {
             "started_at": start_time.isoformat(),
             "detection": {},
@@ -129,7 +129,7 @@ class TimeOSOrchestrator:
             logger.error(f"Pipeline error: {e}")
             results["error"] = str(e)
 
-        end_time = datetime.now()
+        end_time = datetime.now(timezone.utc)
         results["duration_seconds"] = (end_time - start_time).total_seconds()
 
         logger.info(f"Pipeline complete in {results['duration_seconds']:.1f}s")

@@ -17,7 +17,7 @@ Test scenarios:
 """
 
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -63,8 +63,10 @@ class FakeStore:
         prev = self.sync_states.get(source, {})
         self.sync_states[source] = {
             "source": source,
-            "last_sync": datetime.now().isoformat(),
-            "last_success": datetime.now().isoformat() if success else prev.get("last_success"),
+            "last_sync": datetime.now(timezone.utc).isoformat(),
+            "last_success": datetime.now(timezone.utc).isoformat()
+            if success
+            else prev.get("last_success"),
             "items_synced": items,
             "error": error,
             "error_type": error_type,
@@ -488,8 +490,8 @@ class TestOrchestratorStatus:
         store = FakeStore()
         store.sync_states["gmail"] = {
             "source": "gmail",
-            "last_sync": datetime.now().isoformat(),
-            "last_success": datetime.now().isoformat(),
+            "last_sync": datetime.now(timezone.utc).isoformat(),
+            "last_success": datetime.now(timezone.utc).isoformat(),
             "items_synced": 50,
             "error": None,
         }
@@ -515,7 +517,7 @@ class TestOrchestratorStatus:
         store = FakeStore()
         store.sync_states["asana"] = {
             "source": "asana",
-            "last_sync": datetime.now().isoformat(),
+            "last_sync": datetime.now(timezone.utc).isoformat(),
             "last_success": None,
             "items_synced": 0,
             "error": "auth failed",

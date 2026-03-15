@@ -14,11 +14,11 @@ function StalenessBar({ staleness }: { staleness: StalenessResponse | null }) {
 
   if (staleness.is_stale) {
     return (
-      <div className="rounded-lg border border-[var(--warning)] bg-[var(--warning)]/10 px-4 py-3 mb-4">
-        <p className="text-sm font-medium text-[var(--warning)]">
+      <div className="rounded-lg border border-[var(--danger)] bg-[var(--danger)]/10 px-4 py-3 mb-4">
+        <p className="text-sm font-medium text-[var(--danger)]">
           Detection stale — last run{' '}
-          {staleness.stale_since ? formatTimeAgo(staleness.last_run) : 'unknown'} ago. Findings may
-          be outdated.
+          {staleness.last_run ? formatTimeAgo(staleness.last_run) : 'unknown'} ago. Findings below
+          may be outdated. Do not make decisions based on this data without a fresh scan.
         </p>
       </div>
     );
@@ -353,16 +353,19 @@ export default function CommandCenter() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+  const [actionError, setActionError] = useState<string | null>(null);
+
   const handleAcknowledge = useCallback(
     async (findingId: string) => {
       setActionLoading(findingId);
+      setActionError(null);
       try {
         await api.acknowledgeFinding(findingId);
         refetchFindings();
       } catch (err) {
-        if (import.meta.env.DEV) {
-          console.error('Acknowledge failed:', err);
-        }
+        const msg = err instanceof Error ? err.message : 'Unknown error';
+        setActionError(`Failed to acknowledge: ${msg}`);
+        console.error('Acknowledge failed:', err);
       } finally {
         setActionLoading(null);
       }
@@ -373,13 +376,14 @@ export default function CommandCenter() {
   const handleSuppress = useCallback(
     async (findingId: string) => {
       setActionLoading(findingId);
+      setActionError(null);
       try {
         await api.suppressFinding(findingId);
         refetchFindings();
       } catch (err) {
-        if (import.meta.env.DEV) {
-          console.error('Suppress failed:', err);
-        }
+        const msg = err instanceof Error ? err.message : 'Unknown error';
+        setActionError(`Failed to suppress: ${msg}`);
+        console.error('Suppress failed:', err);
       } finally {
         setActionLoading(null);
       }
@@ -425,11 +429,20 @@ export default function CommandCenter() {
               />
             ))}
           </>
-        ) : !isStale ? (
-          <div className="bg-[var(--grey-dim)]/50 rounded-lg border border-[var(--grey)] p-8 text-center">
-            <p className="text-[var(--grey-light)]">Nothing requires attention.</p>
+        ) : isStale ? (
+          <div className="bg-[var(--grey-dim)]/50 rounded-lg border border-[var(--warning)] p-8 text-center">
+            <p className="text-[var(--warning)]">
+              No findings to show, but detection data is stale.
+            </p>
+            <p className="text-xs text-[var(--grey)] mt-1">
+              Run a fresh detection cycle before concluding nothing needs attention.
+            </p>
           </div>
-        ) : null}
+        ) : (
+          <div className="bg-[var(--grey-dim)]/50 rounded-lg border border-[var(--grey)] p-8 text-center">
+            <p className="text-[var(--grey-light)]">No findings detected in last scan.</p>
+          </div>
+        )}
       </div>
 
       {/* Acknowledged section (collapsed) */}
@@ -478,8 +491,21 @@ export default function CommandCenter() {
       {/* Team Collisions (collapsed) */}
       {!loading && findings && <TeamCollisions collisions={findings.team_collisions} />}
 
-      {/* Loading overlay for action buttons */}
-      {actionLoading && (
+      {/* Action feedback */}
+      {actionError && (
+        <div className="fixed bottom-4 right-4 bg-[var(--danger)]/20 border border-[var(--danger)] rounded-lg px-4 py-2 text-xs text-[var(--danger)] max-w-sm">
+          <div className="flex items-center justify-between gap-2">
+            <span>{actionError}</span>
+            <button
+              onClick={() => setActionError(null)}
+              className="text-[var(--danger)] hover:text-white shrink-0"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+      {actionLoading && !actionError && (
         <div className="fixed bottom-4 right-4 bg-[var(--grey-dim)] border border-[var(--grey)] rounded-lg px-4 py-2 text-xs text-[var(--grey-light)]">
           Processing...
         </div>

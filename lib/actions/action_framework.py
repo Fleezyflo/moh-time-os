@@ -15,7 +15,7 @@ import sqlite3
 import time
 from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from uuid import uuid4
 
@@ -69,7 +69,7 @@ class ActionProposal:
     approved_at: str | None = None
     rejected_by: str | None = None
     rejection_reason: str | None = None
-    created_at: str = field(default_factory=lambda: datetime.now().isoformat())
+    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def to_dict(self) -> dict:
         """Convert to dict, handling Enum serialization."""
@@ -90,7 +90,7 @@ class ActionResult:
     error: str | None = None
     execution_time_ms: int = 0
     side_effects: list[dict] = field(default_factory=list)
-    executed_at: str = field(default_factory=lambda: datetime.now().isoformat())
+    executed_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
 
     def to_dict(self) -> dict:
         """Convert to dict."""
@@ -137,8 +137,10 @@ class ActionFramework:
         self.rate_limits: dict[str, tuple[int, int]] = {}
         self.rate_limit_config: dict[str, int] = {}  # action_type -> max_per_minute
 
-        # Idempotency: idempotency_key -> action_id
-        self.idempotency_keys: dict[str, str] = {}
+        # Idempotency: backed by SQLite via outbox for durability across restarts
+        from lib.outbox import get_outbox
+
+        self._outbox = get_outbox()
 
         # Wire routing engine for task_create actions
         self.wire_routing_engine()
@@ -184,11 +186,12 @@ class ActionFramework:
 
         Returns action_id.
         """
-        # Check idempotency
+        # Check idempotency — durable via SQLite (survives restart)
         if idempotency_key:
-            if idempotency_key in self.idempotency_keys:
+            existing_action_id = self._outbox.get_idempotency_action(idempotency_key)
+            if existing_action_id:
                 logger.info(f"Duplicate action with idempotency key: {idempotency_key}")
-                return self.idempotency_keys[idempotency_key]
+                return existing_action_id
 
         # Create proposal
         action_id = f"action_{uuid4().hex[:12]}"
@@ -216,7 +219,7 @@ class ActionFramework:
             and not approval_decision.requires_approval
         ):
             proposal.status = ActionStatus.APPROVED
-            proposal.approved_at = datetime.now().isoformat()
+            proposal.approved_at = datetime.now(timezone.utc).isoformat()
             proposal.approved_by = "system_policy"
             logger.info(
                 f"Auto-approved action {action_id} by policy: {approval_decision.policy_matched}"
@@ -225,9 +228,9 @@ class ActionFramework:
         # Store proposal
         self._store_proposal(proposal)
 
-        # Track idempotency key
+        # Track idempotency key — durable via SQLite
         if idempotency_key:
-            self.idempotency_keys[idempotency_key] = action_id
+            self._outbox.store_idempotency_key(idempotency_key, action_id)
 
         logger.info(
             f"Proposed action {action_id}: {action_type} "
@@ -252,7 +255,7 @@ class ActionFramework:
         update = {
             "status": ActionStatus.APPROVED.value,
             "approved_by": approved_by,
-            "approved_at": datetime.now().isoformat(),
+            "approved_at": datetime.now(timezone.utc).isoformat(),
         }
 
         if additional_context:
@@ -336,10 +339,15 @@ class ActionFramework:
         # Update status to executing
         self.store.update("actions", action_id, {"status": ActionStatus.EXECUTING.value})
 
-        # Execute
+        # Execute with outbox pattern: record intent BEFORE external call
         start_time = time.time()
         result = None
         execution_error = None
+
+        # Outbox idempotency key derived from action_id — prevents duplicate
+        # execution if process restarts after external effect but before local
+        # state update.
+        outbox_key = f"execute_{action_id}"
 
         try:
             payload = (
@@ -358,20 +366,63 @@ class ActionFramework:
                     execution_time_ms=int((time.time() - start_time) * 1000),
                 )
             else:
-                handler_result = handler(payload)
-                execution_time = int((time.time() - start_time) * 1000)
-
-                if isinstance(handler_result, ActionResult):
-                    result = handler_result
-                    result.execution_time_ms = execution_time
-                else:
-                    # Handler returned dict
+                # Check if already fulfilled (idempotent retry after crash)
+                fulfilled = self._outbox.get_fulfilled_intent(idempotency_key=outbox_key)
+                if fulfilled:
+                    logger.info(
+                        "Action %s already executed (outbox fulfilled, resource=%s)",
+                        action_id,
+                        fulfilled.get("external_resource_id"),
+                    )
                     result = ActionResult(
                         action_id=action_id,
-                        success=handler_result.get("success", False),
-                        result_data=handler_result,
-                        execution_time_ms=execution_time,
+                        success=True,
+                        result_data={
+                            "already_executed": True,
+                            "external_resource_id": fulfilled.get("external_resource_id"),
+                        },
+                        execution_time_ms=0,
                     )
+                else:
+                    # Record durable intent BEFORE calling external handler
+                    intent_id = self._outbox.record_intent(
+                        handler=action_type,
+                        action="execute",
+                        payload=payload,
+                        idempotency_key=outbox_key,
+                    )
+
+                    # Call handler — may produce external side effects
+                    handler_result = handler(payload)
+                    execution_time = int((time.time() - start_time) * 1000)
+
+                    if isinstance(handler_result, ActionResult):
+                        result = handler_result
+                        result.execution_time_ms = execution_time
+                    else:
+                        # Handler returned dict
+                        result = ActionResult(
+                            action_id=action_id,
+                            success=handler_result.get("success", False),
+                            result_data=handler_result,
+                            execution_time_ms=execution_time,
+                        )
+
+                    # Mark outbox fulfilled/failed AFTER handler returns
+                    if result.success:
+                        external_id = None
+                        if result.result_data and isinstance(result.result_data, dict):
+                            external_id = (
+                                result.result_data.get("google_event_id")
+                                or result.result_data.get("gid")
+                                or result.result_data.get("gmail_draft_id")
+                                or result.result_data.get("event_id")
+                            )
+                        self._outbox.mark_fulfilled(intent_id, external_resource_id=external_id)
+                    else:
+                        self._outbox.mark_failed(
+                            intent_id, error=result.error or "handler returned failure"
+                        )
 
         except Exception as e:
             execution_error = str(e)
@@ -385,6 +436,23 @@ class ActionFramework:
                 execution_time_ms=execution_time,
             )
 
+            # Mark outbox as failed so it's visible for reconciliation
+            existing_intent = self._outbox.get_fulfilled_intent(idempotency_key=outbox_key)
+            if not existing_intent:
+                # Intent was recorded but handler threw — mark failed
+                intent = self._outbox.get_intent(
+                    self._outbox.record_intent(
+                        handler=proposal.get("type", "unknown")
+                        if isinstance(proposal, dict)
+                        else "unknown",
+                        action="execute",
+                        payload={},
+                        idempotency_key=outbox_key,
+                    )
+                )
+                if intent and intent["status"] == "pending":
+                    self._outbox.mark_failed(intent["id"], error=execution_error[:500])
+
             # Run error hooks
             try:
                 for hook in self.on_error_hooks:
@@ -397,7 +465,7 @@ class ActionFramework:
         update = {
             "status": final_status.value,
             "result": json.dumps(result.to_dict()),
-            "executed_at": datetime.now().isoformat(),
+            "executed_at": datetime.now(timezone.utc).isoformat(),
         }
         if result.error:
             update["error"] = result.error

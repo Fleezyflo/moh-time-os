@@ -23,26 +23,26 @@ interface ClientDetail {
   name: string;
   tier: Tier;
   status: string;
-  health_score: number;
+  health_score: number | null;
   health_label: string;
-  // Financials
-  issued_ytd: number;
-  issued_year: number;
-  paid_ytd: number;
-  paid_year: number;
-  issued_lifetime: number;
-  paid_lifetime: number;
-  ar_outstanding: number;
-  ar_overdue: number;
-  ar_overdue_pct: number;
+  // Financials — null means data not available (distinct from 0)
+  issued_ytd: number | null;
+  issued_year: number | null;
+  paid_ytd: number | null;
+  paid_year: number | null;
+  issued_lifetime: number | null;
+  paid_lifetime: number | null;
+  ar_outstanding: number | null;
+  ar_overdue: number | null;
+  ar_overdue_pct: number | null;
   // Engagements
-  active_engagements: number;
-  open_tasks: number;
-  tasks_overdue: number;
+  active_engagements: number | null;
+  open_tasks: number | null;
+  tasks_overdue: number | null;
   // Signals summary
-  signals_good: number;
-  signals_neutral: number;
-  signals_bad: number;
+  signals_good: number | null;
+  signals_neutral: number | null;
+  signals_bad: number | null;
   // Issues
   top_issues: ClientIssue[];
   // Recent signals
@@ -177,6 +177,11 @@ function formatCurrency(amount: number, currency = 'AED'): string {
   return `${currency} ${amount.toLocaleString()}`;
 }
 
+function formatCurrencyOrNA(amount: number | null, currency = 'AED'): string {
+  if (amount == null) return '--';
+  return `${currency} ${amount.toLocaleString()}`;
+}
+
 function formatAge(isoDate: string): string {
   const diff = Date.now() - new Date(isoDate).getTime();
   const days = Math.floor(diff / (1000 * 60 * 60 * 24));
@@ -234,32 +239,32 @@ export function ClientDetailSpec() {
 
       const transformed: ClientDetail = {
         ...(data as unknown as ClientDetail),
-        // Flatten financials
-        issued_ytd: (financials.issued_ytd as number) || 0,
-        issued_year: (financials.issued_prior_year as number) || 0,
-        paid_ytd: (financials.paid_ytd as number) || 0,
-        paid_year: (financials.paid_prior_year as number) || 0,
-        issued_lifetime: (financials.issued_lifetime as number) || 0,
-        paid_lifetime: (financials.paid_lifetime as number) || 0,
-        ar_outstanding: (financials.ar_outstanding as number) || 0,
-        ar_overdue: (financials.ar_overdue as number) || 0,
-        ar_overdue_pct: (financials.ar_overdue_pct as number) || 0,
+        // Flatten financials — preserve null to distinguish "no data" from "$0"
+        issued_ytd: (financials.issued_ytd as number | null) ?? null,
+        issued_year: (financials.issued_prior_year as number | null) ?? null,
+        paid_ytd: (financials.paid_ytd as number | null) ?? null,
+        paid_year: (financials.paid_prior_year as number | null) ?? null,
+        issued_lifetime: (financials.issued_lifetime as number | null) ?? null,
+        paid_lifetime: (financials.paid_lifetime as number | null) ?? null,
+        ar_outstanding: (financials.ar_outstanding as number | null) ?? null,
+        ar_overdue: (financials.ar_overdue as number | null) ?? null,
+        ar_overdue_pct: (financials.ar_overdue_pct as number | null) ?? null,
         // Flatten overview
         top_issues: (overview.top_issues as ClientIssue[]) || [],
         recent_positive_signals: (overview.recent_positive_signals as Signal[]) || [],
-        // Flatten signals summary
-        signals_good: (signals.good as number) || 0,
-        signals_neutral: (signals.neutral as number) || 0,
-        signals_bad: (signals.bad as number) || 0,
+        // Flatten signals summary — preserve null to distinguish "no signal data" from "0 signals"
+        signals_good: (signals.good as number | null) ?? null,
+        signals_neutral: (signals.neutral as number | null) ?? null,
+        signals_bad: (signals.bad as number | null) ?? null,
         // Flatten engagements
         brands,
-        active_engagements: brands.reduce(
-          (sum: number, b: Brand) => sum + (b.engagements?.length || 0),
-          0
-        ),
-        // Defaults for other fields
-        open_tasks: 0,
-        tasks_overdue: 0,
+        active_engagements:
+          brands.length > 0
+            ? brands.reduce((sum: number, b: Brand) => sum + (b.engagements?.length ?? 0), 0)
+            : null,
+        // Null until populated from separate API fields
+        open_tasks: ((data as Record<string, unknown>).open_tasks as number | null) ?? null,
+        tasks_overdue: ((data as Record<string, unknown>).tasks_overdue as number | null) ?? null,
         invoices: [],
         ar_aging: [],
         team_members: [],
@@ -309,7 +314,7 @@ export function ClientDetailSpec() {
     );
   }
 
-  const healthScore = client.health_score ?? 0;
+  const healthScore = client.health_score;
 
   const actions = (
     <Link to="/clients" className="text-sm text-[var(--grey-light)] hover:text-[var(--white)]">
@@ -326,13 +331,21 @@ export function ClientDetailSpec() {
       <SummaryGrid>
         <MetricCard
           label="Health Score"
-          value={healthScore.toString()}
-          severity={healthScore >= 70 ? 'success' : healthScore >= 40 ? 'warning' : 'danger'}
+          value={healthScore != null ? healthScore.toString() : '--'}
+          severity={
+            healthScore != null
+              ? healthScore >= 70
+                ? 'success'
+                : healthScore >= 40
+                  ? 'warning'
+                  : 'danger'
+              : undefined
+          }
         />
-        <MetricCard label="AR Outstanding" value={formatCurrency(client.ar_outstanding || 0)} />
+        <MetricCard label="AR Outstanding" value={formatCurrencyOrNA(client.ar_outstanding)} />
         <MetricCard
           label="Active Engagements"
-          value={(client.active_engagements || 0).toString()}
+          value={client.active_engagements != null ? client.active_engagements.toString() : '--'}
         />
         <MetricCard
           label="Open Issues"
@@ -349,17 +362,26 @@ export function ClientDetailSpec() {
             {trajectoryPoints.length >= 2 && (
               <TrajectorySparkline data={trajectoryPoints} width={120} height={28} showArea />
             )}
-            <span className={`font-medium ${getHealthColor(healthScore)}`}>
-              {healthScore}
-              <span className="text-[var(--grey)]"> ({client.health_label || 'provisional'})</span>
-            </span>
+            {healthScore != null ? (
+              <span className={`font-medium ${getHealthColor(healthScore)}`}>
+                {healthScore}
+                <span className="text-[var(--grey)]">
+                  {' '}
+                  ({client.health_label || 'provisional'})
+                </span>
+              </span>
+            ) : (
+              <span className="font-medium text-[var(--grey-light)]">--</span>
+            )}
           </div>
         </div>
         <div className="h-2 bg-[var(--grey)] rounded-full overflow-hidden">
-          <div
-            className={`h-full ${getHealthBg(healthScore)}`}
-            style={{ width: `${Math.min(100, healthScore)}%` }}
-          />
+          {healthScore != null && (
+            <div
+              className={`h-full ${getHealthBg(healthScore)}`}
+              style={{ width: `${Math.min(100, healthScore)}%` }}
+            />
+          )}
         </div>
       </div>
 
@@ -378,9 +400,9 @@ export function ClientDetailSpec() {
                 <SignalsTab
                   signals={client.signals || []}
                   summary={{
-                    good: client.signals_good || 0,
-                    neutral: client.signals_neutral || 0,
-                    bad: client.signals_bad || 0,
+                    good: client.signals_good,
+                    neutral: client.signals_neutral,
+                    bad: client.signals_bad,
                   }}
                 />
               );
@@ -419,42 +441,44 @@ function OverviewTab({ client, onIssueAction }: OverviewTabProps) {
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
               <div className="text-[var(--grey-light)] text-xs mb-1">ISSUED</div>
-              <div>Prior Yr: {formatCurrency(client.issued_year || 0)}</div>
-              <div>YTD: {formatCurrency(client.issued_ytd || 0)}</div>
+              <div>Prior Yr: {formatCurrencyOrNA(client.issued_year)}</div>
+              <div>YTD: {formatCurrencyOrNA(client.issued_ytd)}</div>
             </div>
             <div>
               <div className="text-[var(--grey-light)] text-xs mb-1">PAID</div>
-              <div>Prior Yr: {formatCurrency(client.paid_year || 0)}</div>
-              <div>YTD: {formatCurrency(client.paid_ytd || 0)}</div>
+              <div>Prior Yr: {formatCurrencyOrNA(client.paid_year)}</div>
+              <div>YTD: {formatCurrencyOrNA(client.paid_ytd)}</div>
             </div>
           </div>
 
           <div className="border-t border-[var(--grey)] pt-3 grid grid-cols-2 gap-4 text-sm">
-            <div>AR Outstanding: {formatCurrency(client.ar_outstanding || 0)}</div>
-            <div>AR Overdue: {formatCurrency(client.ar_overdue || 0)}</div>
+            <div>AR Outstanding: {formatCurrencyOrNA(client.ar_outstanding)}</div>
+            <div>AR Overdue: {formatCurrencyOrNA(client.ar_overdue)}</div>
           </div>
 
           <div className="border-t border-[var(--grey)] pt-3 grid grid-cols-4 gap-4 text-sm">
             <div>
               <div className="text-[var(--grey-light)] text-xs">Engagements</div>
-              <div className="text-lg font-medium">{client.active_engagements || 0}</div>
+              <div className="text-lg font-medium">{client.active_engagements ?? '--'}</div>
             </div>
             <div>
               <div className="text-[var(--grey-light)] text-xs">Open Tasks</div>
-              <div className="text-lg font-medium">{client.open_tasks || 0}</div>
+              <div className="text-lg font-medium">{client.open_tasks ?? '--'}</div>
             </div>
             <div>
               <div className="text-[var(--grey-light)] text-xs">Overdue</div>
-              <div className="text-lg font-medium text-[var(--danger)]">
-                {client.tasks_overdue || 0}
+              <div
+                className={`text-lg font-medium ${client.tasks_overdue != null && client.tasks_overdue > 0 ? 'text-[var(--danger)]' : ''}`}
+              >
+                {client.tasks_overdue ?? '--'}
               </div>
             </div>
             <div>
               <div className="text-[var(--grey-light)] text-xs">Signals (30d)</div>
               <div className="text-sm">
-                <span className="text-[var(--success)]">{client.signals_good || 0}↑</span>{' '}
-                <span className="text-[var(--grey-light)]">{client.signals_neutral || 0}→</span>{' '}
-                <span className="text-[var(--danger)]">{client.signals_bad || 0}↓</span>
+                <span className="text-[var(--success)]">{client.signals_good ?? '--'}↑</span>{' '}
+                <span className="text-[var(--grey-light)]">{client.signals_neutral ?? '--'}→</span>{' '}
+                <span className="text-[var(--danger)]">{client.signals_bad ?? '--'}↓</span>
               </div>
             </div>
           </div>
@@ -627,15 +651,15 @@ function FinancialsTab({ client }: { client: ClientDetail }) {
         <div className="bg-[var(--black)] rounded p-4 grid grid-cols-2 gap-4 text-sm">
           <div>
             <div className="text-[var(--grey-light)] text-xs mb-1">ISSUED</div>
-            <div>Prior Yr: {formatCurrency(client.issued_year || 0)}</div>
-            <div>YTD: {formatCurrency(client.issued_ytd || 0)}</div>
-            <div>Lifetime: {formatCurrency(client.issued_lifetime || 0)}</div>
+            <div>Prior Yr: {formatCurrencyOrNA(client.issued_year)}</div>
+            <div>YTD: {formatCurrencyOrNA(client.issued_ytd)}</div>
+            <div>Lifetime: {formatCurrencyOrNA(client.issued_lifetime)}</div>
           </div>
           <div>
             <div className="text-[var(--grey-light)] text-xs mb-1">PAID</div>
-            <div>Prior Yr: {formatCurrency(client.paid_year || 0)}</div>
-            <div>YTD: {formatCurrency(client.paid_ytd || 0)}</div>
-            <div>Lifetime: {formatCurrency(client.paid_lifetime || 0)}</div>
+            <div>Prior Yr: {formatCurrencyOrNA(client.paid_year)}</div>
+            <div>YTD: {formatCurrencyOrNA(client.paid_ytd)}</div>
+            <div>Lifetime: {formatCurrencyOrNA(client.paid_lifetime)}</div>
           </div>
         </div>
       </div>
@@ -645,7 +669,7 @@ function FinancialsTab({ client }: { client: ClientDetail }) {
         <h3 className="text-lg font-semibold mb-3">AR Aging</h3>
         <div className="bg-[var(--black)] rounded p-4">
           <div className="text-lg font-medium mb-3">
-            Total Outstanding: {formatCurrency(client.ar_outstanding || 0)}
+            Total Outstanding: {formatCurrencyOrNA(client.ar_outstanding)}
           </div>
           <div className="space-y-2">
             {(client.ar_aging || []).map((bucket) => (
@@ -715,7 +739,7 @@ function SignalsTab({
   summary,
 }: {
   signals: Signal[];
-  summary: { good: number; neutral: number; bad: number };
+  summary: { good: number | null; neutral: number | null; bad: number | null };
 }) {
   const [filter, setFilter] = useState<string>('all');
 
@@ -727,9 +751,9 @@ function SignalsTab({
       <div className="bg-[var(--black)] rounded p-4">
         <h4 className="text-sm text-[var(--grey-light)] mb-2">Signal Summary (Last 30 Days)</h4>
         <div className="flex gap-6 text-lg">
-          <span>🟢 Good: {summary.good}</span>
-          <span>🟡 Neutral: {summary.neutral}</span>
-          <span>🔴 Bad: {summary.bad}</span>
+          <span>🟢 Good: {summary.good ?? '--'}</span>
+          <span>🟡 Neutral: {summary.neutral ?? '--'}</span>
+          <span>🔴 Bad: {summary.bad ?? '--'}</span>
         </div>
       </div>
 

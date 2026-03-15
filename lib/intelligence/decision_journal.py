@@ -12,7 +12,7 @@ import logging
 import sqlite3
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -104,7 +104,7 @@ class DecisionJournal:
             entity_id=entity_id,
             action_taken=action_taken,
             context_snapshot=context_snapshot or {},
-            created_at=datetime.now().isoformat(),
+            created_at=datetime.now(timezone.utc).isoformat(),
             source=source,
         )
 
@@ -209,7 +209,7 @@ class DecisionJournal:
         conn = sqlite3.connect(str(self.db_path))
         conn.row_factory = sqlite3.Row
         try:
-            cutoff = datetime.now().isoformat()[:10]
+            cutoff = datetime.now(timezone.utc).isoformat()[:10]
             if entity_type:
                 rows = conn.execute(
                     """

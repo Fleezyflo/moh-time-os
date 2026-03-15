@@ -10,7 +10,7 @@ Tests validate:
 """
 
 import threading
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from lib.security.rate_limiter import DEFAULT_RATE_LIMITS, RateLimiter, RateLimitResult
 
@@ -33,7 +33,7 @@ class TestRateLimiterBasics:
     def test_first_request_allowed(self):
         """Test that first request is always allowed."""
         limiter = RateLimiter()
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
 
         result = limiter.check_rate_limit("test-key", role="authenticated", current_time=base_time)
 
@@ -44,7 +44,7 @@ class TestRateLimiterBasics:
 
     def test_result_dataclass(self):
         """Test that RateLimitResult is a proper dataclass."""
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
         result = RateLimitResult(
             allowed=True,
             remaining=50,
@@ -64,7 +64,7 @@ class TestSlidingWindow:
     def test_requests_tracked_in_window(self):
         """Test that requests are tracked correctly."""
         limiter = RateLimiter()
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
 
         # Make 5 requests
         for i in range(5):
@@ -84,7 +84,7 @@ class TestSlidingWindow:
     def test_requests_outside_window_ignored(self):
         """Test that requests outside the window are ignored."""
         limiter = RateLimiter()
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
 
         # Make request at time 0
         limiter.check_rate_limit("test-key", role="authenticated", current_time=base_time)
@@ -101,7 +101,7 @@ class TestSlidingWindow:
     def test_window_boundary_behavior(self):
         """Test behavior at window boundaries."""
         limiter = RateLimiter()
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
 
         # Request at t=0
         limiter.check_rate_limit("test-key", role="authenticated", current_time=base_time)
@@ -133,7 +133,7 @@ class TestRateLimitEnforcement:
         """Test that exceeding limit returns denied."""
         custom_limits = {"test": 5}
         limiter = RateLimiter(rate_limits=custom_limits)
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
 
         # Fill up the limit
         for i in range(5):
@@ -158,7 +158,7 @@ class TestRateLimitEnforcement:
         """Test that denied requests include reset time."""
         custom_limits = {"test": 2}
         limiter = RateLimiter(rate_limits=custom_limits)
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
 
         # Fill the limit
         for i in range(2):
@@ -184,7 +184,7 @@ class TestRateLimitEnforcement:
         """Test that different keys have independent limits."""
         custom_limits = {"test": 2}
         limiter = RateLimiter(rate_limits=custom_limits)
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
 
         # Fill limit for key1
         for i in range(2):
@@ -214,7 +214,7 @@ class TestRateLimitEnforcement:
         """Test that all requests up to limit are allowed."""
         custom_limits = {"test": 100}
         limiter = RateLimiter(rate_limits=custom_limits)
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
 
         # Make 100 requests
         for i in range(100):
@@ -240,7 +240,7 @@ class TestRoleTiers:
     def test_admin_tier_limit(self):
         """Test admin role has higher limit (500/min)."""
         limiter = RateLimiter()
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
 
         result = limiter.check_rate_limit("admin-key", role="admin", current_time=base_time)
         assert result.limit == 500
@@ -249,7 +249,7 @@ class TestRoleTiers:
     def test_operator_tier_limit(self):
         """Test operator role limit (200/min)."""
         limiter = RateLimiter()
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
 
         result = limiter.check_rate_limit("op-key", role="operator", current_time=base_time)
         assert result.limit == 200
@@ -258,7 +258,7 @@ class TestRoleTiers:
     def test_viewer_tier_limit(self):
         """Test viewer role limit (100/min)."""
         limiter = RateLimiter()
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
 
         result = limiter.check_rate_limit("viewer-key", role="viewer", current_time=base_time)
         assert result.limit == 100
@@ -267,7 +267,7 @@ class TestRoleTiers:
     def test_authenticated_tier_limit(self):
         """Test authenticated user limit (100/min)."""
         limiter = RateLimiter()
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
 
         result = limiter.check_rate_limit("user-key", role="authenticated", current_time=base_time)
         assert result.limit == 100
@@ -276,7 +276,7 @@ class TestRoleTiers:
     def test_unauthenticated_tier_limit(self):
         """Test unauthenticated user limit (20/min)."""
         limiter = RateLimiter()
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
 
         result = limiter.check_rate_limit(
             "guest-key", role="unauthenticated", current_time=base_time
@@ -287,7 +287,7 @@ class TestRoleTiers:
     def test_unknown_role_defaults_to_authenticated(self):
         """Test that unknown roles default to authenticated tier."""
         limiter = RateLimiter()
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
 
         result = limiter.check_rate_limit("key", role="unknown_role", current_time=base_time)
         assert result.limit == 100
@@ -297,7 +297,7 @@ class TestRoleTiers:
         """Test that different tiers have independent limits."""
         custom_limits = {"admin": 5, "viewer": 2}
         limiter = RateLimiter(rate_limits=custom_limits)
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
 
         # Fill viewer limit
         for i in range(2):
@@ -330,7 +330,7 @@ class TestCleanup:
     def test_cleanup_expired_entries(self):
         """Test that cleanup removes expired entries."""
         limiter = RateLimiter()
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
 
         # Make a request
         limiter.check_rate_limit("test-key", role="authenticated", current_time=base_time)
@@ -347,7 +347,7 @@ class TestCleanup:
     def test_cleanup_preserves_recent_requests(self):
         """Test that cleanup preserves recent requests."""
         limiter = RateLimiter()
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
 
         # Make requests at different times
         limiter.check_rate_limit("test-key", role="authenticated", current_time=base_time)
@@ -367,7 +367,7 @@ class TestCleanup:
     def test_automatic_cleanup_in_check_rate_limit(self):
         """Test that check_rate_limit automatically cleans expired entries."""
         limiter = RateLimiter()
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
 
         # Make a request
         limiter.check_rate_limit("test-key", role="authenticated", current_time=base_time)
@@ -386,7 +386,7 @@ class TestCleanup:
     def test_reset_key(self):
         """Test that reset_key clears a key's history."""
         limiter = RateLimiter()
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
 
         # Make multiple requests
         for i in range(5):
@@ -411,7 +411,7 @@ class TestCleanup:
         """Test that reset key allows requests immediately after."""
         custom_limits = {"test": 2}
         limiter = RateLimiter(rate_limits=custom_limits)
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
 
         # Fill the limit
         for i in range(2):
@@ -448,7 +448,7 @@ class TestThreadSafety:
         """Test that concurrent requests to same key are handled safely."""
         custom_limits = {"test": 100}
         limiter = RateLimiter(rate_limits=custom_limits)
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
         results = []
 
         def make_request(key):
@@ -477,7 +477,7 @@ class TestThreadSafety:
         """Test concurrent requests to different keys."""
         custom_limits = {"test": 10}
         limiter = RateLimiter(rate_limits=custom_limits)
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
         results = []
 
         def make_request(key_num):
@@ -502,7 +502,7 @@ class TestThreadSafety:
     def test_concurrent_cleanup_and_checks(self):
         """Test that cleanup and checks work safely together."""
         limiter = RateLimiter()
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
 
         def make_requests(key_prefix, count):
             for i in range(count):
@@ -536,7 +536,7 @@ class TestEdgeCases:
         """Test that denied requests show accurate reset time."""
         custom_limits = {"test": 1}
         limiter = RateLimiter(rate_limits=custom_limits)
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
 
         # Fill limit at t=10
         result = limiter.check_rate_limit(
@@ -557,7 +557,7 @@ class TestEdgeCases:
     def test_empty_key_handling(self):
         """Test that empty string key is handled."""
         limiter = RateLimiter()
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
 
         # Should not crash with empty key
         result = limiter.check_rate_limit("", role="authenticated", current_time=base_time)
@@ -566,7 +566,7 @@ class TestEdgeCases:
     def test_very_long_key(self):
         """Test that very long keys work."""
         limiter = RateLimiter()
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
 
         long_key = "key" * 1000
 
@@ -576,7 +576,7 @@ class TestEdgeCases:
     def test_special_characters_in_key(self):
         """Test that special characters in keys work."""
         limiter = RateLimiter()
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
 
         special_key = "192.168.1.1:8080/api/v1?query=test&token=abc123"
 
@@ -587,7 +587,7 @@ class TestEdgeCases:
         """Test that millisecond-precision timing works."""
         custom_limits = {"test": 100}
         limiter = RateLimiter(rate_limits=custom_limits)
-        base_time = datetime.utcnow()
+        base_time = datetime.now(timezone.utc)
 
         # Make requests with millisecond spacing
         for i in range(10):

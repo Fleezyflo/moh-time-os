@@ -11,7 +11,7 @@ Covers:
 
 import logging
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from unittest.mock import patch
 
@@ -280,7 +280,7 @@ class TestGetLatestBackup:
     def test_get_latest_backup_returns_most_recent(self, mock_list):
         """get_latest_backup should return the first (most recent) backup."""
         path = Path(tempfile.gettempdir()) / "backup_newest.db"
-        mtime = datetime.now()
+        mtime = datetime.now(timezone.utc)
 
         mock_list.return_value = [
             (path, mtime, 1024),
@@ -429,7 +429,7 @@ class TestPruneBackups:
     def test_prune_backups_keeps_recent(self, mock_list):
         """prune_backups should keep the N most recent backups."""
         paths = [Path(tempfile.gettempdir()) / f"backup_{i}.db" for i in range(10)]
-        times = [datetime.now() - timedelta(days=i) for i in range(10)]
+        times = [datetime.now(timezone.utc) - timedelta(days=i) for i in range(10)]
         sizes = [1024] * 10
 
         mock_list.return_value = [(p, t, s) for p, t, s in zip(paths, times, sizes, strict=False)]
@@ -444,7 +444,7 @@ class TestPruneBackups:
     def test_prune_backups_default_keep_seven(self, mock_list):
         """prune_backups should default to keeping 7 backups."""
         paths = [Path(tempfile.gettempdir()) / f"backup_{i}.db" for i in range(10)]
-        times = [datetime.now() - timedelta(days=i) for i in range(10)]
+        times = [datetime.now(timezone.utc) - timedelta(days=i) for i in range(10)]
         sizes = [1024] * 10
 
         mock_list.return_value = [(p, t, s) for p, t, s in zip(paths, times, sizes, strict=False)]
@@ -460,8 +460,8 @@ class TestPruneBackups:
         """prune_backups should handle deletion errors gracefully."""
         path = Path(tempfile.gettempdir()) / "backup_old.db"
         mock_list.return_value = [
-            (path, datetime.now() - timedelta(days=10), 1024),
-            (Path(tempfile.gettempdir()) / "backup_new.db", datetime.now(), 1024),
+            (path, datetime.now(timezone.utc) - timedelta(days=10), 1024),
+            (Path(tempfile.gettempdir()) / "backup_new.db", datetime.now(timezone.utc), 1024),
         ]
 
         with patch.object(Path, "unlink", side_effect=PermissionError("Access denied")):
@@ -491,7 +491,7 @@ class TestBackupStatus:
     def test_backup_status_formats_backup_list(self, mock_list):
         """backup_status should format backup information."""
         paths = [Path(tempfile.gettempdir()) / f"backup_{i}.db" for i in range(3)]
-        times = [datetime.now() - timedelta(hours=i) for i in range(3)]
+        times = [datetime.now(timezone.utc) - timedelta(hours=i) for i in range(3)]
         sizes = [1024 * (i + 1) for i in range(3)]
 
         mock_list.return_value = [(p, t, s) for p, t, s in zip(paths, times, sizes, strict=False)]

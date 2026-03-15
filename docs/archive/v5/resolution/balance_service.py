@@ -5,7 +5,7 @@ Handles signal balancing logic.
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from ..database import Database
@@ -293,7 +293,7 @@ class BalanceService:
             return False
 
         # Calculate cutoff date
-        cutoff = (datetime.now() - timedelta(days=SUSTAINED_BALANCE_DAYS)).isoformat()
+        cutoff = (datetime.now(timezone.utc) - timedelta(days=SUSTAINED_BALANCE_DAYS)).isoformat()
 
         # Count recent positive signals of balancing types for same scope
         placeholders = ",".join(["?" for _ in balancing_types])
@@ -459,7 +459,7 @@ class BalanceService:
 
         # Only auto-resolve if actively being addressed and balance is positive
         if issue["state"] == "addressing" and issue["balance_net_score"] >= 0:
-            now = datetime.now()
+            now = datetime.now(timezone.utc)
             monitoring_until = (now + timedelta(days=90)).isoformat()
 
             self.db.update(

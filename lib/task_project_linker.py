@@ -7,7 +7,7 @@ Also cascades client_id from projects to tasks.
 
 import logging
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,7 @@ def link_by_asana_gid(db_path: str, dry_run: bool = False) -> int:
     We match via the task's source metadata or the project name.
     """
     conn = sqlite3.connect(db_path)
-    now = datetime.now().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     try:
         # Match tasks that have a `project` name matching a project's name
@@ -61,7 +61,7 @@ def link_by_asana_gid(db_path: str, dry_run: bool = False) -> int:
 def link_by_map(db_path: str, dry_run: bool = False) -> int:
     """Link tasks using asana_project_map explicit mappings."""
     conn = sqlite3.connect(db_path)
-    now = datetime.now().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     try:
         # asana_project_map schema: asana_gid, project_id, asana_name, created_at
@@ -103,7 +103,7 @@ def link_by_map(db_path: str, dry_run: bool = False) -> int:
 def link_by_name(db_path: str, dry_run: bool = False) -> int:
     """Link tasks by fuzzy-matching project name to projects.name_normalized."""
     conn = sqlite3.connect(db_path)
-    now = datetime.now().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     try:
         # Exact name match (case-insensitive)
@@ -143,7 +143,7 @@ def cascade_client_ids(db_path: str, dry_run: bool = False) -> int:
     For tasks that have a project_id but no client_id, copy the project's client_id.
     """
     conn = sqlite3.connect(db_path)
-    now = datetime.now().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
 
     try:
         count = conn.execute(

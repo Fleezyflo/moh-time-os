@@ -15,7 +15,7 @@ import json
 import logging
 import os
 import sqlite3
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 from lib import paths
@@ -48,8 +48,9 @@ from .scoring import (
 
 logger = logging.getLogger(__name__)
 
-DB_PATH = paths.db_path()
-OUTPUT_PATH = paths.out_dir()
+
+def _output_path():
+    return paths.out_dir()
 
 
 class AgencySnapshotGenerator:
@@ -80,12 +81,12 @@ class AgencySnapshotGenerator:
 
     def __init__(
         self,
-        db_path: Path = DB_PATH,
+        db_path: Path = None,
         mode: Mode = Mode.OPS_HEAD,
         horizon: Horizon = Horizon.THIS_WEEK,  # Weekly view is more useful for capacity planning
         scope: dict = None,
     ):
-        self.db_path = db_path
+        self.db_path = db_path or str(paths.db_path())
         self.mode = mode
         self.horizon = horizon
         self.scope = scope or {
@@ -99,7 +100,7 @@ class AgencySnapshotGenerator:
         self.confidence_model = ConfidenceModel(db_path)
         self.capacity_engine = CapacityCommandPage7Engine(db_path, mode, horizon)
 
-        self.now = datetime.now()
+        self.now = datetime.now(timezone.utc)
         self.today = date.today()
 
         # Cache
@@ -271,7 +272,7 @@ class AgencySnapshotGenerator:
 
         Violations RAISE - no logging-only paths.
         """
-        started_at = datetime.now()
+        started_at = datetime.now(timezone.utc)
 
         # Get trust state first (needed for gating)
         self._trust = self.confidence_model.get_trust_state()
@@ -319,8 +320,10 @@ class AgencySnapshotGenerator:
         snapshot["capacity_command"] = self._build_capacity_command_minimal(normalized)
         snapshot["drawers"] = self._drawers
 
-        snapshot["meta"]["finished_at"] = datetime.now().isoformat()
-        snapshot["meta"]["duration_ms"] = (datetime.now() - started_at).total_seconds() * 1000
+        snapshot["meta"]["finished_at"] = datetime.now(timezone.utc).isoformat()
+        snapshot["meta"]["duration_ms"] = (
+            datetime.now(timezone.utc) - started_at
+        ).total_seconds() * 1000
 
         # Compute deltas BEFORE patchwork boundary (load previous snapshot if exists)
         prev_snapshot = self._load_previous_snapshot()
@@ -1702,7 +1705,7 @@ class AgencySnapshotGenerator:
 
     def _load_previous_snapshot(self) -> dict | None:
         """Load previous snapshot if it exists."""
-        prev_path = OUTPUT_PATH / "agency_snapshot.json"
+        prev_path = _output_path() / "agency_snapshot.json"
 
         if not prev_path.exists():
             return None
@@ -1716,7 +1719,7 @@ class AgencySnapshotGenerator:
 
     def save(self, snapshot: dict, path: Path = None) -> Path:
         """Save snapshot to file and history."""
-        path = path or OUTPUT_PATH / "agency_snapshot.json"
+        path = path or _output_path() / "agency_snapshot.json"
         path.parent.mkdir(parents=True, exist_ok=True)
 
         with open(path, "w") as f:

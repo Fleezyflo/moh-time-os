@@ -13,26 +13,27 @@ Data is preserved via temporary tables.
 
 import logging
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 
 from lib import paths
 
 logger = logging.getLogger(__name__)
 
 
-DB_PATH = paths.db_path()
-BACKUP_DIR = paths.data_dir() / "backups"
+def _backup_dir():
+    return paths.data_dir() / "backups"
 
 
 def backup_db():
     """Create backup before migration."""
-    BACKUP_DIR.mkdir(exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    backup_path = BACKUP_DIR / f"moh_time_os.db.pre_v12_rebuild.{timestamp}"
+    db_path = str(paths.db_path())
+    _backup_dir().mkdir(exist_ok=True)
+    timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+    backup_path = _backup_dir() / f"moh_time_os.db.pre_v12_rebuild.{timestamp}"
 
     import shutil
 
-    shutil.copy(DB_PATH, backup_path)
+    shutil.copy(db_path, backup_path)
     logger.info(f"Backup created: {backup_path}")
     return backup_path
 
@@ -426,7 +427,8 @@ def run_migration():
     # Backup first
     backup_path = backup_db()
 
-    conn = sqlite3.connect(DB_PATH)
+    db_path = str(paths.db_path())
+    conn = sqlite3.connect(db_path)
     conn.execute("PRAGMA foreign_keys=OFF")  # Disable during migration
 
     try:

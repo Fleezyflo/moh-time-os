@@ -6,7 +6,7 @@ Handles issue resolution, monitoring, and regression detection.
 
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from ..database import Database
@@ -85,7 +85,7 @@ class ResolutionService:
             )
             return False
 
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         monitoring_until = (now + timedelta(days=self.MONITORING_DAYS)).isoformat()
 
         # Update to resolved, then monitoring

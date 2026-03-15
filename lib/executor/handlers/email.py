@@ -11,7 +11,9 @@ Supports:
 import json
 import logging
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
+
+from lib.outbox import get_outbox
 
 logger = logging.getLogger(__name__)
 
@@ -67,13 +69,13 @@ class EmailHandler:
         self.store.insert(
             "decisions",
             {
-                "id": f"email_draft_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
+                "id": f"email_draft_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}",
                 "domain": "email",
                 "decision_type": "send",
                 "description": f"Send email to {data.get('to')}: {data.get('subject')}",
                 "input_data": json.dumps(data),
                 "requires_approval": 1,
-                "created_at": datetime.now().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             },
         )
         return {"success": True, "status": "draft_created"}
@@ -115,21 +117,45 @@ class EmailHandler:
                 f"Best regards"
             )
 
-        # Try to create Gmail draft via writer
+        # Try to create Gmail draft via writer — with outbox safety
         writer = self._get_writer()
         gmail_draft_id = None
         if writer is not None:
-            result = writer.create_draft(to=to_email, subject=subject, body=body)
-            if result.success:
-                gmail_draft_id = result.data.get("id") if result.data else None
+            outbox = get_outbox()
+            idem_key = f"email_draft_{entity_id}_{to_email}_{days_since}"
+
+            # Check if already fulfilled (idempotent retry)
+            fulfilled = outbox.get_fulfilled_intent(idempotency_key=idem_key)
+            if fulfilled:
+                gmail_draft_id = fulfilled.get("external_resource_id")
                 logger.info(
-                    "Proactive email draft created via Gmail for %s (draft_id=%s)",
+                    "Email draft already created via Gmail for %s (draft_id=%s)",
                     entity_name,
                     gmail_draft_id,
                 )
+            else:
+                # Record intent BEFORE calling Gmail API
+                intent_id = outbox.record_intent(
+                    handler="email",
+                    action="create_draft",
+                    payload={"to": to_email, "subject": subject, "entity_id": entity_id},
+                    idempotency_key=idem_key,
+                )
+
+                result = writer.create_draft(to=to_email, subject=subject, body=body)
+                if result.success:
+                    gmail_draft_id = result.data.get("id") if result.data else None
+                    outbox.mark_fulfilled(intent_id, external_resource_id=gmail_draft_id)
+                    logger.info(
+                        "Proactive email draft created via Gmail for %s (draft_id=%s)",
+                        entity_name,
+                        gmail_draft_id,
+                    )
+                else:
+                    outbox.mark_failed(intent_id, error=result.error or "create_draft failed")
 
         # Always store as decision requiring approval
-        decision_id = f"proactive_draft_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        decision_id = f"proactive_draft_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
         self.store.insert(
             "decisions",
             {
@@ -150,7 +176,7 @@ class EmailHandler:
                     }
                 ),
                 "requires_approval": 1,
-                "created_at": datetime.now().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             },
         )
 

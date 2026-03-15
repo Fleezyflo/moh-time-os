@@ -9,7 +9,7 @@ Covers:
 """
 
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
 
 import pytest
@@ -291,7 +291,7 @@ class TestGetJobHealth:
 
         assert health["last_success"] is not None
         # Verify it's a valid ISO format timestamp
-        datetime.fromisoformat(health["last_success"])
+        datetime.fromisoformat(health["last_success"].replace("Z", "+00:00"))
 
 
 # =============================================================================
@@ -347,7 +347,7 @@ class TestDaemonResilience:
             daemon._run_job(job_name)
 
         # Set last_run to past to make should_run return true
-        daemon.job_states[job_name].last_run = datetime.now() - timedelta(hours=1)
+        daemon.job_states[job_name].last_run = datetime.now(timezone.utc) - timedelta(hours=1)
 
         # should_run should apply backoff
         should_run = daemon._should_run(job_name)

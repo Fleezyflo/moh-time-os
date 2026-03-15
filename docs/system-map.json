@@ -1718,6 +1718,10 @@
       "source": "lib/api.ts"
     },
     {
+      "endpoint": "/clients${qs ? '?' + qs : ''}",
+      "source": "lib/api.ts"
+    },
+    {
       "endpoint": "/clients/${clientId}",
       "source": "lib/api.ts"
     },

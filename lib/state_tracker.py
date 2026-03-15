@@ -15,7 +15,7 @@ import json
 import logging
 import tempfile
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from lib import paths
@@ -24,8 +24,13 @@ from lib.state_store import get_store
 
 logger = logging.getLogger(__name__)
 
-STATE_FILE = paths.data_dir() / "state.json"
-_STATE_LOCK = STATE_FILE.parent / ".state.lock"
+
+def _state_file():
+    return paths.data_dir() / "state.json"
+
+
+def _state_lock():
+    return _state_file().parent / ".state.lock"
 
 
 @contextmanager
@@ -36,8 +41,8 @@ def _file_lock():
     state, both write back, and one thread's changes would be lost
     (audit finding: state tracker lost updates).
     """
-    _STATE_LOCK.parent.mkdir(parents=True, exist_ok=True)
-    lock_fd = open(_STATE_LOCK, "w")
+    _state_lock().parent.mkdir(parents=True, exist_ok=True)
+    lock_fd = open(_state_lock(), "w")
     try:
         fcntl.flock(lock_fd, fcntl.LOCK_EX)
         yield
@@ -48,9 +53,9 @@ def _file_lock():
 
 def load_state() -> dict:
     """Load current state from disk."""
-    if STATE_FILE.exists():
+    if _state_file().exists():
         try:
-            return json.loads(STATE_FILE.read_text())
+            return json.loads(_state_file().read_text())
         except json.JSONDecodeError:
             return _default_state()
     return _default_state()
@@ -73,15 +78,17 @@ def save_state(state: dict) -> None:
     Previous version used write_text() directly, which could leave
     truncated/corrupt state files on crash (audit fix).
     """
-    STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
+    _state_file().parent.mkdir(parents=True, exist_ok=True)
     content = json.dumps(state, indent=2, default=str)
     # Atomic write: write to temp then rename
-    fd = tempfile.NamedTemporaryFile(mode="w", dir=STATE_FILE.parent, suffix=".tmp", delete=False)
+    fd = tempfile.NamedTemporaryFile(
+        mode="w", dir=_state_file().parent, suffix=".tmp", delete=False
+    )
     try:
         fd.write(content)
         fd.flush()
         fd.close()
-        Path(fd.name).rename(STATE_FILE)
+        Path(fd.name).rename(_state_file())
     except BaseException:
         Path(fd.name).unlink(missing_ok=True)
         raise
@@ -108,7 +115,7 @@ def mark_collected(source: str) -> None:
     from datetime import datetime
 
     store = get_store()
-    now = datetime.now().isoformat()
+    now = datetime.now(timezone.utc).isoformat()
     # UPDATE only last_sync; leave items_synced, status, error, etc. intact.
     # If no row exists yet (first-ever sync), the collector's own
     # update_sync_state() call has already created it.

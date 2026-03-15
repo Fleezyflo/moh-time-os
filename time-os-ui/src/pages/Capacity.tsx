@@ -57,9 +57,9 @@ export default function Capacity() {
   const lanes = useMemo(() => lanesData?.lanes ?? [], [lanesData]);
   const forecasts = useMemo(() => forecastData?.forecasts ?? [], [forecastData]);
 
-  // Extract utilization percentage from response
-  const utilizationPct = useMemo(() => {
-    if (!utilData) return 0;
+  // Extract utilization percentage from response — null when not loaded
+  const utilizationPct = useMemo((): number | null => {
+    if (!utilData) return null;
     const util = utilData.utilization;
     if (util && typeof util === 'object') {
       if ('percentage' in util && typeof util.percentage === 'number') return util.percentage;
@@ -84,8 +84,8 @@ export default function Capacity() {
     return [];
   }, [debtData]);
 
-  const totalDebtHours = useMemo(() => {
-    if (!debtData) return 0;
+  const totalDebtHours = useMemo((): number | null => {
+    if (!debtData) return null;
     if ('total_hours' in debtData && typeof debtData.total_hours === 'number')
       return debtData.total_hours;
     return debtItems.reduce((sum, item) => {
@@ -121,23 +121,27 @@ export default function Capacity() {
       <SummaryGrid>
         <MetricCard
           label="Utilization"
-          value={`${Math.round(utilizationPct)}%`}
+          value={utilizationPct != null ? `${Math.round(utilizationPct)}%` : '--'}
           severity={
-            utilizationPct >= 90
-              ? 'danger'
-              : utilizationPct >= 75
-                ? 'warning'
-                : utilizationPct >= 50
-                  ? 'info'
-                  : 'success'
+            utilizationPct != null
+              ? utilizationPct >= 90
+                ? 'danger'
+                : utilizationPct >= 75
+                  ? 'warning'
+                  : utilizationPct >= 50
+                    ? 'info'
+                    : 'success'
+              : undefined
           }
         />
         <MetricCard label="Lanes" value={lanes.length} />
         <MetricCard label="Forecast Days" value={forecastDays} />
         <MetricCard
           label="Debt"
-          value={`${totalDebtHours}h`}
-          severity={totalDebtHours > 0 ? 'warning' : 'success'}
+          value={totalDebtHours != null ? `${totalDebtHours}h` : '--'}
+          severity={
+            totalDebtHours != null ? (totalDebtHours > 0 ? 'warning' : 'success') : undefined
+          }
         />
       </SummaryGrid>
 
@@ -221,10 +225,16 @@ export default function Capacity() {
             <div>
               <div className="flex flex-wrap justify-center gap-8 py-4">
                 {selectedLane ? (
-                  <CapacityGauge label={selectedLane} value={utilizationPct} size={140} />
+                  utilizationPct != null ? (
+                    <CapacityGauge label={selectedLane} value={utilizationPct} size={140} />
+                  ) : (
+                    <div className="text-sm text-[var(--grey-muted)]">No utilization data</div>
+                  )
                 ) : (
                   <>
-                    <CapacityGauge label="Overall" value={utilizationPct} size={140} />
+                    {utilizationPct != null && (
+                      <CapacityGauge label="Overall" value={utilizationPct} size={140} />
+                    )}
                     {lanes.map((lane) => (
                       <CapacityGauge
                         key={lane.id}

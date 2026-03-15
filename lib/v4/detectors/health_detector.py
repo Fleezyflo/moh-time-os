@@ -8,15 +8,12 @@ Detects client/project health signals:
 - Project health degradation
 """
 
-import os
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from ..artifact_service import get_artifact_service
 from .base import BaseDetector
-
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "moh_time_os.db")
 
 
 class HealthDetector(BaseDetector):
@@ -61,7 +58,7 @@ class HealthDetector(BaseDetector):
         cursor = conn.cursor()
 
         try:
-            today = datetime.now().date()
+            today = datetime.now(timezone.utc).date()
 
             # Detect declining client health
             # Only fire if we have REAL data backing the health assessment
@@ -90,7 +87,7 @@ class HealthDetector(BaseDetector):
                     source="system",
                     source_id=f"client_health_{client_id}_{today.isoformat()}",
                     artifact_type="client_update",
-                    occurred_at=datetime.now().isoformat(),
+                    occurred_at=datetime.now(timezone.utc).isoformat(),
                     payload={
                         "client_id": client_id,
                         "name": name,

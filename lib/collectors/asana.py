@@ -10,7 +10,7 @@ Expanded API coverage (~90%):
 import json
 import logging
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from typing import Any
 
 from .base import BaseCollector
@@ -173,7 +173,7 @@ class AsanaCollector(BaseCollector):
     def transform(self, raw_data: dict) -> list[dict]:
         """Transform Asana tasks to canonical format."""
         transformed = []
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
 
         for task in raw_data.get("tasks", []):
             gid = task.get("gid")
@@ -375,7 +375,7 @@ class AsanaCollector(BaseCollector):
                     "type": story.get("type", ""),
                     "text": story.get("text", ""),
                     "created_by": created_by.get("name") if created_by else None,
-                    "created_at": story.get("created_at", datetime.now().isoformat()),
+                    "created_at": story.get("created_at", datetime.now(timezone.utc).isoformat()),
                 }
             )
 
@@ -485,7 +485,7 @@ class AsanaCollector(BaseCollector):
 
         Returns CollectorResult.to_dict() with status indicating health.
         """
-        cycle_start = datetime.now()
+        cycle_start = datetime.now(timezone.utc)
 
         # Check circuit breaker first
         if not self.circuit_breaker.can_execute():
@@ -523,7 +523,7 @@ class AsanaCollector(BaseCollector):
                     error=str(e),
                     error_type=err_type,
                     circuit_breaker_state=self.circuit_breaker.state,
-                    duration_ms=(datetime.now() - cycle_start).total_seconds() * 1000,
+                    duration_ms=(datetime.now(timezone.utc) - cycle_start).total_seconds() * 1000,
                 )
                 return cr.to_dict()
 
@@ -617,8 +617,8 @@ class AsanaCollector(BaseCollector):
                     cr.add_secondary(table_name, stored=0, error=fetch_err)
 
             # Step 5: Finalize status, update sync state, record success
-            self.last_sync = datetime.now()
-            cr.duration_ms = (datetime.now() - cycle_start).total_seconds() * 1000
+            self.last_sync = datetime.now(timezone.utc)
+            cr.duration_ms = (datetime.now(timezone.utc) - cycle_start).total_seconds() * 1000
             cr.timestamp = self.last_sync.isoformat()
             cr.escalate_to_partial()
             self.store.update_sync_state(
@@ -648,6 +648,6 @@ class AsanaCollector(BaseCollector):
                 error=str(e),
                 error_type=err_type,
                 circuit_breaker_state=self.circuit_breaker.state,
-                duration_ms=(datetime.now() - cycle_start).total_seconds() * 1000,
+                duration_ms=(datetime.now(timezone.utc) - cycle_start).total_seconds() * 1000,
             )
             return cr.to_dict()

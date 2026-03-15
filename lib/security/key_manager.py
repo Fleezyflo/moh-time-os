@@ -24,7 +24,7 @@ import logging
 import secrets
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 
 from lib import store
@@ -58,7 +58,7 @@ class KeyInfo:
         if not self.expires_at:
             return False
         expires = datetime.fromisoformat(self.expires_at.replace("Z", "+00:00"))
-        now = datetime.utcnow().replace(tzinfo=expires.tzinfo)
+        now = datetime.now(timezone.utc).replace(tzinfo=expires.tzinfo)
         return now >= expires
 
 
@@ -174,10 +174,10 @@ class KeyManager:
         key_hash = self._hash_key(key)
         key_id = f"key_{secrets.token_hex(8)}"
 
-        now = datetime.utcnow().isoformat() + "Z"
+        now = datetime.now(timezone.utc).isoformat() + "Z"
         expires_at = None
         if expires_in_days:
-            expires = datetime.utcnow() + timedelta(days=expires_in_days)
+            expires = datetime.now(timezone.utc) + timedelta(days=expires_in_days)
             expires_at = expires.isoformat() + "Z"
 
         try:
@@ -260,7 +260,7 @@ class KeyManager:
                     return None
 
                 # Update last_used_at
-                now = datetime.utcnow().isoformat() + "Z"
+                now = datetime.now(timezone.utc).isoformat() + "Z"
                 conn.execute(
                     "UPDATE api_keys SET last_used_at = ? WHERE id = ?",
                     (now, key_info.id),

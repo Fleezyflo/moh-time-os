@@ -8,7 +8,7 @@ Handles:
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 
 from lib.state_store import get_store
 
@@ -65,12 +65,12 @@ class ClientLinker:
                     SET client_id = ?, linked_at = ?
                     WHERE project_id = ?
                 """,
-                [client_id, datetime.now().isoformat(), project_id],
+                [client_id, datetime.now(timezone.utc).isoformat(), project_id],
             )
             return True, f"Updated link from {existing[0]['client_id']} to {client_id}"
 
         # Create new link
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         self.store.insert(
             "client_projects",
             {"client_id": client_id, "project_id": project_id, "linked_at": now},

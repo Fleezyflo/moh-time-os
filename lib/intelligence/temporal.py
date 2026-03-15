@@ -18,7 +18,7 @@ do its own business-day math.
 import logging
 import sqlite3
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from enum import Enum
 from pathlib import Path
 
@@ -366,7 +366,7 @@ class TemporalNormalizer:
         Skips weekends and holidays entirely.
         """
         if end is None:
-            end = datetime.now()
+            end = datetime.now(timezone.utc)
 
         if end <= start:
             return 0.0
@@ -399,7 +399,7 @@ class TemporalNormalizer:
 
     def business_hours_since(self, timestamp: datetime) -> float:
         """Convenience: business hours from timestamp to now."""
-        return self.business_hours_elapsed(timestamp, datetime.now())
+        return self.business_hours_elapsed(timestamp, datetime.now(timezone.utc))
 
     def normalize_aging(self, created_date: date, current_date: date | None = None) -> dict:
         """

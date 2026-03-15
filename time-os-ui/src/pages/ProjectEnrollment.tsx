@@ -55,16 +55,16 @@ function ProjectEnrollment() {
 
   const detected = useMemo(() => detectedData?.detected ?? [], [detectedData]);
 
-  const totalEnrolled = enrolledData?.total ?? 0;
-  const totalCandidates = candidatesData?.total ?? 0;
-  const linkRate = linkingStats?.link_rate ?? 0;
+  const totalEnrolled = enrolledData != null ? (enrolledData.total ?? 0) : null;
+  const totalCandidates = candidatesData != null ? (candidatesData.total ?? 0) : null;
+  const linkRate = linkingStats != null ? (linkingStats.link_rate ?? 0) : null;
   const detectedCount = detected.length;
 
   const tabsWithBadges = useMemo(
     () =>
       BASE_TABS.map((tab) => ({
         ...tab,
-        badge: tab.id === 'candidates' ? totalCandidates : totalEnrolled,
+        badge: tab.id === 'candidates' ? (totalCandidates ?? 0) : (totalEnrolled ?? 0),
       })),
     [totalCandidates, totalEnrolled]
   );
@@ -145,7 +145,11 @@ function ProjectEnrollment() {
   return (
     <PageLayout
       title="Project Enrollment"
-      subtitle={`${totalEnrolled} enrolled, ${totalCandidates} candidates`}
+      subtitle={
+        totalEnrolled != null && totalCandidates != null
+          ? `${totalEnrolled} enrolled, ${totalCandidates} candidates`
+          : 'Loading...'
+      }
       actions={
         <EnrollmentActionBar
           onSyncXero={handleSyncXero}
@@ -155,11 +159,21 @@ function ProjectEnrollment() {
       }
     >
       <SummaryGrid>
-        <MetricCard label="Enrolled" value={totalEnrolled} severity="info" />
+        <MetricCard
+          label="Enrolled"
+          value={totalEnrolled ?? '--'}
+          severity={totalEnrolled != null ? 'info' : undefined}
+        />
         <MetricCard
           label="Candidates"
-          value={totalCandidates}
-          severity={totalCandidates > 0 ? 'warning' : 'success'}
+          value={totalCandidates ?? '--'}
+          severity={
+            totalCandidates != null && totalCandidates > 0
+              ? 'warning'
+              : totalCandidates != null
+                ? 'success'
+                : undefined
+          }
         />
         <MetricCard
           label="Detected"
@@ -168,8 +182,16 @@ function ProjectEnrollment() {
         />
         <MetricCard
           label="Link Rate"
-          value={`${linkRate}%`}
-          severity={linkRate >= 80 ? 'success' : linkRate >= 50 ? 'warning' : 'danger'}
+          value={linkRate != null ? `${linkRate}%` : '--'}
+          severity={
+            linkRate != null
+              ? linkRate >= 80
+                ? 'success'
+                : linkRate >= 50
+                  ? 'warning'
+                  : 'danger'
+              : undefined
+          }
         />
       </SummaryGrid>
 

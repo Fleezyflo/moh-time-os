@@ -14,8 +14,10 @@ from typing import Any
 from lib import paths
 from lib.db import validate_identifier
 
-# Default database path
-DEFAULT_DB_PATH = os.environ.get("TIME_OS_DB_PATH", str(paths.v5_db_path()))
+
+def _get_default_db_path() -> str:
+    """Get the default database path from environment or configuration."""
+    return os.environ.get("TIME_OS_DB_PATH", str(paths.v5_db_path()))
 
 
 class Database:
@@ -384,7 +386,7 @@ def get_db(db_path: str = None) -> Database:
     """
     global _db
     if _db is None:
-        _db = Database(db_path or DEFAULT_DB_PATH)
+        _db = Database(db_path or _get_default_db_path())
     return _db
 
 

@@ -69,15 +69,16 @@ class DelegationPacket:
         return cls(**{k: v for k, v in data.items() if k in cls.__dataclass_fields__})
 
 
-PACKETS_FILE = paths.data_dir() / "delegation_packets.json"
+def _packets_file():
+    return paths.data_dir() / "delegation_packets.json"
 
 
 def load_packets() -> dict[str, DelegationPacket]:
     """Load all delegation packets."""
-    if not PACKETS_FILE.exists():
+    if not _packets_file().exists():
         return {}
     try:
-        data = json.loads(PACKETS_FILE.read_text())
+        data = json.loads(_packets_file().read_text())
         return {pid: DelegationPacket.from_dict(p) for pid, p in data.items()}
     except (json.JSONDecodeError, OSError, KeyError, TypeError) as e:
         logger.warning(f"Could not load delegation packets: {e}")
@@ -87,7 +88,7 @@ def load_packets() -> dict[str, DelegationPacket]:
 def save_packets(packets: dict[str, DelegationPacket]) -> None:
     """Save all packets."""
     data = {pid: p.to_dict() for pid, p in packets.items()}
-    PACKETS_FILE.write_text(json.dumps(data, indent=2))
+    _packets_file().write_text(json.dumps(data, indent=2))
 
 
 def calculate_completeness(packet: DelegationPacket) -> float:

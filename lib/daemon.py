@@ -28,7 +28,7 @@ import sys
 import threading
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from lib import paths
 from lib.collectors.resilience import CircuitBreaker
@@ -36,16 +36,23 @@ from lib.compat import StrEnum
 from lib.observability.metrics import REGISTRY
 
 _orchestrator = None  # Lazy-loaded on first use
+_orchestrator_lock = threading.Lock()
 
 
 def _get_orchestrator():
-    """Lazy-import orchestrator to avoid import-time side effects."""
-    global _orchestrator
-    if _orchestrator is None:
-        from lib.collectors.orchestrator import CollectorOrchestrator
+    """Lazy-import orchestrator to avoid import-time side effects.
 
-        _orchestrator = CollectorOrchestrator()
-    return _orchestrator
+    Thread-safe: uses double-checked locking to prevent multiple instantiation.
+    """
+    global _orchestrator
+    if _orchestrator is not None:
+        return _orchestrator
+    with _orchestrator_lock:
+        if _orchestrator is None:
+            from lib.collectors.orchestrator import CollectorOrchestrator
+
+            _orchestrator = CollectorOrchestrator()
+        return _orchestrator
 
 
 class JobHealth(StrEnum):
@@ -58,11 +65,22 @@ class JobHealth(StrEnum):
 
 logger = logging.getLogger(__name__)
 
+
 # Paths - centralized via lib/paths.py
-PROJECT_ROOT = paths.project_root()
-PID_FILE = paths.data_dir() / "daemon.pid"
-STATE_FILE = paths.data_dir() / "daemon_state.json"
-LOG_FILE = paths.data_dir() / "daemon.log"
+def _project_root():
+    return paths.project_root()
+
+
+def _pid_file():
+    return paths.data_dir() / "daemon.pid"
+
+
+def _state_file():
+    return paths.data_dir() / "daemon_state.json"
+
+
+def _log_file():
+    return paths.data_dir() / "daemon.log"
 
 
 # Configure logging
@@ -70,11 +88,11 @@ def setup_logging(to_file: bool = False):
     """Configure daemon logging with rotation when writing to file."""
     handlers = [logging.StreamHandler()]
     if to_file:
-        LOG_FILE.parent.mkdir(parents=True, exist_ok=True)
+        _log_file().parent.mkdir(parents=True, exist_ok=True)
         from logging.handlers import RotatingFileHandler
 
         file_handler = RotatingFileHandler(
-            LOG_FILE,
+            _log_file(),
             maxBytes=50 * 1024 * 1024,  # 50 MB
             backupCount=5,
         )
@@ -139,7 +157,7 @@ class TimeOSDaemon:
         self.jobs: dict[str, JobConfig] = {}
         self.job_states: dict[str, JobState] = {}
         self._shutdown_event = threading.Event()
-        self._last_tick = datetime.now()
+        self._last_tick = datetime.now(timezone.utc)
         self._tick_count = 0
 
         # Register default jobs
@@ -198,9 +216,9 @@ class TimeOSDaemon:
 
     def _load_state(self):
         """Load persisted job state from disk."""
-        if STATE_FILE.exists():
+        if _state_file().exists():
             try:
-                with open(STATE_FILE) as f:
+                with open(_state_file()) as f:
                     data = json.load(f)
                 for name, state_data in data.get("jobs", {}).items():
                     if name in self.job_states:
@@ -213,14 +231,14 @@ class TimeOSDaemon:
                         state.consecutive_failures = state_data.get("consecutive_failures", 0)
                         state.total_runs = state_data.get("total_runs", 0)
                         state.total_failures = state_data.get("total_failures", 0)
-                self.logger.info(f"Loaded state from {STATE_FILE}")
+                self.logger.info(f"Loaded state from {_state_file()}")
             except (sqlite3.Error, ValueError, OSError) as e:
                 self.logger.warning(f"Failed to load state: {e}")
 
     def _save_state(self):
         """Persist job state to disk."""
         try:
-            data = {"jobs": {}, "updated_at": datetime.now().isoformat()}
+            data = {"jobs": {}, "updated_at": datetime.now(timezone.utc).isoformat()}
             for name, state in self.job_states.items():
                 data["jobs"][name] = {
                     "last_run": state.last_run.isoformat() if state.last_run else None,
@@ -230,8 +248,8 @@ class TimeOSDaemon:
                     "total_runs": state.total_runs,
                     "total_failures": state.total_failures,
                 }
-            STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-            with open(STATE_FILE, "w") as f:
+            _state_file().parent.mkdir(parents=True, exist_ok=True)
+            with open(_state_file(), "w") as f:
                 json.dump(data, f, indent=2)
         except (sqlite3.Error, ValueError, OSError) as e:
             self.logger.warning(f"Failed to save state: {e}")
@@ -332,7 +350,7 @@ class TimeOSDaemon:
             return True
 
         # Check interval
-        elapsed = datetime.now() - state.last_run
+        elapsed = datetime.now(timezone.utc) - state.last_run
         interval = timedelta(minutes=config.interval_minutes)
 
         # Apply backoff if failing
@@ -350,7 +368,7 @@ class TimeOSDaemon:
 
     def _detect_sleep_wake(self) -> timedelta:
         """Detect if system was asleep and return sleep duration."""
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
         elapsed = now - self._last_tick
         self._last_tick = now
 
@@ -377,7 +395,7 @@ class TimeOSDaemon:
             return False
 
         self.logger.info(f"▶ Running {job_name}...")
-        start = datetime.now()
+        start = datetime.now(timezone.utc)
         state.last_run = start
         state.total_runs += 1
 
@@ -393,8 +411,8 @@ class TimeOSDaemon:
                 self._handle_notify()
             else:
                 raise ValueError(f"Unknown job: {job_name}")
-            duration = (datetime.now() - start).total_seconds()
-            state.last_success = datetime.now()
+            duration = (datetime.now(timezone.utc) - start).total_seconds()
+            state.last_success = datetime.now(timezone.utc)
             state.last_error = None
             state.consecutive_failures = 0
             self._update_job_health(job_name)
@@ -404,7 +422,7 @@ class TimeOSDaemon:
             return True
 
         except (sqlite3.Error, ValueError, OSError) as e:
-            duration = (datetime.now() - start).total_seconds()
+            duration = (datetime.now(timezone.utc) - start).total_seconds()
             state.last_error = str(e)[:500]
             state.total_failures += 1
             state.consecutive_failures += 1
@@ -461,7 +479,7 @@ class TimeOSDaemon:
             generator = AgencySnapshotGenerator(db_path=paths.db_path())
             # Build minimal snapshot directly
             snapshot = {
-                "meta": generator._build_meta(datetime.now()),
+                "meta": generator._build_meta(datetime.now(timezone.utc)),
                 "trust": {"gates": [], "confidence_level": "unknown"},
                 "narrative": {"first_to_break": None, "deltas": []},
                 "tiles": generator._build_tiles_minimal(),
@@ -481,19 +499,25 @@ class TimeOSDaemon:
                 },
                 "drawers": {},
             }
-            snapshot["meta"]["finished_at"] = datetime.now().isoformat()
+            snapshot["meta"]["finished_at"] = datetime.now(timezone.utc).isoformat()
             generator.save(snapshot)
             self.logger.info("Minimal snapshot saved")
 
     def _handle_notify(self):
-        """Stage 4: Send notifications (dry-run mode)."""
+        """Stage 4: Send notifications (dry-run mode) via outbox-safe path."""
         self.logger.info("Sending notifications (dry-run mode)...")
         try:
             from lib.notifier.channels.google_chat import GoogleChatChannel
+            from lib.notifier.channels.safe_send import safe_send_sync
 
             channel = GoogleChatChannel(webhook_url="", dry_run=True)
             message = "MOH Time OS daemon cycle completed successfully"
-            result = channel.send_sync(message, priority="normal")
+            result = safe_send_sync(
+                channel=channel,
+                message=message,
+                caller="daemon",
+                priority="normal",
+            )
             if result.get("success"):
                 self.logger.info(f"Notification sent: {result.get('message_id')}")
             else:
@@ -574,31 +598,31 @@ class TimeOSDaemon:
 
     def _write_pid(self):
         """Write PID file."""
-        PID_FILE.parent.mkdir(parents=True, exist_ok=True)
-        PID_FILE.write_text(str(os.getpid()))
-        self.logger.info(f"PID {os.getpid()} written to {PID_FILE}")
+        _pid_file().parent.mkdir(parents=True, exist_ok=True)
+        _pid_file().write_text(str(os.getpid()))
+        self.logger.info(f"PID {os.getpid()} written to {_pid_file()}")
 
     def _cleanup(self):
         """Cleanup on shutdown."""
         self._save_state()
-        if PID_FILE.exists():
-            PID_FILE.unlink()
+        if _pid_file().exists():
+            _pid_file().unlink()
         self.logger.info("Daemon stopped")
 
     @staticmethod
     def is_running() -> tuple[bool, int | None]:
         """Check if daemon is running. Returns (is_running, pid)."""
-        if not PID_FILE.exists():
+        if not _pid_file().exists():
             return False, None
 
         try:
-            pid = int(PID_FILE.read_text().strip())
+            pid = int(_pid_file().read_text().strip())
             # Check if process exists
             os.kill(pid, 0)
             return True, pid
         except (ProcessLookupError, ValueError):
             # Process doesn't exist, clean up stale PID file
-            PID_FILE.unlink(missing_ok=True)
+            _pid_file().unlink(missing_ok=True)
             return False, None
         except PermissionError:
             # Process exists but we can't signal it
@@ -626,7 +650,7 @@ class TimeOSDaemon:
             logger.info("Daemon force killed")
             return True
         except ProcessLookupError:
-            PID_FILE.unlink(missing_ok=True)
+            _pid_file().unlink(missing_ok=True)
             logger.info("Daemon already stopped")
             return True
 
@@ -638,16 +662,16 @@ class TimeOSDaemon:
         status = {
             "running": running,
             "pid": pid,
-            "pid_file": str(PID_FILE),
-            "state_file": str(STATE_FILE),
-            "log_file": str(LOG_FILE),
+            "pid_file": str(_pid_file()),
+            "state_file": str(_state_file()),
+            "log_file": str(_log_file()),
             "jobs": {},
         }
 
         # Load job states
-        if STATE_FILE.exists():
+        if _state_file().exists():
             try:
-                with open(STATE_FILE) as f:
+                with open(_state_file()) as f:
                     data = json.load(f)
                 status["jobs"] = data.get("jobs", {})
                 status["state_updated"] = data.get("updated_at")

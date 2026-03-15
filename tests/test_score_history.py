@@ -10,7 +10,7 @@ Tests:
 
 import sqlite3
 import tempfile
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -52,7 +52,7 @@ def sample_scorecard():
             {"name": "operational_health", "score": 80.0, "classification": "healthy"},
             {"name": "financial_health", "score": 70.0, "classification": "stable"},
         ],
-        "scored_at": datetime.now().isoformat(),
+        "scored_at": datetime.now(timezone.utc).isoformat(),
         "data_completeness": 0.9,
     }
 
@@ -131,7 +131,7 @@ class TestGetScoreTrend:
         cursor = conn.cursor()
 
         # Insert test data spanning multiple days
-        base_date = datetime.now()
+        base_date = datetime.now(timezone.utc)
         for i in range(10):
             date = base_date - timedelta(days=i)
             score = 50 + i * 3  # Increasing scores going back in time
@@ -171,7 +171,7 @@ class TestGetScoreTrend:
         conn = sqlite3.connect(str(test_db))
         cursor = conn.cursor()
 
-        base_date = datetime.now()
+        base_date = datetime.now(timezone.utc)
         scores = [40, 45, 50, 55, 60, 65, 70]  # Improving
 
         for i, score in enumerate(scores):
@@ -207,7 +207,7 @@ class TestGetScoreTrend:
         conn = sqlite3.connect(str(test_db))
         cursor = conn.cursor()
 
-        base_date = datetime.now()
+        base_date = datetime.now(timezone.utc)
         scores = [70, 65, 60, 55, 50, 45, 40]  # Declining
 
         for i, score in enumerate(scores):
@@ -254,7 +254,7 @@ class TestGetScoreHistorySummary:
         conn = sqlite3.connect(str(test_db))
         cursor = conn.cursor()
 
-        now = datetime.now()
+        now = datetime.now(timezone.utc)
 
         # Insert test data
         for _i, (etype, eid) in enumerate(

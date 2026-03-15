@@ -34,12 +34,21 @@ class ChatWriteResult:
 
 
 class ChatInteractive:
-    """Send messages, cards, and manage spaces/members in Google Chat."""
+    """Send messages, cards, and manage spaces/members in Google Chat.
+
+    IMPORTANT: Direct use of mutation methods is forbidden. Use SafeChatInteractive
+    from lib.integrations.chat_interactive_safe instead, which wraps every mutation
+    with the durable-intent outbox pattern.
+
+    To construct for direct use (tests only), pass _direct_call_allowed=True.
+    """
 
     def __init__(
         self,
         bot_token: str | None = None,
         webhook_url: str | None = None,
+        *,
+        _direct_call_allowed: bool = False,
     ):
         """
         Initialize ChatInteractive.
@@ -48,14 +57,27 @@ class ChatInteractive:
             bot_token: Google Chat bot token. If None, uses GOOGLE_CHAT_BOT_TOKEN env var.
             webhook_url: Webhook URL for incoming webhooks. If None, uses GOOGLE_CHAT_WEBHOOK_URL env var.
                 If both provided, bot_token is preferred for API calls.
+            _direct_call_allowed: If False (default), mutation methods raise RuntimeError.
+                Only SafeChatInteractive and tests should set this to True.
         """
         self.bot_token = bot_token or os.environ.get("GOOGLE_CHAT_BOT_TOKEN")
         self.webhook_url = webhook_url or os.environ.get("GOOGLE_CHAT_WEBHOOK_URL")
+        self._direct_call_allowed = _direct_call_allowed
 
         if not self.bot_token and not self.webhook_url:
             raise ValueError(
                 "No Google Chat credentials provided. "
                 "Set GOOGLE_CHAT_BOT_TOKEN or GOOGLE_CHAT_WEBHOOK_URL env var."
+            )
+
+    def _check_direct_call_guard(self, method_name: str) -> None:
+        """Raise RuntimeError if direct mutation calls are not allowed."""
+        if not self._direct_call_allowed:
+            raise RuntimeError(
+                f"Direct call to ChatInteractive.{method_name}() is forbidden. "
+                "Use SafeChatInteractive from lib.integrations.chat_interactive_safe "
+                "which wraps mutations with the durable-intent outbox pattern. "
+                "If you are writing a test, pass _direct_call_allowed=True to the constructor."
             )
 
     def _get_headers(self) -> dict:
@@ -81,6 +103,8 @@ class ChatInteractive:
         Returns:
             ChatWriteResult with message_name on success, error on failure
         """
+        self._check_direct_call_guard("send_message")
+
         if not HAS_HTTPX:
             return ChatWriteResult(success=False, error="httpx not installed")
 
@@ -157,6 +181,8 @@ class ChatInteractive:
         Returns:
             ChatWriteResult with message_name on success
         """
+        self._check_direct_call_guard("send_card")
+
         if not HAS_HTTPX:
             return ChatWriteResult(success=False, error="httpx not installed")
 
@@ -234,6 +260,8 @@ class ChatInteractive:
         Returns:
             ChatWriteResult with updated message_name
         """
+        self._check_direct_call_guard("update_message")
+
         if not HAS_HTTPX:
             return ChatWriteResult(success=False, error="httpx not installed")
 
@@ -305,6 +333,8 @@ class ChatInteractive:
         Returns:
             ChatWriteResult indicating success/failure
         """
+        self._check_direct_call_guard("delete_message")
+
         if not HAS_HTTPX:
             return ChatWriteResult(success=False, error="httpx not installed")
 
@@ -364,6 +394,8 @@ class ChatInteractive:
         Returns:
             ChatWriteResult with space_name on success
         """
+        self._check_direct_call_guard("create_space")
+
         if not HAS_HTTPX:
             return ChatWriteResult(success=False, error="httpx not installed")
 
@@ -431,6 +463,8 @@ class ChatInteractive:
         Returns:
             ChatWriteResult with membership info on success
         """
+        self._check_direct_call_guard("add_member")
+
         if not HAS_HTTPX:
             return ChatWriteResult(success=False, error="httpx not installed")
 

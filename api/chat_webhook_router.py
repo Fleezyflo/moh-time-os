@@ -4,9 +4,14 @@ Chat Webhook Router — FastAPI endpoints for Google Chat webhook events.
 Endpoints:
 - POST /api/chat/webhook — receive Chat events (messages, reactions, slash commands)
 - POST /api/chat/interactive — handle interactive card button clicks
+
+Security: Interactive card button clicks (approve/reject) enforce the same
+sender verification as the slash command path. The user.email field in the
+Google Chat interactive payload is checked against the authorized email list.
 """
 
 import logging
+import os
 import sqlite3
 from typing import Any
 
@@ -14,15 +19,65 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from lib.integrations.chat_commands import SlashCommandHandler
-from lib.integrations.chat_interactive import ChatInteractive
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
+# Privileged interactive actions that require sender verification
+_PRIVILEGED_ACTIONS = frozenset({"APPROVE_ACTION", "REJECT_ACTION"})
+
 # Global instances
 _slash_handler: SlashCommandHandler | None = None
-_chat_client: ChatInteractive | None = None
+_authorized_emails: set[str] | None = None
+
+
+def _get_authorized_emails() -> set[str]:
+    """Get authorized email set (same source as SlashCommandHandler)."""
+    global _authorized_emails
+    if _authorized_emails is None:
+        env_val = os.environ.get("MOH_TIME_OS_CHAT_AUTHORIZED_EMAILS", "")
+        if env_val.strip():
+            _authorized_emails = {e.lower().strip() for e in env_val.split(",") if e.strip()}
+        else:
+            _authorized_emails = {"by.cream.co@gmail.com"}
+    return _authorized_emails
+
+
+def _verify_interactive_sender(user_dict: dict | None, action_name: str) -> str | None:
+    """Verify the interactive payload sender is authorized.
+
+    Extracts email from the Google Chat interactive event's user field
+    and checks it against the same authorized email list used by slash commands.
+
+    Returns:
+        Sender email on success, None on failure.
+    """
+    if not user_dict:
+        logger.warning(
+            "Interactive action %s rejected: no user in payload",
+            action_name,
+        )
+        return None
+
+    sender_email = (user_dict.get("email") or "").lower().strip()
+    if not sender_email:
+        logger.warning(
+            "Interactive action %s rejected: no email in user payload",
+            action_name,
+        )
+        return None
+
+    authorized = _get_authorized_emails()
+    if sender_email not in authorized:
+        logger.warning(
+            "Interactive action %s rejected: sender %s not in authorized list",
+            action_name,
+            sender_email,
+        )
+        return None
+
+    return sender_email
 
 
 def get_slash_handler() -> SlashCommandHandler:
@@ -31,14 +86,6 @@ def get_slash_handler() -> SlashCommandHandler:
     if _slash_handler is None:
         _slash_handler = SlashCommandHandler()
     return _slash_handler
-
-
-def get_chat_client() -> ChatInteractive:
-    """Get or create global chat client."""
-    global _chat_client
-    if _chat_client is None:
-        _chat_client = ChatInteractive()
-    return _chat_client
 
 
 # Pydantic models for API requests
@@ -178,6 +225,12 @@ async def handle_interactive_action(request: InteractiveActionRequest) -> dict:
         elif isinstance(parameters, dict):
             params_dict = parameters
 
+        # Verify sender for privileged actions (same trust boundary as slash commands)
+        if action_name in _PRIVILEGED_ACTIONS:
+            sender_email = _verify_interactive_sender(request.user, action_name)
+            if sender_email is None:
+                return {"text": f"⛔ Unauthorized: you are not permitted to {action_name}"}
+
         # Route to appropriate handler based on actionMethodName
         if action_name == "APPROVE_ACTION":
             action_id = params_dict.get("action_id")
@@ -188,9 +241,9 @@ async def handle_interactive_action(request: InteractiveActionRequest) -> dict:
                 from lib.actions.action_framework import ActionFramework
 
                 framework = ActionFramework()
-                success = framework.approve_action(action_id, approved_by="chat_interactive")
+                success = framework.approve_action(action_id, approved_by=sender_email)
                 if success:
-                    return {"text": f"✓ Action {action_id} approved"}
+                    return {"text": f"✓ Action {action_id} approved by {sender_email}"}
                 else:
                     return {
                         "text": f"Could not approve action {action_id} (not found or not pending)"
@@ -210,10 +263,10 @@ async def handle_interactive_action(request: InteractiveActionRequest) -> dict:
 
                 framework = ActionFramework()
                 success = framework.reject_action(
-                    action_id, rejected_by="chat_interactive", reason=reason
+                    action_id, rejected_by=sender_email, reason=reason
                 )
                 if success:
-                    return {"text": f"✓ Action {action_id} rejected: {reason}"}
+                    return {"text": f"✓ Action {action_id} rejected by {sender_email}: {reason}"}
                 else:
                     return {
                         "text": f"Could not reject action {action_id} (not found or not pending)"

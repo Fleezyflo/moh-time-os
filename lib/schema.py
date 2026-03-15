@@ -861,6 +861,8 @@ TABLES["sync_state"] = {
         ("last_success", "TEXT"),
         ("items_synced", "INTEGER DEFAULT 0"),
         ("error", "TEXT"),
+        ("error_type", "TEXT"),  # auth, transport, rate_limit, timeout, parse, storage
+        ("status", "TEXT"),  # success, partial, stale, failed, skipped
     ],
 }
 
@@ -1276,15 +1278,18 @@ TABLES["governance_audit_log"] = {
 TABLES["api_keys"] = {
     "columns": [
         ("id", "TEXT PRIMARY KEY"),
-        ("key_hash", "TEXT"),
-        ("name", "TEXT"),
-        ("role", "TEXT"),
-        ("created_at", "TEXT"),
+        ("key_hash", "TEXT NOT NULL"),
+        ("name", "TEXT NOT NULL"),
+        ("role", "TEXT NOT NULL CHECK(role IN ('viewer', 'operator', 'admin'))"),
+        ("created_at", "TEXT NOT NULL"),
         ("expires_at", "TEXT"),
         ("last_used_at", "TEXT"),
-        ("is_active", "INTEGER DEFAULT 1"),
+        ("is_active", "INTEGER NOT NULL DEFAULT 1"),
         ("created_by", "TEXT"),
     ],
+    "unique": [["key_hash"]],
+    # Bump when constraints change to trigger rebuild of existing weak tables.
+    "constraint_version": 1,
 }
 
 TABLES["subject_access_requests"] = {
@@ -1570,6 +1575,8 @@ INDEXES: list[tuple[str, str, str, str | None]] = [
     ("idx_dismiss_log_signal", "signal_dismiss_log", "signal_key", None),
     # engagement transitions
     ("idx_engagement_transitions_engagement_id", "engagement_transitions", "engagement_id", None),
+    # api_keys
+    ("idx_api_keys_key_hash", "api_keys", "key_hash", None),
 ]
 
 # ---------------------------------------------------------------------------

@@ -50,7 +50,7 @@ export default function Schedule() {
   } = useEvents(selectedDate, selectedDate);
 
   const blocks = useMemo(() => blocksData?.blocks ?? [], [blocksData]);
-  const totalBlocks = blocksData?.total ?? 0;
+  const totalBlocks = blocksData != null ? (blocksData.total ?? 0) : null;
   const events = useMemo(() => eventsData?.items ?? [], [eventsData]);
 
   // Derive metrics from blocks
@@ -103,7 +103,7 @@ export default function Schedule() {
   return (
     <PageLayout
       title="Schedule"
-      subtitle={`${selectedDate} — ${totalBlocks} blocks`}
+      subtitle={`${selectedDate} — ${totalBlocks ?? '--'} blocks`}
       actions={
         <input
           type="date"
@@ -114,7 +114,7 @@ export default function Schedule() {
       }
     >
       <SummaryGrid>
-        <MetricCard label="Total Blocks" value={totalBlocks} />
+        <MetricCard label="Total Blocks" value={totalBlocks ?? '--'} />
         <MetricCard
           label="Scheduled"
           value={scheduledBlocks.length}

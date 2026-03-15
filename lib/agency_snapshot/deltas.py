@@ -7,7 +7,7 @@ Per Page 0 §4 Zone B2: "Since last refresh" delta strip (max 5).
 import json
 import logging
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from lib import paths
@@ -62,7 +62,7 @@ class DeltaTracker:
 
     def save_snapshot_to_history(self, snapshot: dict):
         """Save current snapshot to history for future comparison."""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         path = self.SNAPSHOT_HISTORY_PATH / f"snapshot_{timestamp}.json"
 
         with open(path, "w") as f:

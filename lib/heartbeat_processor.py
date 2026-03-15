@@ -34,8 +34,14 @@ try:
 except ImportError:
     pass
 
-DATA_DIR = paths.out_dir()
-OPS_LEDGER = paths.app_home() / "OPS_LEDGER.md"
+
+def _data_dir():
+    return paths.out_dir()
+
+
+def _ops_ledger():
+    return paths.app_home() / "OPS_LEDGER.md"
+
 
 # Urgency thresholds
 URGENT_KEYWORDS = ["urgent", "asap", "critical", "immediately", "emergency"]
@@ -47,7 +53,7 @@ def load_cached_data() -> dict:
     data = {}
 
     # Calendar
-    cal_file = DATA_DIR / "calendar-next.json"
+    cal_file = _data_dir() / "calendar-next.json"
     if cal_file.exists():
         try:
             data["calendar"] = json.loads(cal_file.read_text())
@@ -56,7 +62,7 @@ def load_cached_data() -> dict:
             data["calendar"] = {"events": []}
 
     # Gmail
-    gmail_file = DATA_DIR / "gmail-unread.json"
+    gmail_file = _data_dir() / "gmail-unread.json"
     if gmail_file.exists():
         try:
             data["gmail"] = json.loads(gmail_file.read_text())
@@ -65,7 +71,7 @@ def load_cached_data() -> dict:
             data["gmail"] = {"threads": []}
 
     # Tasks
-    tasks_file = DATA_DIR / "tasks-all.json"
+    tasks_file = _data_dir() / "tasks-all.json"
     if tasks_file.exists():
         try:
             data["tasks"] = json.loads(tasks_file.read_text())
@@ -74,7 +80,7 @@ def load_cached_data() -> dict:
             data["tasks"] = {"tasks": []}
 
     # Chat (mentions)
-    chat_file = DATA_DIR / "chat-unread-full.json"
+    chat_file = _data_dir() / "chat-unread-full.json"
     if chat_file.exists():
         try:
             data["chat"] = json.loads(chat_file.read_text())

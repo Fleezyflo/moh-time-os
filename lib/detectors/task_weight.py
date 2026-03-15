@@ -14,7 +14,7 @@ import logging
 import re
 import sqlite3
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -73,7 +73,7 @@ class TaskWeightEngine:
             if row and row["cnt"] > 0:
                 return
 
-            now = datetime.now().isoformat()
+            now = datetime.now(timezone.utc).isoformat()
             for i, rule in enumerate(DEFAULT_RULES):
                 rule_id = f"default_{i:03d}"
                 conn.execute(
@@ -171,7 +171,7 @@ class TaskWeightEngine:
 
         conn = self._get_conn()
         try:
-            now = datetime.now().isoformat()
+            now = datetime.now(timezone.utc).isoformat()
 
             # Upsert override
             conn.execute(
@@ -216,7 +216,7 @@ class TaskWeightEngine:
         """Record a user confirmation -- increases matched rule confidence."""
         conn = self._get_conn()
         try:
-            now = datetime.now().isoformat()
+            now = datetime.now(timezone.utc).isoformat()
             cursor = conn.execute(
                 "SELECT id, pattern FROM task_weight_rules ORDER BY confidence DESC"
             )

@@ -74,7 +74,7 @@ class TestRecordingSession:
 
     def test_records_interaction(self, tmp_path, monkeypatch):
         # Use temp dir for cassettes
-        monkeypatch.setattr("lib.collectors.recorder.CASSETTES_DIR", tmp_path)
+        monkeypatch.setattr("lib.collectors.recorder._cassettes_dir", lambda: tmp_path)
 
         with RecordingSession("test_recording") as session:
             session.record(
@@ -100,7 +100,7 @@ class TestReplaySession:
     """Test replay sessions."""
 
     def test_matches_request(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("lib.collectors.recorder.CASSETTES_DIR", tmp_path)
+        monkeypatch.setattr("lib.collectors.recorder._cassettes_dir", lambda: tmp_path)
 
         # Create a cassette
         cassette = Cassette(
@@ -130,7 +130,7 @@ class TestReplaySession:
         assert match.response_body == '[{"id": 1}]'
 
     def test_no_match_for_different_method(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("lib.collectors.recorder.CASSETTES_DIR", tmp_path)
+        monkeypatch.setattr("lib.collectors.recorder._cassettes_dir", lambda: tmp_path)
 
         cassette = Cassette(
             name="test_method",
@@ -160,7 +160,7 @@ class TestCassetteValidation:
     """Test cassette validation."""
 
     def test_validate_detects_expired(self, tmp_path, monkeypatch):
-        monkeypatch.setattr("lib.collectors.recorder.CASSETTES_DIR", tmp_path)
+        monkeypatch.setattr("lib.collectors.recorder._cassettes_dir", lambda: tmp_path)
 
         # Create expired cassette
         cassette = Cassette(

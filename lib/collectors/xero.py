@@ -7,7 +7,7 @@ enabling accurate financial calculations for YTD, prior year, and lifetime reven
 
 import logging
 import re
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from lib.state_store import get_store
 
@@ -150,7 +150,7 @@ class XeroCollector:
     def _transform_contacts(self, contacts: list) -> list[dict]:
         """Transform Xero contacts to xero_contacts table rows."""
         rows = []
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         for contact in contacts:
             rows.append(
                 {
@@ -179,7 +179,7 @@ class XeroCollector:
     def _transform_credit_notes(self, credit_notes: list) -> list[dict]:
         """Transform Xero credit notes to xero_credit_notes table rows."""
         rows = []
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         for cn in credit_notes:
             contact = cn.get("Contact")
             contact_id = contact.get("ContactID") if contact else None
@@ -201,7 +201,7 @@ class XeroCollector:
     def _transform_bank_transactions(self, transactions: list) -> list[dict]:
         """Transform Xero bank transactions to xero_bank_transactions table rows."""
         rows = []
-        now = datetime.now().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         for txn in transactions:
             contact = txn.get("Contact")
             contact_id = contact.get("ContactID") if contact else None
@@ -273,7 +273,7 @@ class XeroCollector:
                 list_tax_rates,
             )
 
-            now = datetime.now().isoformat()
+            now = datetime.now(timezone.utc).isoformat()
             today = date.today()
 
             # Fetch all invoices from Xero

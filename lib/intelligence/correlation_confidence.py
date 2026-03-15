@@ -14,7 +14,7 @@ Brief 18 (ID), Task ID-1.1
 
 import logging
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from statistics import mean, stdev
 
 logger = logging.getLogger(__name__)
@@ -97,7 +97,7 @@ class CorrelationConfidenceCalculator:
             )
 
         if reference_time is None:
-            reference_time = datetime.now()
+            reference_time = datetime.now(timezone.utc)
 
         if recurrence_history is None:
             recurrence_history = {}

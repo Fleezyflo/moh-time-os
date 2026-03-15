@@ -5,7 +5,7 @@ Brief 22 (SM), Task SM-3.1
 """
 
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -75,7 +75,7 @@ class TestIsSuppressed:
         suppression.dismiss_signal("sig_test::c1", "client", "c1")
         # Manually expire the suppression
         conn = sqlite3.connect(str(suppression.db_path))
-        past = (datetime.now() - timedelta(days=1)).isoformat()
+        past = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
         conn.execute(
             "UPDATE signal_suppressions SET expires_at = ?",
             (past,),
@@ -141,7 +141,7 @@ class TestExpireSuppressions:
         suppression.dismiss_signal("sig_test::c1", "client", "c1")
         # Manually backdate expiry
         conn = sqlite3.connect(str(suppression.db_path))
-        past = (datetime.now() - timedelta(days=1)).isoformat()
+        past = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
         conn.execute("UPDATE signal_suppressions SET expires_at = ?", (past,))
         conn.commit()
         conn.close()

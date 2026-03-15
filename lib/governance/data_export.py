@@ -17,7 +17,7 @@ import logging
 import sqlite3
 import tempfile
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 
@@ -268,7 +268,7 @@ class DataExporter:
         # Export based on format
         self.export_dir.mkdir(exist_ok=True, parents=True)
 
-        filename = f"{table}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        filename = f"{table}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
 
         if format == ExportFormat.JSON:
             file_path = self.export_dir / f"{filename}.json"
@@ -324,10 +324,10 @@ class DataExporter:
                 logger.error(f"Error exporting table {table}: {e}")
 
         # Create manifest file
-        request_id = datetime.now().strftime("%Y%m%d_%H%M%S")
+        request_id = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
         manifest = {
             "request_id": request_id,
-            "requested_at": datetime.now().isoformat(),
+            "requested_at": datetime.now(timezone.utc).isoformat(),
             "requested_by": request.requested_by,
             "reason": request.reason,
             "format": request.format.value,
@@ -353,7 +353,7 @@ class DataExporter:
             row_count=total_rows,
             table_count=len(result_files),
             size_bytes=file_size,
-            created_at=datetime.now().isoformat(),
+            created_at=datetime.now(timezone.utc).isoformat(),
             checksum_sha256=checksum,
             anonymized=request.anonymize_pii,
             tables_included=list(result_files.keys()),

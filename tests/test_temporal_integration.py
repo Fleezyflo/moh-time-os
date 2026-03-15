@@ -8,7 +8,7 @@ RecencyWeighter, and SignalLifecycleTracker.
 """
 
 import sqlite3
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import pytest
@@ -164,7 +164,7 @@ class TestChronicSignalEscalation:
                 "client",
                 "client_x",
                 "watch",
-                datetime.now().isoformat(),
+                datetime.now(timezone.utc).isoformat(),
                 first_detected.isoformat(),
                 "watch",
                 "watch",

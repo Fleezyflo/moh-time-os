@@ -25,7 +25,7 @@ import sqlite3
 import tempfile
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 
@@ -168,7 +168,7 @@ class SubjectAccessManager:
         """
         try:
             request_id = str(uuid.uuid4())
-            timestamp = datetime.utcnow().isoformat()
+            timestamp = datetime.now(timezone.utc).isoformat()
 
             conn = self._get_connection()
             conn.execute(
@@ -335,7 +335,7 @@ class SubjectAccessManager:
                     logger.warning(f"Error searching {table}: {e}")
                     continue
 
-            timestamp = datetime.utcnow().isoformat()
+            timestamp = datetime.now(timezone.utc).isoformat()
 
             # Log data access
             self.audit_log.log(
@@ -382,7 +382,7 @@ class SubjectAccessManager:
 
             # Generate filename
             safe_subject = re.sub(r"[^\w\-@.]", "_", subject_identifier)
-            filename = f"subject_data_{safe_subject}_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.{format}"
+            filename = f"subject_data_{safe_subject}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.{format}"
             file_path = os.path.join(tempfile.gettempdir(), filename)
 
             if format == "json":
@@ -455,7 +455,7 @@ class SubjectAccessManager:
             rows_deleted = 0
             tables_skipped = {}
             audit_entries = []
-            timestamp = datetime.utcnow().isoformat()
+            timestamp = datetime.now(timezone.utc).isoformat()
 
             for table in report.tables_with_data:
                 # Skip protected tables
@@ -568,7 +568,7 @@ class SubjectAccessManager:
             rows_anonymized = 0
             tables_skipped = {}
             audit_entries = []
-            timestamp = datetime.utcnow().isoformat()
+            timestamp = datetime.now(timezone.utc).isoformat()
 
             for table in report.tables_with_data:
                 # Skip protected tables

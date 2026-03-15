@@ -6,15 +6,14 @@ Abstract base class for all detectors.
 
 import hashlib
 import json
-import os
 import sqlite3
 import time
 from abc import ABC, abstractmethod
 from typing import Any
 
-from ..signal_service import get_signal_service
+from lib import paths
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "..", "..", "..", "data", "moh_time_os.db")
+from ..signal_service import get_signal_service
 
 
 class BaseDetector(ABC):
@@ -34,7 +33,7 @@ class BaseDetector(ABC):
     signal_types: list[str] = []
 
     def __init__(self, db_path: str = None):
-        self.db_path = db_path or DB_PATH
+        self.db_path = db_path or str(paths.db_path())
         self.signal_svc = get_signal_service()
         self._register()
 

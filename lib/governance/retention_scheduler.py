@@ -11,7 +11,7 @@ Features:
 
 import logging
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from lib.governance.retention_engine import RetentionEngine, RetentionReport
@@ -116,7 +116,7 @@ class RetentionScheduler:
             return True
 
         last_dt = datetime.fromisoformat(completed_at)
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
 
         # Calculate required interval
         if self.schedule == "daily":
@@ -144,11 +144,11 @@ class RetentionScheduler:
         """
         last_run = self.get_last_run()
         if last_run is None:
-            return datetime.utcnow()
+            return datetime.now(timezone.utc)
 
         completed_at = last_run.get("completed_at")
         if not completed_at:
-            return datetime.utcnow()
+            return datetime.now(timezone.utc)
 
         last_dt = datetime.fromisoformat(completed_at)
 
@@ -221,7 +221,7 @@ class RetentionScheduler:
         conn = self._get_connection()
         try:
             lock_key = f"retention_{self.schedule}"
-            now = datetime.utcnow().isoformat()
+            now = datetime.now(timezone.utc).isoformat()
 
             # Check if lock already exists and not released
             cursor = conn.execute(
@@ -263,7 +263,7 @@ class RetentionScheduler:
         conn = self._get_connection()
         try:
             lock_key = f"retention_{self.schedule}"
-            now = datetime.utcnow().isoformat()
+            now = datetime.now(timezone.utc).isoformat()
 
             conn.execute(
                 """
@@ -296,7 +296,7 @@ class RetentionScheduler:
             logger.warning("Could not acquire lock - skipping run")
             return RetentionReport(errors=["Could not acquire execution lock"])
 
-        started_at = datetime.utcnow()
+        started_at = datetime.now(timezone.utc)
         started_at_iso = started_at.isoformat()
 
         try:
@@ -304,7 +304,7 @@ class RetentionScheduler:
             report = self.engine.enforce(dry_run=dry_run)
 
             # Record run
-            completed_at = datetime.utcnow().isoformat()
+            completed_at = datetime.now(timezone.utc).isoformat()
             status = "success" if not report.errors else "partial_failure"
 
             conn = self._get_connection()
@@ -361,7 +361,7 @@ class RetentionScheduler:
             report = engine.enforce(dry_run=True)
 
             snapshot = {
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "schedule": self.schedule,
                 "tables_covered": len(report.table_reports),
                 "total_rows_pending_deletion": report.total_rows_deleted,
@@ -410,4 +410,4 @@ class RetentionScheduler:
 
         except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Compliance snapshot failed: {e}")
-            return {"error": str(e), "timestamp": datetime.utcnow().isoformat()}
+            return {"error": str(e), "timestamp": datetime.now(timezone.utc).isoformat()}

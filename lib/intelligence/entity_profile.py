@@ -10,7 +10,7 @@ Brief 18 (ID), Task ID-3.1
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 
 from lib.intelligence.narrative import NarrativeBuilder
@@ -357,7 +357,7 @@ def build_entity_profile(
     Performance target: < 500ms per entity.
     """
     if as_of is None:
-        as_of = datetime.now()
+        as_of = datetime.now(timezone.utc)
 
     # Health
     health_score = compute_health_score(score_dimensions, entity_type)
