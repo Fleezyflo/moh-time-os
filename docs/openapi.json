@@ -11854,23 +11854,23 @@
     },
     "/api/v2/intelligence/patterns": {
       "get": {
-        "description": "Detect all active patterns.\n\nReturns structural patterns across entities:\n- Concentration (revenue, resource, communication)\n- Cascade (blast radius, dependency chains)\n- Degradation (quality, engagement erosion)\n- Drift (workload, ownership)\n- Correlation (load-quality, comm-payment)",
-        "operationId": "list_patterns_api_v2_intelligence_patterns_get",
+        "description": "GET /api/v2/intelligence/patterns\n\nDetects and returns all active patterns.\nReturns PatternDetectionResponse with detection health metadata.\n\nKept in spec_router (not intelligence_router) because it returns\nPatternDetectionResponse with richer schema (detection_success,\ndetection_errors, detection_error_details) that the UI types expect.",
+        "operationId": "get_intelligence_patterns_api_v2_intelligence_patterns_get",
         "responses": {
           "200": {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/IntelligenceResponse"
+                  "$ref": "#/components/schemas/PatternDetectionResponse"
                 }
               }
             },
             "description": "Successful Response"
           }
         },
-        "summary": "List Patterns",
+        "summary": "Get Intelligence Patterns",
         "tags": [
-          "Intelligence"
+          "Spec v2.9"
         ]
       }
     },

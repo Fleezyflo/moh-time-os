@@ -28,7 +28,6 @@ from api.response_models import (
     InboxCountsResponse,
     InboxRecentResponse,
     InboxResponse,
-    IntelligenceResponse,
     InvoiceListResponse,
     ListResponse,
     MutationResponse,
@@ -1590,9 +1589,7 @@ async def get_fix_data_v2():
         conn.close()
 
 
-# ==== Intelligence Endpoints ====
-# These wire the intelligence layer into /api/v2/intelligence/*
-# The UI expects all responses wrapped: {status, data, computed_at, params}
+# ==== Intelligence Helpers (used by mutation endpoints below) ====
 
 
 def _proposal_type_to_issue_type(proposal_type: str) -> str:
@@ -1608,174 +1605,14 @@ def _proposal_type_to_issue_type(proposal_type: str) -> str:
     return mapping.get(proposal_type, "risk")
 
 
-def _intel_response(data: object, params: dict | None = None) -> dict:
-    """Wrap intelligence data in the envelope the UI expects."""
-    return {
-        "status": "ok",
-        "data": data,
-        "computed_at": now_iso(),
-        "params": params or {},
-    }
-
-
-def _intel_error(message: str, params: dict | None = None) -> dict:
-    """Return an error envelope."""
-    return {
-        "status": "error",
-        "data": None,
-        "computed_at": now_iso(),
-        "params": params or {},
-        "error": message,
-    }
-
-
-@spec_router.get("/intelligence/critical", response_model=IntelligenceResponse)
-async def get_critical_items():
-    """
-    GET /api/v2/intelligence/critical
-
-    Returns IMMEDIATE urgency proposals for the Command Center.
-    """
-    try:
-        from lib.intelligence.engine import get_critical_items as _get_critical
-
-        items = _get_critical()
-        return _intel_response(items)
-    except (sqlite3.Error, ValueError) as e:
-        logger.error(f"Intelligence critical items error: {e}", exc_info=True)
-        return _intel_error(str(e))
-
-
-@spec_router.get("/intelligence/briefing", response_model=IntelligenceResponse)
-async def get_briefing():
-    """
-    GET /api/v2/intelligence/briefing
-
-    Returns daily briefing with proposals grouped by urgency and portfolio health.
-    """
-    try:
-        from lib.intelligence.engine import generate_intelligence_snapshot
-
-        snapshot = generate_intelligence_snapshot()
-
-        proposals_data = snapshot.get("proposals", {})
-        portfolio_score = snapshot.get("scores", {}).get("portfolio", {})
-
-        # Shape the briefing to match the UI's Briefing type
-        result = {
-            "generated_at": snapshot.get("generated_at", now_iso()),
-            "summary": {
-                "total_proposals": proposals_data.get("total", 0),
-                "immediate_count": len(proposals_data.get("by_urgency", {}).get("immediate", [])),
-                "this_week_count": len(proposals_data.get("by_urgency", {}).get("this_week", [])),
-                "monitor_count": len(proposals_data.get("by_urgency", {}).get("monitor", [])),
-            },
-            "critical_items": proposals_data.get("by_urgency", {}).get("immediate", []),
-            "attention_items": proposals_data.get("by_urgency", {}).get("this_week", []),
-            "watching": proposals_data.get("by_urgency", {}).get("monitor", []),
-            "portfolio_health": {
-                "overall_score": portfolio_score.get("composite_score", 0),
-                "active_structural_patterns": len(
-                    snapshot.get("patterns", {}).get("structural", [])
-                ),
-                "trend": "stable",
-            },
-            "top_proposal": (
-                proposals_data.get("ranked", [{}])[0].get("headline", "")
-                if proposals_data.get("ranked")
-                else ""
-            ),
-        }
-        return _intel_response(result)
-    except (sqlite3.Error, ValueError) as e:
-        logger.error(f"Intelligence briefing error: {e}", exc_info=True)
-        return _intel_error(str(e))
-
-
-@spec_router.get("/intelligence/signals", response_model=IntelligenceResponse)
-async def get_intelligence_signals(
-    quick: bool = Query(True, description="Quick detection mode"),
-):
-    """
-    GET /api/v2/intelligence/signals
-
-    Runs signal detection and returns all detected signals.
-    """
-    try:
-        from lib.intelligence.signals import detect_all_signals
-
-        detection = detect_all_signals(quick=quick)
-        signals = detection.get("signals", [])
-        return _intel_response(
-            {"signals": signals, "total_signals": len(signals)},
-            params={"quick": quick},
-        )
-    except (sqlite3.Error, ValueError) as e:
-        logger.error(f"Intelligence signals error: {e}", exc_info=True)
-        return _intel_error(str(e))
-
-
-@spec_router.get("/intelligence/signals/summary", response_model=IntelligenceResponse)
-async def get_intelligence_signal_summary():
-    """
-    GET /api/v2/intelligence/signals/summary
-
-    Returns aggregate signal counts by severity and entity type.
-    """
-    try:
-        from lib.intelligence.signals import get_signal_summary
-
-        summary = get_signal_summary()
-        return _intel_response(summary)
-    except (sqlite3.Error, ValueError) as e:
-        logger.error(f"Intelligence signal summary error: {e}", exc_info=True)
-        return _intel_error(str(e))
-
-
-@spec_router.get("/intelligence/signals/active", response_model=IntelligenceResponse)
-async def get_intelligence_active_signals(
-    entity_type: str | None = Query(None),
-    entity_id: str | None = Query(None),
-):
-    """
-    GET /api/v2/intelligence/signals/active
-
-    Returns currently active signals, optionally filtered by entity.
-    """
-    try:
-        from lib.intelligence.signals import get_active_signals
-
-        signals = get_active_signals(entity_type=entity_type, entity_id=entity_id)
-        return _intel_response(signals, params={"entity_type": entity_type, "entity_id": entity_id})
-    except (sqlite3.Error, ValueError) as e:
-        logger.error(f"Intelligence active signals error: {e}", exc_info=True)
-        return _intel_error(str(e))
-
-
-@spec_router.get("/intelligence/signals/history", response_model=IntelligenceResponse)
-async def get_intelligence_signal_history(
-    entity_type: str = Query(...),
-    entity_id: str = Query(...),
-    limit: int = Query(50, ge=1, le=200),
-):
-    """
-    GET /api/v2/intelligence/signals/history
-
-    Returns signal history for a specific entity.
-    """
-    try:
-        from lib.intelligence.signals import get_signal_history
-
-        history = get_signal_history(entity_type=entity_type, entity_id=entity_id)
-        # Apply limit
-        limited = history[:limit] if isinstance(history, list) else history
-        return _intel_response(
-            limited,
-            params={"entity_type": entity_type, "entity_id": entity_id, "limit": limit},
-        )
-    except (sqlite3.Error, ValueError) as e:
-        logger.error(f"Intelligence signal history error: {e}", exc_info=True)
-        return _intel_error(str(e))
+# ==== Intelligence Endpoints ====
+# Canonical intelligence routes live in intelligence_router.py (mounted at
+# /api/v2/intelligence). 20 duplicate handlers that previously shadowed
+# intelligence_router were removed here — see CANONICALIZATION.md §10.
+#
+# The /intelligence/patterns handler is kept here because it returns
+# PatternDetectionResponse (richer schema than IntelligenceResponse).
+# All other intelligence routes are served by intelligence_router.py.
 
 
 @spec_router.get("/intelligence/patterns", response_model=PatternDetectionResponse)
@@ -1785,16 +1622,40 @@ async def get_intelligence_patterns():
 
     Detects and returns all active patterns.
     Returns PatternDetectionResponse with detection health metadata.
+
+    Kept in spec_router (not intelligence_router) because it returns
+    PatternDetectionResponse with richer schema (detection_success,
+    detection_errors, detection_error_details) that the UI types expect.
     """
     try:
         from lib.intelligence.patterns import detect_all_patterns
 
         detection = detect_all_patterns()
-        patterns = detection.get("patterns", [])
+        raw_patterns = detection.get("patterns", [])
         errors_list = detection.get("errors", [])
         error_details = [
             e.get("message", str(e)) if isinstance(e, dict) else str(e) for e in errors_list
         ]
+
+        # Normalize pattern field names for UI Pattern interface:
+        #   pattern_name → name, pattern_type → type,
+        #   entities_involved → affected_entities,
+        #   operational_meaning → description
+        patterns = []
+        for p in raw_patterns:
+            if not isinstance(p, dict):
+                patterns.append(p)
+                continue
+            normalized = dict(p)
+            if "pattern_name" in normalized and "name" not in normalized:
+                normalized["name"] = normalized["pattern_name"]
+            if "pattern_type" in normalized and "type" not in normalized:
+                normalized["type"] = normalized["pattern_type"]
+            if "entities_involved" in normalized and "affected_entities" not in normalized:
+                normalized["affected_entities"] = normalized["entities_involved"]
+            if "operational_meaning" in normalized and "description" not in normalized:
+                normalized["description"] = normalized["operational_meaning"]
+            patterns.append(normalized)
 
         data = PatternDetectionData(
             patterns=patterns,
@@ -1816,321 +1677,6 @@ async def get_intelligence_patterns():
             computed_at=now_iso(),
             error=str(e),
         )
-
-
-@spec_router.get("/intelligence/patterns/catalog", response_model=IntelligenceResponse)
-async def get_intelligence_pattern_catalog():
-    """
-    GET /api/v2/intelligence/patterns/catalog
-
-    Returns the pattern library — all defined patterns with descriptions.
-    """
-    try:
-        from lib.intelligence.patterns import PATTERN_LIBRARY
-
-        catalog = []
-        for pat_id, pat in PATTERN_LIBRARY.items():
-            catalog.append(
-                {
-                    "id": pat_id,
-                    "name": pat.name,
-                    "type": pat.pattern_type.value
-                    if hasattr(pat.pattern_type, "value")
-                    else str(pat.pattern_type),
-                    "severity": pat.severity.value
-                    if hasattr(pat.severity, "value")
-                    else str(pat.severity),
-                    "description": pat.description,
-                    "implied_action": pat.implied_action,
-                }
-            )
-        return _intel_response(catalog)
-    except (sqlite3.Error, ValueError) as e:
-        logger.error(f"Intelligence pattern catalog error: {e}", exc_info=True)
-        return _intel_error(str(e))
-
-
-@spec_router.get("/intelligence/proposals", response_model=IntelligenceResponse)
-async def get_intelligence_proposals(
-    limit: int = Query(20, ge=1, le=100),
-    urgency: str | None = Query(None, description="Filter by urgency: immediate|this_week|monitor"),
-):
-    """
-    GET /api/v2/intelligence/proposals
-
-    Generates, ranks, and returns proposals.
-    """
-    try:
-        from lib.intelligence.patterns import detect_all_patterns
-        from lib.intelligence.proposals import generate_proposals, rank_proposals
-        from lib.intelligence.signals import detect_all_signals
-
-        signals = detect_all_signals(quick=True)
-        patterns = detect_all_patterns()
-
-        signal_input = {"signals": signals.get("signals", [])}
-        pattern_input = {"patterns": patterns.get("patterns", [])}
-
-        proposals = generate_proposals(signal_input, pattern_input)
-        ranked = rank_proposals(proposals)
-
-        results = []
-        for p, s in ranked[:limit]:
-            item = p.to_dict()
-            item["priority_score"] = s.to_dict()
-            if urgency and p.urgency.value != urgency:
-                continue
-            results.append(item)
-
-        return _intel_response(results[:limit], params={"limit": limit, "urgency": urgency})
-    except (sqlite3.Error, ValueError) as e:
-        logger.error(f"Intelligence proposals error: {e}", exc_info=True)
-        return _intel_error(str(e))
-
-
-@spec_router.get("/intelligence/scores/client/{client_id}", response_model=IntelligenceResponse)
-async def get_client_score(client_id: str):
-    """
-    GET /api/v2/intelligence/scores/client/:id
-
-    Returns scorecard for a specific client.
-    """
-    try:
-        from lib.intelligence.scorecard import score_client
-
-        scorecard = score_client(client_id)
-        scorecard["computed_at"] = now_iso()
-        return _intel_response(scorecard)
-    except (sqlite3.Error, ValueError) as e:
-        logger.error(f"Intelligence client score error: {e}", exc_info=True)
-        return _intel_error(str(e))
-
-
-@spec_router.get("/intelligence/scores/project/{project_id}", response_model=IntelligenceResponse)
-async def get_project_score(project_id: str):
-    """
-    GET /api/v2/intelligence/scores/project/:id
-
-    Returns scorecard for a specific project.
-    """
-    try:
-        from lib.intelligence.scorecard import score_project
-
-        scorecard = score_project(project_id)
-        scorecard["computed_at"] = now_iso()
-        return _intel_response(scorecard)
-    except (sqlite3.Error, ValueError) as e:
-        logger.error(f"Intelligence project score error: {e}", exc_info=True)
-        return _intel_error(str(e))
-
-
-@spec_router.get("/intelligence/scores/person/{person_id}", response_model=IntelligenceResponse)
-async def get_person_score(person_id: str):
-    """
-    GET /api/v2/intelligence/scores/person/:id
-
-    Returns scorecard for a specific person.
-    """
-    try:
-        from lib.intelligence.scorecard import score_person
-
-        scorecard = score_person(person_id)
-        scorecard["computed_at"] = now_iso()
-        return _intel_response(scorecard)
-    except (sqlite3.Error, ValueError) as e:
-        logger.error(f"Intelligence person score error: {e}", exc_info=True)
-        return _intel_error(str(e))
-
-
-@spec_router.get("/intelligence/scores/portfolio", response_model=IntelligenceResponse)
-async def get_portfolio_score():
-    """
-    GET /api/v2/intelligence/scores/portfolio
-
-    Returns scorecard for the entire portfolio.
-    """
-    try:
-        from lib.intelligence.scorecard import score_portfolio
-
-        scorecard = score_portfolio()
-        scorecard["computed_at"] = now_iso()
-        return _intel_response(scorecard)
-    except (sqlite3.Error, ValueError) as e:
-        logger.error(f"Intelligence portfolio score error: {e}", exc_info=True)
-        return _intel_error(str(e))
-
-
-@spec_router.get("/intelligence/entity/client/{client_id}", response_model=IntelligenceResponse)
-async def get_client_intelligence(client_id: str):
-    """
-    GET /api/v2/intelligence/entity/client/:id
-
-    Deep dive: scorecard + signals + history + trajectory + proposals for a client.
-    """
-    try:
-        from lib.intelligence.engine import get_client_intelligence as _get_client_intel
-
-        intel = _get_client_intel(client_id)
-        return _intel_response(intel)
-    except (sqlite3.Error, ValueError) as e:
-        logger.error(f"Intelligence client entity error: {e}", exc_info=True)
-        return _intel_error(str(e))
-
-
-@spec_router.get("/intelligence/entity/person/{person_id}", response_model=IntelligenceResponse)
-async def get_person_intelligence(person_id: str):
-    """
-    GET /api/v2/intelligence/entity/person/:id
-
-    Deep dive: scorecard + signals + history + profile for a person.
-    """
-    try:
-        from lib.intelligence.engine import get_person_intelligence as _get_person_intel
-
-        intel = _get_person_intel(person_id)
-        return _intel_response(intel)
-    except (sqlite3.Error, ValueError) as e:
-        logger.error(f"Intelligence person entity error: {e}", exc_info=True)
-        return _intel_error(str(e))
-
-
-@spec_router.get("/intelligence/entity/portfolio", response_model=IntelligenceResponse)
-async def get_portfolio_intelligence():
-    """
-    GET /api/v2/intelligence/entity/portfolio
-
-    Portfolio-level: score + signal summary + structural patterns + top proposals.
-    """
-    try:
-        from lib.intelligence.engine import get_portfolio_intelligence as _get_portfolio_intel
-
-        intel = _get_portfolio_intel()
-        return _intel_response(intel)
-    except (sqlite3.Error, ValueError) as e:
-        logger.error(f"Intelligence portfolio entity error: {e}", exc_info=True)
-        return _intel_error(str(e))
-
-
-@spec_router.get("/intelligence/projects/{project_id}/state", response_model=IntelligenceResponse)
-async def get_project_state(project_id: str):
-    """
-    GET /api/v2/intelligence/projects/:id/state
-
-    Returns operational state for a project.
-    """
-    try:
-        from lib.query_engine import QueryEngine
-
-        engine = QueryEngine()
-        state = engine.project_operational_state(project_id)
-        if not state:
-            raise HTTPException(status_code=404, detail="Project not found")
-        return _intel_response(state)
-    except HTTPException:
-        raise
-    except (sqlite3.Error, ValueError) as e:
-        logger.error(f"Intelligence project state error: {e}", exc_info=True)
-        return _intel_error(str(e))
-
-
-@spec_router.get("/intelligence/clients/{client_id}/profile", response_model=IntelligenceResponse)
-async def get_client_profile(client_id: str):
-    """
-    GET /api/v2/intelligence/clients/:id/profile
-
-    Returns deep operational profile for a client.
-    """
-    try:
-        from lib.query_engine import QueryEngine
-
-        engine = QueryEngine()
-        profile = engine.client_deep_profile(client_id)
-        if not profile:
-            raise HTTPException(status_code=404, detail="Client not found")
-        return _intel_response(profile)
-    except HTTPException:
-        raise
-    except (sqlite3.Error, ValueError) as e:
-        logger.error(f"Intelligence client profile error: {e}", exc_info=True)
-        return _intel_error(str(e))
-
-
-@spec_router.get("/intelligence/team/{person_id}/profile", response_model=IntelligenceResponse)
-async def get_person_profile(person_id: str):
-    """
-    GET /api/v2/intelligence/team/:id/profile
-
-    Returns operational profile for a person.
-    """
-    try:
-        from lib.query_engine import QueryEngine
-
-        engine = QueryEngine()
-        profile = engine.person_operational_profile(person_id)
-        if not profile:
-            raise HTTPException(status_code=404, detail="Person not found")
-        return _intel_response(profile)
-    except HTTPException:
-        raise
-    except (sqlite3.Error, ValueError) as e:
-        logger.error(f"Intelligence person profile error: {e}", exc_info=True)
-        return _intel_error(str(e))
-
-
-@spec_router.get(
-    "/intelligence/clients/{client_id}/trajectory", response_model=IntelligenceResponse
-)
-async def get_client_trajectory(
-    client_id: str,
-    window_days: int = Query(30, ge=7, le=90),
-    num_windows: int = Query(6, ge=2, le=12),
-):
-    """
-    GET /api/v2/intelligence/clients/:id/trajectory
-
-    Returns rolling-window metrics and trends for a client.
-    """
-    try:
-        from lib.query_engine import QueryEngine
-
-        engine = QueryEngine()
-        trajectory = engine.client_trajectory(
-            client_id, window_size_days=window_days, num_windows=num_windows
-        )
-        return _intel_response(
-            trajectory,
-            params={"window_days": window_days, "num_windows": num_windows},
-        )
-    except (sqlite3.Error, ValueError) as e:
-        logger.error(f"Intelligence client trajectory error: {e}", exc_info=True)
-        return _intel_error(str(e))
-
-
-@spec_router.get("/intelligence/team/{person_id}/trajectory", response_model=IntelligenceResponse)
-async def get_person_trajectory(
-    person_id: str,
-    window_days: int = Query(30, ge=7, le=90),
-    num_windows: int = Query(6, ge=2, le=12),
-):
-    """
-    GET /api/v2/intelligence/team/:id/trajectory
-
-    Returns rolling-window load metrics and trends for a person.
-    """
-    try:
-        from lib.query_engine import QueryEngine
-
-        engine = QueryEngine()
-        trajectory = engine.person_trajectory(
-            person_id, window_size_days=window_days, num_windows=num_windows
-        )
-        return _intel_response(
-            trajectory,
-            params={"window_days": window_days, "num_windows": num_windows},
-        )
-    except (sqlite3.Error, ValueError) as e:
-        logger.error(f"Intelligence person trajectory error: {e}", exc_info=True)
-        return _intel_error(str(e))
 
 
 # ==== Mutation Endpoints (Proposals, Watchers, Fix-Data, Issues) ====

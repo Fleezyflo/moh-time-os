@@ -61,6 +61,64 @@ def _error_response(message: str, code: str = "ERROR") -> dict:
     }
 
 
+def _normalize_scorecard_dimensions(scorecard: dict) -> None:
+    """Transform scorecard dimensions from backend list to UI Record format.
+
+    Backend returns dimensions as:
+        [{"dimension": "name", "score": 75, "classification": "healthy", ...}, ...]
+
+    UI Scorecard interface expects:
+        {"dimension_name": {"name": "Dim Name", "score": 75, "status": "healthy"}, ...}
+
+    Also maps field names: dimension → name, classification → status.
+    Weight is not available from score_dimension() output, so it's omitted
+    (UI ScoreBar treats weight as optional).
+    """
+    dims = scorecard.get("dimensions")
+    if not isinstance(dims, list):
+        return
+    record: dict[str, dict] = {}
+    for dim in dims:
+        if not isinstance(dim, dict):
+            continue
+        key = dim.get("dimension", "unknown")
+        record[key] = {
+            "name": key,
+            "score": dim.get("score", 0),
+            "status": dim.get("classification", "data_unavailable"),
+        }
+    scorecard["dimensions"] = record
+
+
+def _patch_scorecard_computed_at(data: dict) -> None:
+    """Inject computed_at and normalize dimensions in embedded scorecard.
+
+    The scorecard lib returns `scored_at` but the UI Scorecard interface
+    requires `computed_at`. Also normalizes dimensions from list to Record.
+    Patches in-place on entity intelligence responses that embed a scorecard
+    (client, person).
+    """
+    scorecard = data.get("scorecard")
+    if isinstance(scorecard, dict):
+        if "computed_at" not in scorecard:
+            scorecard["computed_at"] = scorecard.get(
+                "scored_at", datetime.now(timezone.utc).isoformat()
+            )
+        _normalize_scorecard_dimensions(scorecard)
+
+
+def _patch_portfolio_score_computed_at(data: dict) -> None:
+    """Inject computed_at and normalize dimensions in embedded portfolio_score.
+
+    Portfolio intelligence uses `portfolio_score` key (not `scorecard`).
+    """
+    score = data.get("portfolio_score")
+    if isinstance(score, dict):
+        if "computed_at" not in score:
+            score["computed_at"] = score.get("scored_at", datetime.now(timezone.utc).isoformat())
+        _normalize_scorecard_dimensions(score)
+
+
 # =============================================================================
 # PORTFOLIO ENDPOINTS
 # =============================================================================
@@ -683,7 +741,10 @@ def signal_history(
     try:
         from lib.intelligence.signals import get_signal_history
 
-        data = get_signal_history(entity_type=entity_type, entity_id=entity_id, limit=limit)
+        # get_signal_history does not accept a limit param — fetch all, then slice
+        data = get_signal_history(entity_type=entity_type, entity_id=entity_id)
+        if isinstance(data, list):
+            data = data[:limit]
         return _wrap_response(
             data, {"entity_type": entity_type, "entity_id": entity_id, "limit": limit}
         )
@@ -743,31 +804,16 @@ def get_thresholds():
 # =============================================================================
 # PATTERNS ENDPOINTS
 # =============================================================================
-
-
-@intelligence_router.get("/patterns", response_model=IntelligenceResponse)
-def list_patterns():
-    """
-    Detect all active patterns.
-
-    Returns structural patterns across entities:
-    - Concentration (revenue, resource, communication)
-    - Cascade (blast radius, dependency chains)
-    - Degradation (quality, engagement erosion)
-    - Drift (workload, ownership)
-    - Correlation (load-quality, comm-payment)
-    """
-    try:
-        from lib.intelligence import detect_all_patterns
-
-        data = detect_all_patterns()
-        return _wrap_response(data)
-    except (sqlite3.Error, ValueError) as e:
-        logger.exception("list_patterns failed")
-        return JSONResponse(
-            status_code=500,
-            content=_error_response(str(e), "QUERY_ERROR"),
-        )
+# NOTE: /patterns is NOT registered here. It is canonically served by
+# spec_router at /intelligence/patterns → /api/v2/intelligence/patterns.
+# Reason: spec_router returns PatternDetectionResponse (richer schema with
+# detection_success, detection_errors, detection_error_details) which the
+# UI generated types depend on. intelligence_router's IntelligenceResponse
+# would lose that metadata. See CANONICALIZATION.md §10.
+#
+# /patterns/catalog IS registered here — it returns the static pattern
+# library, which is a simple list and fits IntelligenceResponse fine.
+# =============================================================================
 
 
 @intelligence_router.get("/patterns/catalog", response_model=IntelligenceResponse)
@@ -883,6 +929,10 @@ def client_score(client_id: str):
         from lib.intelligence import score_client
 
         data = score_client(client_id)
+        # UI Scorecard interface expects computed_at inside the scorecard data
+        if isinstance(data, dict):
+            data["computed_at"] = datetime.now(timezone.utc).isoformat()
+            _normalize_scorecard_dimensions(data)
         return _wrap_response(data, {"client_id": client_id})
     except (sqlite3.Error, ValueError) as e:
         logger.exception("client_score failed")
@@ -907,6 +957,9 @@ def project_score(project_id: str):
         from lib.intelligence import score_project
 
         data = score_project(project_id)
+        if isinstance(data, dict):
+            data["computed_at"] = datetime.now(timezone.utc).isoformat()
+            _normalize_scorecard_dimensions(data)
         return _wrap_response(data, {"project_id": project_id})
     except (sqlite3.Error, ValueError) as e:
         logger.exception("project_score failed")
@@ -931,6 +984,9 @@ def person_score(person_id: str):
         from lib.intelligence import score_person
 
         data = score_person(person_id)
+        if isinstance(data, dict):
+            data["computed_at"] = datetime.now(timezone.utc).isoformat()
+            _normalize_scorecard_dimensions(data)
         return _wrap_response(data, {"person_id": person_id})
     except (sqlite3.Error, ValueError) as e:
         logger.exception("person_score failed")
@@ -955,6 +1011,9 @@ def portfolio_score():
         from lib.intelligence import score_portfolio
 
         data = score_portfolio()
+        if isinstance(data, dict):
+            data["computed_at"] = datetime.now(timezone.utc).isoformat()
+            _normalize_scorecard_dimensions(data)
         return _wrap_response(data)
     except (sqlite3.Error, ValueError) as e:
         logger.exception("portfolio_score failed")
@@ -1075,6 +1134,8 @@ def client_intelligence(client_id: str):
         from lib.intelligence import get_client_intelligence
 
         data = get_client_intelligence(client_id)
+        # Scorecard lib returns scored_at; UI Scorecard interface expects computed_at
+        _patch_scorecard_computed_at(data)
         return _wrap_response(data, {"client_id": client_id})
     except (sqlite3.Error, ValueError) as e:
         logger.exception("client_intelligence failed")
@@ -1099,6 +1160,7 @@ def person_intelligence(person_id: str):
         from lib.intelligence import get_person_intelligence
 
         data = get_person_intelligence(person_id)
+        _patch_scorecard_computed_at(data)
         return _wrap_response(data, {"person_id": person_id})
     except (sqlite3.Error, ValueError) as e:
         logger.exception("person_intelligence failed")
@@ -1123,6 +1185,7 @@ def portfolio_intelligence():
         from lib.intelligence import get_portfolio_intelligence
 
         data = get_portfolio_intelligence()
+        _patch_portfolio_score_computed_at(data)
         return _wrap_response(data)
     except (sqlite3.Error, ValueError) as e:
         logger.exception("portfolio_intelligence failed")
