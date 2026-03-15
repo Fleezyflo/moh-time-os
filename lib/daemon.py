@@ -171,40 +171,76 @@ class TimeOSDaemon:
     def _register_default_jobs(self):
         """Register the standard Time OS jobs."""
 
-        # 4-stage pipeline
+        # 8-stage pipeline (wiring remediation — activates detection + intelligence)
         # Stage 1: Collect data from all sources
         self.register_job(
             JobConfig(
                 name="collect",
                 interval_minutes=30,
-                command=None,  # Will use handler function
+                command=None,
             )
         )
 
-        # Stage 2: Run truth cycle (time → commitment → capacity → client)
+        # Stage 2: Lane assignment (categorize tasks into capacity lanes)
+        self.register_job(
+            JobConfig(
+                name="lane_assignment",
+                interval_minutes=30,
+                command=None,
+            )
+        )
+
+        # Stage 3: Run truth cycle (time → commitment → capacity → client)
         self.register_job(
             JobConfig(
                 name="truth_cycle",
                 interval_minutes=15,
-                command=None,  # Will use handler function
+                command=None,
             )
         )
 
-        # Stage 3: Generate agency snapshot
+        # Stage 4: Detection system (collision, drift, bottleneck → production table)
+        self.register_job(
+            JobConfig(
+                name="detection",
+                interval_minutes=15,
+                command=None,
+            )
+        )
+
+        # Stage 5: Intelligence pipeline (scoring → signals → patterns → proposals)
+        self.register_job(
+            JobConfig(
+                name="intelligence",
+                interval_minutes=15,
+                command=None,
+            )
+        )
+
+        # Stage 6: Generate agency snapshot
         self.register_job(
             JobConfig(
                 name="snapshot",
                 interval_minutes=15,
-                command=None,  # Will use handler function
+                command=None,
             )
         )
 
-        # Stage 4: Send notifications (dry-run for now)
+        # Stage 7: Morning brief (daily detection digest via Google Chat)
+        self.register_job(
+            JobConfig(
+                name="morning_brief",
+                interval_minutes=15,
+                command=None,
+            )
+        )
+
+        # Stage 8: Send notifications
         self.register_job(
             JobConfig(
                 name="notify",
                 interval_minutes=60,
-                command=None,  # Will use handler function
+                command=None,
             )
         )
 
@@ -403,10 +439,18 @@ class TimeOSDaemon:
             # Route to handler function
             if job_name == "collect":
                 self._handle_collect()
+            elif job_name == "lane_assignment":
+                self._handle_lane_assignment()
             elif job_name == "truth_cycle":
                 self._handle_truth_cycle()
+            elif job_name == "detection":
+                self._handle_detection()
+            elif job_name == "intelligence":
+                self._handle_intelligence()
             elif job_name == "snapshot":
                 self._handle_snapshot()
+            elif job_name == "morning_brief":
+                self._handle_morning_brief()
             elif job_name == "notify":
                 self._handle_notify()
             else:
@@ -444,8 +488,26 @@ class TimeOSDaemon:
             self.logger.error(f"Collect failed: {e}")
             raise
 
+    def _handle_lane_assignment(self):
+        """Stage 2: Categorize tasks into capacity lanes."""
+        try:
+            from lib.lane_assigner import run_assignment
+
+            self.logger.info("Running lane assignment...")
+            result = run_assignment()
+            changed = result.get("changed", 0)
+            if changed > 0:
+                self.logger.info(f"Lane assignment: {changed} tasks reassigned")
+            else:
+                self.logger.info("Lane assignment: no changes")
+        except ImportError:
+            self.logger.warning("Lane assigner not available, skipping")
+        except (sqlite3.Error, ValueError, OSError) as e:
+            self.logger.error(f"Lane assignment failed: {e}")
+            raise
+
     def _handle_truth_cycle(self):
-        """Stage 2: Run truth cycle."""
+        """Stage 3: Run truth cycle."""
         from lib.truth_cycle import TruthCycle
 
         self.logger.info("Running truth cycle...")
@@ -455,8 +517,129 @@ class TimeOSDaemon:
         if result.errors:
             self.logger.warning(f"Truth cycle warnings: {result.errors}")
 
+        # Empty-data guard: warn if all truth stages returned zero counts
+        all_zero = True
+        for _stage_name, stage_result in result.stages.items():
+            counts = stage_result.counts or {}
+            if any(v for v in counts.values() if isinstance(v, int) and v > 0):
+                all_zero = False
+                break
+        if all_zero and result.all_ok:
+            self.logger.warning(
+                "STARVED: Truth cycle passed but all stages returned zero counts. "
+                "Collectors may not be populating data."
+            )
+
+    def _handle_detection(self):
+        """Stage 4: Run collision, drift, bottleneck detectors → production table."""
+        from lib.detectors import run_all_detectors
+
+        db_path = str(paths.db_path())
+        self.logger.info("Running detection system (production mode)...")
+        results = run_all_detectors(
+            db_path=db_path,
+            dry_run=False,  # Write to detection_findings, not preview
+            cycle_id=f"daemon_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}",
+        )
+        total_findings = sum(d.get("findings", 0) for d in results.get("detectors", {}).values())
+        groups = results.get("correlation", {}).get("groups", 0)
+        storage = results.get("storage", {})
+        self.logger.info(
+            f"Detection: {total_findings} raw findings, {groups} correlated groups, "
+            f"{storage.get('inserted', 0)} new, {storage.get('updated', 0)} updated"
+        )
+
+    def _handle_intelligence(self):
+        """Stage 5: Signal detection + state update + V4 proposal generation.
+
+        Canonical pipeline (per CANONICALIZATION.md):
+        - detect_all_signals() → find active signals from collector data
+        - update_signal_state() → persist to signal_state table (new/ongoing/escalated/cleared)
+        - ProposalService.generate_proposals_from_signals() → group signals → proposals_v4
+
+        The full intelligence engine (generate_intelligence_snapshot) is reserved for
+        API-time use (briefing endpoint). The daemon only populates the tables those
+        endpoints read from.
+        """
+        from pathlib import Path
+
+        db_path_str = str(paths.db_path())
+        db_path_obj = Path(db_path_str)
+
+        # Step 1: Detect signals from current data
+        self.logger.info("Running signal detection...")
+        try:
+            from lib.intelligence.signals import detect_all_signals, update_signal_state
+
+            detection = detect_all_signals(db_path_obj, quick=True)
+            detected_signals = detection.get("signals", [])
+            self.logger.info(f"Signals detected: {len(detected_signals)}")
+
+            # Step 2: Update signal state (persist new/ongoing/escalated/cleared)
+            if detected_signals:
+                state_update = update_signal_state(detected_signals, db_path_obj)
+                new_count = len(state_update.get("new_signals", []))
+                escalated_count = len(state_update.get("escalated_signals", []))
+                cleared_count = len(state_update.get("cleared_signals", []))
+                self.logger.info(
+                    f"Signal state: {new_count} new, {escalated_count} escalated, "
+                    f"{cleared_count} cleared"
+                )
+            else:
+                self.logger.info("No signals detected, skipping state update")
+        except (sqlite3.Error, ValueError, OSError) as e:
+            self.logger.warning(f"Signal detection/update failed: {e}")
+
+        # Step 3: Generate V4 proposals from persisted signal state
+        try:
+            from lib.v4.proposal_service import ProposalService
+
+            svc = ProposalService(db_path=db_path_str)
+            prop_result = svc.generate_proposals_from_signals()
+            self.logger.info(
+                f"V4 proposals: {prop_result.get('created', 0)} created, "
+                f"{prop_result.get('updated', 0)} updated, "
+                f"{prop_result.get('skipped', 0)} skipped"
+            )
+        except (sqlite3.Error, ValueError, OSError, ImportError) as e:
+            self.logger.warning(f"V4 proposal generation skipped: {e}")
+
+    def _handle_morning_brief(self):
+        """Stage 7: Send morning brief if findings changed (daily, via Google Chat)."""
+        import os
+
+        webhook_url = os.environ.get("MOH_GCHAT_WEBHOOK_URL", "")
+        if not webhook_url:
+            self.logger.debug("Morning brief skipped: MOH_GCHAT_WEBHOOK_URL not set")
+            return
+
+        try:
+            from lib.detectors.morning_brief import send_if_changed
+            from lib.notifier.channels.google_chat import GoogleChatChannel
+
+            db_path = str(paths.db_path())
+
+            # Build a minimal notifier-like object with a google_chat channel
+            channel = GoogleChatChannel(webhook_url=webhook_url, dry_run=False)
+
+            class _BriefNotifier:
+                """Minimal notifier interface for morning brief."""
+
+                def __init__(self, ch):
+                    self.channels = {"google_chat": ch}
+
+            notifier = _BriefNotifier(channel)
+            result = send_if_changed(
+                db_path=db_path,
+                notifier=notifier,
+                morning_brief_hour=8,
+            )
+            self.logger.info(f"Morning brief: {result.get('status', 'unknown')}")
+        except (sqlite3.Error, ValueError, OSError) as e:
+            self.logger.warning(f"Morning brief failed: {e}")
+
     def _handle_snapshot(self):
-        """Stage 3: Generate agency snapshot."""
+        """Stage 6: Generate agency snapshot."""
         import os
 
         from lib.agency_snapshot.generator import AgencySnapshotGenerator
@@ -504,26 +687,12 @@ class TimeOSDaemon:
             self.logger.info("Minimal snapshot saved")
 
     def _handle_notify(self):
-        """Stage 4: Send notifications (dry-run mode) via outbox-safe path."""
-        self.logger.info("Sending notifications (dry-run mode)...")
-        try:
-            from lib.notifier.channels.google_chat import GoogleChatChannel
-            from lib.notifier.channels.safe_send import safe_send_sync
+        """Stage 8: Log cycle completion. Outbound delivery is handled by morning_brief.
 
-            channel = GoogleChatChannel(webhook_url="", dry_run=True)
-            message = "MOH Time OS daemon cycle completed successfully"
-            result = safe_send_sync(
-                channel=channel,
-                message=message,
-                caller="daemon",
-                priority="normal",
-            )
-            if result.get("success"):
-                self.logger.info(f"Notification sent: {result.get('message_id')}")
-            else:
-                self.logger.warning(f"Notification failed: {result.get('error')}")
-        except (sqlite3.Error, ValueError, OSError) as e:
-            self.logger.warning(f"Notification handler failed: {e}")
+        Per CANONICALIZATION.md: "cycle complete" messages are noise on the Google Chat
+        channel. The morning brief is the canonical outbound. This stage just logs.
+        """
+        self.logger.info("Daemon cycle notification: all stages complete")
 
     def run_once(self):
         """Run all jobs once in sequence and exit."""
@@ -531,7 +700,16 @@ class TimeOSDaemon:
         self.logger.info("Running one-shot cycle")
         self.logger.info("=" * 50)
 
-        jobs_to_run = ["collect", "truth_cycle", "snapshot", "notify"]
+        jobs_to_run = [
+            "collect",
+            "lane_assignment",
+            "truth_cycle",
+            "detection",
+            "intelligence",
+            "snapshot",
+            "morning_brief",
+            "notify",
+        ]
         succeeded = 0
         failed = 0
 

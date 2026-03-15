@@ -4440,17 +4440,17 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * List Patterns
-         * @description Detect all active patterns.
+         * Get Intelligence Patterns
+         * @description GET /api/v2/intelligence/patterns
          *
-         *     Returns structural patterns across entities:
-         *     - Concentration (revenue, resource, communication)
-         *     - Cascade (blast radius, dependency chains)
-         *     - Degradation (quality, engagement erosion)
-         *     - Drift (workload, ownership)
-         *     - Correlation (load-quality, comm-payment)
+         *     Detects and returns all active patterns.
+         *     Returns PatternDetectionResponse with detection health metadata.
+         *
+         *     Kept in spec_router (not intelligence_router) because it returns
+         *     PatternDetectionResponse with richer schema (detection_success,
+         *     detection_errors, detection_error_details) that the UI types expect.
          */
-        get: operations["list_patterns_api_v2_intelligence_patterns_get"];
+        get: operations["get_intelligence_patterns_api_v2_intelligence_patterns_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -13297,7 +13297,7 @@ export interface operations {
             };
         };
     };
-    list_patterns_api_v2_intelligence_patterns_get: {
+    get_intelligence_patterns_api_v2_intelligence_patterns_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -13312,7 +13312,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["IntelligenceResponse"];
+                    "application/json": components["schemas"]["PatternDetectionResponse"];
                 };
             };
         };
