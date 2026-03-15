@@ -1444,3 +1444,23 @@ CREATE TABLE IF NOT EXISTS [handoffs] (
     state TEXT NOT NULL DEFAULT 'proposed',
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
 )
+
+CREATE TABLE IF NOT EXISTS [side_effect_outbox] (
+    id TEXT PRIMARY KEY,
+    idempotency_key TEXT UNIQUE,
+    handler TEXT NOT NULL,
+    action TEXT NOT NULL,
+    payload TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending',
+    external_resource_id TEXT,
+    error TEXT,
+    created_at TEXT NOT NULL,
+    fulfilled_at TEXT,
+    attempts INTEGER NOT NULL DEFAULT 0
+)
+
+CREATE TABLE IF NOT EXISTS [idempotency_keys] (
+    key TEXT PRIMARY KEY,
+    action_id TEXT NOT NULL,
+    created_at TEXT NOT NULL
+)

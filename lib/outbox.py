@@ -40,32 +40,19 @@ import threading
 from datetime import datetime, timezone
 
 from lib import db as db_module
+from lib.schema_engine import _build_create_sql
 
 logger = logging.getLogger(__name__)
 
-_OUTBOX_SCHEMA = """
-CREATE TABLE IF NOT EXISTS side_effect_outbox (
-    id TEXT PRIMARY KEY,
-    idempotency_key TEXT UNIQUE,
-    handler TEXT NOT NULL,
-    action TEXT NOT NULL,
-    payload TEXT NOT NULL,
-    status TEXT NOT NULL DEFAULT 'pending',
-    external_resource_id TEXT,
-    error TEXT,
-    created_at TEXT NOT NULL,
-    fulfilled_at TEXT,
-    attempts INTEGER NOT NULL DEFAULT 0
-)
-"""
 
-_IDEMPOTENCY_SCHEMA = """
-CREATE TABLE IF NOT EXISTS idempotency_keys (
-    key TEXT PRIMARY KEY,
-    action_id TEXT NOT NULL,
-    created_at TEXT NOT NULL
-)
-"""
+def _outbox_ddl() -> tuple[str, str]:
+    """Derive outbox DDL from canonical schema — single source of truth."""
+    from lib.schema import TABLES
+
+    return (
+        _build_create_sql("side_effect_outbox", TABLES["side_effect_outbox"]),
+        _build_create_sql("idempotency_keys", TABLES["idempotency_keys"]),
+    )
 
 
 class SideEffectOutbox:
@@ -88,10 +75,11 @@ class SideEffectOutbox:
         return conn
 
     def _ensure_schema(self):
+        outbox_sql, idem_sql = _outbox_ddl()
         conn = self._get_conn()
         try:
-            conn.execute(_OUTBOX_SCHEMA)
-            conn.execute(_IDEMPOTENCY_SCHEMA)
+            conn.execute(outbox_sql)
+            conn.execute(idem_sql)
             conn.commit()
         finally:
             conn.close()
