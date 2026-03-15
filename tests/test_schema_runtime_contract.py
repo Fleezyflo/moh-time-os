@@ -295,6 +295,7 @@ class TestNoRuntimeDDL:
             "lib/intelligence/drift_detection.py",
             "lib/intelligence/signal_suppression.py",
             "lib/ui_spec_v21/engagement_lifecycle.py",
+            "lib/outbox.py",
         ],
     )
     def test_no_create_table(self, path):
@@ -302,6 +303,109 @@ class TestNoRuntimeDDL:
         assert "CREATE TABLE" not in source, (
             f"{path} still contains CREATE TABLE DDL. Tables must be owned by schema.py."
         )
+
+
+# ──────────────────────────────────────────────────────────────
+# Test 6b: Outbox tables — canonical ownership and column completeness
+# ──────────────────────────────────────────────────────────────
+
+
+class TestOutboxSchema:
+    """Proof that outbox tables are canonically owned and operational."""
+
+    def test_side_effect_outbox_in_schema(self):
+        """side_effect_outbox must be declared in schema.TABLES."""
+        assert "side_effect_outbox" in schema.TABLES, (
+            "side_effect_outbox not registered in schema.py"
+        )
+
+    def test_idempotency_keys_in_schema(self):
+        """idempotency_keys must be declared in schema.TABLES."""
+        assert "idempotency_keys" in schema.TABLES, "idempotency_keys not registered in schema.py"
+
+    def test_side_effect_outbox_created_fresh(self, fresh_db):
+        """schema_engine.create_fresh() must create side_effect_outbox."""
+        cursor = fresh_db.execute("PRAGMA table_info(side_effect_outbox)")
+        cols = {row[1] for row in cursor.fetchall()}
+        required = {
+            "id",
+            "idempotency_key",
+            "handler",
+            "action",
+            "payload",
+            "status",
+            "external_resource_id",
+            "error",
+            "created_at",
+            "fulfilled_at",
+            "attempts",
+        }
+        missing = required - cols
+        assert not missing, f"side_effect_outbox missing columns: {missing}"
+
+    def test_idempotency_keys_created_fresh(self, fresh_db):
+        """schema_engine.create_fresh() must create idempotency_keys."""
+        cursor = fresh_db.execute("PRAGMA table_info(idempotency_keys)")
+        cols = {row[1] for row in cursor.fetchall()}
+        required = {"key", "action_id", "created_at"}
+        missing = required - cols
+        assert not missing, f"idempotency_keys missing columns: {missing}"
+
+    def test_outbox_runtime_sql_against_fresh_db(self, fresh_db):
+        """Core outbox SQL operations must work against a fresh schema DB."""
+        # INSERT — record_intent path
+        fresh_db.execute(
+            "INSERT INTO side_effect_outbox "
+            "(id, idempotency_key, handler, action, payload, status, created_at) "
+            "VALUES (?, ?, ?, ?, ?, 'pending', ?)",
+            ["intent_test1", "key_1", "calendar", "create_event", "{}", "2025-01-01T00:00:00Z"],
+        )
+
+        # SELECT — get_fulfilled_intent path
+        row = fresh_db.execute(
+            "SELECT * FROM side_effect_outbox WHERE idempotency_key = ? AND status = 'fulfilled'",
+            ["key_1"],
+        ).fetchone()
+        assert row is None  # not fulfilled yet
+
+        # UPDATE — mark_fulfilled path
+        fresh_db.execute(
+            "UPDATE side_effect_outbox SET "
+            "status = 'fulfilled', external_resource_id = ?, fulfilled_at = ?, "
+            "attempts = attempts + 1 WHERE id = ?",
+            ["ext_123", "2025-01-01T00:01:00Z", "intent_test1"],
+        )
+        row = fresh_db.execute(
+            "SELECT * FROM side_effect_outbox WHERE idempotency_key = ? AND status = 'fulfilled'",
+            ["key_1"],
+        ).fetchone()
+        assert row is not None
+        assert row["external_resource_id"] == "ext_123"
+
+        # Idempotency key table operations
+        fresh_db.execute(
+            "INSERT OR IGNORE INTO idempotency_keys (key, action_id, created_at) VALUES (?, ?, ?)",
+            ["idem_1", "action_abc", "2025-01-01T00:00:00Z"],
+        )
+        row = fresh_db.execute(
+            "SELECT action_id FROM idempotency_keys WHERE key = ?",
+            ["idem_1"],
+        ).fetchone()
+        assert row["action_id"] == "action_abc"
+
+    def test_outbox_ddl_derived_from_schema(self):
+        """lib/outbox._outbox_ddl() must derive DDL from schema.TABLES, not hardcode it."""
+        from lib.outbox import _outbox_ddl
+
+        outbox_sql, idem_sql = _outbox_ddl()
+        # DDL comes from _build_create_sql which wraps table name in brackets
+        assert "[side_effect_outbox]" in outbox_sql
+        assert "[idempotency_keys]" in idem_sql
+        # Must include all declared columns
+        for col_name, _ in schema.TABLES["side_effect_outbox"]["columns"]:
+            assert col_name in outbox_sql, f"Column {col_name} missing from outbox DDL"
+        for col_name, _ in schema.TABLES["idempotency_keys"]["columns"]:
+            assert col_name in idem_sql, f"Column {col_name} missing from idempotency DDL"
 
 
 # ──────────────────────────────────────────────────────────────
@@ -726,11 +830,10 @@ class TestSchemaVersion:
         row = fresh_db.execute("PRAGMA user_version").fetchone()
         assert row[0] == schema.SCHEMA_VERSION
 
-    def test_schema_version_at_least_22(self):
-        """Schema v22 added governance_history, v4 tables, canonical views."""
-        assert schema.SCHEMA_VERSION >= 22, (
-            f"Schema version {schema.SCHEMA_VERSION} < 22; "
-            f"governance_history and v4 tables require v22+"
+    def test_schema_version_at_least_23(self):
+        """Schema v23 added side_effect_outbox and idempotency_keys."""
+        assert schema.SCHEMA_VERSION >= 23, (
+            f"Schema version {schema.SCHEMA_VERSION} < 23; outbox tables require v23+"
         )
 
 
