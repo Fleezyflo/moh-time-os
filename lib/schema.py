@@ -17,7 +17,7 @@ from collections import OrderedDict
 # =============================================================================
 # Schema version — bump when you change this file
 # =============================================================================
-SCHEMA_VERSION = 22
+SCHEMA_VERSION = 23
 
 # =============================================================================
 # Table Definitions
@@ -2103,6 +2103,38 @@ TABLES["handoffs"] = {
         ("done_definition", "TEXT NOT NULL"),
         ("state", "TEXT NOT NULL DEFAULT 'proposed'"),
         ("created_at", "TEXT NOT NULL DEFAULT (datetime('now'))"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Outbox Pattern: side_effect_outbox — durable intent recording before
+# external side effects.  Previously defined as runtime DDL in lib/outbox.py.
+# ---------------------------------------------------------------------------
+TABLES["side_effect_outbox"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("idempotency_key", "TEXT UNIQUE"),
+        ("handler", "TEXT NOT NULL"),
+        ("action", "TEXT NOT NULL"),
+        ("payload", "TEXT NOT NULL"),
+        ("status", "TEXT NOT NULL DEFAULT 'pending'"),
+        ("external_resource_id", "TEXT"),
+        ("error", "TEXT"),
+        ("created_at", "TEXT NOT NULL"),
+        ("fulfilled_at", "TEXT"),
+        ("attempts", "INTEGER NOT NULL DEFAULT 0"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Outbox Pattern: idempotency_keys — persistent idempotency key → action_id
+# mapping.  Previously defined as runtime DDL in lib/outbox.py.
+# ---------------------------------------------------------------------------
+TABLES["idempotency_keys"] = {
+    "columns": [
+        ("key", "TEXT PRIMARY KEY"),
+        ("action_id", "TEXT NOT NULL"),
+        ("created_at", "TEXT NOT NULL"),
     ],
 }
 
