@@ -21,9 +21,8 @@ import sqlite3
 import sys
 from pathlib import Path
 
-from lib import paths
-
 SYSTEM_MAP_PATH = Path("docs/system-map.json")
+DB_PATH = Path("data/moh_time_os.db")
 
 # Known stateless routes (no storage lineage)
 STATELESS_ROUTES = {
@@ -60,11 +59,10 @@ def load_system_map() -> dict:
 
 def get_db_tables() -> set[str]:
     """Get all tables from the database."""
-    db_path = paths.db_path()
-    if not db_path.exists():
+    if not DB_PATH.exists():
         return set()
     try:
-        conn = sqlite3.connect(str(db_path))
+        conn = sqlite3.connect(str(DB_PATH))
         cursor = conn.execute(
             "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'"
         )

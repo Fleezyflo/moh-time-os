@@ -87,7 +87,13 @@ export function Operations() {
         <MetricCard
           label="Fix Items"
           value={totalFixItems ?? '--'}
-          severity={totalFixItems != null && totalFixItems > 0 ? 'warning' : totalFixItems != null ? 'success' : undefined}
+          severity={
+            totalFixItems != null && totalFixItems > 0
+              ? 'warning'
+              : totalFixItems != null
+                ? 'success'
+                : undefined
+          }
         />
         <MetricCard label="Active Watchers" value={watcherCount ?? '--'} />
         <MetricCard label="Couplings" value={couplingCount ?? '--'} />

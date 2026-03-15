@@ -83,13 +83,21 @@ export function Team() {
 
   // Summary stats — preserve null when data not yet loaded
   const teamLoaded = apiTeam != null;
-  const internalCount = teamLoaded ? team.filter((m: TeamMember) => m.type === 'internal').length : null;
-  const totalOpenTasks = teamLoaded ? team.reduce((sum: number, m: TeamMember) => sum + (m.open_tasks || 0), 0) : null;
-  const totalOverdue = teamLoaded ? team.reduce((sum: number, m: TeamMember) => sum + (m.overdue_tasks || 0), 0) : null;
-  const overloadedCount = teamLoaded ? team.filter((m: TeamMember) => {
-    const load = getLoadLevel(m.open_tasks || 0, m.overdue_tasks || 0);
-    return load === loadLevels.overloaded || load === loadLevels.high;
-  }).length : null;
+  const internalCount = teamLoaded
+    ? team.filter((m: TeamMember) => m.type === 'internal').length
+    : null;
+  const totalOpenTasks = teamLoaded
+    ? team.reduce((sum: number, m: TeamMember) => sum + (m.open_tasks || 0), 0)
+    : null;
+  const totalOverdue = teamLoaded
+    ? team.reduce((sum: number, m: TeamMember) => sum + (m.overdue_tasks || 0), 0)
+    : null;
+  const overloadedCount = teamLoaded
+    ? team.filter((m: TeamMember) => {
+        const load = getLoadLevel(m.open_tasks || 0, m.overdue_tasks || 0);
+        return load === loadLevels.overloaded || load === loadLevels.high;
+      }).length
+    : null;
 
   return (
     <PageLayout
@@ -127,7 +135,11 @@ export function Team() {
       {/* Summary Grid */}
       <SummaryGrid>
         <MetricCard label="Team Size" value={internalCount ?? '--'} />
-        <MetricCard label="Open Tasks" value={totalOpenTasks ?? '--'} severity={totalOpenTasks != null ? 'info' : undefined} />
+        <MetricCard
+          label="Open Tasks"
+          value={totalOpenTasks ?? '--'}
+          severity={totalOpenTasks != null ? 'info' : undefined}
+        />
         <MetricCard
           label="Overdue"
           value={totalOverdue ?? '--'}

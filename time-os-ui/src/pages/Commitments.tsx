@@ -142,7 +142,11 @@ export default function Commitments() {
           value={untrackedCount ?? '--'}
           severity={untrackedCount != null && untrackedCount > 0 ? 'warning' : undefined}
         />
-        <MetricCard label="Due" value={dueCount ?? '--'} severity={dueCount != null && dueCount > 0 ? 'danger' : undefined} />
+        <MetricCard
+          label="Due"
+          value={dueCount ?? '--'}
+          severity={dueCount != null && dueCount > 0 ? 'danger' : undefined}
+        />
         <MetricCard
           label="Done"
           value={doneCount}
