@@ -58,10 +58,16 @@ class StateStore:
 
     @contextmanager
     def _get_conn(self):
-        """Thread-safe connection context."""
-        conn = sqlite3.connect(self.db_path)
+        """Thread-safe connection context with WAL mode and busy timeout.
+
+        Uses timeout=30 so concurrent readers/writers wait instead of
+        raising 'database is locked' immediately. WAL mode allows
+        concurrent reads while a write is in progress.
+        """
+        conn = sqlite3.connect(self.db_path, timeout=30.0)
         conn.row_factory = sqlite3.Row
-        conn.execute("PRAGMA foreign_keys=ON")  # Enable FK enforcement
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA foreign_keys=ON")
         try:
             yield conn
             conn.commit()

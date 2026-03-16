@@ -338,75 +338,68 @@ class HealthChecker:
             )
 
     def _check_daemon_health(self) -> HealthCheckResult:
-        """Check if daemon is responsive (state file fresh)."""
+        """Check if daemon is responsive via its state file.
+
+        The daemon persists state to data_dir/daemon_state.json (written by
+        TimeOSDaemon._save_state on every job cycle). We check the updated_at
+        timestamp inside that file rather than querying a DB table.
+        """
+        import json
+
+        state_file = paths.data_dir() / "daemon_state.json"
         try:
-            # Try to get daemon state from store
-            from lib.state_store import get_store
-
-            try:
-                store = get_store()
-                state = store.get("daemon_heartbeat", "current")
-
-                if state:
-                    try:
-                        heartbeat_time = datetime.fromisoformat(
-                            state.replace("Z", "+00:00") if isinstance(state, str) else str(state)
-                        )
-                        now = datetime.now(UTC)
-                        age_seconds = (now - heartbeat_time).total_seconds()
-
-                        # Allow up to 30 seconds for heartbeat
-                        max_age = 30
-
-                        if age_seconds > max_age:
-                            logger.warning(f"Daemon health degraded: heartbeat {age_seconds}s old")
-                            return HealthCheckResult(
-                                name="daemon_health",
-                                status=HealthStatus.DEGRADED,
-                                message=f"Daemon heartbeat {int(age_seconds)}s old (threshold {max_age}s)",
-                                latency_ms=0,
-                                details={"last_heartbeat": state, "age_seconds": int(age_seconds)},
-                            )
-
-                        return HealthCheckResult(
-                            name="daemon_health",
-                            status=HealthStatus.HEALTHY,
-                            message=f"Daemon responsive (heartbeat {int(age_seconds)}s old)",
-                            latency_ms=0,
-                            details={"last_heartbeat": state, "age_seconds": int(age_seconds)},
-                        )
-                    except (sqlite3.Error, ValueError, OSError) as e:
-                        logger.error(f"Error parsing daemon heartbeat: {e}")
-                        return HealthCheckResult(
-                            name="daemon_health",
-                            status=HealthStatus.DEGRADED,
-                            message=f"Error parsing daemon heartbeat: {e}",
-                            latency_ms=0,
-                        )
-
-                # No heartbeat found - assume daemon is ok but no heartbeat yet
+            if not state_file.exists():
                 return HealthCheckResult(
                     name="daemon_health",
                     status=HealthStatus.HEALTHY,
-                    message="Daemon state available",
+                    message="Daemon state file not found (daemon may not have run yet)",
                     latency_ms=0,
-                    details={"last_heartbeat": None},
+                    details={"state_file": str(state_file)},
                 )
-            except (sqlite3.Error, ValueError, OSError) as e:
-                logger.warning(f"Could not access daemon state: {e}")
-                # Degraded but not unhealthy - state store may not be initialized
+
+            with open(state_file) as f:
+                data = json.load(f)
+
+            updated_at = data.get("updated_at")
+            if not updated_at:
+                return HealthCheckResult(
+                    name="daemon_health",
+                    status=HealthStatus.HEALTHY,
+                    message="Daemon state file exists but no updated_at timestamp",
+                    latency_ms=0,
+                )
+
+            last_update = datetime.fromisoformat(updated_at)
+            now = datetime.now(UTC)
+            age_seconds = (now - last_update).total_seconds()
+
+            # Daemon ticks every 30s, jobs run every 15-60 min.
+            # State is saved after every job cycle, so >10 min staleness
+            # means the daemon is likely not running.
+            max_age = 600  # 10 minutes
+
+            if age_seconds > max_age:
                 return HealthCheckResult(
                     name="daemon_health",
                     status=HealthStatus.DEGRADED,
-                    message=f"Could not check daemon state: {e}",
+                    message=f"Daemon state {int(age_seconds)}s old (threshold {max_age}s)",
                     latency_ms=0,
+                    details={"updated_at": updated_at, "age_seconds": int(age_seconds)},
                 )
-        except (sqlite3.Error, ValueError, OSError) as e:
-            logger.error("Daemon health check failed", exc_info=e)
+
+            return HealthCheckResult(
+                name="daemon_health",
+                status=HealthStatus.HEALTHY,
+                message=f"Daemon responsive (state updated {int(age_seconds)}s ago)",
+                latency_ms=0,
+                details={"updated_at": updated_at, "age_seconds": int(age_seconds)},
+            )
+        except (json.JSONDecodeError, ValueError, OSError) as e:
+            logger.warning(f"Could not read daemon state file: {e}")
             return HealthCheckResult(
                 name="daemon_health",
                 status=HealthStatus.DEGRADED,
-                message=f"Daemon check error: {e}",
+                message=f"Could not read daemon state: {e}",
                 latency_ms=0,
             )
 
