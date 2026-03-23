@@ -33,6 +33,7 @@ import threading
 import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta
+from pathlib import Path
 
 from lib import paths
 
@@ -43,6 +44,45 @@ PID_FILE = paths.data_dir() / "daemon.pid"
 STATE_FILE = paths.data_dir() / "daemon_state.json"
 LOG_FILE = paths.data_dir() / "daemon.log"
 VENV_PYTHON = paths.project_root() / ".venv" / "bin" / "python3"
+
+# Credential env file locations (checked in order, first found wins)
+_ENV_FILE_PATHS = [
+    Path.home() / ".mohtime.env",
+    paths.project_root() / ".env",
+]
+
+
+def _load_env_file() -> int:
+    """Load KEY=VALUE pairs from the first existing env file into os.environ.
+
+    Only sets variables that are not already in the environment, so explicit
+    env vars (e.g. from launchd plist) take precedence.
+
+    Returns the number of variables loaded.
+    """
+    loaded = 0
+    for env_path in _ENV_FILE_PATHS:
+        if not env_path.is_file():
+            continue
+        logger.info("Loading credentials from %s", env_path)
+        with open(env_path) as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, _, value = line.partition("=")
+                key = key.strip()
+                value = value.strip().strip("'\"")
+                if key and key not in os.environ:
+                    os.environ[key] = value
+                    loaded += 1
+        logger.info("Loaded %d env vars from %s", loaded, env_path)
+        return loaded
+    logger.warning(
+        "No env file found at %s — credentials must be set via environment",
+        [str(p) for p in _ENV_FILE_PATHS],
+    )
+    return 0
 
 
 # Configure logging
@@ -101,6 +141,7 @@ class TimeOSDaemon:
 
     def __init__(self):
         self.logger = setup_logging(to_file=True)
+        _load_env_file()
         self.running = False
         self.jobs: dict[str, JobConfig] = {}
         self.job_states: dict[str, JobState] = {}

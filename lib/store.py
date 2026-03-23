@@ -68,15 +68,20 @@ def db_exists() -> bool:
 
 
 def table_counts() -> dict:
-    """Get row counts for all tables."""
+    """Get row counts for core tables used in health checks.
+
+    Only counts the 5 primary business tables, not all 124 schema tables.
+    Counting all tables takes ~2.4s on a 1 GB database due to full table
+    scans on million-row Gmail tables. Health checks need to be fast.
+    """
     if not db_exists():
         return {}
 
-    from lib.schema import TABLES
+    core_tables = ["clients", "people", "projects", "items", "item_history"]
 
     with get_connection() as conn:
         counts = {}
-        for table in TABLES:
+        for table in core_tables:
             try:
                 sql = safe_sql.select_count_bare(table)
                 count = conn.execute(sql).fetchone()[0]

@@ -35,7 +35,9 @@
 	<dict>
 		<key>PATH</key>
 		<string>/Users/molhamhomsi/clawd/moh_time_os/.venv/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
-		<!-- Credentials loaded from ~/.mohtime.env — do not hardcode here -->
+		<!-- Daemon loads credentials from ~/.mohtime.env or .env at startup.
+		     To set up: copy .env.example to ~/.mohtime.env with real values.
+		     Do not hardcode credentials in this plist — it is tracked in git. -->
 	</dict>
 </dict>
 </plist>

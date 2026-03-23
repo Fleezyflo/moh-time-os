@@ -62,6 +62,7 @@ class XeroCollector:
         "xero_credit_notes",
         "xero_bank_transactions",
         "xero_tax_rates",
+        "clients",  # AR summary fields updated during invoice sync
     ]
 
     def __init__(self, config: dict, store=None):

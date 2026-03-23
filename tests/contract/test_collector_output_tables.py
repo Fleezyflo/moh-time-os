@@ -132,7 +132,7 @@ class TestMultiTableCollectorsComplete:
             assert expected in tables, f"ChatCollector.OUTPUT_TABLES missing '{expected}'"
 
     def test_xero_declares_all_secondary_tables(self):
-        """Xero writes to line_items, contacts, credit_notes, bank_transactions, tax_rates."""
+        """Xero writes to line_items, contacts, credit_notes, bank_transactions, tax_rates, and clients (AR fields)."""
         tables = XeroCollector.OUTPUT_TABLES
         for expected in [
             "xero_line_items",
@@ -140,5 +140,6 @@ class TestMultiTableCollectorsComplete:
             "xero_credit_notes",
             "xero_bank_transactions",
             "xero_tax_rates",
+            "clients",
         ]:
             assert expected in tables, f"XeroCollector.OUTPUT_TABLES missing '{expected}'"
