@@ -60,7 +60,7 @@ class TestLegacyRemoved:
         """No Python files should import from collectors.scheduled_collect."""
         for py_file in PROJECT_ROOT.rglob("*.py"):
             # Skip archived files and this test file itself
-            if "_archive" in str(py_file) or py_file == Path(__file__):
+            if "_archive" in str(py_file) or py_file.name == Path(__file__).name:
                 continue
             content = py_file.read_text()
             assert "from collectors.scheduled_collect" not in content, (
