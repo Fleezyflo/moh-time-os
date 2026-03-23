@@ -277,9 +277,13 @@ def enrich_inbox_item(
 
     # Generate enrichment
     if use_llm:
-        enrichment = enrich_with_llm(sender, subject, body)
+        try:
+            enrichment = enrich_with_llm(sender, subject, body)
+        except (json.JSONDecodeError, sqlite3.Error, ValueError, OSError) as e:
+            logger.warning("LLM enrichment failed, falling back to heuristics: %s", e)
+            enrichment = {}
         if not enrichment:
-            # Fallback to heuristics if LLM fails
+            # Fallback to heuristics if LLM returns empty or raised
             enrichment = enrich_from_heuristics(sender, subject, body, priority, requires_response)
     else:
         enrichment = enrich_from_heuristics(sender, subject, body, priority, requires_response)

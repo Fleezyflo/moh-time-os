@@ -1,21 +1,20 @@
 """
-Tests for daemon resilience with circuit breakers and health tracking.
+Tests for daemon resilience — failure tracking, backoff, and state persistence.
 
-Covers:
-- Circuit breaker integration with jobs
-- Health status tracking based on consecutive failures
-- Job health state transitions
-- Circuit breaker state exposure via get_job_health()
+The daemon is a thin scheduler that delegates all pipeline work to
+AutonomousLoop via subprocess. These tests verify:
+- Job state tracking (success/failure counts)
+- Exponential backoff on consecutive failures
+- State persistence across daemon restarts
+- Graceful handling of subprocess failures
 """
 
-import time
-from datetime import datetime, timedelta, timezone
-from unittest.mock import patch
+from datetime import datetime, timedelta
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from lib.collectors.resilience import CircuitBreakerState
-from lib.daemon import JobHealth, TimeOSDaemon
+from lib.daemon import TimeOSDaemon
 
 
 @pytest.fixture
@@ -29,299 +28,172 @@ def temp_daemon_dirs(tmp_path):
 @pytest.fixture
 def daemon(temp_daemon_dirs, monkeypatch):
     """Create a TimeOSDaemon for testing."""
-    # Mock the paths to use temp directory
     monkeypatch.setattr("lib.daemon.STATE_FILE", temp_daemon_dirs / "daemon_state.json")
     monkeypatch.setattr("lib.daemon.PID_FILE", temp_daemon_dirs / "daemon.pid")
     monkeypatch.setattr("lib.daemon.LOG_FILE", temp_daemon_dirs / "daemon.log")
+    monkeypatch.setattr("lib.daemon._ENV_FILE_PATHS", [])
 
     daemon = TimeOSDaemon()
     return daemon
 
 
 # =============================================================================
-# CIRCUIT BREAKER INTEGRATION TESTS
+# JOB STATE TRACKING TESTS
 # =============================================================================
 
 
-class TestDaemonCircuitBreakers:
-    """Tests for circuit breaker integration with daemon jobs."""
+class TestJobStateTracking:
+    """Tests for job success/failure state tracking."""
 
-    def test_circuit_breakers_initialized_for_all_jobs(self, daemon):
-        """Circuit breaker should be initialized for each job."""
+    def test_initial_state_is_clean(self, daemon):
+        """Jobs should start with zero failures and no last_run."""
         for job_name in daemon.jobs:
             state = daemon.job_states[job_name]
-            assert state.circuit_breaker is not None
-            assert state.circuit_breaker.failure_threshold == 5
-            assert state.circuit_breaker.cooldown_seconds == 600
+            assert state.consecutive_failures == 0
+            assert state.total_runs == 0
+            assert state.total_failures == 0
+            assert state.last_run is None
+            assert state.last_success is None
+            assert state.last_error is None
 
-    def test_circuit_breaker_rejects_execution_when_open(self, daemon):
-        """Job execution should be skipped if circuit breaker is open."""
-        job_name = "collect"
-        state = daemon.job_states[job_name]
-        cb = state.circuit_breaker
+    def test_successful_run_updates_state(self, daemon):
+        """Successful subprocess run should update success fields."""
+        mock_result = MagicMock()
+        mock_result.returncode = 0
+        mock_result.stdout = "OK"
+        mock_result.stderr = ""
 
-        # Open the circuit breaker
-        for _ in range(cb.failure_threshold):
-            cb.record_failure()
+        with patch("subprocess.run", return_value=mock_result):
+            daemon._run_job("autonomous")
 
-        assert cb.state == CircuitBreakerState.OPEN
-
-        # Try to run job - should fail without executing
-        result = daemon._run_job(job_name)
-
-        assert result is False
-        assert "circuit breaker" in state.last_error.lower()
-        assert state.consecutive_failures > 0
-
-    def test_circuit_breaker_transitions_to_half_open_after_cooldown(self, daemon):
-        """Circuit breaker should become HALF_OPEN after cooldown."""
-        job_name = "collect"
-        state = daemon.job_states[job_name]
-        cb = state.circuit_breaker
-
-        # Open the circuit breaker
-        for _ in range(cb.failure_threshold):
-            cb.record_failure()
-
-        assert cb.state == CircuitBreakerState.OPEN
-
-        # Mock job execution to succeed
-        with patch("lib.daemon.collect_all") as mock_collect:
-            mock_collect.return_value = None
-
-            # Wait for cooldown to expire
-            cb.cooldown_seconds = 0.01
-            cb.last_failure_time = time.time() - 0.1
-
-            # Next execution should be allowed (circuit transitions to HALF_OPEN)
-            assert cb.can_execute() is True
-            assert cb.state == CircuitBreakerState.HALF_OPEN
-
-    def test_circuit_breaker_closes_after_successful_execution_in_half_open(self, daemon):
-        """Successful execution in HALF_OPEN should close circuit."""
-        job_name = "collect"
-        state = daemon.job_states[job_name]
-        cb = state.circuit_breaker
-
-        # Open circuit
-        for _ in range(cb.failure_threshold):
-            cb.record_failure()
-
-        # Make cooldown instant
-        cb.cooldown_seconds = 0.01
-        cb.last_failure_time = time.time() - 0.1
-
-        # Transition to HALF_OPEN
-        cb.can_execute()
-        assert cb.state == CircuitBreakerState.HALF_OPEN
-
-        # Execute job successfully
-        with patch("lib.daemon.collect_all") as mock_collect:
-            mock_collect.return_value = None
-            result = daemon._run_job(job_name)
-
-        assert result is True
-        assert cb.state == CircuitBreakerState.CLOSED
-        assert cb.failure_count == 0
-
-
-# =============================================================================
-# JOB HEALTH STATUS TESTS
-# =============================================================================
-
-
-class TestJobHealthStatus:
-    """Tests for job health status tracking."""
-
-    def test_initial_health_is_healthy(self, daemon):
-        """Jobs should start in HEALTHY status."""
-        for job_name in daemon.jobs:
-            state = daemon.job_states[job_name]
-            assert state.health_status == JobHealth.HEALTHY
-            assert state.is_healthy is True
-
-    def test_single_failure_marks_degraded(self, daemon):
-        """One failure should move job to DEGRADED."""
-        job_name = "collect"
-        state = daemon.job_states[job_name]
-
-        with patch("lib.daemon.collect_all") as mock_collect:
-            mock_collect.side_effect = Exception("Collect error")
-            daemon._run_job(job_name)
-
-        assert state.health_status == JobHealth.DEGRADED
-        assert state.consecutive_failures == 1
-
-    def test_multiple_failures_mark_unhealthy(self, daemon):
-        """Three or more consecutive failures should mark UNHEALTHY."""
-        job_name = "collect"
-        state = daemon.job_states[job_name]
-
-        with patch("lib.daemon.collect_all") as mock_collect:
-            mock_collect.side_effect = Exception("Collect error")
-
-            for _i in range(3):
-                daemon._run_job(job_name)
-
-        assert state.health_status == JobHealth.UNHEALTHY
-        assert state.consecutive_failures == 3
-
-    def test_successful_execution_resets_health_to_healthy(self, daemon):
-        """Successful execution should reset to HEALTHY."""
-        job_name = "collect"
-        state = daemon.job_states[job_name]
-
-        # First, fail a few times
-        with patch("lib.daemon.collect_all") as mock_collect:
-            mock_collect.side_effect = Exception("Collect error")
-            for _ in range(2):
-                daemon._run_job(job_name)
-
-        assert state.health_status == JobHealth.DEGRADED
-
-        # Now succeed
-        with patch("lib.daemon.collect_all") as mock_collect:
-            mock_collect.return_value = None
-            daemon._run_job(job_name)
-
-        assert state.health_status == JobHealth.HEALTHY
+        state = daemon.job_states["autonomous"]
+        assert state.total_runs == 1
+        assert state.total_failures == 0
         assert state.consecutive_failures == 0
+        assert state.last_success is not None
+        assert state.last_error is None
 
-    def test_health_status_property(self, daemon):
-        """is_healthy property should reflect current status."""
-        job_name = "collect"
-        state = daemon.job_states[job_name]
+    def test_failed_run_tracks_failure(self, daemon):
+        """Failed subprocess run should increment failure counters."""
+        mock_result = MagicMock()
+        mock_result.returncode = 1
+        mock_result.stdout = ""
+        mock_result.stderr = "Error occurred"
 
-        assert state.is_healthy is True
-        state.health_status = JobHealth.DEGRADED
-        assert state.is_healthy is False
-        state.health_status = JobHealth.HEALTHY
-        assert state.is_healthy is True
+        with patch("subprocess.run", return_value=mock_result):
+            daemon._run_job("autonomous")
 
+        state = daemon.job_states["autonomous"]
+        assert state.total_runs == 1
+        assert state.total_failures == 1
+        assert state.consecutive_failures == 1
+        assert state.last_error is not None
 
-# =============================================================================
-# GET_JOB_HEALTH TESTS
-# =============================================================================
+    def test_success_resets_consecutive_failures(self, daemon):
+        """Successful run should reset consecutive failure count."""
+        fail_result = MagicMock()
+        fail_result.returncode = 1
+        fail_result.stdout = ""
+        fail_result.stderr = "Error"
 
+        ok_result = MagicMock()
+        ok_result.returncode = 0
+        ok_result.stdout = "OK"
+        ok_result.stderr = ""
 
-class TestGetJobHealth:
-    """Tests for get_job_health() method."""
+        # Fail twice
+        with patch("subprocess.run", return_value=fail_result):
+            daemon._run_job("autonomous")
+            daemon._run_job("autonomous")
 
-    def test_get_health_for_single_job(self, daemon):
-        """Should return health info for a single job."""
-        job_name = "collect"
+        assert daemon.job_states["autonomous"].consecutive_failures == 2
 
-        health = daemon.get_job_health(job_name)
+        # Then succeed
+        with patch("subprocess.run", return_value=ok_result):
+            daemon._run_job("autonomous")
 
-        assert health["name"] == job_name
-        assert health["health"] == "healthy"
-        assert health["consecutive_failures"] == 0
-        assert health["total_runs"] == 0
-        assert health["circuit_breaker"] is not None
+        state = daemon.job_states["autonomous"]
+        assert state.consecutive_failures == 0
+        assert state.total_failures == 2  # Total doesn't reset
+        assert state.total_runs == 3
 
-    def test_get_health_for_all_jobs(self, daemon):
-        """Should return health info for all jobs."""
-        health = daemon.get_job_health()
+    def test_subprocess_exception_tracked_as_failure(self, daemon):
+        """If subprocess.run raises, it should be tracked as a failure."""
+        with patch("subprocess.run", side_effect=OSError("Command not found")):
+            daemon._run_job("autonomous")
 
-        assert isinstance(health, dict)
-        assert len(health) == len(daemon.jobs)
-
-        for job_name in daemon.jobs:
-            assert job_name in health
-            assert health[job_name]["name"] == job_name
-            assert "health" in health[job_name]
-
-    def test_get_health_includes_circuit_breaker_state(self, daemon):
-        """Health info should include circuit breaker state."""
-        job_name = "collect"
-        state = daemon.job_states[job_name]
-        cb = state.circuit_breaker
-
-        # Open the circuit breaker
-        for _ in range(cb.failure_threshold):
-            cb.record_failure()
-
-        health = daemon.get_job_health(job_name)
-
-        assert health["circuit_breaker"]["state"] == CircuitBreakerState.OPEN
-        assert health["circuit_breaker"]["failure_count"] == cb.failure_threshold
-
-    def test_get_health_for_nonexistent_job(self, daemon):
-        """Should return error for non-existent job."""
-        health = daemon.get_job_health("nonexistent")
-
-        assert "error" in health
-
-    def test_get_health_includes_failure_counts(self, daemon):
-        """Health info should include total and consecutive failure counts."""
-        job_name = "collect"
-
-        with patch("lib.daemon.collect_all") as mock_collect:
-            mock_collect.side_effect = Exception("test error")
-            for _ in range(3):
-                daemon._run_job(job_name)
-
-        health = daemon.get_job_health(job_name)
-
-        assert health["consecutive_failures"] == 3
-        assert health["total_failures"] == 3
-        assert health["total_runs"] == 3
-
-    def test_get_health_includes_last_error(self, daemon):
-        """Health info should include last error message."""
-        job_name = "collect"
-
-        with patch("lib.daemon.collect_all") as mock_collect:
-            mock_collect.side_effect = Exception("test error")
-            daemon._run_job(job_name)
-
-        health = daemon.get_job_health(job_name)
-
-        assert health["last_error"] is not None
-
-    def test_get_health_includes_last_success_time(self, daemon):
-        """Health info should include last success timestamp."""
-        job_name = "collect"
-
-        with patch("lib.daemon.collect_all") as mock_collect:
-            mock_collect.return_value = None
-            daemon._run_job(job_name)
-
-        health = daemon.get_job_health(job_name)
-
-        assert health["last_success"] is not None
-        # Verify it's a valid ISO format timestamp
-        datetime.fromisoformat(health["last_success"].replace("Z", "+00:00"))
+        state = daemon.job_states["autonomous"]
+        assert state.consecutive_failures == 1
+        assert state.total_failures == 1
+        assert "Command not found" in state.last_error
 
 
 # =============================================================================
-# CIRCUIT BREAKER STATE PERSISTENCE TESTS
+# BACKOFF TESTS
 # =============================================================================
 
 
-class TestCircuitBreakerPersistence:
-    """Tests for circuit breaker state across daemon restarts."""
+class TestExponentialBackoff:
+    """Tests for exponential backoff on consecutive failures."""
 
-    def test_consecutive_failures_persist_across_restarts(self, temp_daemon_dirs, monkeypatch):
-        """Consecutive failure count should persist to disk."""
+    def test_no_backoff_on_first_failure(self, daemon):
+        """First failure should not prevent next run when interval elapses."""
+        state = daemon.job_states["autonomous"]
+        state.consecutive_failures = 1
+        state.last_run = datetime.now() - timedelta(minutes=16)
+
+        assert daemon._should_run("autonomous") is True
+
+    def test_backoff_increases_with_failures(self, daemon):
+        """More failures should require longer wait before next run.
+
+        Backoff formula: min(interval_minutes, backoff_base ^ consecutive_failures)
+        With 3 failures, base=2: min(15, 2^3) = min(15, 8) = 8 minutes.
+        """
+        state = daemon.job_states["autonomous"]
+
+        # With 3 consecutive failures, backoff = min(15, 2^3) = 8 min
+        state.consecutive_failures = 3
+        state.last_run = datetime.now() - timedelta(minutes=5)
+
+        # 5 minutes ago is not enough for 8-minute backoff
+        assert daemon._should_run("autonomous") is False
+
+        # But 9 minutes ago should be enough
+        state.last_run = datetime.now() - timedelta(minutes=9)
+        assert daemon._should_run("autonomous") is True
+
+
+# =============================================================================
+# STATE PERSISTENCE TESTS
+# =============================================================================
+
+
+class TestStatePersistence:
+    """Tests for daemon state persistence across restarts."""
+
+    def test_failure_count_persists(self, temp_daemon_dirs, monkeypatch):
+        """Consecutive failure count should persist across daemon restarts."""
         monkeypatch.setattr("lib.daemon.STATE_FILE", temp_daemon_dirs / "daemon_state.json")
         monkeypatch.setattr("lib.daemon.PID_FILE", temp_daemon_dirs / "daemon.pid")
         monkeypatch.setattr("lib.daemon.LOG_FILE", temp_daemon_dirs / "daemon.log")
+        monkeypatch.setattr("lib.daemon._ENV_FILE_PATHS", [])
 
-        # Create daemon and simulate failures
+        fail_result = MagicMock()
+        fail_result.returncode = 1
+        fail_result.stdout = ""
+        fail_result.stderr = "Error"
+
+        # First daemon instance — fail twice
         daemon1 = TimeOSDaemon()
-        job_name = "collect"
-
-        with patch("lib.daemon.collect_all") as mock_collect:
-            mock_collect.side_effect = Exception("test error")
-            for _ in range(2):
-                daemon1._run_job(job_name)
-
+        with patch("subprocess.run", return_value=fail_result):
+            daemon1._run_job("autonomous")
+            daemon1._run_job("autonomous")
         daemon1._save_state()
 
-        # Create new daemon and load state
+        # Second daemon instance — should load persisted state
         daemon2 = TimeOSDaemon()
-        state = daemon2.job_states[job_name]
+        state = daemon2.job_states["autonomous"]
 
         assert state.consecutive_failures == 2
         assert state.total_runs == 2
@@ -329,60 +201,26 @@ class TestCircuitBreakerPersistence:
 
 
 # =============================================================================
-# INTEGRATION TESTS
+# JOB REGISTRATION TESTS
 # =============================================================================
 
 
-class TestDaemonResilience:
-    """Integration tests for daemon resilience features."""
+class TestJobRegistration:
+    """Tests for default job registration."""
 
-    def test_job_with_backoff_on_consecutive_failures(self, daemon):
-        """Job should have increased interval when failing."""
-        job_name = "collect"
-        daemon.jobs[job_name]
+    def test_default_jobs_registered(self, daemon):
+        """Daemon should register autonomous and backup jobs."""
+        assert "autonomous" in daemon.jobs
+        assert "backup" in daemon.jobs
 
-        # Make job fail
-        with patch("lib.daemon.collect_all") as mock_collect:
-            mock_collect.side_effect = Exception("test error")
-            daemon._run_job(job_name)
+    def test_autonomous_job_config(self, daemon):
+        """Autonomous job should run every 15 minutes."""
+        config = daemon.jobs["autonomous"]
+        assert config.interval_minutes == 15
+        assert "autonomous_loop" in " ".join(str(c) for c in config.command)
 
-        # Set last_run to past to make should_run return true
-        daemon.job_states[job_name].last_run = datetime.now(timezone.utc) - timedelta(hours=1)
-
-        # should_run should apply backoff
-        should_run = daemon._should_run(job_name)
-        assert should_run is True  # Backoff has elapsed
-
-    def test_metrics_tracked_for_job_health(self, daemon):
-        """Metrics should be updated when job health changes."""
-        job_name = "collect"
-
-        with patch("lib.daemon.collect_all") as mock_collect:
-            mock_collect.side_effect = Exception("test error")
-            daemon._run_job(job_name)
-
-        # Check that metrics were updated
-        # (we can't directly verify without checking REGISTRY, which is integration)
-        state = daemon.job_states[job_name]
-        assert state.health_status != JobHealth.HEALTHY
-
-    def test_daemon_graceful_degradation_with_circuit_breakers(self, daemon):
-        """Daemon should gracefully handle job failures with circuit breakers."""
-        job_name = "collect"
-        state = daemon.job_states[job_name]
-        cb = state.circuit_breaker
-
-        # Simulate many failures to open circuit breaker
-        with patch("lib.daemon.collect_all") as mock_collect:
-            mock_collect.side_effect = Exception("test error")
-            for _ in range(10):  # More than threshold
-                daemon._run_job(job_name)
-
-        # Circuit should be open
-        assert cb.state == CircuitBreakerState.OPEN
-        assert state.health_status == JobHealth.UNHEALTHY
-
-        # Further job runs should be rejected immediately
-        result = daemon._run_job(job_name)
-        assert result is False
-        assert "circuit breaker" in state.last_error.lower()
+    def test_backup_job_config(self, daemon):
+        """Backup job should run every 24 hours."""
+        config = daemon.jobs["backup"]
+        assert config.interval_minutes == 1440
+        assert "backup" in " ".join(str(c) for c in config.command)
