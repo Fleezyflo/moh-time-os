@@ -67,7 +67,7 @@ class LogEntry:
     ) -> "LogEntry":
         """Create a log entry with current timestamp."""
         return cls(
-            timestamp=datetime.now(timezone.utc).isoformat() + "Z",
+            timestamp=datetime.now(timezone.utc).isoformat(),
             level=level,
             message=message,
             logger=logger,

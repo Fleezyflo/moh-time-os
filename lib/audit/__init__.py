@@ -90,7 +90,7 @@ class AuditStore:
             entity_type=entity_type,
             entity_id=entity_id,
             payload=payload,
-            timestamp=datetime.now(timezone.utc).isoformat() + "Z",
+            timestamp=datetime.now(timezone.utc).isoformat(),
             request_id=get_request_id(),
             trace_id=get_trace_id(),
             actor=actor,

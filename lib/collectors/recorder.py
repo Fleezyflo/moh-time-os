@@ -194,8 +194,8 @@ class RecordingSession:
             response_status=response_status,
             response_headers=dict(response_headers),
             response_body=response_body,
-            recorded_at=now.isoformat() + "Z",
-            expires_at=expires.isoformat() + "Z",
+            recorded_at=now.isoformat(),
+            expires_at=expires.isoformat(),
         )
         self.cassette.entries.append(entry)
 
