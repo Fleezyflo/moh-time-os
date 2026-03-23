@@ -1313,6 +1313,7 @@ TABLES["write_context_v1"] = {
         ("actor", "TEXT"),
         ("source", "TEXT"),
         ("git_sha", "TEXT"),
+        ("set_at", "TEXT"),
     ],
 }
 
