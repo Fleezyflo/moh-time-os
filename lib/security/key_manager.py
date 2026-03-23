@@ -261,7 +261,7 @@ class KeyManager:
                     return None
 
                 # Update last_used_at
-                now = datetime.now(timezone.utc).isoformat() + "Z"
+                now = datetime.now(timezone.utc).isoformat()
                 conn.execute(
                     "UPDATE api_keys SET last_used_at = ? WHERE id = ?",
                     (now, key_info.id),

@@ -243,46 +243,49 @@ class ModeChange(BaseModel):
 @app.get("/api/overview", response_model=DetailResponse)
 async def get_overview():
     """Get dashboard overview with priorities, calendar, decisions, anomalies."""
-    # Get priority queue
-    priority_queue = (
-        analyzers.priority_analyzer.analyze() if hasattr(analyzers, "priority_analyzer") else []
-    )
-    top_priorities = sorted(priority_queue, key=lambda x: x.get("score", 0), reverse=True)[:5]
+    try:
+        # Get priority queue
+        priority_queue = (
+            analyzers.priority_analyzer.analyze() if hasattr(analyzers, "priority_analyzer") else []
+        )
+        top_priorities = sorted(priority_queue, key=lambda x: x.get("score", 0), reverse=True)[:5]
 
-    # Get today's events
-    from datetime import datetime
+        # Get today's events
+        from datetime import datetime
 
-    today = datetime.now().strftime("%Y-%m-%d")
-    events = store.query(
-        "SELECT * FROM events WHERE date(start_time) = ? ORDER BY start_time", [today]
-    )
+        today = datetime.now().strftime("%Y-%m-%d")
+        events = store.query(
+            "SELECT * FROM events WHERE date(start_time) = ? ORDER BY start_time", [today]
+        )
 
-    # Get pending decisions
-    pending_decisions = store.query(
-        "SELECT * FROM decisions WHERE approved IS NULL ORDER BY created_at DESC LIMIT 5"
-    )
+        # Get pending decisions
+        pending_decisions = store.query(
+            "SELECT * FROM decisions WHERE approved IS NULL ORDER BY created_at DESC LIMIT 5"
+        )
 
-    # Get anomalies
-    anomalies = store.query(
-        "SELECT * FROM insights WHERE type = 'anomaly' AND (expires_at IS NULL OR expires_at > datetime('now')) ORDER BY created_at DESC LIMIT 5"
-    )
+        # Get anomalies
+        anomalies = store.query(
+            "SELECT * FROM insights WHERE type = 'anomaly' AND (expires_at IS NULL OR expires_at > datetime('now')) ORDER BY created_at DESC LIMIT 5"
+        )
 
-    return {
-        "priorities": {"items": top_priorities, "total": len(priority_queue)},
-        "calendar": {"events": [dict(e) for e in events], "event_count": len(events)},
-        "decisions": {
-            "pending": [dict(d) for d in pending_decisions],
-            "pending_count": store.count("decisions", "approved IS NULL"),
-        },
-        "anomalies": {
-            "items": [dict(a) for a in anomalies],
-            "total": store.count(
-                "insights",
-                "type = 'anomaly' AND (expires_at IS NULL OR expires_at > datetime('now'))",
-            ),
-        },
-        "sync_status": collectors.get_status(),
-    }
+        return {
+            "priorities": {"items": top_priorities, "total": len(priority_queue)},
+            "calendar": {"events": [dict(e) for e in events], "event_count": len(events)},
+            "decisions": {
+                "pending": [dict(d) for d in pending_decisions],
+                "pending_count": store.count("decisions", "approved IS NULL"),
+            },
+            "anomalies": {
+                "items": [dict(a) for a in anomalies],
+                "total": store.count(
+                    "insights",
+                    "type = 'anomaly' AND (expires_at IS NULL OR expires_at > datetime('now'))",
+                ),
+            },
+            "sync_status": collectors.get_status(),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # ==== Time Endpoints ====
@@ -3366,55 +3369,60 @@ async def debug_db():
 @app.get("/api/summary", response_model=DetailResponse)
 async def get_summary():
     """Get a comprehensive summary."""
-    from datetime import date
+    try:
+        from datetime import date
 
-    # Get cached data
-    queue = store.get_cache("priority_queue") or []
-    anomalies = store.get_cache("anomalies") or []
+        # Get cached data
+        queue = store.get_cache("priority_queue") or []
+        anomalies = store.get_cache("anomalies") or []
 
-    # Today's info
-    today = date.today().isoformat()
-    today_events = store.query(
-        "SELECT * FROM events WHERE date(start_time) = ? ORDER BY start_time", [today]
-    )
+        # Today's info
+        today = date.today().isoformat()
+        today_events = store.query(
+            "SELECT * FROM events WHERE date(start_time) = ? ORDER BY start_time", [today]
+        )
 
-    # Calculate total event hours
-    total_event_hours = 0
-    for e in today_events:
-        try:
-            start = datetime.fromisoformat(e["start_time"].replace("Z", "+00:00"))
-            end = datetime.fromisoformat(e["end_time"].replace("Z", "+00:00"))
-            total_event_hours += (end - start).total_seconds() / 3600
-        except (ValueError, TypeError, AttributeError) as ex:
-            logger.debug(f"Could not parse event times for event {e.get('id', 'unknown')}: {ex}")
+        # Calculate total event hours
+        total_event_hours = 0
+        for e in today_events:
+            try:
+                start = datetime.fromisoformat(e["start_time"].replace("Z", "+00:00"))
+                end = datetime.fromisoformat(e["end_time"].replace("Z", "+00:00"))
+                total_event_hours += (end - start).total_seconds() / 3600
+            except (ValueError, TypeError, AttributeError) as ex:
+                logger.debug(
+                    f"Could not parse event times for event {e.get('id', 'unknown')}: {ex}"
+                )
 
-    # Calculate available hours (9 hour work day)
-    work_hours = 9
-    available = max(0, work_hours - total_event_hours)
+        # Calculate available hours (9 hour work day)
+        work_hours = 9
+        available = max(0, work_hours - total_event_hours)
 
-    return {
-        "priorities": {
-            "top_5": queue[:5],
-            "total": len(queue),
-            "critical_count": len([i for i in queue if i.get("score", 0) >= 70]),
-        },
-        "anomalies": {
-            "items": [a for a in anomalies if a.get("severity") in ("critical", "high")],
-            "total": len(anomalies),
-        },
-        "today": {
-            "events": len(today_events),
-            "event_list": [
-                {"title": e["title"], "start": e["start_time"], "end": e["end_time"]}
-                for e in today_events[:5]
-            ],
-            "total_event_hours": round(total_event_hours, 1),
-            "available_hours": round(available, 1),
-            "deep_work_hours": round(max(0, available - 2), 1),
-        },
-        "pending_approvals": store.count("decisions", "approved IS NULL"),
-        "sync_status": collectors.get_status(),
-    }
+        return {
+            "priorities": {
+                "top_5": queue[:5],
+                "total": len(queue),
+                "critical_count": len([i for i in queue if i.get("score", 0) >= 70]),
+            },
+            "anomalies": {
+                "items": [a for a in anomalies if a.get("severity") in ("critical", "high")],
+                "total": len(anomalies),
+            },
+            "today": {
+                "events": len(today_events),
+                "event_list": [
+                    {"title": e["title"], "start": e["start_time"], "end": e["end_time"]}
+                    for e in today_events[:5]
+                ],
+                "total_event_hours": round(total_event_hours, 1),
+                "available_hours": round(available, 1),
+                "deep_work_hours": round(max(0, available - 2), 1),
+            },
+            "pending_approvals": store.count("decisions", "approved IS NULL"),
+            "sync_status": collectors.get_status(),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/api/search", response_model=DetailResponse)
@@ -4044,7 +4052,10 @@ async def get_project_detail(project_id: str):
 @app.post("/api/sync/xero", response_model=DetailResponse)
 async def sync_xero():
     """Sync with Xero."""
-    return collectors.sync(source="xero")
+    try:
+        return collectors.sync(source="xero")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/api/tasks/link", response_model=DetailResponse)
