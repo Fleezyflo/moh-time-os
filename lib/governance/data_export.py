@@ -221,7 +221,7 @@ class DataExporter:
             }
         except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error getting schema for {table}: {e}")
-            return {"error": str(e)}
+            raise
 
     def export_table(
         self,

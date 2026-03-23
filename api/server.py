@@ -3215,13 +3215,19 @@ async def release_emergency_brake():
 @app.get("/api/sync/status", response_model=DetailResponse)
 async def get_sync_status():
     """Get sync status for all collectors."""
-    return collectors.get_status()
+    try:
+        return collectors.get_status()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/api/sync", response_model=DetailResponse)
 async def force_sync(source: str | None = None):
     """Force a sync operation."""
-    return collectors.force_sync(source=source or "")
+    try:
+        return collectors.force_sync(source=source or "")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/api/analyze", response_model=DetailResponse)
@@ -3240,12 +3246,15 @@ async def run_cycle():
 @app.get("/api/status", response_model=DetailResponse)
 async def get_status():
     """Get system status."""
-    return {
-        "status": "ok",
-        "timestamp": datetime.now().isoformat(),
-        "sync": collectors.get_status(),
-        "governance": governance.get_summary(),
-    }
+    try:
+        return {
+            "status": "ok",
+            "timestamp": datetime.now().isoformat(),
+            "sync": collectors.get_status(),
+            "governance": governance.get_summary(),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/api/health")

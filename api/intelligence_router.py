@@ -1437,7 +1437,13 @@ def compliance_report():
                 detail=f"Failed to load retention policies: {policies_result.error}",
             )
         retention_policies = policies_result.data
-        deletion_requests = subject_access.list_requests(status="completed")
+        deletion_result = subject_access.list_requests(status="completed")
+        if deletion_result.failed:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to list deletion requests: {deletion_result.error}",
+            )
+        deletion_requests = deletion_result.data
 
         violations = []
         policy_table_names = {p.table for p in retention_policies}
