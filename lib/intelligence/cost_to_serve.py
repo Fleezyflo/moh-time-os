@@ -27,6 +27,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from statistics import quantiles
 
+from lib.common.result_types import DataResult
 from lib.query_engine import get_engine
 
 logger = logging.getLogger(__name__)
@@ -444,7 +445,7 @@ class CostToServeEngine:
             logger.error(f"Error computing portfolio profitability: {e}", exc_info=True)
             return None
 
-    def get_hidden_cost_clients(self) -> list[dict]:
+    def get_hidden_cost_clients(self) -> DataResult[list[dict]]:
         """
         Identify clients where operational cost indicators exceed revenue signals.
 
@@ -455,13 +456,13 @@ class CostToServeEngine:
         - Low efficiency ratio
 
         Returns:
-            List of dicts with client_id, name, and cost_indicators
+            DataResult wrapping list of dicts with client_id, name, and cost_indicators
         """
         try:
             clients_overview = self.engine.client_portfolio_overview()
             if not clients_overview:
                 logger.warning("No clients in portfolio")
-                return []
+                return DataResult.ok([])
 
             hidden_cost_clients = []
 
@@ -506,13 +507,13 @@ class CostToServeEngine:
                         }
                     )
 
-            return sorted(hidden_cost_clients, key=lambda c: c["efficiency_ratio"])
+            return DataResult.ok(sorted(hidden_cost_clients, key=lambda c: c["efficiency_ratio"]))
 
         except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error identifying hidden cost clients: {e}", exc_info=True)
-            return []
+            return DataResult.fail(str(e), error_type="storage")
 
-    def get_profitability_ranking(self) -> list[dict]:
+    def get_profitability_ranking(self) -> DataResult[list[dict]]:
         """
         Get all clients ranked by profitability (efficiency ratio).
 
@@ -524,7 +525,7 @@ class CostToServeEngine:
             clients_overview = self.engine.client_portfolio_overview()
             if not clients_overview:
                 logger.warning("No clients in portfolio")
-                return []
+                return DataResult.ok([])
 
             rankings = []
 
@@ -544,11 +545,13 @@ class CostToServeEngine:
                     }
                 )
 
-            return sorted(rankings, key=lambda r: r["efficiency_ratio"], reverse=True)
+            return DataResult.ok(
+                sorted(rankings, key=lambda r: r["efficiency_ratio"], reverse=True)
+            )
 
         except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error computing profitability ranking: {e}", exc_info=True)
-            return []
+            return DataResult.fail(str(e), error_type="storage")
 
     # =========================================================================
     # HELPERS

@@ -104,7 +104,7 @@ def load_projects() -> dict[str, Project]:
         return {pid: Project.from_dict(p) for pid, p in data.items()}
     except (json.JSONDecodeError, TypeError) as e:
         logger.warning("Could not load projects file: %s", e)
-        return {}
+        raise
 
 
 def save_projects(projects: dict[str, Project]) -> None:

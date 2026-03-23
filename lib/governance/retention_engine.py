@@ -29,6 +29,7 @@ from pathlib import Path
 from typing import Any
 
 from lib import safe_sql
+from lib.common.result_types import DataResult
 from lib.data_lifecycle import PROTECTED_TABLES, get_lifecycle_manager
 from lib.db import validate_identifier
 
@@ -110,39 +111,19 @@ class RetentionEngine:
         return conn
 
     def _create_schema(self) -> None:
-        """Create retention system tables if needed."""
+        """Ensure retention_policies and retention_audit tables exist.
+
+        Table definitions live in lib/schema.py (single source of truth).
+        schema_engine.converge() creates them at startup; this is a defensive
+        fallback for standalone usage.
+        """
+        from lib.schema import TABLES
+        from lib.schema_engine import _build_create_sql
+
         conn = self._get_connection()
         try:
-            # Table to store policies
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS retention_policies (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    table_name TEXT NOT NULL UNIQUE,
-                    retention_days INTEGER NOT NULL,
-                    archive_before_delete INTEGER NOT NULL,
-                    require_approval INTEGER NOT NULL,
-                    min_rows_preserve INTEGER NOT NULL,
-                    timestamp_column TEXT,
-                    active INTEGER NOT NULL,
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
-                )
-            """)
-
-            # Table to store audit log of enforcement actions
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS retention_audit (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    table_name TEXT NOT NULL,
-                    action_type TEXT NOT NULL,
-                    rows_affected INTEGER,
-                    cutoff_date TEXT,
-                    dry_run INTEGER NOT NULL,
-                    executed_at TEXT NOT NULL,
-                    error_message TEXT
-                )
-            """)
-
+            conn.execute(_build_create_sql("retention_policies", TABLES["retention_policies"]))
+            conn.execute(_build_create_sql("retention_audit", TABLES["retention_audit"]))
             conn.commit()
             logger.debug("Retention schema tables created/verified")
         except (sqlite3.Error, ValueError, OSError) as e:
@@ -201,8 +182,12 @@ class RetentionEngine:
         finally:
             conn.close()
 
-    def get_policies(self) -> list[RetentionPolicy]:
-        """Get all retention policies."""
+    def get_policies(self) -> DataResult[list[RetentionPolicy]]:
+        """Get all retention policies.
+
+        Returns:
+            DataResult with list of policies on success, or error on failure.
+        """
         conn = self._get_connection()
         try:
             cursor = conn.execute(
@@ -224,10 +209,10 @@ class RetentionEngine:
                     active=bool(row[6]),
                 )
                 policies.append(policy)
-            return policies
+            return DataResult.ok(policies)
         except (sqlite3.Error, ValueError, OSError) as e:
-            logger.error(f"Error getting policies: {e}")
-            return []
+            logger.error("get_policies failed: %s", e, exc_info=True)
+            return DataResult.fail(str(e), error_type="storage")
         finally:
             conn.close()
 
@@ -288,12 +273,17 @@ class RetentionEngine:
         start_time = time.time()
         report = RetentionReport()
 
-        policies = self.get_policies()
-        if not policies:
+        policies_result = self.get_policies()
+        if not policies_result.succeeded:
+            logger.error("Failed to load policies: %s", policies_result.error)
+            report.errors.append(f"Policy loading failed: {policies_result.error}")
+            return report
+
+        if not policies_result.data:
             logger.warning("No retention policies configured")
             return report
 
-        for policy in policies:
+        for policy in policies_result.data:
             if not policy.active:
                 continue
 
@@ -327,12 +317,16 @@ class RetentionEngine:
             return None
 
         # Get policy
-        policies = [p for p in self.get_policies() if p.table == table]
-        if not policies:
+        policies_result = self.get_policies()
+        if not policies_result.succeeded:
+            logger.error("Failed to load policies for %s: %s", table, policies_result.error)
+            return None
+        matching = [p for p in policies_result.data if p.table == table]
+        if not matching:
             logger.debug(f"No policy for table {table}")
             return None
 
-        policy = policies[0]
+        policy = matching[0]
 
         # Find timestamp column
         ts_column = policy.timestamp_column or self._find_timestamp_column(table)
@@ -445,18 +439,20 @@ class RetentionEngine:
         finally:
             conn.close()
 
-    def get_table_age_distribution(self, table: str) -> dict[str, Any]:
+    def get_table_age_distribution(self, table: str) -> DataResult[dict[str, Any]]:
         """
         Get histogram of data age in a table.
 
         Returns:
-            dict with age buckets and counts
+            DataResult with dict of age buckets and counts on success,
+            or error on failure.
         """
         # Find timestamp column
         ts_column = self._find_timestamp_column(table)
         if not ts_column:
-            logger.warning(f"Cannot find timestamp column for {table}")
-            return {}
+            msg = f"Cannot find timestamp column for {table}"
+            logger.warning(msg)
+            return DataResult.fail(msg, error_type="schema")
 
         # Validate identifiers before SQL construction
         validate_identifier(table)
@@ -515,20 +511,21 @@ class RetentionEngine:
             )
             distribution["> 1 year"] = cursor.fetchone()[0]
 
-            return distribution
+            return DataResult.ok(distribution)
 
         except (sqlite3.Error, ValueError, OSError) as e:
-            logger.error(f"Error getting age distribution for {table}: {e}")
-            return {}
+            logger.error("get_table_age_distribution failed for %s: %s", table, e, exc_info=True)
+            return DataResult.fail(str(e), error_type="storage")
         finally:
             conn.close()
 
-    def get_stale_data_summary(self) -> dict[str, Any]:
+    def get_stale_data_summary(self) -> DataResult[dict[str, Any]]:
         """
         Get overview of stale/old data across all tables.
 
         Returns:
-            dict with table -> {old_rows, total_rows, percentage}
+            DataResult with dict of table -> {old_rows, total_rows, percentage}
+            on success, or error on failure.
         """
         summary = {}
         conn = self._get_connection()
@@ -574,10 +571,10 @@ class RetentionEngine:
                         "percentage": round(100 * old_rows / total, 1),
                     }
 
-            return summary
+            return DataResult.ok(summary)
 
         except (sqlite3.Error, ValueError, OSError) as e:
-            logger.error(f"Error getting stale data summary: {e}")
-            return {}
+            logger.error("get_stale_data_summary failed: %s", e, exc_info=True)
+            return DataResult.fail(str(e), error_type="storage")
         finally:
             conn.close()

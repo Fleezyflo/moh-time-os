@@ -69,50 +69,20 @@ def _get_db_path(db_path: Path | None = None) -> Path:
 
 
 def ensure_notification_table(db_path: Path | None = None) -> None:
+    """Ensure notification_queue table exists.
+
+    Table definition lives in lib/schema.py (single source of truth).
+    schema_engine.converge() creates it at startup; this is a defensive
+    fallback for standalone usage.
     """
-    Create notification_queue table if it doesn't exist.
-    """
+    from lib.schema import TABLES
+    from lib.schema_engine import _build_create_sql
+
     db = _get_db_path(db_path)
 
     conn = sqlite3.connect(str(db))
     try:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS notification_queue (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                notification_id TEXT UNIQUE NOT NULL,
-                type TEXT NOT NULL,
-                priority TEXT NOT NULL,
-                title TEXT NOT NULL,
-                body TEXT,
-                entity_type TEXT,
-                entity_id TEXT,
-                data_json TEXT,
-                created_at TEXT NOT NULL,
-                delivered_at TEXT,
-
-                -- Indexes
-                UNIQUE(notification_id)
-            )
-        """)
-
-        # Create indexes
-        conn.execute("""
-            CREATE INDEX IF NOT EXISTS idx_notification_type
-            ON notification_queue(type)
-        """)
-        conn.execute("""
-            CREATE INDEX IF NOT EXISTS idx_notification_priority
-            ON notification_queue(priority)
-        """)
-        conn.execute("""
-            CREATE INDEX IF NOT EXISTS idx_notification_created
-            ON notification_queue(created_at)
-        """)
-        conn.execute("""
-            CREATE INDEX IF NOT EXISTS idx_notification_delivered
-            ON notification_queue(delivered_at)
-        """)
-
+        conn.execute(_build_create_sql("notification_queue", TABLES["notification_queue"]))
         conn.commit()
     finally:
         conn.close()

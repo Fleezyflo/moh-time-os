@@ -129,28 +129,18 @@ class AttentionTracker:
         self._ensure_table()
 
     def _ensure_table(self) -> None:
+        """Ensure attention_events table exists.
+
+        Table definition lives in lib/schema.py (single source of truth).
+        schema_engine.converge() creates it at startup; this is a defensive
+        fallback for standalone usage.
+        """
+        from lib.schema import TABLES
+        from lib.schema_engine import _build_create_sql
+
         conn = sqlite3.connect(str(self.db_path))
         try:
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS attention_events (
-                    id TEXT PRIMARY KEY,
-                    entity_type TEXT NOT NULL,
-                    entity_id TEXT NOT NULL,
-                    event_type TEXT NOT NULL,
-                    duration_minutes REAL DEFAULT 0,
-                    notes TEXT DEFAULT '',
-                    created_at TEXT NOT NULL
-                )
-                """
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_attention_entity "
-                "ON attention_events(entity_type, entity_id)"
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_attention_time ON attention_events(created_at)"
-            )
+            conn.execute(_build_create_sql("attention_events", TABLES["attention_events"]))
             conn.commit()
         finally:
             conn.close()

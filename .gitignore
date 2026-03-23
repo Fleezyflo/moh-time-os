@@ -66,6 +66,9 @@ logs/
 agent_state.json
 agent_index_log.md
 
+# Pilot plugin working directory
+.pilot/
+
 # Node.js (frontend)
 time-os-ui/node_modules/
 time-os-ui/dist/

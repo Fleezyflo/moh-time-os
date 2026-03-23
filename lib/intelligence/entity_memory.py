@@ -103,34 +103,18 @@ class EntityMemory:
         self._ensure_table()
 
     def _ensure_table(self) -> None:
+        """Ensure entity_interactions table exists.
+
+        Table definition lives in lib/schema.py (single source of truth).
+        schema_engine.converge() creates it at startup; this is a defensive
+        fallback for standalone usage.
+        """
+        from lib.schema import TABLES
+        from lib.schema_engine import _build_create_sql
+
         conn = sqlite3.connect(str(self.db_path))
         try:
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS entity_interactions (
-                    id TEXT PRIMARY KEY,
-                    entity_type TEXT NOT NULL,
-                    entity_id TEXT NOT NULL,
-                    interaction_type TEXT NOT NULL,
-                    summary TEXT NOT NULL,
-                    details_json TEXT DEFAULT '{}',
-                    created_at TEXT NOT NULL,
-                    source TEXT DEFAULT 'system'
-                )
-                """
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_interactions_entity "
-                "ON entity_interactions(entity_type, entity_id)"
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_interactions_time "
-                "ON entity_interactions(created_at)"
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_interactions_type "
-                "ON entity_interactions(interaction_type)"
-            )
+            conn.execute(_build_create_sql("entity_interactions", TABLES["entity_interactions"]))
             conn.commit()
         finally:
             conn.close()

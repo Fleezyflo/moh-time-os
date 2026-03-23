@@ -124,16 +124,12 @@ def save_org_settings(conn, settings: OrgSettings) -> None:
 
     Creates table if it doesn't exist.
     """
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS org_settings (
-            id INTEGER PRIMARY KEY CHECK (id = 1),
-            timezone TEXT NOT NULL DEFAULT 'Asia/Dubai',
-            base_currency TEXT NOT NULL DEFAULT 'AED',
-            finance_calc_version TEXT NOT NULL DEFAULT 'v1',
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        )
-    """)
+    # Table definition lives in lib/schema.py (single source of truth).
+    # schema_engine.converge() creates it at startup; this is a defensive fallback.
+    from lib.schema import TABLES
+    from lib.schema_engine import _build_create_sql
+
+    conn.execute(_build_create_sql("org_settings", TABLES["org_settings"]))
 
     from .time_utils import now_iso
 
@@ -234,19 +230,6 @@ def create_currency_mismatch_signal(
     }
 
 
-# SQL migration for org_settings table
-ORG_SETTINGS_MIGRATION = """
--- Org Settings Table (Spec 0.1)
-CREATE TABLE IF NOT EXISTS org_settings (
-    id INTEGER PRIMARY KEY CHECK (id = 1),
-    timezone TEXT NOT NULL DEFAULT 'Asia/Dubai',
-    base_currency TEXT NOT NULL DEFAULT 'AED',
-    finance_calc_version TEXT NOT NULL DEFAULT 'v1',
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-);
-
--- Insert default settings if not exists
-INSERT OR IGNORE INTO org_settings (id, timezone, base_currency, finance_calc_version, created_at, updated_at)
-VALUES (1, 'Asia/Dubai', 'AED', 'v1', datetime('now'), datetime('now'));
-"""
+# NOTE: ORG_SETTINGS_MIGRATION removed — table definition now lives in
+# lib/schema.py as TABLES["org_settings"]. Default row insertion handled
+# by save_org_settings() on first use.

@@ -66,7 +66,7 @@ def get_outstanding_invoices() -> list:
 
     except (OSError, ValueError, KeyError) as e:
         logger.error("Error fetching invoices: %s", e)
-        return []
+        raise
 
 
 def get_ar_summary() -> dict:
@@ -134,4 +134,4 @@ def get_all_client_revenue() -> list:
 
     except (OSError, ValueError, KeyError) as e:
         logger.error("Error fetching revenue data: %s", e)
-        return []
+        raise

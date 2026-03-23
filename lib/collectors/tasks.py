@@ -32,6 +32,7 @@ class TasksCollector(BaseCollector):
 
     source_name = "tasks"
     target_table = "tasks"
+    OUTPUT_TABLES = ["tasks"]
 
     def __init__(self, config: dict, store=None):
         super().__init__(config, store)

@@ -54,41 +54,23 @@ class AuditStore:
         self._ensure_table()
 
     def _ensure_table(self) -> None:
-        """Create audit table if not exists."""
-        self.conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS audit_events (
-                event_id TEXT PRIMARY KEY,
-                event_type TEXT NOT NULL,
-                entity_type TEXT NOT NULL,
-                entity_id TEXT NOT NULL,
-                payload TEXT NOT NULL,
-                timestamp TEXT NOT NULL,
-                request_id TEXT,
-                trace_id TEXT,
-                actor TEXT,
-                created_at TEXT DEFAULT CURRENT_TIMESTAMP
-            )
+        """Ensure audit_events table exists.
+
+        Table definition lives in lib/schema.py (single source of truth).
+        schema_engine.converge() creates it at startup; this is a defensive
+        fallback for standalone usage.
         """
-        )
-        self.conn.execute(
-            """
-            CREATE INDEX IF NOT EXISTS idx_audit_entity
-            ON audit_events(entity_type, entity_id)
-        """
-        )
-        self.conn.execute(
-            """
-            CREATE INDEX IF NOT EXISTS idx_audit_type
-            ON audit_events(event_type)
-        """
-        )
-        self.conn.execute(
-            """
-            CREATE INDEX IF NOT EXISTS idx_audit_timestamp
-            ON audit_events(timestamp)
-        """
-        )
+        from lib.schema import INDEXES, TABLES
+        from lib.schema_engine import _build_create_sql
+
+        self.conn.execute(_build_create_sql("audit_events", TABLES["audit_events"]))
+        # Create indexes defined in schema.py for this table
+        for idx_name, tbl, cols, where in INDEXES:
+            if tbl == "audit_events":
+                where_clause = f" WHERE {where}" if where else ""
+                self.conn.execute(
+                    f"CREATE INDEX IF NOT EXISTS [{idx_name}] ON [{tbl}]({cols}){where_clause}"
+                )
         self.conn.commit()
 
     def record(

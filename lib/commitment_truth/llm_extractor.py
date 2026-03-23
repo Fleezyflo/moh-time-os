@@ -96,7 +96,7 @@ def extract_with_llm(text: str, subject: str = "") -> list[dict]:
 
     except (sqlite3.Error, ValueError, OSError) as e:
         logger.info(f"LLM extraction error: {e}")
-        return []
+        raise
 
 
 def process_unextracted_communications(limit: int = 50) -> dict:

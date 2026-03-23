@@ -300,7 +300,7 @@ def get_pending_proposals() -> list[dict]:
         return json.loads(proposals_file.read_text())
     except (json.JSONDecodeError, OSError) as e:
         logger.warning(f"Could not load proposals file: {e}")
-        return []
+        raise
 
 
 def approve_proposal(proposal_index: int) -> tuple[bool, str]:

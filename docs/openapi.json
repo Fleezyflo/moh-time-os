@@ -3798,7 +3798,7 @@
     },
     "/api/command/client-health": {
       "get": {
-        "description": "Client health overview for agency command center.",
+        "description": "Client health overview for agency command center.\n\n\u26a0\ufe0f  NON-CANONICAL \u2014 not called by UI. See CANONICALIZATION.md \u00a76.",
         "operationId": "command_client_health_api_command_client_health_get",
         "responses": {
           "200": {
@@ -4044,7 +4044,7 @@
     },
     "/api/command/team-load": {
       "get": {
-        "description": "Team load overview for agency command center.",
+        "description": "Team load overview for agency command center.\n\n\u26a0\ufe0f  NON-CANONICAL \u2014 not called by UI. See CANONICALIZATION.md \u00a77.",
         "operationId": "command_team_load_api_command_team_load_get",
         "responses": {
           "200": {
@@ -4942,7 +4942,7 @@
     },
     "/api/control-room/proposals": {
       "get": {
-        "description": "Get proposals with full hierarchy context.\n\nArgs:\n    limit: Max proposals to return\n    status: Filter by status (open, snoozed, dismissed, accepted)\n    days: Filter to signals within last N days (1=today, 7=week, 30=month)\n    client_id: Filter to signals for a specific client (optional)\n    member_id: Filter to signals for tasks assigned to this team member (optional)\n\nReturns:\n    items: List of proposals with:\n        - scope_level, scope_name (project/client level)\n        - client_name, client_tier\n        - score, score_breakdown\n        - signal_summary (counts by category)\n        - worst_signal (text description)\n        - signal_count, remaining_count",
+        "description": "Get proposals with full hierarchy context.\n\n\u26a0\ufe0f  NON-CANONICAL \u2014 not called by UI. See CANONICALIZATION.md \u00a710.\n\nArgs:\n    limit: Max proposals to return\n    status: Filter by status (open, snoozed, dismissed, accepted)\n    days: Filter to signals within last N days (1=today, 7=week, 30=month)\n    client_id: Filter to signals for a specific client (optional)\n    member_id: Filter to signals for tasks assigned to this team member (optional)\n\nReturns:\n    items: List of proposals with:\n        - scope_level, scope_name (project/client level)\n        - client_name, client_tier\n        - score, score_breakdown\n        - signal_summary (counts by category)\n        - worst_signal (text description)\n        - signal_count, remaining_count",
         "operationId": "get_proposals_api_control_room_proposals_get",
         "parameters": [
           {

@@ -263,13 +263,13 @@ class TestIntelligenceAPIErrorFields:
         src = inspect.getsource(get_intelligence_patterns)
         assert "detection_errors" in src, "patterns endpoint strips detection_errors"
 
-    def test_S_proposals_endpoint_preserves_detection_health(self):
-        """[S] /intelligence/proposals surfaces pattern detection errors."""
-        from api.spec_router import get_intelligence_proposals
+    def test_S_proposals_endpoint_served_by_intelligence_router(self):
+        """[S] /intelligence/proposals is served by intelligence_router (canonical)."""
+        from api.intelligence_router import list_proposals
 
-        src = inspect.getsource(get_intelligence_proposals)
-        assert "pattern_detection_errors" in src, (
-            "proposals endpoint does not surface pattern detection errors"
+        src = inspect.getsource(list_proposals)
+        assert "generate_proposals" in src, (
+            "canonical proposals endpoint must call generate_proposals"
         )
 
 

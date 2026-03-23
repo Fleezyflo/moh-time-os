@@ -55,6 +55,15 @@ class XeroCollector:
     with proper client_id linking and status tracking.
     """
 
+    OUTPUT_TABLES = [
+        "invoices",
+        "xero_line_items",
+        "xero_contacts",
+        "xero_credit_notes",
+        "xero_bank_transactions",
+        "xero_tax_rates",
+    ]
+
     def __init__(self, config: dict, store=None):
         self.config = config
         self.store = store or get_store()

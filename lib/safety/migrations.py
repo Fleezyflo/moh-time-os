@@ -42,53 +42,32 @@ def run_safety_migrations(conn: sqlite3.Connection, verbose: bool = True) -> dic
         "errors": [],
     }
 
+    # Table definitions live in lib/schema.py (single source of truth).
+    # schema_engine.converge() creates them at startup; these calls are
+    # defensive fallbacks when safety migrations run independently.
+    from lib.schema import TABLES
+    from lib.schema_engine import _build_create_sql
+
     # 1. Create write_context_v1 table
     try:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS write_context_v1 (
-                id INTEGER PRIMARY KEY CHECK (id = 1),
-                request_id TEXT NOT NULL,
-                actor TEXT NOT NULL,
-                source TEXT NOT NULL,
-                git_sha TEXT NOT NULL,
-                set_at TEXT NOT NULL
-            )
-        """)
+        conn.execute(_build_create_sql("write_context_v1", TABLES["write_context_v1"]))
         results["tables_created"].append("write_context_v1")
         if verbose:
             logger.info("Created/verified write_context_v1 table")
     except (sqlite3.Error, ValueError, OSError) as e:
         results["errors"].append(f"write_context_v1: {e}")
 
-    # 2. Create db_write_audit_v1 table
+    # 2. Create db_write_audit_v1 table + indexes
     try:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS db_write_audit_v1 (
-                id TEXT PRIMARY KEY,
-                at TEXT NOT NULL,
-                actor TEXT NOT NULL,
-                request_id TEXT NOT NULL,
-                source TEXT NOT NULL,
-                git_sha TEXT NOT NULL,
-                table_name TEXT NOT NULL,
-                op TEXT NOT NULL CHECK (op IN ('INSERT', 'UPDATE', 'DELETE')),
-                row_id TEXT NOT NULL,
-                before_json TEXT,
-                after_json TEXT
-            )
-        """)
-        conn.execute("""
-            CREATE INDEX IF NOT EXISTS idx_audit_table_row ON db_write_audit_v1(table_name, row_id)
-        """)
-        conn.execute("""
-            CREATE INDEX IF NOT EXISTS idx_audit_actor ON db_write_audit_v1(actor)
-        """)
-        conn.execute("""
-            CREATE INDEX IF NOT EXISTS idx_audit_request ON db_write_audit_v1(request_id)
-        """)
-        conn.execute("""
-            CREATE INDEX IF NOT EXISTS idx_audit_at ON db_write_audit_v1(at)
-        """)
+        conn.execute(_build_create_sql("db_write_audit_v1", TABLES["db_write_audit_v1"]))
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_audit_table_row ON db_write_audit_v1(table_name, row_id)"
+        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_audit_actor ON db_write_audit_v1(actor)")
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_audit_request ON db_write_audit_v1(request_id)"
+        )
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_audit_at ON db_write_audit_v1(at)")
         results["tables_created"].append("db_write_audit_v1")
         if verbose:
             logger.info("Created/verified db_write_audit_v1 table with indexes")
@@ -97,15 +76,7 @@ def run_safety_migrations(conn: sqlite3.Connection, verbose: bool = True) -> dic
 
     # 3. Create maintenance_mode table
     try:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS maintenance_mode_v1 (
-                id INTEGER PRIMARY KEY CHECK (id = 1),
-                flag INTEGER NOT NULL DEFAULT 0 CHECK (flag IN (0, 1)),
-                reason TEXT,
-                set_by TEXT,
-                set_at TEXT
-            )
-        """)
+        conn.execute(_build_create_sql("maintenance_mode_v1", TABLES["maintenance_mode_v1"]))
         # Ensure exactly one row exists
         conn.execute("""
             INSERT OR IGNORE INTO maintenance_mode_v1 (id, flag) VALUES (1, 0)

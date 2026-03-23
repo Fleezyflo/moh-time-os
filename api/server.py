@@ -17,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 
-from api.response_models import DetailResponse, MutationResponse
+from api.response_models import DetailResponse, ErrorResponse, MutationResponse, classify_error_type
 from lib import db as db_module
 from lib import paths, safe_sql
 from lib.analyzers import AnalyzerOrchestrator
@@ -118,6 +118,40 @@ app.include_router(governance_router)
 
 app.include_router(action_router, prefix="/api")
 app.include_router(chat_webhook_router, prefix="/api")
+
+
+# ==== Unified Error Handler ====
+# All HTTPException responses go through this handler to produce a consistent
+# ErrorResponse shape: {error, error_type, detail, request_id}.
+# Frontend can rely on this shape for ALL API errors.
+
+
+@app.exception_handler(HTTPException)
+async def unified_http_exception_handler(request: Request, exc: HTTPException):
+    """Convert all HTTPException responses to unified ErrorResponse format."""
+    error_type = classify_error_type(exc.status_code)
+
+    # Extract error message — exc.detail can be str or dict
+    if isinstance(exc.detail, dict):
+        error_message = exc.detail.get("message", exc.detail.get("error", str(exc.detail)))
+        detail_extra = str(exc.detail) if "message" in exc.detail else None
+    else:
+        error_message = str(exc.detail) if exc.detail else "An error occurred"
+        detail_extra = None
+
+    # Try to get request_id from middleware (CorrelationIdMiddleware sets it)
+    request_id = getattr(request.state, "request_id", None) if hasattr(request, "state") else None
+
+    body = ErrorResponse(
+        error=error_message,
+        error_type=error_type,
+        detail=detail_extra,
+        request_id=request_id,
+    )
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=body.model_dump(exclude_none=True),
+    )
 
 
 # ==== DB Startup & Migrations ====
@@ -294,7 +328,7 @@ async def get_time_blocks(date: str | None = None, lane: str | None = None):
         return {"date": date, "blocks": result, "total": len(result)}
     except Exception as e:
         logger.exception("time/blocks error: %s", e)
-        return {"date": date, "blocks": [], "total": 0, "error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/api/time/summary", response_model=DetailResponse)
@@ -317,7 +351,7 @@ async def get_time_summary(date: str | None = None):
         return {"date": date, "time": day_summary, "scheduling": scheduling_summary}
     except Exception as e:
         logger.exception("time/summary error: %s", e)
-        return {"date": date, "time": {}, "scheduling": {}, "error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/api/time/schedule", response_model=MutationResponse)
@@ -482,7 +516,7 @@ async def get_capacity_lanes_endpoint():
         return {"lanes": lanes}
     except Exception as e:
         logger.exception("capacity/lanes error: %s", e)
-        return {"lanes": [], "error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/api/capacity/utilization", response_model=DetailResponse)
@@ -498,7 +532,7 @@ async def get_capacity_utilization(lane_id: str | None = None, target_date: str 
         return calc.get_capacity_summary(target_date=target_date)
     except Exception as e:
         logger.exception("capacity/utilization error: %s", e)
-        return {"utilization": {}, "error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/api/capacity/forecast", response_model=DetailResponse)
@@ -524,7 +558,7 @@ async def get_capacity_forecast(lane_id: str = "default", days: int = 7):
         }
     except Exception as e:
         logger.exception("capacity/forecast error: %s", e)
-        return {"lane_id": lane_id, "days": days, "forecasts": [], "error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/api/capacity/debt", response_model=DetailResponse)
@@ -537,13 +571,7 @@ async def get_capacity_debt(lane: str | None = None):
         return tracker.get_debt_report(lane=lane)
     except Exception as e:
         logger.exception("capacity/debt error: %s", e)
-        return {
-            "lane": lane,
-            "total_open_min": 0,
-            "total_resolved_min": 0,
-            "entries": [],
-            "error": str(e),
-        }
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/api/capacity/debt/accrue", status_code=501)
@@ -2885,7 +2913,7 @@ async def get_events(hours: int = 24):
         return {"events": [dict(e) for e in events], "total": len(events)}
     except Exception as e:
         logger.exception("events error: %s", e)
-        return {"events": [], "total": 0, "error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/api/day/{date}", response_model=DetailResponse)
@@ -3007,7 +3035,7 @@ async def get_notification_stats():
         return {"total": total, "unread": unread}
     except Exception as e:
         logger.exception("notifications/stats error: %s", e)
-        return {"total": 0, "unread": 0, "error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/api/notifications/{notif_id}/dismiss", response_model=MutationResponse)
@@ -3205,7 +3233,7 @@ async def run_analysis():
 @app.post("/api/cycle", response_model=DetailResponse)
 async def run_cycle():
     """Run a full autonomous cycle."""
-    loop = AutonomousLoop(store, collectors, analyzers, governance)
+    loop = AutonomousLoop()
     return loop.run_cycle()
 
 
@@ -4244,6 +4272,12 @@ async def get_dependencies():
 # Note: This is intentionally placed at the end of the file after all API routes
 
 # ==== Control Room API (V4) ====
+# ⚠️  NON-CANONICAL — see CANONICALIZATION.md §10.
+# /api/control-room/proposals is not called by any UI page.
+# Canonical proposal routes:
+#   - /api/v2/proposals (cached, reads proposals_v4)
+#   - /api/v2/intelligence/proposals (live-generated)
+# These routes are scheduled for removal.
 
 
 @app.get("/api/control-room/proposals", response_model=DetailResponse)
@@ -4255,6 +4289,8 @@ async def get_proposals(
     member_id: str | None = None,
 ):
     """Get proposals with full hierarchy context.
+
+    ⚠️  NON-CANONICAL — not called by UI. See CANONICALIZATION.md §10.
 
     Args:
         limit: Max proposals to return
@@ -4339,8 +4375,7 @@ async def get_proposals(
 
                 return {"items": proposals[:limit], "total": len(proposals)}
         except (sqlite3.Error, ValueError) as svc_err:
-            logger.warning(f"ProposalService error: {svc_err}")
-            pass
+            logger.warning(f"ProposalService error, falling back to signal query: {svc_err}")
 
         # Fallback: Generate proposals from signals
         from datetime import datetime, timedelta
@@ -4762,17 +4797,6 @@ async def add_issue_note(issue_id: str, body: AddIssueNoteRequest):
         conn = sqlite3.connect(store.db_path)
         cur = conn.cursor()
 
-        # Create notes table if not exists
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS issue_notes (
-                note_id TEXT PRIMARY KEY,
-                issue_id TEXT NOT NULL,
-                text TEXT NOT NULL,
-                actor TEXT,
-                created_at TEXT DEFAULT (datetime('now'))
-            )
-        """)
-
         import uuid
 
         note_id = str(uuid.uuid4())[:8]
@@ -4809,21 +4833,6 @@ async def get_watchers(hours: int = 24):
         conn = sqlite3.connect(store.db_path)
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
-
-        # Ensure watchers table exists (defensive)
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS watchers (
-                watcher_id TEXT PRIMARY KEY,
-                issue_id TEXT NOT NULL,
-                watch_type TEXT NOT NULL,
-                params TEXT NOT NULL DEFAULT '{}',
-                active INTEGER NOT NULL DEFAULT 1,
-                next_check_at TEXT NOT NULL,
-                last_checked_at TEXT,
-                triggered_at TEXT,
-                trigger_count INTEGER NOT NULL DEFAULT 0
-            )
-        """)
 
         # Get recently triggered watchers with issue details
         cur.execute(
@@ -5386,11 +5395,20 @@ async def seed_identities():
 
 
 # ==== Command Center ====
+# ⚠️  NON-CANONICAL — see CANONICALIZATION.md §6-7.
+# /api/command/client-health and /api/command/team-load are not called by any UI page.
+# Canonical routes:
+#   - Client health: /api/clients/health (used by UI)
+#   - Team load: /api/v2/team (used by UI)
+# These routes are scheduled for removal.
 
 
 @app.get("/api/command/client-health", response_model=DetailResponse)
 async def command_client_health():
-    """Client health overview for agency command center."""
+    """Client health overview for agency command center.
+
+    ⚠️  NON-CANONICAL — not called by UI. See CANONICALIZATION.md §6.
+    """
     try:
         from lib.command_center import ClientHealthView
 
@@ -5416,7 +5434,10 @@ async def command_client_detail(client_id: str):
 
 @app.get("/api/command/team-load", response_model=DetailResponse)
 async def command_team_load():
-    """Team load overview for agency command center."""
+    """Team load overview for agency command center.
+
+    ⚠️  NON-CANONICAL — not called by UI. See CANONICALIZATION.md §7.
+    """
     try:
         from lib.command_center import TeamLoadView
 

@@ -64,8 +64,11 @@ def temp_db():
 @pytest.fixture
 def key_manager(temp_db):
     """Create a KeyManager instance with a temporary database."""
-    # Patch the db_path to use our temp db
-    with patch("lib.security.key_manager.store.DB_PATH", temp_db):
+    # Patch paths.db_path to redirect all store operations to temp db
+    with patch("lib.paths.db_path", return_value=temp_db):
+        from lib import store
+
+        store.init_db()
         manager = KeyManager()
         yield manager
 
@@ -228,8 +231,7 @@ class TestKeyExpiration:
         _key, info = key_manager.create_key("test", KeyRole.VIEWER, expires_in_days=90)
 
         assert info.expires_at is not None
-        raw = info.expires_at.replace("Z", "+00:00")
-        expires = datetime.fromisoformat(raw)
+        expires = datetime.fromisoformat(info.expires_at)
         now = datetime.now(tz=timezone.utc)
         delta = (expires - now).days
 
@@ -363,9 +365,10 @@ class TestListKeys:
     """Test listing keys."""
 
     def test_list_empty(self, key_manager):
-        """List returns empty list when no keys."""
-        keys = key_manager.list_keys()
-        assert keys == []
+        """List returns successful result with empty list when no keys."""
+        result = key_manager.list_keys()
+        assert result.succeeded
+        assert result.data == []
 
     def test_list_keys(self, key_manager):
         """List returns all active keys."""
@@ -373,8 +376,10 @@ class TestListKeys:
         _key2, _ = key_manager.create_key("key2", KeyRole.OPERATOR)
         _key3, _ = key_manager.create_key("key3", KeyRole.ADMIN)
 
-        keys = key_manager.list_keys()
+        result = key_manager.list_keys()
 
+        assert result.succeeded
+        keys = result.data
         assert len(keys) == 3
         names = {k.name for k in keys}
         assert names == {"key1", "key2", "key3"}
@@ -383,9 +388,10 @@ class TestListKeys:
         """List never returns key hashes."""
         key_manager.create_key("test", KeyRole.VIEWER)
 
-        keys = key_manager.list_keys()
+        result = key_manager.list_keys()
+        assert result.succeeded
 
-        for key_info in keys:
+        for key_info in result.data:
             # KeyInfo should not have a hash attribute
             assert not hasattr(key_info, "key_hash")
             # And it definitely shouldn't be exposed in str representation
@@ -398,8 +404,10 @@ class TestListKeys:
 
         key_manager.revoke_key(info2.id)
 
-        keys = key_manager.list_keys(active_only=True)
+        result = key_manager.list_keys(active_only=True)
 
+        assert result.succeeded
+        keys = result.data
         assert len(keys) == 1
         assert keys[0].name == "active"
 
@@ -410,8 +418,10 @@ class TestListKeys:
 
         key_manager.revoke_key(info2.id)
 
-        keys = key_manager.list_keys(active_only=False)
+        result = key_manager.list_keys(active_only=False)
 
+        assert result.succeeded
+        keys = result.data
         assert len(keys) == 2
         names = {k.name for k in keys}
         assert names == {"active", "revoked"}
@@ -422,10 +432,24 @@ class TestListKeys:
         _key2, _ = key_manager.create_key("key2", KeyRole.VIEWER)
         _key3, _ = key_manager.create_key("key3", KeyRole.VIEWER)
 
-        keys = key_manager.list_keys()
+        result = key_manager.list_keys()
 
+        assert result.succeeded
+        keys = result.data
         # Should be in reverse order (newest first)
         assert [k.name for k in keys] == ["key3", "key2", "key1"]
+
+    def test_list_keys_db_error(self, key_manager):
+        """When DB fails, list_keys returns FAILED status, not empty list."""
+        from unittest.mock import patch
+
+        with patch("lib.store.get_connection", side_effect=sqlite3.Error("DB locked")):
+            result = key_manager.list_keys()
+
+        assert result.failed
+        assert result.error is not None
+        assert "DB locked" in result.error
+        assert result.data is None
 
 
 class TestGetKeyInfo:
@@ -598,9 +622,10 @@ class TestMetadataExposure:
         for i in range(5):
             key_manager.create_key(f"key_{i}", KeyRole.VIEWER)
 
-        keys = key_manager.list_keys()
+        result = key_manager.list_keys()
+        assert result.succeeded
 
-        for key_info in keys:
+        for key_info in result.data:
             assert not hasattr(key_info, "key_hash")
 
     def test_get_key_info_no_hash(self, key_manager):

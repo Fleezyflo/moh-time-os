@@ -132,10 +132,11 @@ class TestPolicyCRUD:
         )
         engine.add_policy(policy)
 
-        policies = engine.get_policies()
-        assert len(policies) == 1
-        assert policies[0].table == "test_table"
-        assert policies[0].retention_days == 30
+        result = engine.get_policies()
+        assert result.succeeded
+        assert len(result.data) == 1
+        assert result.data[0].table == "test_table"
+        assert result.data[0].retention_days == 30
 
     def test_remove_policy(self, engine):
         """Test removing a policy."""
@@ -145,10 +146,10 @@ class TestPolicyCRUD:
             min_rows_preserve=5,
         )
         engine.add_policy(policy)
-        assert len(engine.get_policies()) == 1
+        assert len(engine.get_policies().data) == 1
 
         engine.remove_policy("test_table")
-        assert len(engine.get_policies()) == 0
+        assert len(engine.get_policies().data) == 0
 
     def test_update_policy(self, engine):
         """Test updating an existing policy."""
@@ -163,13 +164,15 @@ class TestPolicyCRUD:
         policy.retention_days = 60
         engine.add_policy(policy)
 
-        policies = engine.get_policies()
-        assert policies[0].retention_days == 60
+        result = engine.get_policies()
+        assert result.succeeded
+        assert result.data[0].retention_days == 60
 
     def test_get_policies_empty(self, engine):
         """Test getting policies when none exist."""
-        policies = engine.get_policies()
-        assert policies == []
+        result = engine.get_policies()
+        assert result.succeeded
+        assert result.data == []
 
     def test_get_policies_multiple(self, engine):
         """Test getting multiple policies."""
@@ -181,8 +184,9 @@ class TestPolicyCRUD:
             )
             engine.add_policy(policy)
 
-        policies = engine.get_policies()
-        assert len(policies) == 3
+        result = engine.get_policies()
+        assert result.succeeded
+        assert len(result.data) == 3
 
 
 # =============================================================================
@@ -398,7 +402,9 @@ class TestTableAgeDistribution:
 
     def test_age_distribution_buckets(self, engine, sample_data):
         """Test age distribution returns expected buckets."""
-        distribution = engine.get_table_age_distribution("test_table")
+        result = engine.get_table_age_distribution("test_table")
+        assert result.succeeded
+        distribution = result.data
 
         # Should have buckets
         assert len(distribution) > 0
@@ -407,7 +413,9 @@ class TestTableAgeDistribution:
 
     def test_age_distribution_counts(self, engine, sample_data):
         """Test age distribution counts are reasonable."""
-        distribution = engine.get_table_age_distribution("test_table")
+        result = engine.get_table_age_distribution("test_table")
+        assert result.succeeded
+        distribution = result.data
 
         # Total count should match or be close to actual
         total = sum(distribution.values())
@@ -424,7 +432,9 @@ class TestStaleDataSummary:
 
     def test_stale_data_summary(self, engine, sample_data):
         """Test stale data summary generation."""
-        summary = engine.get_stale_data_summary()
+        result = engine.get_stale_data_summary()
+        assert result.succeeded
+        summary = result.data
 
         # Should be a dict
         assert isinstance(summary, dict)
@@ -627,3 +637,99 @@ class TestScheduleVariants:
         """Test monthly schedule."""
         scheduler = RetentionScheduler(engine, schedule="monthly")
         assert scheduler.schedule == "monthly"
+
+
+# =============================================================================
+# DATARESULT ERROR-CASE TESTS
+# =============================================================================
+
+
+class TestGetPoliciesFailure:
+    """Tests for get_policies() returning DataResult.fail() on error."""
+
+    def test_get_policies_returns_failure_on_db_error(self, temp_db):
+        """get_policies() returns DataResult.fail() when DB is corrupted."""
+        engine = RetentionEngine(temp_db)
+
+        # Corrupt the database by dropping the policies table
+        conn = sqlite3.connect(str(temp_db))
+        conn.execute("DROP TABLE IF EXISTS retention_policies")
+        conn.commit()
+        conn.close()
+
+        result = engine.get_policies()
+        assert result.failed
+        assert result.error is not None
+        assert result.data is None
+
+    def test_get_policies_success_returns_dataresult(self, engine):
+        """get_policies() returns DataResult.ok() on success."""
+        result = engine.get_policies()
+        assert result.succeeded
+        assert result.data is not None
+        assert isinstance(result.data, list)
+
+
+class TestAgeDistributionFailure:
+    """Tests for get_table_age_distribution() error handling."""
+
+    def test_age_distribution_no_timestamp_column(self, engine):
+        """get_table_age_distribution() returns failure when no timestamp column."""
+        # Create a table without a timestamp column
+        conn = sqlite3.connect(str(engine.db_path))
+        conn.execute("CREATE TABLE no_ts (id INTEGER PRIMARY KEY, value TEXT)")
+        conn.commit()
+        conn.close()
+
+        result = engine.get_table_age_distribution("no_ts")
+        assert result.failed
+        assert "timestamp column" in result.error.lower()
+
+    def test_age_distribution_success(self, engine, sample_data):
+        """get_table_age_distribution() returns DataResult.ok() on success."""
+        result = engine.get_table_age_distribution("test_table")
+        assert result.succeeded
+        assert isinstance(result.data, dict)
+
+
+class TestStaleDataSummaryFailure:
+    """Tests for get_stale_data_summary() error handling."""
+
+    def test_stale_data_summary_returns_dataresult(self, engine, sample_data):
+        """get_stale_data_summary() returns DataResult.ok() on success."""
+        result = engine.get_stale_data_summary()
+        assert result.succeeded
+        assert isinstance(result.data, dict)
+
+    def test_stale_data_summary_failure_on_corrupt_db(self, temp_db):
+        """get_stale_data_summary() returns DataResult.fail() on DB error."""
+        engine = RetentionEngine(temp_db)
+
+        # Corrupt the database
+        conn = sqlite3.connect(str(temp_db))
+        conn.execute("DROP TABLE IF EXISTS test_table")
+        conn.execute("DROP TABLE IF EXISTS unprotected_data")
+        conn.execute("DROP TABLE IF EXISTS protected_table")
+        conn.close()
+
+        # Should still succeed (empty summary) even with no tables
+        result = engine.get_stale_data_summary()
+        assert result.succeeded
+
+
+class TestEnforceWithPolicyFailure:
+    """Tests for enforce() when get_policies() fails."""
+
+    def test_enforce_reports_policy_load_failure(self, temp_db):
+        """enforce() includes error in report when get_policies fails."""
+        engine = RetentionEngine(temp_db)
+
+        # Drop the policies table to cause get_policies to fail
+        conn = sqlite3.connect(str(temp_db))
+        conn.execute("DROP TABLE IF EXISTS retention_policies")
+        conn.commit()
+        conn.close()
+
+        report = engine.enforce(dry_run=True)
+        assert len(report.errors) > 0
+        assert "Policy loading failed" in report.errors[0]

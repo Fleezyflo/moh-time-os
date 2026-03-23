@@ -19,6 +19,7 @@ from dataclasses import asdict, dataclass
 from enum import Enum
 from pathlib import Path
 
+from lib.common.result_types import DataResult
 from lib.query_engine import get_engine
 
 logger = logging.getLogger(__name__)
@@ -686,16 +687,16 @@ class TrajectoryEngine:
             logger.error(f"Error computing client trajectory: {e}", exc_info=True)
             return None
 
-    def portfolio_health_trajectory(self) -> list[FullTrajectory]:
+    def portfolio_health_trajectory(self) -> DataResult[list[FullTrajectory]]:
         """
         Trajectory for all clients in portfolio.
 
         Returns:
-            List of FullTrajectory objects
+            DataResult wrapping list of FullTrajectory objects
         """
         if not self.engine:
             logger.error("Query engine not initialized")
-            return []
+            return DataResult.fail("Query engine not initialized", error_type="config")
 
         try:
             clients = self.engine.client_portfolio_overview()
@@ -706,8 +707,8 @@ class TrajectoryEngine:
                 if traj:
                     results.append(traj)
 
-            return results
+            return DataResult.ok(results)
 
         except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error computing portfolio trajectory: {e}", exc_info=True)
-            return []
+            return DataResult.fail(str(e), error_type="storage")

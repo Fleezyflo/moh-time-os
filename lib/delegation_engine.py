@@ -82,7 +82,7 @@ def load_packets() -> dict[str, DelegationPacket]:
         return {pid: DelegationPacket.from_dict(p) for pid, p in data.items()}
     except (json.JSONDecodeError, OSError, KeyError, TypeError) as e:
         logger.warning(f"Could not load delegation packets: {e}")
-        return {}
+        raise
 
 
 def save_packets(packets: dict[str, DelegationPacket]) -> None:

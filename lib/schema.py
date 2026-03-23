@@ -17,7 +17,7 @@ from collections import OrderedDict
 # =============================================================================
 # Schema version — bump when you change this file
 # =============================================================================
-SCHEMA_VERSION = 23
+SCHEMA_VERSION = 27
 
 # =============================================================================
 # Table Definitions
@@ -1320,6 +1320,103 @@ TABLES["maintenance_mode_v1"] = {
     "columns": [
         ("id", "INTEGER PRIMARY KEY"),
         ("flag", "INTEGER DEFAULT 0"),
+        ("reason", "TEXT"),
+        ("set_by", "TEXT"),
+        ("set_at", "TEXT"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Safety: db_write_audit_v1 — audit trail of all DB writes.
+# Previously defined as runtime DDL in lib/safety/migrations.py.
+# Consolidated here in SCHEMA_VERSION 25 (C-002 PR3).
+# ---------------------------------------------------------------------------
+TABLES["db_write_audit_v1"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("at", "TEXT NOT NULL"),
+        ("actor", "TEXT NOT NULL"),
+        ("request_id", "TEXT NOT NULL"),
+        ("source", "TEXT NOT NULL"),
+        ("git_sha", "TEXT NOT NULL"),
+        ("table_name", "TEXT NOT NULL"),
+        ("op", "TEXT NOT NULL"),
+        ("row_id", "TEXT NOT NULL"),
+        ("before_json", "TEXT"),
+        ("after_json", "TEXT"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Governance: retention_policies — retention policy definitions.
+# Previously defined as runtime DDL in lib/governance/retention_engine.py.
+# Consolidated here in SCHEMA_VERSION 25 (C-002 PR3).
+# ---------------------------------------------------------------------------
+TABLES["retention_policies"] = {
+    "columns": [
+        ("id", "INTEGER PRIMARY KEY AUTOINCREMENT"),
+        ("table_name", "TEXT NOT NULL"),
+        ("retention_days", "INTEGER NOT NULL"),
+        ("archive_before_delete", "INTEGER NOT NULL"),
+        ("require_approval", "INTEGER NOT NULL"),
+        ("min_rows_preserve", "INTEGER NOT NULL"),
+        ("timestamp_column", "TEXT"),
+        ("active", "INTEGER NOT NULL"),
+        ("created_at", "TEXT NOT NULL"),
+        ("updated_at", "TEXT NOT NULL"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Governance: retention_audit — audit log of retention enforcement actions.
+# Previously defined as runtime DDL in lib/governance/retention_engine.py.
+# Consolidated here in SCHEMA_VERSION 25 (C-002 PR3).
+# ---------------------------------------------------------------------------
+TABLES["retention_audit"] = {
+    "columns": [
+        ("id", "INTEGER PRIMARY KEY AUTOINCREMENT"),
+        ("table_name", "TEXT NOT NULL"),
+        ("action_type", "TEXT NOT NULL"),
+        ("rows_affected", "INTEGER"),
+        ("cutoff_date", "TEXT"),
+        ("dry_run", "INTEGER NOT NULL"),
+        ("executed_at", "TEXT NOT NULL"),
+        ("error_message", "TEXT"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Governance: retention_runs — scheduler run history.
+# Previously defined as runtime DDL in lib/governance/retention_scheduler.py.
+# Consolidated here in SCHEMA_VERSION 25 (C-002 PR3).
+# ---------------------------------------------------------------------------
+TABLES["retention_runs"] = {
+    "columns": [
+        ("id", "INTEGER PRIMARY KEY AUTOINCREMENT"),
+        ("schedule", "TEXT NOT NULL"),
+        ("started_at", "TEXT NOT NULL"),
+        ("completed_at", "TEXT"),
+        ("status", "TEXT NOT NULL"),
+        ("total_rows_deleted", "INTEGER"),
+        ("total_rows_archived", "INTEGER"),
+        ("total_rows_anonymized", "INTEGER"),
+        ("error_count", "INTEGER"),
+        ("warning_count", "INTEGER"),
+        ("duration_ms", "INTEGER"),
+        ("dry_run", "INTEGER NOT NULL"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Governance: retention_locks — lock table for scheduler concurrency.
+# Previously defined as runtime DDL in lib/governance/retention_scheduler.py.
+# Consolidated here in SCHEMA_VERSION 25 (C-002 PR3).
+# ---------------------------------------------------------------------------
+TABLES["retention_locks"] = {
+    "columns": [
+        ("lock_key", "TEXT PRIMARY KEY"),
+        ("acquired_at", "TEXT NOT NULL"),
+        ("released_at", "TEXT"),
     ],
 }
 
@@ -1577,6 +1674,61 @@ INDEXES: list[tuple[str, str, str, str | None]] = [
     ("idx_engagement_transitions_engagement_id", "engagement_transitions", "engagement_id", None),
     # api_keys
     ("idx_api_keys_key_hash", "api_keys", "key_hash", None),
+    # items + item_history (consolidated from lib/store.py SCHEMA in v24)
+    ("idx_items_status", "items", "status", None),
+    ("idx_items_due", "items", "due", None),
+    ("idx_items_client", "items", "client_id", None),
+    ("idx_items_project", "items", "project_id", None),
+    ("idx_items_owner", "items", "owner", None),
+    ("idx_history_item", "item_history", "item_id", None),
+    # clients indexes (consolidated from lib/store.py SCHEMA in v24)
+    ("idx_clients_tier", "clients", "tier", None),
+    ("idx_clients_health", "clients", "relationship_health", None),
+    ("idx_clients_xero", "clients", "xero_contact_id", None),
+    # people indexes (consolidated from lib/store.py SCHEMA in v24)
+    ("idx_people_type", "people", "type", None),
+    ("idx_people_email", "people", "email", None),
+    # projects indexes (consolidated from lib/store.py SCHEMA in v24)
+    ("idx_projects_health", "projects", "health", None),
+    ("idx_projects_asana", "projects", "asana_project_id", None),
+    # db_write_audit_v1 indexes (consolidated from lib/safety/migrations.py in v25)
+    ("idx_audit_table_row", "db_write_audit_v1", "table_name, row_id", None),
+    ("idx_audit_actor", "db_write_audit_v1", "actor", None),
+    ("idx_audit_request", "db_write_audit_v1", "request_id", None),
+    ("idx_audit_at", "db_write_audit_v1", "at", None),
+    # retention_policies (consolidated from lib/governance/retention_engine.py in v25)
+    ("idx_retention_policies_table", "retention_policies", "table_name", None),
+    # entity_interactions (consolidated from lib/intelligence/entity_memory.py in v26)
+    ("idx_interactions_entity", "entity_interactions", "entity_type, entity_id", None),
+    ("idx_interactions_time", "entity_interactions", "created_at", None),
+    # data_freshness (consolidated from lib/intelligence/data_freshness.py in v26)
+    ("idx_freshness_source", "data_freshness", "source", None),
+    # attention_events (consolidated from lib/intelligence/attention_tracking.py in v26)
+    ("idx_attention_entity", "attention_events", "entity_type, entity_id", None),
+    ("idx_attention_time", "attention_events", "created_at", None),
+    # intelligence_audit (consolidated from lib/intelligence/audit_trail.py in v26)
+    ("idx_audit_entity_intel", "intelligence_audit", "entity_type, entity_id", None),
+    ("idx_audit_operation_intel", "intelligence_audit", "operation", None),
+    # notification_queue (consolidated from lib/intelligence/notifications.py in v26)
+    ("idx_notification_type", "notification_queue", "type", None),
+    ("idx_notification_priority", "notification_queue", "priority", None),
+    # signal_outcomes (consolidated from lib/intelligence/outcome_tracker.py in v26)
+    ("idx_signal_outcomes_entity", "signal_outcomes", "entity_type, entity_id", None),
+    ("idx_signal_outcomes_type", "signal_outcomes", "signal_type", None),
+    # resolution_escalations (consolidated from lib/intelligence/auto_resolution.py in v26)
+    ("idx_escalations_item", "resolution_escalations", "item_id", None),
+    # asana_task_mappings (consolidated from lib/integrations/asana_sync.py in v26)
+    ("idx_asana_mappings_gid", "asana_task_mappings", "asana_gid", None),
+    # sync_cursor (consolidated from lib/collectors/all_users_runner.py in v26)
+    ("idx_sync_cursor_service", "sync_cursor", "service", None),
+    # decision_journal_log (consolidated from lib/intelligence/decision_journal.py)
+    ("idx_dj_entity", "decision_journal_log", "entity_type, entity_id", None),
+    ("idx_dj_type", "decision_journal_log", "decision_type", None),
+    ("idx_dj_time", "decision_journal_log", "created_at", None),
+    # audit_events (consolidated from lib/audit/__init__.py)
+    ("idx_audit_entity", "audit_events", "entity_type, entity_id", None),
+    ("idx_audit_type", "audit_events", "event_type", None),
+    ("idx_audit_timestamp", "audit_events", "timestamp", None),
 ]
 
 # ---------------------------------------------------------------------------
@@ -2135,6 +2287,290 @@ TABLES["idempotency_keys"] = {
         ("key", "TEXT PRIMARY KEY"),
         ("action_id", "TEXT NOT NULL"),
         ("created_at", "TEXT NOT NULL"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# §Core: items — action items / tasks tracked by the command center.
+# Previously defined as runtime DDL in lib/store.py SCHEMA constant.
+# Consolidated here in SCHEMA_VERSION 24 (C-002 PR2).
+# ---------------------------------------------------------------------------
+TABLES["items"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("what", "TEXT NOT NULL"),
+        ("status", "TEXT NOT NULL"),
+        ("owner", "TEXT NOT NULL"),
+        ("owner_id", "TEXT"),
+        ("counterparty", "TEXT"),
+        ("counterparty_id", "TEXT"),
+        ("due", "TEXT"),
+        ("waiting_since", "TEXT"),
+        ("client_id", "TEXT"),
+        ("project_id", "TEXT"),
+        ("context_snapshot_json", "TEXT"),
+        ("stakes", "TEXT"),
+        ("history_context", "TEXT"),
+        ("source_type", "TEXT"),
+        ("source_ref", "TEXT"),
+        ("captured_at", "TEXT NOT NULL"),
+        ("resolution_outcome", "TEXT"),
+        ("resolution_notes", "TEXT"),
+        ("resolved_at", "TEXT"),
+        ("created_at", "TEXT NOT NULL"),
+        ("updated_at", "TEXT NOT NULL"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# §Core: item_history — append-only audit log for item changes.
+# Previously defined as runtime DDL in lib/store.py SCHEMA constant.
+# Consolidated here in SCHEMA_VERSION 24 (C-002 PR2).
+# ---------------------------------------------------------------------------
+TABLES["item_history"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("item_id", "TEXT NOT NULL"),
+        ("timestamp", "TEXT NOT NULL"),
+        ("change", "TEXT NOT NULL"),
+        ("changed_by", "TEXT NOT NULL"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Intelligence: entity_interactions — tracks interactions with entities.
+# Previously created at runtime in lib/intelligence/entity_memory.py.
+# Consolidated here in SCHEMA_VERSION 26 (C-002 PR4).
+# ---------------------------------------------------------------------------
+TABLES["entity_interactions"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("entity_type", "TEXT NOT NULL"),
+        ("entity_id", "TEXT NOT NULL"),
+        ("interaction_type", "TEXT NOT NULL"),
+        ("summary", "TEXT NOT NULL"),
+        ("details_json", "TEXT DEFAULT '{}'"),
+        ("created_at", "TEXT NOT NULL"),
+        ("source", "TEXT DEFAULT 'system'"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Intelligence: data_freshness — tracks data collection recency per entity.
+# Previously created at runtime in lib/intelligence/data_freshness.py.
+# Consolidated here in SCHEMA_VERSION 26 (C-002 PR4).
+# ---------------------------------------------------------------------------
+TABLES["data_freshness"] = {
+    "columns": [
+        ("entity_type", "TEXT NOT NULL"),
+        ("entity_id", "TEXT NOT NULL"),
+        ("source", "TEXT NOT NULL"),
+        ("last_collected_at", "TEXT NOT NULL"),
+        ("record_count", "INTEGER DEFAULT 0"),
+    ],
+    "primary_key": ["entity_type", "entity_id", "source"],
+}
+
+# ---------------------------------------------------------------------------
+# Intelligence: attention_events — tracks attention/focus time per entity.
+# Previously created at runtime in lib/intelligence/attention_tracking.py.
+# Consolidated here in SCHEMA_VERSION 26 (C-002 PR4).
+# ---------------------------------------------------------------------------
+TABLES["attention_events"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("entity_type", "TEXT NOT NULL"),
+        ("entity_id", "TEXT NOT NULL"),
+        ("event_type", "TEXT NOT NULL"),
+        ("duration_minutes", "REAL DEFAULT 0"),
+        ("notes", "TEXT DEFAULT ''"),
+        ("created_at", "TEXT NOT NULL"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Intelligence: intelligence_audit — audit trail for intelligence operations.
+# Previously created at runtime in lib/intelligence/audit_trail.py.
+# Consolidated here in SCHEMA_VERSION 26 (C-002 PR4).
+# ---------------------------------------------------------------------------
+TABLES["intelligence_audit"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("operation", "TEXT NOT NULL"),
+        ("entity_type", "TEXT NOT NULL"),
+        ("entity_id", "TEXT NOT NULL"),
+        ("inputs_json", "TEXT DEFAULT '{}'"),
+        ("outputs_json", "TEXT DEFAULT '{}'"),
+        ("duration_ms", "REAL DEFAULT 0"),
+        ("created_at", "TEXT NOT NULL"),
+        ("status", "TEXT DEFAULT 'success'"),
+        ("error_message", "TEXT"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Intelligence: notification_queue — queued notifications for delivery.
+# Previously created at runtime in lib/intelligence/notifications.py.
+# Consolidated here in SCHEMA_VERSION 26 (C-002 PR4).
+# ---------------------------------------------------------------------------
+TABLES["notification_queue"] = {
+    "columns": [
+        ("id", "INTEGER PRIMARY KEY AUTOINCREMENT"),
+        ("notification_id", "TEXT UNIQUE NOT NULL"),
+        ("type", "TEXT NOT NULL"),
+        ("priority", "TEXT NOT NULL"),
+        ("title", "TEXT NOT NULL"),
+        ("body", "TEXT"),
+        ("entity_type", "TEXT"),
+        ("entity_id", "TEXT"),
+        ("data_json", "TEXT"),
+        ("created_at", "TEXT NOT NULL"),
+        ("delivered_at", "TEXT"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Intelligence: signal_outcomes — tracks how signals resolved over time.
+# Previously created at runtime in lib/intelligence/outcome_tracker.py.
+# Consolidated here in SCHEMA_VERSION 26 (C-002 PR4).
+# ---------------------------------------------------------------------------
+TABLES["signal_outcomes"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("signal_key", "TEXT NOT NULL"),
+        ("entity_type", "TEXT NOT NULL"),
+        ("entity_id", "TEXT NOT NULL"),
+        ("signal_type", "TEXT NOT NULL"),
+        ("detected_at", "TEXT NOT NULL"),
+        ("cleared_at", "TEXT NOT NULL"),
+        ("duration_days", "REAL NOT NULL"),
+        ("health_before", "REAL"),
+        ("health_after", "REAL"),
+        ("health_improved", "INTEGER"),
+        ("actions_taken", "TEXT"),
+        ("resolution_type", "TEXT NOT NULL"),
+        ("created_at", "TEXT NOT NULL"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Intelligence: resolution_escalations — escalated items needing human review.
+# Previously created at runtime in lib/intelligence/auto_resolution.py.
+# Consolidated here in SCHEMA_VERSION 26 (C-002 PR4).
+# ---------------------------------------------------------------------------
+TABLES["resolution_escalations"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("item_id", "TEXT NOT NULL"),
+        ("issue_type", "TEXT"),
+        ("reason", "TEXT NOT NULL"),
+        ("entity_type", "TEXT"),
+        ("entity_id", "TEXT"),
+        ("escalated_at", "TEXT NOT NULL"),
+        ("resolved_at", "TEXT"),
+        ("resolved_by", "TEXT"),
+        ("resolution_notes", "TEXT"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Integrations: asana_task_mappings — maps local tasks to Asana GIDs.
+# Previously created at runtime in lib/integrations/asana_sync.py.
+# Consolidated here in SCHEMA_VERSION 26 (C-002 PR4).
+# ---------------------------------------------------------------------------
+TABLES["asana_task_mappings"] = {
+    "columns": [
+        ("local_id", "TEXT PRIMARY KEY"),
+        ("asana_gid", "TEXT NOT NULL UNIQUE"),
+        ("project_gid", "TEXT"),
+        ("local_updated_at", "TEXT"),
+        ("asana_updated_at", "TEXT"),
+        ("created_at", "TEXT NOT NULL"),
+        ("updated_at", "TEXT NOT NULL"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Collectors: sync_cursor — tracks collection cursor state per service/subject.
+# Previously created at runtime in lib/collectors/all_users_runner.py.
+# Consolidated here in SCHEMA_VERSION 26 (C-002 PR4).
+# ---------------------------------------------------------------------------
+TABLES["sync_cursor"] = {
+    "columns": [
+        ("service", "TEXT NOT NULL"),
+        ("subject", "TEXT NOT NULL"),
+        ("key", "TEXT NOT NULL"),
+        ("value", "TEXT"),
+        ("updated_at", "TEXT"),
+    ],
+    "primary_key": ["service", "subject", "key"],
+}
+
+# ---------------------------------------------------------------------------
+# Collectors: subject_blocklist — subjects blocked from collection.
+# Previously created at runtime in lib/collectors/all_users_runner.py.
+# Consolidated here in SCHEMA_VERSION 26 (C-002 PR4).
+# ---------------------------------------------------------------------------
+TABLES["subject_blocklist"] = {
+    "columns": [
+        ("subject", "TEXT PRIMARY KEY"),
+        ("reason", "TEXT NOT NULL"),
+        ("error_detail", "TEXT"),
+        ("updated_at", "TEXT NOT NULL"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Decision Journal: decision_journal_log — general-purpose decision audit trail.
+# Used by lib/intelligence/decision_journal.py (may target a separate DB file).
+# Not to be confused with decision_log (V4 Issue Service decisions above).
+# ---------------------------------------------------------------------------
+TABLES["decision_journal_log"] = {
+    "columns": [
+        ("id", "TEXT PRIMARY KEY"),
+        ("decision_type", "TEXT NOT NULL"),
+        ("entity_type", "TEXT NOT NULL"),
+        ("entity_id", "TEXT NOT NULL"),
+        ("action_taken", "TEXT NOT NULL"),
+        ("context_json", "TEXT DEFAULT '{}'"),
+        ("outcome", "TEXT"),
+        ("outcome_score", "REAL"),
+        ("created_at", "TEXT NOT NULL"),
+        ("source", "TEXT DEFAULT 'system'"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Audit Events: audit_events — append-only event log for state reconstruction.
+# Previously created at runtime in lib/audit/__init__.py.
+# ---------------------------------------------------------------------------
+TABLES["audit_events"] = {
+    "columns": [
+        ("event_id", "TEXT PRIMARY KEY"),
+        ("event_type", "TEXT NOT NULL"),
+        ("entity_type", "TEXT NOT NULL"),
+        ("entity_id", "TEXT NOT NULL"),
+        ("payload", "TEXT NOT NULL"),
+        ("timestamp", "TEXT NOT NULL"),
+        ("request_id", "TEXT"),
+        ("trace_id", "TEXT"),
+        ("actor", "TEXT"),
+        ("created_at", "TEXT DEFAULT CURRENT_TIMESTAMP"),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Org Settings: org_settings — organization-level config (timezone, currency).
+# Previously created at runtime in lib/ui_spec_v21/org_settings.py.
+# ---------------------------------------------------------------------------
+TABLES["org_settings"] = {
+    "columns": [
+        ("id", "INTEGER PRIMARY KEY CHECK (id = 1)"),
+        ("timezone", "TEXT NOT NULL DEFAULT 'Asia/Dubai'"),
+        ("base_currency", "TEXT NOT NULL DEFAULT 'AED'"),
+        ("finance_calc_version", "TEXT NOT NULL DEFAULT 'v1'"),
+        ("created_at", "TEXT NOT NULL"),
+        ("updated_at", "TEXT NOT NULL"),
     ],
 }
 

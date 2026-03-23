@@ -76,7 +76,7 @@ def load_promises() -> list:
             return json.load(f)
     except (json.JSONDecodeError, OSError) as e:
         logger.warning(f"Could not load promises file: {e}")
-        return []
+        raise
 
 
 def save_promises(promises: list) -> None:

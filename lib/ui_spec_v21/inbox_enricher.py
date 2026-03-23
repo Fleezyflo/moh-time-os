@@ -111,10 +111,10 @@ def enrich_with_llm(sender: str, subject: str, body: str) -> dict[str, Any]:
 
     except json.JSONDecodeError as e:
         logger.warning(f"Failed to parse LLM enrichment response: {e}")
-        return {}
+        raise
     except (sqlite3.Error, ValueError, OSError) as e:
         logger.warning(f"LLM enrichment error: {e}")
-        return {}
+        raise
 
 
 def enrich_from_heuristics(

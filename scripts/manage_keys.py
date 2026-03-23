@@ -111,8 +111,13 @@ def cmd_list(args) -> int:
     """List all API keys."""
     try:
         manager = KeyManager()
-        keys = manager.list_keys(active_only=not args.all)
+        result = manager.list_keys(active_only=not args.all)
 
+        if result.failed:
+            print(f"Error: Failed to list keys: {result.error}", file=sys.stderr)
+            return 1
+
+        keys = result.data or []
         if not keys:
             print("No API keys found.")
             return 0

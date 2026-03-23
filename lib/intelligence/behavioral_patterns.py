@@ -90,7 +90,7 @@ class BehavioralPatternAnalyzer:
     Analyzes decision journal data to find behavioral patterns
     and generate context hints.
 
-    Reads from the decision_log table (created by DecisionJournal).
+    Reads from the decision_journal_log table (created by DecisionJournal).
     """
 
     def __init__(self, db_path: Path):
@@ -127,7 +127,7 @@ class BehavioralPatternAnalyzer:
             rows = conn.execute(
                 """
                 SELECT decision_type, action_taken, COUNT(*) as cnt
-                FROM decision_log
+                FROM decision_journal_log
                 WHERE created_at >= ?
                 GROUP BY decision_type, action_taken
                 HAVING COUNT(*) >= ?
@@ -141,7 +141,7 @@ class BehavioralPatternAnalyzer:
             for row in conn.execute(
                 """
                 SELECT decision_type, COUNT(*) as cnt
-                FROM decision_log
+                FROM decision_journal_log
                 WHERE created_at >= ?
                 GROUP BY decision_type
                 """,
@@ -185,7 +185,7 @@ class BehavioralPatternAnalyzer:
             rows = conn.execute(
                 """
                 SELECT entity_type, entity_id, COUNT(*) as cnt
-                FROM decision_log
+                FROM decision_journal_log
                 WHERE created_at >= ?
                 GROUP BY entity_type, entity_id
                 HAVING COUNT(*) >= ?
@@ -196,7 +196,7 @@ class BehavioralPatternAnalyzer:
             ).fetchall()
 
             total_decisions = conn.execute(
-                "SELECT COUNT(*) as cnt FROM decision_log WHERE created_at >= ?",
+                "SELECT COUNT(*) as cnt FROM decision_journal_log WHERE created_at >= ?",
                 (cutoff,),
             ).fetchone()["cnt"]
 
@@ -235,7 +235,7 @@ class BehavioralPatternAnalyzer:
             rows = conn.execute(
                 """
                 SELECT entity_type, entity_id, COUNT(*) as cnt
-                FROM decision_log
+                FROM decision_journal_log
                 WHERE created_at >= ?
                 AND decision_type LIKE '%escalat%'
                 GROUP BY entity_type, entity_id
@@ -299,7 +299,7 @@ class BehavioralPatternAnalyzer:
                 rows = conn.execute(
                     """
                     SELECT id, decision_type, action_taken, outcome, outcome_score, created_at
-                    FROM decision_log
+                    FROM decision_journal_log
                     WHERE entity_type = ? AND entity_id = ?
                     AND decision_type = ?
                     ORDER BY created_at DESC
@@ -311,7 +311,7 @@ class BehavioralPatternAnalyzer:
                 rows = conn.execute(
                     """
                     SELECT id, decision_type, action_taken, outcome, outcome_score, created_at
-                    FROM decision_log
+                    FROM decision_journal_log
                     WHERE entity_type = ? AND entity_id = ?
                     ORDER BY created_at DESC
                     LIMIT 10
@@ -380,7 +380,7 @@ class BehavioralPatternAnalyzer:
                        COUNT(*) as total,
                        AVG(outcome_score) as avg_score,
                        SUM(CASE WHEN outcome_score >= 0.6 THEN 1 ELSE 0 END) as successes
-                FROM decision_log
+                FROM decision_journal_log
                 WHERE decision_type = ?
                 AND outcome_score IS NOT NULL
                 GROUP BY action_taken
@@ -431,7 +431,7 @@ class BehavioralPatternAnalyzer:
                            SUM(CASE WHEN outcome IS NOT NULL THEN 1 ELSE 0 END) as with_outcome,
                            AVG(CASE WHEN outcome_score IS NOT NULL THEN outcome_score END) as avg_score,
                            SUM(CASE WHEN outcome_score >= 0.6 THEN 1 ELSE 0 END) as successes
-                    FROM decision_log
+                    FROM decision_journal_log
                     WHERE decision_type = ?
                     AND created_at >= ?
                     GROUP BY decision_type, action_taken
@@ -447,7 +447,7 @@ class BehavioralPatternAnalyzer:
                            SUM(CASE WHEN outcome IS NOT NULL THEN 1 ELSE 0 END) as with_outcome,
                            AVG(CASE WHEN outcome_score IS NOT NULL THEN outcome_score END) as avg_score,
                            SUM(CASE WHEN outcome_score >= 0.6 THEN 1 ELSE 0 END) as successes
-                    FROM decision_log
+                    FROM decision_journal_log
                     WHERE created_at >= ?
                     GROUP BY decision_type, action_taken
                     ORDER BY avg_score DESC
@@ -488,7 +488,7 @@ class BehavioralPatternAnalyzer:
             by_type = conn.execute(
                 """
                 SELECT decision_type, COUNT(*) as cnt
-                FROM decision_log
+                FROM decision_journal_log
                 WHERE created_at >= ?
                 GROUP BY decision_type
                 ORDER BY cnt DESC
@@ -499,7 +499,7 @@ class BehavioralPatternAnalyzer:
             by_source = conn.execute(
                 """
                 SELECT source, COUNT(*) as cnt
-                FROM decision_log
+                FROM decision_journal_log
                 WHERE created_at >= ?
                 GROUP BY source
                 ORDER BY cnt DESC
@@ -508,7 +508,7 @@ class BehavioralPatternAnalyzer:
             ).fetchall()
 
             total = conn.execute(
-                "SELECT COUNT(*) as cnt FROM decision_log WHERE created_at >= ?",
+                "SELECT COUNT(*) as cnt FROM decision_journal_log WHERE created_at >= ?",
                 (cutoff,),
             ).fetchone()["cnt"]
 

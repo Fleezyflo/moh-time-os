@@ -1,6 +1,13 @@
 """
-Autonomous Loop - The heart of MOH TIME OS.
-This is the MAIN WIRING - connects all components into one running system.
+Autonomous Loop - The complete MOH TIME OS pipeline.
+
+This is the CANONICAL pipeline. The daemon (lib/daemon.py) calls this
+via subprocess: `python -m lib.autonomous_loop run`. The daemon handles
+scheduling, sleep/wake, backoff. This module handles the actual work:
+collect → normalize → gates → truth → detection → intelligence →
+analyze → surface → reason → execute → snapshot.
+
+Also callable via POST /api/cycle for manual triggers.
 """
 
 import argparse
@@ -233,7 +240,7 @@ class AutonomousLoop:
             # ═══════════════════════════════════════
             # PHASE 1b5: DETECTION SYSTEM
             # Run collision, drift, bottleneck detectors
-            # Dry-run mode: writes to preview table
+            # Production mode: writes to detection_findings
             # ═══════════════════════════════════════
             logger.info("▶ Phase 1b5: DETECTION")
             try:
@@ -242,7 +249,7 @@ class AutonomousLoop:
                 db_path = str(paths.data_dir() / "moh_time_os.db")
                 detection_results = run_all_detectors(
                     db_path=db_path,
-                    dry_run=True,
+                    dry_run=False,
                     cycle_id=f"cycle_{self.cycle_count}",
                 )
                 results["phases"]["detection"] = detection_results
@@ -250,7 +257,7 @@ class AutonomousLoop:
                     d.get("findings", 0) for d in detection_results.get("detectors", {}).values()
                 )
                 groups = detection_results.get("correlation", {}).get("groups", 0)
-                logger.info(f"  Detection: {total_findings} findings, {groups} groups (dry-run)")
+                logger.info(f"  Detection: {total_findings} findings, {groups} groups")
             except (sqlite3.Error, ValueError, OSError) as e:
                 logger.warning(f"  Detection skipped: {e}")
                 results["phases"]["detection"] = {"error": str(e)}
@@ -709,13 +716,18 @@ class AutonomousLoop:
             from lib.intelligence.trajectory import TrajectoryEngine
 
             trajectory_engine = TrajectoryEngine(db_path)
-            portfolio_traj = trajectory_engine.portfolio_health_trajectory()
-            results["trajectory_analyses"] = len(portfolio_traj)
-            if portfolio_traj:
-                logger.info(
-                    "Intelligence: computed trajectory for %d entities",
-                    len(portfolio_traj),
-                )
+            traj_result = trajectory_engine.portfolio_health_trajectory()
+            if traj_result.succeeded:
+                portfolio_traj = traj_result.data or []
+                results["trajectory_analyses"] = len(portfolio_traj)
+                if portfolio_traj:
+                    logger.info(
+                        "Intelligence: computed trajectory for %d entities",
+                        len(portfolio_traj),
+                    )
+            else:
+                logger.error("Intelligence: trajectory failed: %s", traj_result.error)
+                results["trajectory_analyses"] = 0
         except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Intelligence: trajectory analysis failed: {e}")
 

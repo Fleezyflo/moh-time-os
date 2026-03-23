@@ -273,9 +273,13 @@ class IntelligenceLayer:
             trajectory_results = []
             try:
                 trajectory_engine = self._get_trajectory_engine()
-                trajectories = trajectory_engine.portfolio_health_trajectory()
-                trajectory_results = [t.to_dict() for t in trajectories]
-                self.logger.info(f"Trajectory analysis: {len(trajectories)} entities analyzed")
+                traj_result = trajectory_engine.portfolio_health_trajectory()
+                if traj_result.succeeded:
+                    trajectories = traj_result.data or []
+                    trajectory_results = [t.to_dict() for t in trajectories]
+                    self.logger.info(f"Trajectory analysis: {len(trajectories)} entities analyzed")
+                else:
+                    self.logger.error(f"Trajectory analysis failed: {traj_result.error}")
             except (sqlite3.Error, ValueError, OSError) as e:
                 self.logger.error(f"Error in trajectory analysis: {e}")
                 trajectory_results = []
@@ -432,13 +436,14 @@ class IntelligenceLayer:
                 # Count at-risk and declining
                 try:
                     trajectory_engine = self._get_trajectory_engine()
-                    trajectories = trajectory_engine.portfolio_health_trajectory()
+                    traj_result = trajectory_engine.portfolio_health_trajectory()
 
-                    for traj in trajectories:
-                        if traj.overall_health == "DECLINING":
-                            dashboard.declining_count += 1
-                        elif traj.overall_health == "CRITICAL":
-                            dashboard.at_risk_count += 1
+                    if traj_result.succeeded:
+                        for traj in traj_result.data or []:
+                            if traj.overall_health == "DECLINING":
+                                dashboard.declining_count += 1
+                            elif traj.overall_health == "CRITICAL":
+                                dashboard.at_risk_count += 1
                 except (sqlite3.Error, ValueError, OSError) as e:
                     self.logger.warning(f"Could not compute trajectory for dashboard: {e}")
 

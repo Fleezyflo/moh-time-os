@@ -122,7 +122,7 @@ class BatchLoader:
         except sqlite3.Error as e:
             logger.error(f"BatchLoader failed for {self.table}: {e}")
             self.loaded = True
-            return {}
+            raise
 
     def get(self, id_value: Any, default: dict | None = None) -> dict | None:
         """Get single row by ID (performs load on first call)."""
@@ -184,7 +184,7 @@ def prefetch_related(
         return result
     except sqlite3.Error as e:
         logger.error(f"prefetch_related failed for {table}: {e}")
-        return {}
+        raise
 
 
 def explain_query(conn: sqlite3.Connection, sql: str, params: tuple = ()) -> list[dict]:
@@ -205,7 +205,7 @@ def explain_query(conn: sqlite3.Connection, sql: str, params: tuple = ()) -> lis
         return [dict(zip(cols, row, strict=False)) for row in cursor.fetchall()]
     except sqlite3.Error as e:
         logger.error(f"EXPLAIN failed: {e}")
-        return []
+        raise
 
 
 def analyze_query_performance(

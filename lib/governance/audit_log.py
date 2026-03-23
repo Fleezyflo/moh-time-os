@@ -56,21 +56,18 @@ class AuditLog:
         return conn
 
     def _init_schema(self):
-        """Create audit log table if it doesn't exist."""
+        """Ensure governance_audit_log table exists.
+
+        Table definition lives in lib/schema.py (single source of truth).
+        schema_engine.converge() creates it at startup; this is a defensive
+        fallback for standalone usage.
+        """
         try:
+            from lib.schema import TABLES
+            from lib.schema_engine import _build_create_sql
+
             conn = self._get_connection()
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS governance_audit_log (
-                    id TEXT PRIMARY KEY,
-                    timestamp TEXT NOT NULL,
-                    action TEXT NOT NULL,
-                    actor TEXT NOT NULL,
-                    subject_identifier TEXT NOT NULL,
-                    details TEXT NOT NULL,
-                    ip_address TEXT,
-                    created_at TEXT NOT NULL
-                )
-            """)
+            conn.execute(_build_create_sql("governance_audit_log", TABLES["governance_audit_log"]))
             conn.commit()
             conn.close()
             logger.info("Audit log schema initialized")

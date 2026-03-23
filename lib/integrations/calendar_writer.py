@@ -509,7 +509,7 @@ class CalendarWriter:
         except (sqlite3.Error, ValueError, OSError, KeyError) as e:
             error_msg = f"Failed to find free slots: {e}"
             logger.error(error_msg)
-            return []
+            raise
 
     def _parse_time(self, time_str: str) -> dict:
         """

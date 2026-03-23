@@ -496,31 +496,39 @@ class TestSubjectAccessManager:
     def test_find_identifier_columns(self, temp_db):
         """Test identifying columns that contain subject identifiers."""
         manager = SubjectAccessManager(temp_db)
-        cols = manager._find_identifier_columns("people")
+        result = manager._find_identifier_columns("people")
 
+        assert result.succeeded
+        cols = result.data or []
         assert "email" in cols or "name" in cols or "client_id" in cols
 
     def test_find_identifier_columns_for_tasks(self, temp_db):
         """Test identifying identifier columns in tasks table."""
         manager = SubjectAccessManager(temp_db)
-        cols = manager._find_identifier_columns("tasks")
+        result = manager._find_identifier_columns("tasks")
 
+        assert result.succeeded
+        cols = result.data or []
         # Should find assignee_email
         assert any("email" in c.lower() for c in cols)
 
     def test_search_table(self, temp_db):
         """Test searching a single table."""
         manager = SubjectAccessManager(temp_db)
-        records = manager._search_table("tasks", "john@example.com")
+        result = manager._search_table("tasks", "john@example.com")
 
+        assert result.succeeded
+        records = result.data or []
         assert len(records) >= 1
         assert any(r.get("assignee_email") == "john@example.com" for r in records)
 
     def test_search_table_no_results(self, temp_db):
         """Test search with no results."""
         manager = SubjectAccessManager(temp_db)
-        records = manager._search_table("tasks", "nonexistent@example.com")
+        result = manager._search_table("tasks", "nonexistent@example.com")
 
+        assert result.succeeded
+        records = result.data or []
         assert len(records) == 0
 
     def test_multiple_deletions_different_subjects(self, temp_db):

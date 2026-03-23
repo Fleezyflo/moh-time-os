@@ -1,17 +1,28 @@
 """
-Intelligence proposal generation for MOH TIME OS.
+Intelligence proposal generation for MOH TIME OS (in-memory, API-time).
+
+⚠️  This module generates proposals IN-MEMORY for on-demand API use only.
+It does NOT persist proposals to the database. See CANONICALIZATION.md §3/§C1.
+
+The CANONICAL persistent proposal path for the daemon pipeline is:
+  lib/v4/proposal_service.py → ProposalService.generate_proposals_from_signals()
+  → writes to proposals_v4 table → served by /api/v2/proposals
+
+This module powers the live /api/v2/intelligence/proposals endpoint (fresh
+generation per request). Do NOT wire this into the daemon or any background job.
 
 Assembles scores, signals, and patterns into actionable intelligence.
 This is the layer that turns detection into communication.
 
 A proposal is: "Client X's communication dropped 40%, their last two task
-deadlines slipped, and they have an invoice 30 days overdue — this account
+deadlines slipped, and they have an invoice 30 days overdue -- this account
 needs a check-in call."
 
 Multiple signals + scores + patterns assembled into one actionable item.
 """
 
 import logging
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
@@ -92,8 +103,6 @@ class Proposal:
 # =============================================================================
 # HELPER FUNCTIONS
 # =============================================================================
-
-import uuid  # noqa: E402 — conditional import
 
 
 def _generate_proposal_id() -> str:
