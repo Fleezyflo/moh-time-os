@@ -57,32 +57,25 @@ class DecisionJournal:
         self._ensure_table()
 
     def _ensure_table(self) -> None:
+        """Ensure decision_journal_log table exists.
+
+        Table definition lives in lib/schema.py (single source of truth).
+        schema_engine.converge() creates it at startup; this is a defensive
+        fallback for standalone usage.
+        """
+        from lib.schema import INDEXES, TABLES
+        from lib.schema_engine import _build_create_sql
+
         conn = sqlite3.connect(str(self.db_path))
         try:
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS decision_log (
-                    id TEXT PRIMARY KEY,
-                    decision_type TEXT NOT NULL,
-                    entity_type TEXT NOT NULL,
-                    entity_id TEXT NOT NULL,
-                    action_taken TEXT NOT NULL,
-                    context_json TEXT DEFAULT '{}',
-                    outcome TEXT,
-                    outcome_score REAL,
-                    created_at TEXT NOT NULL,
-                    source TEXT DEFAULT 'system'
-                )
-                """
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_decision_entity "
-                "ON decision_log(entity_type, entity_id)"
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_decision_type ON decision_log(decision_type)"
-            )
-            conn.execute("CREATE INDEX IF NOT EXISTS idx_decision_time ON decision_log(created_at)")
+            conn.execute(_build_create_sql("decision_journal_log", TABLES["decision_journal_log"]))
+            # Create indexes defined in schema.py for this table
+            for idx_name, tbl, cols, where in INDEXES:
+                if tbl == "decision_journal_log":
+                    where_clause = f" WHERE {where}" if where else ""
+                    conn.execute(
+                        f"CREATE INDEX IF NOT EXISTS [{idx_name}] ON [{tbl}]({cols}){where_clause}"
+                    )
             conn.commit()
         finally:
             conn.close()
@@ -112,7 +105,7 @@ class DecisionJournal:
         try:
             conn.execute(
                 """
-                INSERT INTO decision_log
+                INSERT INTO decision_journal_log
                 (id, decision_type, entity_type, entity_id, action_taken,
                  context_json, created_at, source)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -145,7 +138,7 @@ class DecisionJournal:
         try:
             conn.execute(
                 """
-                UPDATE decision_log
+                UPDATE decision_journal_log
                 SET outcome = ?, outcome_score = ?
                 WHERE id = ?
                 """,
@@ -167,7 +160,7 @@ class DecisionJournal:
         try:
             rows = conn.execute(
                 """
-                SELECT * FROM decision_log
+                SELECT * FROM decision_journal_log
                 WHERE entity_type = ? AND entity_id = ?
                 ORDER BY created_at DESC
                 LIMIT ?
@@ -189,7 +182,7 @@ class DecisionJournal:
         try:
             rows = conn.execute(
                 """
-                SELECT * FROM decision_log
+                SELECT * FROM decision_journal_log
                 WHERE decision_type = ?
                 ORDER BY created_at DESC
                 LIMIT ?
@@ -214,7 +207,7 @@ class DecisionJournal:
                 rows = conn.execute(
                     """
                     SELECT decision_type, COUNT(*) as cnt
-                    FROM decision_log
+                    FROM decision_journal_log
                     WHERE entity_type = ?
                     AND created_at >= date(?, '-' || ? || ' days')
                     GROUP BY decision_type
@@ -226,7 +219,7 @@ class DecisionJournal:
                 rows = conn.execute(
                     """
                     SELECT decision_type, COUNT(*) as cnt
-                    FROM decision_log
+                    FROM decision_journal_log
                     WHERE created_at >= date(?, '-' || ? || ' days')
                     GROUP BY decision_type
                     ORDER BY cnt DESC
@@ -242,14 +235,16 @@ class DecisionJournal:
         conn = sqlite3.connect(str(self.db_path))
         conn.row_factory = sqlite3.Row
         try:
-            total = conn.execute("SELECT COUNT(*) as cnt FROM decision_log").fetchone()["cnt"]
+            total = conn.execute("SELECT COUNT(*) as cnt FROM decision_journal_log").fetchone()[
+                "cnt"
+            ]
 
             with_outcome = conn.execute(
-                "SELECT COUNT(*) as cnt FROM decision_log WHERE outcome IS NOT NULL"
+                "SELECT COUNT(*) as cnt FROM decision_journal_log WHERE outcome IS NOT NULL"
             ).fetchone()["cnt"]
 
             avg_score = conn.execute(
-                "SELECT AVG(outcome_score) as avg FROM decision_log WHERE outcome_score IS NOT NULL"
+                "SELECT AVG(outcome_score) as avg FROM decision_journal_log WHERE outcome_score IS NOT NULL"
             ).fetchone()["avg"]
 
             by_type = conn.execute(
@@ -257,7 +252,7 @@ class DecisionJournal:
                 SELECT decision_type,
                        COUNT(*) as cnt,
                        AVG(outcome_score) as avg_score
-                FROM decision_log
+                FROM decision_journal_log
                 WHERE outcome_score IS NOT NULL
                 GROUP BY decision_type
                 """

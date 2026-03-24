@@ -184,13 +184,15 @@ class TestSubjectAccessManager:
     def test_create_request(self, temp_db):
         """Test creating a subject access request."""
         manager = SubjectAccessManager(temp_db)
-        request_id = manager.create_request(
+        result = manager.create_request(
             subject_identifier="john@example.com",
             request_type="access",
             requested_by="user1",
             reason="GDPR access request",
         )
 
+        assert result.succeeded
+        request_id = result.data
         assert request_id is not None
         assert isinstance(request_id, str)
         assert len(request_id) > 0
@@ -198,11 +200,13 @@ class TestSubjectAccessManager:
     def test_create_request_recorded_in_db(self, temp_db):
         """Test that created request is stored in database."""
         manager = SubjectAccessManager(temp_db)
-        request_id = manager.create_request(
+        result = manager.create_request(
             subject_identifier="john@example.com",
             request_type="deletion",
             requested_by="user1",
         )
+        assert result.succeeded
+        request_id = result.data
 
         # Verify in database
         conn = sqlite3.connect(temp_db)
@@ -219,13 +223,17 @@ class TestSubjectAccessManager:
     def test_get_request_status(self, temp_db):
         """Test retrieving request status."""
         manager = SubjectAccessManager(temp_db)
-        request_id = manager.create_request(
+        create_result = manager.create_request(
             subject_identifier="john@example.com",
             request_type="access",
         )
+        assert create_result.succeeded
+        request_id = create_result.data
 
-        status = manager.get_request_status(request_id)
+        result = manager.get_request_status(request_id)
 
+        assert result.succeeded
+        status = result.data
         assert status is not None
         assert status.request_id == request_id
         assert status.subject_identifier == "john@example.com"
@@ -234,18 +242,25 @@ class TestSubjectAccessManager:
     def test_get_request_status_not_found(self, temp_db):
         """Test getting status for non-existent request."""
         manager = SubjectAccessManager(temp_db)
-        status = manager.get_request_status("nonexistent-id")
+        result = manager.get_request_status("nonexistent-id")
 
-        assert status is None
+        assert result.succeeded
+        assert result.data is None
 
     def test_list_requests(self, temp_db):
         """Test listing all requests."""
         manager = SubjectAccessManager(temp_db)
-        req1 = manager.create_request("john@example.com", "access")
-        req2 = manager.create_request("alice@example.com", "deletion")
+        r1 = manager.create_request("john@example.com", "access")
+        r2 = manager.create_request("alice@example.com", "deletion")
+        assert r1.succeeded
+        assert r2.succeeded
+        req1 = r1.data
+        req2 = r2.data
 
-        requests = manager.list_requests()
+        result = manager.list_requests()
 
+        assert result.succeeded
+        requests = result.data
         assert len(requests) >= 2
         assert any(r.request_id == req1 for r in requests)
         assert any(r.request_id == req2 for r in requests)
@@ -255,16 +270,20 @@ class TestSubjectAccessManager:
         manager = SubjectAccessManager(temp_db)
         manager.create_request("john@example.com", "access")
 
-        requests = manager.list_requests(status="pending")
+        result = manager.list_requests(status="pending")
 
+        assert result.succeeded
+        requests = result.data
         assert len(requests) >= 1
         assert all(r.status == "pending" for r in requests)
 
     def test_find_subject_data_by_email(self, temp_db):
         """Test finding subject data by email address."""
         manager = SubjectAccessManager(temp_db)
-        report = manager.find_subject_data("john@example.com")
+        result = manager.find_subject_data("john@example.com")
 
+        assert result.succeeded
+        report = result.data
         assert report.subject_identifier == "john@example.com"
         assert "tasks" in report.tables_with_data
         assert "people" in report.tables_with_data
@@ -274,8 +293,10 @@ class TestSubjectAccessManager:
     def test_find_subject_data_by_name(self, temp_db):
         """Test finding subject data by name."""
         manager = SubjectAccessManager(temp_db)
-        report = manager.find_subject_data("John Doe")
+        result = manager.find_subject_data("John Doe")
 
+        assert result.succeeded
+        report = result.data
         assert report.subject_identifier == "John Doe"
         assert "people" in report.tables_with_data
         assert report.total_records >= 1
@@ -283,8 +304,10 @@ class TestSubjectAccessManager:
     def test_find_subject_data_by_client_id(self, temp_db):
         """Test finding subject data by client_id."""
         manager = SubjectAccessManager(temp_db)
-        report = manager.find_subject_data("client123")
+        result = manager.find_subject_data("client123")
 
+        assert result.succeeded
+        report = result.data
         assert report.subject_identifier == "client123"
         # Should find in people and clients tables
         assert report.total_records >= 1
@@ -292,8 +315,10 @@ class TestSubjectAccessManager:
     def test_find_subject_data_no_matches(self, temp_db):
         """Test finding data for subject with no matches."""
         manager = SubjectAccessManager(temp_db)
-        report = manager.find_subject_data("nonexistent@example.com")
+        result = manager.find_subject_data("nonexistent@example.com")
 
+        assert result.succeeded
+        report = result.data
         assert report.subject_identifier == "nonexistent@example.com"
         assert report.total_records == 0
         assert len(report.tables_with_data) == 0
@@ -301,8 +326,10 @@ class TestSubjectAccessManager:
     def test_find_subject_data_contains_records(self, temp_db):
         """Test that found data contains actual records."""
         manager = SubjectAccessManager(temp_db)
-        report = manager.find_subject_data("john@example.com")
+        result = manager.find_subject_data("john@example.com")
 
+        assert result.succeeded
+        report = result.data
         assert "tasks" in report.data_by_table
         tasks = report.data_by_table["tasks"]
         assert len(tasks) > 0
@@ -312,8 +339,10 @@ class TestSubjectAccessManager:
     def test_export_subject_data(self, temp_db):
         """Test exporting subject data to file."""
         manager = SubjectAccessManager(temp_db)
-        file_path = manager.export_subject_data("john@example.com")
+        result = manager.export_subject_data("john@example.com")
 
+        assert result.succeeded
+        file_path = result.data
         assert os.path.exists(file_path)
         assert file_path.endswith(".json")
 
@@ -327,7 +356,8 @@ class TestSubjectAccessManager:
     def test_export_subject_data_creates_audit_entry(self, temp_db):
         """Test that export creates audit log entry."""
         manager = SubjectAccessManager(temp_db)
-        manager.export_subject_data("john@example.com")
+        result = manager.export_subject_data("john@example.com")
+        assert result.succeeded
 
         # Check audit log
         entries = manager.audit_log.get_entries(subject="john@example.com", action="DATA_EXPORTED")
@@ -346,9 +376,11 @@ class TestSubjectAccessManager:
         conn.close()
 
         # Dry-run deletion
-        result = manager.delete_subject_data("john@example.com", dry_run=True)
+        del_result = manager.delete_subject_data("john@example.com", dry_run=True)
 
         # Verify result
+        assert del_result.succeeded
+        result = del_result.data
         assert result.subject_identifier == "john@example.com"
         assert result.rows_deleted >= initial_count
         assert "tasks" in result.tables_affected
@@ -378,9 +410,11 @@ class TestSubjectAccessManager:
         assert initial_count > 0, "Test needs initial data"
 
         # Actual deletion
-        result = manager.delete_subject_data("john@example.com", dry_run=False)
+        del_result = manager.delete_subject_data("john@example.com", dry_run=False)
 
         # Verify deletion
+        assert del_result.succeeded
+        result = del_result.data
         assert result.rows_deleted >= initial_count
         assert result.rows_deleted > 0
 
@@ -408,7 +442,8 @@ class TestSubjectAccessManager:
         initial_count = cursor.fetchone()[0]
         conn.close()
 
-        manager.delete_subject_data("john@example.com", dry_run=False)
+        del_result = manager.delete_subject_data("john@example.com", dry_run=False)
+        assert del_result.succeeded
 
         # Verify sync_state data still exists (protected)
         conn = sqlite3.connect(temp_db)
@@ -421,7 +456,8 @@ class TestSubjectAccessManager:
     def test_delete_creates_audit_entries(self, temp_db):
         """Test that deletion creates audit log entries."""
         manager = SubjectAccessManager(temp_db)
-        manager.delete_subject_data("john@example.com", dry_run=False)
+        del_result = manager.delete_subject_data("john@example.com", dry_run=False)
+        assert del_result.succeeded
 
         entries = manager.audit_log.get_entries(subject="john@example.com", action="DATA_DELETED")
         assert len(entries) >= 1
@@ -439,8 +475,10 @@ class TestSubjectAccessManager:
         assert initial_email == "john@example.com"
 
         # Dry-run anonymization
-        result = manager.anonymize_subject_data("John Doe", dry_run=True)
+        anon_result = manager.anonymize_subject_data("John Doe", dry_run=True)
 
+        assert anon_result.succeeded
+        result = anon_result.data
         assert result.subject_identifier == "John Doe"
         assert result.rows_anonymized >= 1
 
@@ -468,8 +506,10 @@ class TestSubjectAccessManager:
         assert initial_email == "john@example.com"
 
         # Actual anonymization
-        result = manager.anonymize_subject_data("John Doe", dry_run=False)
+        anon_result = manager.anonymize_subject_data("John Doe", dry_run=False)
 
+        assert anon_result.succeeded
+        result = anon_result.data
         assert result.rows_anonymized >= 1
 
         # Verify data was actually anonymized
@@ -488,7 +528,8 @@ class TestSubjectAccessManager:
     def test_anonymize_creates_audit_entries(self, temp_db):
         """Test that anonymization creates audit entries."""
         manager = SubjectAccessManager(temp_db)
-        manager.anonymize_subject_data("John Doe", dry_run=False)
+        anon_result = manager.anonymize_subject_data("John Doe", dry_run=False)
+        assert anon_result.succeeded
 
         entries = manager.audit_log.get_entries(subject="John Doe", action="DATA_ANONYMIZED")
         assert len(entries) >= 1
@@ -496,31 +537,39 @@ class TestSubjectAccessManager:
     def test_find_identifier_columns(self, temp_db):
         """Test identifying columns that contain subject identifiers."""
         manager = SubjectAccessManager(temp_db)
-        cols = manager._find_identifier_columns("people")
+        result = manager._find_identifier_columns("people")
 
+        assert result.succeeded
+        cols = result.data or []
         assert "email" in cols or "name" in cols or "client_id" in cols
 
     def test_find_identifier_columns_for_tasks(self, temp_db):
         """Test identifying identifier columns in tasks table."""
         manager = SubjectAccessManager(temp_db)
-        cols = manager._find_identifier_columns("tasks")
+        result = manager._find_identifier_columns("tasks")
 
+        assert result.succeeded
+        cols = result.data or []
         # Should find assignee_email
         assert any("email" in c.lower() for c in cols)
 
     def test_search_table(self, temp_db):
         """Test searching a single table."""
         manager = SubjectAccessManager(temp_db)
-        records = manager._search_table("tasks", "john@example.com")
+        result = manager._search_table("tasks", "john@example.com")
 
+        assert result.succeeded
+        records = result.data or []
         assert len(records) >= 1
         assert any(r.get("assignee_email") == "john@example.com" for r in records)
 
     def test_search_table_no_results(self, temp_db):
         """Test search with no results."""
         manager = SubjectAccessManager(temp_db)
-        records = manager._search_table("tasks", "nonexistent@example.com")
+        result = manager._search_table("tasks", "nonexistent@example.com")
 
+        assert result.succeeded
+        records = result.data or []
         assert len(records) == 0
 
     def test_multiple_deletions_different_subjects(self, temp_db):
@@ -528,12 +577,14 @@ class TestSubjectAccessManager:
         manager = SubjectAccessManager(temp_db)
 
         # Delete first subject
-        result1 = manager.delete_subject_data("john@example.com", dry_run=False)
-        assert result1.rows_deleted >= 1
+        del1 = manager.delete_subject_data("john@example.com", dry_run=False)
+        assert del1.succeeded
+        assert del1.data.rows_deleted >= 1
 
         # Delete second subject
-        result2 = manager.delete_subject_data("alice@example.com", dry_run=False)
-        assert result2.rows_deleted >= 1
+        del2 = manager.delete_subject_data("alice@example.com", dry_run=False)
+        assert del2.succeeded
+        assert del2.data.rows_deleted >= 1
 
         # Verify both are gone
         conn = sqlite3.connect(temp_db)
@@ -571,37 +622,47 @@ class TestSubjectAccessManager:
         subject = "john@example.com"
 
         # Create request
-        request_id = manager.create_request(subject, "access", "user1")
+        create_result = manager.create_request(subject, "access", "user1")
+        assert create_result.succeeded
+        request_id = create_result.data
         assert request_id is not None
 
         # Get request status
-        request = manager.get_request_status(request_id)
+        status_result = manager.get_request_status(request_id)
+        assert status_result.succeeded
+        request = status_result.data
         assert request.status == "pending"
         assert request.subject_identifier == subject
 
         # Find data for subject
-        report = manager.find_subject_data(subject)
+        find_result = manager.find_subject_data(subject)
+        assert find_result.succeeded
+        report = find_result.data
         assert report.total_records >= 0
 
         # Export data
-        file_path = manager.export_subject_data(subject)
-        assert os.path.exists(file_path)
+        export_result = manager.export_subject_data(subject)
+        assert export_result.succeeded
+        assert os.path.exists(export_result.data)
 
     def test_concurrent_table_search(self, temp_db):
         """Test searching across multiple tables finds all matches."""
         manager = SubjectAccessManager(temp_db)
-        report = manager.find_subject_data("john@example.com")
+        result = manager.find_subject_data("john@example.com")
 
+        assert result.succeeded
         # Should find data in multiple tables
-        found_tables = report.tables_with_data
+        found_tables = result.data.tables_with_data
 
         assert len(found_tables) >= 2, f"Expected >= 2 tables, found {found_tables}"
 
     def test_empty_database_search(self, temp_db):
         """Test searching in database with no matching data."""
         manager = SubjectAccessManager(temp_db)
-        report = manager.find_subject_data("nobody@nowhere.com")
+        result = manager.find_subject_data("nobody@nowhere.com")
 
+        assert result.succeeded
+        report = result.data
         assert report.total_records == 0
         assert len(report.tables_with_data) == 0
 
@@ -610,10 +671,11 @@ class TestSubjectAccessManager:
         manager = SubjectAccessManager(temp_db)
 
         # Search with different case
-        report1 = manager.find_subject_data("john doe")
-        report2 = manager.find_subject_data("JOHN DOE")
-        report3 = manager.find_subject_data("John Doe")
+        r1 = manager.find_subject_data("john doe")
+        r2 = manager.find_subject_data("JOHN DOE")
+        r3 = manager.find_subject_data("John Doe")
 
+        assert r1.succeeded and r2.succeeded and r3.succeeded
         # All should find the same data
-        assert report1.total_records == report2.total_records == report3.total_records
-        assert report1.total_records > 0
+        assert r1.data.total_records == r2.data.total_records == r3.data.total_records
+        assert r1.data.total_records > 0

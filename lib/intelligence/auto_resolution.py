@@ -138,7 +138,7 @@ class AutoResolutionEngine:
             return [dict(row) for row in cursor.fetchall()]
         except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Query execution failed: {e}")
-            return []
+            raise
         finally:
             conn.close()
 
@@ -851,21 +851,14 @@ class AutoResolutionEngine:
             conn = sqlite3.connect(str(self.db_path))
             conn.execute("PRAGMA journal_mode=WAL")
 
-            # Ensure escalation table exists
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS resolution_escalations (
-                    id TEXT PRIMARY KEY,
-                    item_id TEXT NOT NULL,
-                    issue_type TEXT,
-                    reason TEXT NOT NULL,
-                    entity_type TEXT,
-                    entity_id TEXT,
-                    escalated_at TEXT NOT NULL,
-                    resolved_at TEXT,
-                    resolved_by TEXT,
-                    resolution_notes TEXT
-                )
-            """)
+            # Table definition lives in lib/schema.py (single source of truth).
+            # schema_engine.converge() creates it at startup; defensive fallback.
+            from lib.schema import TABLES
+            from lib.schema_engine import _build_create_sql
+
+            conn.execute(
+                _build_create_sql("resolution_escalations", TABLES["resolution_escalations"])
+            )
 
             escalation_id = f"esc_{item_id}_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}"
             conn.execute(

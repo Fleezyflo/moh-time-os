@@ -833,6 +833,8 @@ export interface paths {
         /**
          * Command Client Health
          * @description Client health overview for agency command center.
+         *
+         *     ⚠️  NON-CANONICAL — not called by UI. See CANONICALIZATION.md §6.
          */
         get: operations["command_client_health_api_command_client_health_get"];
         put?: never;
@@ -993,6 +995,8 @@ export interface paths {
         /**
          * Command Team Load
          * @description Team load overview for agency command center.
+         *
+         *     ⚠️  NON-CANONICAL — not called by UI. See CANONICALIZATION.md §7.
          */
         get: operations["command_team_load_api_command_team_load_get"];
         put?: never;
@@ -1423,6 +1427,8 @@ export interface paths {
         /**
          * Get Proposals
          * @description Get proposals with full hierarchy context.
+         *
+         *     ⚠️  NON-CANONICAL — not called by UI. See CANONICALIZATION.md §10.
          *
          *     Args:
          *         limit: Max proposals to return

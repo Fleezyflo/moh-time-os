@@ -7,6 +7,8 @@ All Google API calls are mocked using unittest.mock.
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from lib.integrations.calendar_writer import CalendarWriter, CalendarWriteResult
 
 # ============================================================
@@ -139,7 +141,7 @@ class TestCalendarWriterCreateEvent:
     def test_create_event_api_error(self, mock_get_service):
         """Handles API errors correctly."""
         mock_service = MagicMock()
-        mock_service.events().insert.return_value.execute.side_effect = Exception("403 Forbidden")
+        mock_service.events().insert.return_value.execute.side_effect = OSError("403 Forbidden")
         mock_get_service.return_value = mock_service
 
         writer = CalendarWriter(dry_run=False)
@@ -275,7 +277,7 @@ class TestCalendarWriterDeleteEvent:
     def test_delete_event_not_found(self, mock_get_service):
         """Handles event not found error."""
         mock_service = MagicMock()
-        mock_service.events().delete.return_value.execute.side_effect = Exception("404 Not Found")
+        mock_service.events().delete.return_value.execute.side_effect = OSError("404 Not Found")
         mock_get_service.return_value = mock_service
 
         writer = CalendarWriter(dry_run=False)
@@ -548,20 +550,18 @@ class TestCalendarWriterFreeSlots:
             assert len(result) >= 2
 
     def test_find_free_slots_api_error(self):
-        """Handles API errors gracefully."""
+        """API errors are logged and re-raised."""
         mock_service = MagicMock()
-        mock_service.events().list.return_value.execute.side_effect = Exception("403 Forbidden")
+        mock_service.events().list.return_value.execute.side_effect = OSError("403 Forbidden")
 
         with patch.object(CalendarWriter, "_get_service", return_value=mock_service):
             writer = CalendarWriter(dry_run=False)
-            result = writer.find_free_slots(
-                calendar_id="primary",
-                start="2026-02-21T09:00:00Z",
-                end="2026-02-21T17:00:00Z",
-            )
-
-            # Should return empty list on error
-            assert result == []
+            with pytest.raises(OSError, match="403 Forbidden"):
+                writer.find_free_slots(
+                    calendar_id="primary",
+                    start="2026-02-21T09:00:00Z",
+                    end="2026-02-21T17:00:00Z",
+                )
 
 
 # ============================================================

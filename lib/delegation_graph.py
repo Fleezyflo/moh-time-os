@@ -105,7 +105,7 @@ def load_graph() -> dict[str, Delegatee]:
         return {did: Delegatee.from_dict(d) for did, d in data.items()}
     except (json.JSONDecodeError, TypeError) as e:
         logger.warning("Could not load delegation graph: %s", e)
-        return {}
+        raise
 
 
 def save_graph(graph: dict[str, Delegatee]) -> None:

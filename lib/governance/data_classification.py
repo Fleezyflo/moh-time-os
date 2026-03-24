@@ -16,6 +16,7 @@ from enum import Enum
 from typing import TYPE_CHECKING
 
 from lib import safe_sql
+from lib.common.result_types import DataResult
 from lib.db import validate_identifier
 
 if TYPE_CHECKING:
@@ -276,7 +277,7 @@ class DataClassifier:
             return columns
         except sqlite3.Error as e:
             self.logger.error(f"Error getting schema for {table}: {e}")
-            return []
+            raise
 
     def _get_sample_values(self, table: str, column: str, limit: int = 5) -> list:
         """Get sample values from a column for pattern analysis."""
@@ -291,7 +292,7 @@ class DataClassifier:
             return values
         except sqlite3.Error as e:
             self.logger.debug(f"Error getting samples from {table}.{column}: {e}")
-            return []
+            raise
 
     def classify_column(
         self,
@@ -392,52 +393,68 @@ class DataClassifier:
             notes="; ".join(notes) if notes else "",
         )
 
-    def classify_table(self, table: str) -> TableClassification:
-        """Classify all columns in a table."""
-        columns = self._get_table_schema(table)
+    def classify_table(self, table: str) -> DataResult[TableClassification]:
+        """Classify all columns in a table.
 
-        if not columns:
-            return TableClassification(
-                table=table,
-                overall_sensitivity=DataSensitivity.PUBLIC,
-                categories=set(),
-                pii_columns=[],
-                financial_columns=[],
-                total_columns=0,
-                classified_columns=0,
+        Returns:
+            DataResult with TableClassification on success, or error on failure.
+        """
+        try:
+            columns = self._get_table_schema(table)
+
+            if not columns:
+                return DataResult.ok(
+                    TableClassification(
+                        table=table,
+                        overall_sensitivity=DataSensitivity.PUBLIC,
+                        categories=set(),
+                        pii_columns=[],
+                        financial_columns=[],
+                        total_columns=0,
+                        classified_columns=0,
+                    )
+                )
+
+            pii_columns = []
+            financial_columns = []
+            max_sensitivity = DataSensitivity.PUBLIC
+            categories = set()
+
+            for column in columns:
+                col_class = self.classify_column(table, column)
+
+                if col_class.contains_pii:
+                    pii_columns.append(column)
+                if col_class.contains_financial:
+                    financial_columns.append(column)
+
+                categories.add(col_class.category)
+
+                # Update max sensitivity
+                if col_class.sensitivity > max_sensitivity:
+                    max_sensitivity = col_class.sensitivity
+
+            return DataResult.ok(
+                TableClassification(
+                    table=table,
+                    overall_sensitivity=max_sensitivity,
+                    categories=categories,
+                    pii_columns=pii_columns,
+                    financial_columns=financial_columns,
+                    total_columns=len(columns),
+                    classified_columns=len(columns),
+                )
             )
+        except (sqlite3.Error, ValueError, OSError) as e:
+            self.logger.error("classify_table failed for %s: %s", table, e, exc_info=True)
+            return DataResult.fail(str(e), error_type="classification")
 
-        pii_columns = []
-        financial_columns = []
-        max_sensitivity = DataSensitivity.PUBLIC
-        categories = set()
+    def classify_database(self) -> DataResult["DataCatalog"]:
+        """Classify the entire database.
 
-        for column in columns:
-            col_class = self.classify_column(table, column)
-
-            if col_class.contains_pii:
-                pii_columns.append(column)
-            if col_class.contains_financial:
-                financial_columns.append(column)
-
-            categories.add(col_class.category)
-
-            # Update max sensitivity
-            if col_class.sensitivity > max_sensitivity:
-                max_sensitivity = col_class.sensitivity
-
-        return TableClassification(
-            table=table,
-            overall_sensitivity=max_sensitivity,
-            categories=categories,
-            pii_columns=pii_columns,
-            financial_columns=financial_columns,
-            total_columns=len(columns),
-            classified_columns=len(columns),
-        )
-
-    def classify_database(self) -> "DataCatalog":
-        """Classify the entire database."""
+        Returns:
+            DataResult with DataCatalog on success, or error on failure.
+        """
         from lib.governance.data_catalog import DataCatalog
 
         try:
@@ -446,21 +463,37 @@ class DataClassifier:
             tables = [row[0] for row in cursor.fetchall()]
             conn.close()
         except sqlite3.Error as e:
-            self.logger.error(f"Error listing tables: {e}")
-            return DataCatalog({})
+            self.logger.error("classify_database failed: %s", e, exc_info=True)
+            return DataResult.fail(str(e), error_type="storage")
 
         classifications = {}
         for table in tables:
-            classifications[table] = self.classify_table(table)
+            result = self.classify_table(table)
+            if result.succeeded:
+                classifications[table] = result.data
+            else:
+                self.logger.warning("Skipping table %s in classification: %s", table, result.error)
 
-        return DataCatalog(classifications)
+        return DataResult.ok(DataCatalog(classifications))
 
-    def get_pii_tables(self) -> list[str]:
-        """Get all tables containing PII data."""
-        catalog = self.classify_database()
-        return catalog.get_pii_tables()
+    def get_pii_tables(self) -> DataResult[list[str]]:
+        """Get all tables containing PII data.
 
-    def get_financial_tables(self) -> list[str]:
-        """Get all tables containing financial data."""
-        catalog = self.classify_database()
-        return catalog.get_financial_tables()
+        Returns:
+            DataResult with list of PII table names on success, or error on failure.
+        """
+        result = self.classify_database()
+        if not result.succeeded:
+            return DataResult.fail(result.error, error_type=result.error_type)
+        return DataResult.ok(result.data.get_pii_tables())
+
+    def get_financial_tables(self) -> DataResult[list[str]]:
+        """Get all tables containing financial data.
+
+        Returns:
+            DataResult with list of financial table names on success, or error on failure.
+        """
+        result = self.classify_database()
+        if not result.succeeded:
+            return DataResult.fail(result.error, error_type=result.error_type)
+        return DataResult.ok(result.data.get_financial_tables())

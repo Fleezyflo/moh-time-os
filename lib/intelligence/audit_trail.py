@@ -59,37 +59,18 @@ class AuditTrail:
         self._ensure_table()
 
     def _ensure_table(self) -> None:
+        """Ensure intelligence_audit table exists.
+
+        Table definition lives in lib/schema.py (single source of truth).
+        schema_engine.converge() creates it at startup; this is a defensive
+        fallback for standalone usage.
+        """
+        from lib.schema import TABLES
+        from lib.schema_engine import _build_create_sql
+
         conn = sqlite3.connect(str(self.db_path))
         try:
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS intelligence_audit (
-                    id TEXT PRIMARY KEY,
-                    operation TEXT NOT NULL,
-                    entity_type TEXT NOT NULL,
-                    entity_id TEXT NOT NULL,
-                    inputs_json TEXT DEFAULT '{}',
-                    outputs_json TEXT DEFAULT '{}',
-                    duration_ms REAL DEFAULT 0,
-                    created_at TEXT NOT NULL,
-                    status TEXT DEFAULT 'success',
-                    error_message TEXT
-                )
-                """
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_audit_entity "
-                "ON intelligence_audit(entity_type, entity_id)"
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_audit_operation ON intelligence_audit(operation)"
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_audit_time ON intelligence_audit(created_at)"
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_audit_status ON intelligence_audit(status)"
-            )
+            conn.execute(_build_create_sql("intelligence_audit", TABLES["intelligence_audit"]))
             conn.commit()
         finally:
             conn.close()

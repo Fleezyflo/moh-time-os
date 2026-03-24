@@ -72,26 +72,18 @@ def get_internal_users(db_path: Path) -> list[str]:
 
 
 def ensure_tables(db_path: Path) -> None:
-    """Create required tables if not exist."""
+    """Ensure sync_cursor and subject_blocklist tables exist.
+
+    Table definitions live in lib/schema.py (single source of truth).
+    schema_engine.converge() creates them at startup; this is a defensive
+    fallback for standalone usage.
+    """
+    from lib.schema import TABLES
+    from lib.schema_engine import _build_create_sql
+
     conn = sqlite3.connect(str(db_path))
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS sync_cursor (
-            service TEXT NOT NULL,
-            subject TEXT NOT NULL,
-            key TEXT NOT NULL,
-            value TEXT,
-            updated_at TEXT,
-            PRIMARY KEY (service, subject, key)
-        )
-    """)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS subject_blocklist (
-            subject TEXT PRIMARY KEY,
-            reason TEXT NOT NULL,
-            error_detail TEXT,
-            updated_at TEXT NOT NULL
-        )
-    """)
+    conn.execute(_build_create_sql("sync_cursor", TABLES["sync_cursor"]))
+    conn.execute(_build_create_sql("subject_blocklist", TABLES["subject_blocklist"]))
     conn.commit()
     conn.close()
 

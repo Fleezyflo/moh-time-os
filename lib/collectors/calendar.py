@@ -37,6 +37,7 @@ class CalendarCollector(BaseCollector):
 
     source_name = "calendar"
     target_table = "events"
+    OUTPUT_TABLES = ["events", "calendar_attendees", "calendar_recurrence_rules"]
 
     def __init__(self, config: dict, store=None):
         super().__init__(config, store)

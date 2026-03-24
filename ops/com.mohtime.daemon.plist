@@ -7,13 +7,14 @@
 
 	<key>ProgramArguments</key>
 	<array>
-		<string>/Users/molham/clawd/moh_time_os/.venv/bin/python</string>
+		<string>/Users/molhamhomsi/clawd/moh_time_os/.venv/bin/python3</string>
 		<string>-m</string>
 		<string>lib.daemon</string>
+		<string>start</string>
 	</array>
 
 	<key>WorkingDirectory</key>
-	<string>/Users/molham/clawd/moh_time_os</string>
+	<string>/Users/molhamhomsi/clawd/moh_time_os</string>
 
 	<key>KeepAlive</key>
 	<true/>
@@ -22,10 +23,10 @@
 	<true/>
 
 	<key>StandardOutPath</key>
-	<string>/Users/molham/Library/Logs/mohtime-daemon.log</string>
+	<string>/Users/molhamhomsi/Library/Logs/mohtime-daemon.log</string>
 
 	<key>StandardErrorPath</key>
-	<string>/Users/molham/Library/Logs/mohtime-daemon.log</string>
+	<string>/Users/molhamhomsi/Library/Logs/mohtime-daemon.log</string>
 
 	<key>ThrottleInterval</key>
 	<integer>10</integer>
@@ -33,7 +34,10 @@
 	<key>EnvironmentVariables</key>
 	<dict>
 		<key>PATH</key>
-		<string>/Users/molham/clawd/moh_time_os/.venv/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+		<string>/Users/molhamhomsi/clawd/moh_time_os/.venv/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+		<!-- Daemon loads credentials from ~/.mohtime.env or .env at startup.
+		     To set up: copy .env.example to ~/.mohtime.env with real values.
+		     Do not hardcode credentials in this plist — it is tracked in git. -->
 	</dict>
 </dict>
 </plist>

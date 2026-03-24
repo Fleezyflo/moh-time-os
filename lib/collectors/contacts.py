@@ -36,6 +36,7 @@ class ContactsCollector(BaseCollector):
 
     source_name = "contacts"
     target_table = "contacts"
+    OUTPUT_TABLES = ["contacts"]
 
     def __init__(self, config: dict, store=None):
         super().__init__(config, store)

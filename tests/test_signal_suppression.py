@@ -21,6 +21,14 @@ from lib.intelligence.signal_suppression import (
 @pytest.fixture
 def suppression(tmp_path):
     db_path = tmp_path / "test_suppress.db"
+    import sqlite3
+
+    conn = sqlite3.connect(str(db_path))
+    from lib.schema_engine import create_fresh
+
+    create_fresh(conn)
+    conn.commit()
+    conn.close()
     return SignalSuppression(db_path=db_path)
 
 

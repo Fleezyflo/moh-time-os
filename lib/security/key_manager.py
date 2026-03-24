@@ -28,6 +28,7 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 
 from lib import store
+from lib.common.result_types import DataResult
 
 log = logging.getLogger(__name__)
 
@@ -174,11 +175,11 @@ class KeyManager:
         key_hash = self._hash_key(key)
         key_id = f"key_{secrets.token_hex(8)}"
 
-        now = datetime.now(timezone.utc).isoformat() + "Z"
+        now = datetime.now(timezone.utc).isoformat()
         expires_at = None
         if expires_in_days:
             expires = datetime.now(timezone.utc) + timedelta(days=expires_in_days)
-            expires_at = expires.isoformat() + "Z"
+            expires_at = expires.isoformat()
 
         try:
             with store.get_connection() as conn:
@@ -260,7 +261,7 @@ class KeyManager:
                     return None
 
                 # Update last_used_at
-                now = datetime.now(timezone.utc).isoformat() + "Z"
+                now = datetime.now(timezone.utc).isoformat()
                 conn.execute(
                     "UPDATE api_keys SET last_used_at = ? WHERE id = ?",
                     (now, key_info.id),
@@ -361,7 +362,7 @@ class KeyManager:
             log.error(f"Failed to rotate key {key_id}: {e}")
             return None
 
-    def list_keys(self, active_only: bool = True) -> list[KeyInfo]:
+    def list_keys(self, active_only: bool = True) -> DataResult[list[KeyInfo]]:
         """
         List all keys (metadata only, never returns hash or key).
 
@@ -369,7 +370,8 @@ class KeyManager:
             active_only: If True, only return active keys
 
         Returns:
-            List of KeyInfo objects (no hashes or keys exposed)
+            DataResult with list of KeyInfo on success, error info on failure.
+            Callers must check ``result.succeeded`` before using ``result.data``.
         """
         try:
             with store.get_connection() as conn:
@@ -395,11 +397,11 @@ class KeyManager:
                     if key_info is not None:
                         keys.append(key_info)
 
-                return keys
+                return DataResult.ok(keys)
 
         except sqlite3.Error as e:
-            log.error(f"Failed to list keys: {e}")
-            return []
+            log.error("Failed to list keys: %s", e, exc_info=True)
+            return DataResult.fail(str(e), error_type="storage")
 
     def get_key_info(self, key_id: str) -> KeyInfo | None:
         """

@@ -152,7 +152,7 @@ class BusinessCalendar:
                 return yaml.safe_load(f) or {}
         except (sqlite3.Error, ValueError, OSError) as exc:
             logger.error("Failed to load business calendar config: %s", exc)
-            return {}
+            raise
 
     # -------------------------------------------------------------------------
     # Core queries

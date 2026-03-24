@@ -56,16 +56,18 @@ def create_subject_access_request(
             )
 
         # Create request
-        request_id = _manager.create_request(
+        result = _manager.create_request(
             subject_identifier=subject_identifier,
             request_type=request_type,
             requested_by=requested_by or "api",
             reason=reason,
         )
+        if result.failed:
+            raise HTTPException(status_code=500, detail=result.error)
 
         return {
             "status": "ok",
-            "request_id": request_id,
+            "request_id": result.data,
             "subject_identifier": subject_identifier,
             "request_type": request_type,
         }
@@ -81,8 +83,11 @@ def create_subject_access_request(
 def get_subject_access_request(request_id: str) -> dict:
     """Get status of a subject access request."""
     try:
-        request = _manager.get_request_status(request_id)
+        result = _manager.get_request_status(request_id)
+        if result.failed:
+            raise HTTPException(status_code=500, detail=result.error)
 
+        request = result.data
         if not request:
             raise HTTPException(status_code=404, detail="Request not found")
 
@@ -111,11 +116,13 @@ def list_subject_access_requests(
 ) -> dict:
     """List all subject access requests with optional status filter."""
     try:
-        requests = _manager.list_requests(status=status)
+        result = _manager.list_requests(status=status)
+        if result.failed:
+            raise HTTPException(status_code=500, detail=result.error)
 
         return {
             "status": "ok",
-            "count": len(requests),
+            "count": len(result.data),
             "requests": [
                 {
                     "request_id": req.request_id,
@@ -125,7 +132,7 @@ def list_subject_access_requests(
                     "requested_at": req.requested_at,
                     "fulfilled_at": req.fulfilled_at,
                 }
-                for req in requests
+                for req in result.data
             ],
         }
 
@@ -159,13 +166,19 @@ def fulfill_subject_access_request(
     """
     try:
         # Get the request
-        sar = _manager.get_request_status(request_id)
+        sar_result = _manager.get_request_status(request_id)
+        if sar_result.failed:
+            raise HTTPException(status_code=500, detail=sar_result.error)
+        sar = sar_result.data
         if not sar:
             raise HTTPException(status_code=404, detail="Request not found")
 
         # Perform the action
         if action == "find":
-            report = _manager.find_subject_data(sar.subject_identifier)
+            report_result = _manager.find_subject_data(sar.subject_identifier)
+            if report_result.failed:
+                raise HTTPException(status_code=500, detail=report_result.error)
+            report = report_result.data
             return {
                 "status": "ok",
                 "action": "find",
@@ -177,16 +190,21 @@ def fulfill_subject_access_request(
             }
 
         elif action == "export":
-            file_path = _manager.export_subject_data(sar.subject_identifier)
+            export_result = _manager.export_subject_data(sar.subject_identifier)
+            if export_result.failed:
+                raise HTTPException(status_code=500, detail=export_result.error)
             return {
                 "status": "ok",
                 "action": "export",
-                "file_path": file_path,
+                "file_path": export_result.data,
                 "subject_identifier": sar.subject_identifier,
             }
 
         elif action == "delete":
-            result = _manager.delete_subject_data(sar.subject_identifier, dry_run=dry_run)
+            delete_result = _manager.delete_subject_data(sar.subject_identifier, dry_run=dry_run)
+            if delete_result.failed:
+                raise HTTPException(status_code=500, detail=delete_result.error)
+            result = delete_result.data
             return {
                 "status": "ok",
                 "action": "delete",
@@ -199,7 +217,10 @@ def fulfill_subject_access_request(
             }
 
         elif action == "anonymize":
-            result = _manager.anonymize_subject_data(sar.subject_identifier, dry_run=dry_run)
+            anon_result = _manager.anonymize_subject_data(sar.subject_identifier, dry_run=dry_run)
+            if anon_result.failed:
+                raise HTTPException(status_code=500, detail=anon_result.error)
+            result = anon_result.data
             return {
                 "status": "ok",
                 "action": "anonymize",

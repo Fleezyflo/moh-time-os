@@ -44,6 +44,13 @@ class ChatCollector(BaseCollector):
 
     source_name = "chat"
     target_table = "chat_messages"
+    OUTPUT_TABLES = [
+        "chat_messages",
+        "chat_reactions",
+        "chat_attachments",
+        "chat_space_metadata",
+        "chat_space_members",
+    ]
 
     def __init__(self, config: dict, store=None):
         super().__init__(config, store)
@@ -142,7 +149,7 @@ class ChatCollector(BaseCollector):
                 socket.setdefaulttimeout(old_timeout)
         except COLLECTOR_ERRORS as e:
             self.logger.warning(f"Error listing spaces: {e}")
-            return []
+            raise
 
     def _list_messages(self, service, space_name: str, max_messages: int = 30) -> list[dict]:
         """List messages in a space."""
@@ -153,7 +160,7 @@ class ChatCollector(BaseCollector):
             return list(results.get("messages", []))
         except COLLECTOR_ERRORS as e:
             self.logger.warning(f"Failed to fetch messages for {space_name}: {e}")
-            return []
+            raise
 
     def _list_members(self, service, space_name: str) -> list[dict]:
         """List members in a space."""
@@ -162,7 +169,7 @@ class ChatCollector(BaseCollector):
             return list(results.get("memberships", []))
         except COLLECTOR_ERRORS as e:
             self.logger.warning(f"Failed to fetch members for {space_name}: {e}")
-            return []
+            raise
 
     def transform(self, raw_data: dict) -> list[dict]:
         """Transform raw Chat API data to canonical format for chat_messages."""

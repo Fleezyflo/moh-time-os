@@ -1,13 +1,21 @@
 """
 Detection System Orchestrator -- runs all detectors, correlates, and stores findings.
 
-Entry point: run_all_detectors(db_path, dry_run=True)
+Entry point: run_all_detectors(db_path, dry_run=False)
 
 Handles:
 - Running CollisionDetector, DriftDetector, BottleneckDetector
 - Passing results through the correlator
 - Deduplication: existing findings get last_detected updated, new ones inserted
-- Writing to detection_findings or detection_findings_preview (dry-run mode)
+- Writing to detection_findings (canonical) or detection_findings_preview (non-canonical)
+
+CANONICAL TABLE: detection_findings (dry_run=False)
+  The daemon and autonomous loop both write here. The UI reads from here.
+
+NON-CANONICAL TABLE: detection_findings_preview (dry_run=True)
+  ⚠️  Retired per CANONICALIZATION.md §2/§8. Nothing reads this table.
+  The dry_run=True path is preserved for backward compatibility but should
+  not be used in production pipelines. The daemon uses dry_run=False.
 """
 
 import hashlib
@@ -198,7 +206,7 @@ def _extract_severity(detector: str, finding: dict[str, Any]) -> str:
         return "medium"
     elif detector == "drift":
         overdue = finding.get("overdue_count", 0)
-        tier = finding.get("client_tier", "").lower()
+        tier = (finding.get("client_tier") or "").lower()
         if tier in ("platinum", "gold") and overdue >= 3:
             return "critical"
         elif overdue >= 5:

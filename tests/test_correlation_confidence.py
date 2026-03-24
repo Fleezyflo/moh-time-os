@@ -4,7 +4,7 @@ Tests for CorrelationConfidenceCalculator — evidence-based confidence.
 Brief 18 (ID), Task ID-1.1 + ID-6.1
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -21,7 +21,7 @@ def calculator():
 
 def _signal(key, severity="WARNING", hours_ago=0, present=True, ref_time=None):
     if ref_time is None:
-        ref_time = datetime(2026, 4, 15, 12, 0)
+        ref_time = datetime(2026, 4, 15, 12, 0, tzinfo=timezone.utc)
     return CorrelationSignalEvidence(
         signal_key=key,
         signal_type=f"sig_{key}",
@@ -76,19 +76,19 @@ class TestSeverityAlignment:
 
 class TestTemporalProximity:
     def test_same_cycle(self, calculator):
-        ref = datetime(2026, 4, 15, 12, 0)
+        ref = datetime(2026, 4, 15, 12, 0, tzinfo=timezone.utc)
         signals = [_signal("a", hours_ago=1, ref_time=ref)]
         f = calculator.calculate(signals, required_signals=1, reference_time=ref)
         assert f.temporal_proximity > 0.95
 
     def test_three_cycles_ago(self, calculator):
-        ref = datetime(2026, 4, 15, 12, 0)
+        ref = datetime(2026, 4, 15, 12, 0, tzinfo=timezone.utc)
         signals = [_signal("a", hours_ago=72, ref_time=ref)]  # 3 cycles
         f = calculator.calculate(signals, required_signals=1, reference_time=ref)
         assert abs(f.temporal_proximity - 0.5) < 0.05  # half-life = 3 cycles
 
     def test_six_cycles_ago(self, calculator):
-        ref = datetime(2026, 4, 15, 12, 0)
+        ref = datetime(2026, 4, 15, 12, 0, tzinfo=timezone.utc)
         signals = [_signal("a", hours_ago=144, ref_time=ref)]  # 6 cycles
         f = calculator.calculate(signals, required_signals=1, reference_time=ref)
         assert abs(f.temporal_proximity - 0.25) < 0.05
@@ -144,7 +144,7 @@ class TestRecurrenceFactor:
 
 class TestFinalConfidence:
     def test_perfect_correlation(self, calculator):
-        ref = datetime(2026, 4, 15, 12, 0)
+        ref = datetime(2026, 4, 15, 12, 0, tzinfo=timezone.utc)
         signals = [
             _signal("a", "CRITICAL", hours_ago=0, ref_time=ref),
             _signal("b", "CRITICAL", hours_ago=0, ref_time=ref),
@@ -162,7 +162,7 @@ class TestFinalConfidence:
         assert f.final_confidence > 0.8
 
     def test_weak_correlation(self, calculator):
-        ref = datetime(2026, 4, 15, 12, 0)
+        ref = datetime(2026, 4, 15, 12, 0, tzinfo=timezone.utc)
         signals = [
             _signal("a", "CRITICAL", hours_ago=144, ref_time=ref),
             _signal("b", "WATCH", hours_ago=144, ref_time=ref, present=False),

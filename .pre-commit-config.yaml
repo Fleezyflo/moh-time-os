@@ -53,7 +53,7 @@ repos:
     hooks:
       - id: sync-openapi-spec
         name: Sync OpenAPI spec
-        entry: bash -c 'python scripts/export_openapi.py && git add docs/openapi.json'
+        entry: bash -c '.venv/bin/python scripts/export_openapi.py && git add docs/openapi.json'
         language: system
         pass_filenames: false
         types: [python]
@@ -67,7 +67,7 @@ repos:
 
       - id: sync-system-map
         name: Sync system map
-        entry: bash -c 'python scripts/generate_system_map.py && git add docs/system-map.json'
+        entry: bash -c '.venv/bin/python scripts/generate_system_map.py && git add docs/system-map.json'
         language: system
         pass_filenames: false
         types: [python]

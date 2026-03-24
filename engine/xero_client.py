@@ -41,13 +41,18 @@ def _load_from_env() -> XeroCredentials | None:
     tenant_id = os.environ.get("XERO_TENANT_ID")
 
     if all([client_id, client_secret, refresh_token, tenant_id]):
-        # Still check token cache for access token
+        # Check token cache for access token AND rotated refresh token
         access_token = None
         if os.path.exists(TOKEN_CACHE_PATH):
             try:
                 with open(TOKEN_CACHE_PATH) as f:
                     cache = json.load(f)
                     access_token = cache.get("access_token")
+                    # Prefer cached refresh token — Xero rotates on every use,
+                    # so the env var is stale after the first token refresh
+                    cached_refresh = cache.get("refresh_token")
+                    if cached_refresh:
+                        refresh_token = cached_refresh
             except (OSError, json.JSONDecodeError):
                 logger.debug("Token cache read failed", exc_info=True)
 
@@ -99,24 +104,18 @@ def load_credentials() -> XeroCredentials:
 def save_tokens(access_token: str, refresh_token: str) -> None:
     """Save tokens to cache and update refresh token in credentials.
 
-    Access token always cached to .xero_token_cache.json.
-    Refresh token written back to .credentials.json only if using file-based creds.
-    When using env vars, the rotated refresh token is logged as a warning so
-    the operator can update the env var.
+    Both access_token and refresh_token are cached to .xero_token_cache.json.
+    This is critical because Xero rotates refresh tokens on every use —
+    the env var becomes stale after the first token refresh.
+    Refresh token also written back to .credentials.json if using file-based creds.
     """
-    # Save access token to cache
+    # Save both tokens to cache (refresh_token survives rotation this way)
     os.makedirs(os.path.dirname(TOKEN_CACHE_PATH), exist_ok=True)
     with open(TOKEN_CACHE_PATH, "w") as f:
-        json.dump({"access_token": access_token}, f)
+        json.dump({"access_token": access_token, "refresh_token": refresh_token}, f)
 
-    # Update refresh token — file-based or env-var mode
-    if os.environ.get("XERO_REFRESH_TOKEN"):
-        # Env var mode: can't write back, warn operator
-        if refresh_token != os.environ.get("XERO_REFRESH_TOKEN"):
-            logger.warning(
-                "Xero refresh token rotated. Update XERO_REFRESH_TOKEN env var to avoid re-auth.",
-            )
-    else:
+    # Also update credentials file if using file-based creds
+    if not os.environ.get("XERO_REFRESH_TOKEN"):
         # File-based mode: update credentials file
         try:
             with open(_CONFIG_PATH) as f:

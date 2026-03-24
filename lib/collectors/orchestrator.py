@@ -13,7 +13,7 @@ from typing import Any
 import yaml
 
 from lib import paths
-from lib.collector_registry import CollectorLock
+from lib.collector_lock import CollectorLock
 from lib.collectors.resilience import COLLECTOR_ERRORS
 from lib.collectors.result import CollectorResult, CollectorStatus, classify_error
 from lib.state_tracker import mark_collected

@@ -68,23 +68,18 @@ class AsanaSyncManager:
             )
 
     def _ensure_mapping_table(self):
-        """Create asana_task_mappings table if it doesn't exist."""
+        """Ensure asana_task_mappings table exists.
+
+        Table definition lives in lib/schema.py (single source of truth).
+        schema_engine.converge() creates it at startup; this is a defensive
+        fallback for standalone usage.
+        """
+        from lib.schema import TABLES
+        from lib.schema_engine import _build_create_sql
+
         try:
             conn = get_connection()
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                CREATE TABLE IF NOT EXISTS asana_task_mappings (
-                    local_id TEXT PRIMARY KEY,
-                    asana_gid TEXT NOT NULL UNIQUE,
-                    project_gid TEXT,
-                    local_updated_at TEXT,
-                    asana_updated_at TEXT,
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
-                )
-            """
-            )
+            conn.execute(_build_create_sql("asana_task_mappings", TABLES["asana_task_mappings"]))
             conn.commit()
             conn.close()
         except sqlite3.Error as e:

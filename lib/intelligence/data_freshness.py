@@ -104,23 +104,18 @@ class DataFreshnessTracker:
         self._ensure_table()
 
     def _ensure_table(self) -> None:
+        """Ensure data_freshness table exists.
+
+        Table definition lives in lib/schema.py (single source of truth).
+        schema_engine.converge() creates it at startup; this is a defensive
+        fallback for standalone usage.
+        """
+        from lib.schema import TABLES
+        from lib.schema_engine import _build_create_sql
+
         conn = sqlite3.connect(str(self.db_path))
         try:
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS data_freshness (
-                    entity_type TEXT NOT NULL,
-                    entity_id TEXT NOT NULL,
-                    source TEXT NOT NULL,
-                    last_collected_at TEXT NOT NULL,
-                    record_count INTEGER DEFAULT 0,
-                    PRIMARY KEY (entity_type, entity_id, source)
-                )
-                """
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_freshness_source ON data_freshness(source)"
-            )
+            conn.execute(_build_create_sql("data_freshness", TABLES["data_freshness"]))
             conn.commit()
         finally:
             conn.close()

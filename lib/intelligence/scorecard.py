@@ -10,10 +10,13 @@ Individual scoring functions are for single-entity use cases.
 Reference: data/scoring_model_20260213.md
 """
 
+import json
 import logging
+import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+from lib import paths
 from lib.intelligence.scoring import (
     CLIENT_DIMENSIONS,
     PERSON_DIMENSIONS,
@@ -554,11 +557,6 @@ def get_score_distribution(entity_type: EntityType, db_path: Path | None = None)
 # =============================================================================
 # SCORE HISTORY (Persistence for Trend Analysis)
 # =============================================================================
-
-import json  # noqa: E402 — conditional import
-import sqlite3  # noqa: E402 — conditional import
-
-from lib import paths  # noqa: E402 — conditional import
 
 
 def record_score(scorecard: dict, db_path: Path | None = None) -> bool:

@@ -15,6 +15,14 @@ from lib.intelligence.drift_detection import (
 @pytest.fixture
 def detector(tmp_path):
     db_path = tmp_path / "test_drift.db"
+    import sqlite3
+
+    conn = sqlite3.connect(str(db_path))
+    from lib.schema_engine import create_fresh
+
+    create_fresh(conn)
+    conn.commit()
+    conn.close()
     return DriftDetector(db_path=db_path)
 
 

@@ -21,6 +21,16 @@ REPO_ROOT = Path(__file__).parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+# Redirect MOH_TIME_OS_HOME to a temp dir BEFORE any module imports trigger
+# StateStore.__init__ → ensure_migrations() → sqlite3.connect(live_db_path).
+# This must happen before the determinism guards below, because the guards
+# block access to the live DB path — but if StateStore is created during
+# import-time initialization, it would hit the guard before any fixture runs.
+import tempfile
+
+_TEST_HOME = tempfile.mkdtemp(prefix="mohtest_")
+os.environ["MOH_TIME_OS_HOME"] = _TEST_HOME
+
 
 # =============================================================================
 # DETERMINISM GUARD: Block live database access
@@ -131,6 +141,11 @@ def _is_forbidden_path(path_str: str) -> bool:
         return True
 
     # Also check raw string patterns for belt-and-suspenders
+    # Skip substring matching for paths under _TEST_HOME (the temp dir set above)
+    # because "data/moh_time_os.db" is a valid test DB filename in the temp dir.
+    if _TEST_HOME and _TEST_HOME in path_str:
+        return False
+
     for pattern in _FORBIDDEN_DB_PATTERNS:
         if pattern in path_str:
             return True
@@ -298,14 +313,14 @@ def validate_all_cassettes():
     - No secrets (redaction markers present where expected)
     - Sorted keys for deterministic JSON
     """
-    from lib.collectors.recorder import CASSETTES_DIR, validate_cassettes
+    from lib.collectors.recorder import _cassettes_dir, validate_cassettes
 
     issues = validate_cassettes()
 
     # Additional checks: ensure cassettes use sorted keys
     import json
 
-    for path in CASSETTES_DIR.glob("*.json"):
+    for path in _cassettes_dir().glob("*.json"):
         try:
             text = path.read_text()
             data = json.loads(text)

@@ -17,7 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse
 from pydantic import BaseModel
 
-from api.response_models import DetailResponse, MutationResponse
+from api.response_models import DetailResponse, ErrorResponse, MutationResponse, classify_error_type
 from lib import db as db_module
 from lib import paths, safe_sql
 from lib.analyzers import AnalyzerOrchestrator
@@ -120,6 +120,40 @@ app.include_router(action_router, prefix="/api")
 app.include_router(chat_webhook_router, prefix="/api")
 
 
+# ==== Unified Error Handler ====
+# All HTTPException responses go through this handler to produce a consistent
+# ErrorResponse shape: {error, error_type, detail, request_id}.
+# Frontend can rely on this shape for ALL API errors.
+
+
+@app.exception_handler(HTTPException)
+async def unified_http_exception_handler(request: Request, exc: HTTPException):
+    """Convert all HTTPException responses to unified ErrorResponse format."""
+    error_type = classify_error_type(exc.status_code)
+
+    # Extract error message — exc.detail can be str or dict
+    if isinstance(exc.detail, dict):
+        error_message = exc.detail.get("message", exc.detail.get("error", str(exc.detail)))
+        detail_extra = str(exc.detail) if "message" in exc.detail else None
+    else:
+        error_message = str(exc.detail) if exc.detail else "An error occurred"
+        detail_extra = None
+
+    # Try to get request_id from middleware (CorrelationIdMiddleware sets it)
+    request_id = getattr(request.state, "request_id", None) if hasattr(request, "state") else None
+
+    body = ErrorResponse(
+        error=error_message,
+        error_type=error_type,
+        detail=detail_extra,
+        request_id=request_id,
+    )
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=body.model_dump(exclude_none=True),
+    )
+
+
 # ==== DB Startup & Migrations ====
 @app.on_event("startup")
 async def run_db_migrations_on_startup():
@@ -209,46 +243,49 @@ class ModeChange(BaseModel):
 @app.get("/api/overview", response_model=DetailResponse)
 async def get_overview():
     """Get dashboard overview with priorities, calendar, decisions, anomalies."""
-    # Get priority queue
-    priority_queue = (
-        analyzers.priority_analyzer.analyze() if hasattr(analyzers, "priority_analyzer") else []
-    )
-    top_priorities = sorted(priority_queue, key=lambda x: x.get("score", 0), reverse=True)[:5]
+    try:
+        # Get priority queue
+        priority_queue = (
+            analyzers.priority_analyzer.analyze() if hasattr(analyzers, "priority_analyzer") else []
+        )
+        top_priorities = sorted(priority_queue, key=lambda x: x.get("score", 0), reverse=True)[:5]
 
-    # Get today's events
-    from datetime import datetime
+        # Get today's events
+        from datetime import datetime
 
-    today = datetime.now().strftime("%Y-%m-%d")
-    events = store.query(
-        "SELECT * FROM events WHERE date(start_time) = ? ORDER BY start_time", [today]
-    )
+        today = datetime.now().strftime("%Y-%m-%d")
+        events = store.query(
+            "SELECT * FROM events WHERE date(start_time) = ? ORDER BY start_time", [today]
+        )
 
-    # Get pending decisions
-    pending_decisions = store.query(
-        "SELECT * FROM decisions WHERE approved IS NULL ORDER BY created_at DESC LIMIT 5"
-    )
+        # Get pending decisions
+        pending_decisions = store.query(
+            "SELECT * FROM decisions WHERE approved IS NULL ORDER BY created_at DESC LIMIT 5"
+        )
 
-    # Get anomalies
-    anomalies = store.query(
-        "SELECT * FROM insights WHERE type = 'anomaly' AND (expires_at IS NULL OR expires_at > datetime('now')) ORDER BY created_at DESC LIMIT 5"
-    )
+        # Get anomalies
+        anomalies = store.query(
+            "SELECT * FROM insights WHERE type = 'anomaly' AND (expires_at IS NULL OR expires_at > datetime('now')) ORDER BY created_at DESC LIMIT 5"
+        )
 
-    return {
-        "priorities": {"items": top_priorities, "total": len(priority_queue)},
-        "calendar": {"events": [dict(e) for e in events], "event_count": len(events)},
-        "decisions": {
-            "pending": [dict(d) for d in pending_decisions],
-            "pending_count": store.count("decisions", "approved IS NULL"),
-        },
-        "anomalies": {
-            "items": [dict(a) for a in anomalies],
-            "total": store.count(
-                "insights",
-                "type = 'anomaly' AND (expires_at IS NULL OR expires_at > datetime('now'))",
-            ),
-        },
-        "sync_status": collectors.get_status(),
-    }
+        return {
+            "priorities": {"items": top_priorities, "total": len(priority_queue)},
+            "calendar": {"events": [dict(e) for e in events], "event_count": len(events)},
+            "decisions": {
+                "pending": [dict(d) for d in pending_decisions],
+                "pending_count": store.count("decisions", "approved IS NULL"),
+            },
+            "anomalies": {
+                "items": [dict(a) for a in anomalies],
+                "total": store.count(
+                    "insights",
+                    "type = 'anomaly' AND (expires_at IS NULL OR expires_at > datetime('now'))",
+                ),
+            },
+            "sync_status": collectors.get_status(),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 # ==== Time Endpoints ====
@@ -294,7 +331,7 @@ async def get_time_blocks(date: str | None = None, lane: str | None = None):
         return {"date": date, "blocks": result, "total": len(result)}
     except Exception as e:
         logger.exception("time/blocks error: %s", e)
-        return {"date": date, "blocks": [], "total": 0, "error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/api/time/summary", response_model=DetailResponse)
@@ -317,7 +354,7 @@ async def get_time_summary(date: str | None = None):
         return {"date": date, "time": day_summary, "scheduling": scheduling_summary}
     except Exception as e:
         logger.exception("time/summary error: %s", e)
-        return {"date": date, "time": {}, "scheduling": {}, "error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/api/time/schedule", response_model=MutationResponse)
@@ -482,7 +519,7 @@ async def get_capacity_lanes_endpoint():
         return {"lanes": lanes}
     except Exception as e:
         logger.exception("capacity/lanes error: %s", e)
-        return {"lanes": [], "error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/api/capacity/utilization", response_model=DetailResponse)
@@ -498,7 +535,7 @@ async def get_capacity_utilization(lane_id: str | None = None, target_date: str 
         return calc.get_capacity_summary(target_date=target_date)
     except Exception as e:
         logger.exception("capacity/utilization error: %s", e)
-        return {"utilization": {}, "error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/api/capacity/forecast", response_model=DetailResponse)
@@ -524,7 +561,7 @@ async def get_capacity_forecast(lane_id: str = "default", days: int = 7):
         }
     except Exception as e:
         logger.exception("capacity/forecast error: %s", e)
-        return {"lane_id": lane_id, "days": days, "forecasts": [], "error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/api/capacity/debt", response_model=DetailResponse)
@@ -537,13 +574,7 @@ async def get_capacity_debt(lane: str | None = None):
         return tracker.get_debt_report(lane=lane)
     except Exception as e:
         logger.exception("capacity/debt error: %s", e)
-        return {
-            "lane": lane,
-            "total_open_min": 0,
-            "total_resolved_min": 0,
-            "entries": [],
-            "error": str(e),
-        }
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/api/capacity/debt/accrue", status_code=501)
@@ -2885,7 +2916,7 @@ async def get_events(hours: int = 24):
         return {"events": [dict(e) for e in events], "total": len(events)}
     except Exception as e:
         logger.exception("events error: %s", e)
-        return {"events": [], "total": 0, "error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/api/day/{date}", response_model=DetailResponse)
@@ -3007,7 +3038,7 @@ async def get_notification_stats():
         return {"total": total, "unread": unread}
     except Exception as e:
         logger.exception("notifications/stats error: %s", e)
-        return {"total": 0, "unread": 0, "error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/api/notifications/{notif_id}/dismiss", response_model=MutationResponse)
@@ -3187,13 +3218,19 @@ async def release_emergency_brake():
 @app.get("/api/sync/status", response_model=DetailResponse)
 async def get_sync_status():
     """Get sync status for all collectors."""
-    return collectors.get_status()
+    try:
+        return collectors.get_status()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/api/sync", response_model=DetailResponse)
 async def force_sync(source: str | None = None):
     """Force a sync operation."""
-    return collectors.force_sync(source=source or "")
+    try:
+        return collectors.force_sync(source=source or "")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/api/analyze", response_model=DetailResponse)
@@ -3205,19 +3242,22 @@ async def run_analysis():
 @app.post("/api/cycle", response_model=DetailResponse)
 async def run_cycle():
     """Run a full autonomous cycle."""
-    loop = AutonomousLoop(store, collectors, analyzers, governance)
+    loop = AutonomousLoop()
     return loop.run_cycle()
 
 
 @app.get("/api/status", response_model=DetailResponse)
 async def get_status():
     """Get system status."""
-    return {
-        "status": "ok",
-        "timestamp": datetime.now().isoformat(),
-        "sync": collectors.get_status(),
-        "governance": governance.get_summary(),
-    }
+    try:
+        return {
+            "status": "ok",
+            "timestamp": datetime.now().isoformat(),
+            "sync": collectors.get_status(),
+            "governance": governance.get_summary(),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/api/health")
@@ -3329,55 +3369,60 @@ async def debug_db():
 @app.get("/api/summary", response_model=DetailResponse)
 async def get_summary():
     """Get a comprehensive summary."""
-    from datetime import date
+    try:
+        from datetime import date
 
-    # Get cached data
-    queue = store.get_cache("priority_queue") or []
-    anomalies = store.get_cache("anomalies") or []
+        # Get cached data
+        queue = store.get_cache("priority_queue") or []
+        anomalies = store.get_cache("anomalies") or []
 
-    # Today's info
-    today = date.today().isoformat()
-    today_events = store.query(
-        "SELECT * FROM events WHERE date(start_time) = ? ORDER BY start_time", [today]
-    )
+        # Today's info
+        today = date.today().isoformat()
+        today_events = store.query(
+            "SELECT * FROM events WHERE date(start_time) = ? ORDER BY start_time", [today]
+        )
 
-    # Calculate total event hours
-    total_event_hours = 0
-    for e in today_events:
-        try:
-            start = datetime.fromisoformat(e["start_time"].replace("Z", "+00:00"))
-            end = datetime.fromisoformat(e["end_time"].replace("Z", "+00:00"))
-            total_event_hours += (end - start).total_seconds() / 3600
-        except (ValueError, TypeError, AttributeError) as ex:
-            logger.debug(f"Could not parse event times for event {e.get('id', 'unknown')}: {ex}")
+        # Calculate total event hours
+        total_event_hours = 0
+        for e in today_events:
+            try:
+                start = datetime.fromisoformat(e["start_time"].replace("Z", "+00:00"))
+                end = datetime.fromisoformat(e["end_time"].replace("Z", "+00:00"))
+                total_event_hours += (end - start).total_seconds() / 3600
+            except (ValueError, TypeError, AttributeError) as ex:
+                logger.debug(
+                    f"Could not parse event times for event {e.get('id', 'unknown')}: {ex}"
+                )
 
-    # Calculate available hours (9 hour work day)
-    work_hours = 9
-    available = max(0, work_hours - total_event_hours)
+        # Calculate available hours (9 hour work day)
+        work_hours = 9
+        available = max(0, work_hours - total_event_hours)
 
-    return {
-        "priorities": {
-            "top_5": queue[:5],
-            "total": len(queue),
-            "critical_count": len([i for i in queue if i.get("score", 0) >= 70]),
-        },
-        "anomalies": {
-            "items": [a for a in anomalies if a.get("severity") in ("critical", "high")],
-            "total": len(anomalies),
-        },
-        "today": {
-            "events": len(today_events),
-            "event_list": [
-                {"title": e["title"], "start": e["start_time"], "end": e["end_time"]}
-                for e in today_events[:5]
-            ],
-            "total_event_hours": round(total_event_hours, 1),
-            "available_hours": round(available, 1),
-            "deep_work_hours": round(max(0, available - 2), 1),
-        },
-        "pending_approvals": store.count("decisions", "approved IS NULL"),
-        "sync_status": collectors.get_status(),
-    }
+        return {
+            "priorities": {
+                "top_5": queue[:5],
+                "total": len(queue),
+                "critical_count": len([i for i in queue if i.get("score", 0) >= 70]),
+            },
+            "anomalies": {
+                "items": [a for a in anomalies if a.get("severity") in ("critical", "high")],
+                "total": len(anomalies),
+            },
+            "today": {
+                "events": len(today_events),
+                "event_list": [
+                    {"title": e["title"], "start": e["start_time"], "end": e["end_time"]}
+                    for e in today_events[:5]
+                ],
+                "total_event_hours": round(total_event_hours, 1),
+                "available_hours": round(available, 1),
+                "deep_work_hours": round(max(0, available - 2), 1),
+            },
+            "pending_approvals": store.count("decisions", "approved IS NULL"),
+            "sync_status": collectors.get_status(),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.get("/api/search", response_model=DetailResponse)
@@ -4007,7 +4052,10 @@ async def get_project_detail(project_id: str):
 @app.post("/api/sync/xero", response_model=DetailResponse)
 async def sync_xero():
     """Sync with Xero."""
-    return collectors.sync(source="xero")
+    try:
+        return collectors.sync(source="xero")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @app.post("/api/tasks/link", response_model=DetailResponse)
@@ -4244,6 +4292,12 @@ async def get_dependencies():
 # Note: This is intentionally placed at the end of the file after all API routes
 
 # ==== Control Room API (V4) ====
+# ⚠️  NON-CANONICAL — see CANONICALIZATION.md §10.
+# /api/control-room/proposals is not called by any UI page.
+# Canonical proposal routes:
+#   - /api/v2/proposals (cached, reads proposals_v4)
+#   - /api/v2/intelligence/proposals (live-generated)
+# These routes are scheduled for removal.
 
 
 @app.get("/api/control-room/proposals", response_model=DetailResponse)
@@ -4255,6 +4309,8 @@ async def get_proposals(
     member_id: str | None = None,
 ):
     """Get proposals with full hierarchy context.
+
+    ⚠️  NON-CANONICAL — not called by UI. See CANONICALIZATION.md §10.
 
     Args:
         limit: Max proposals to return
@@ -4339,8 +4395,7 @@ async def get_proposals(
 
                 return {"items": proposals[:limit], "total": len(proposals)}
         except (sqlite3.Error, ValueError) as svc_err:
-            logger.warning(f"ProposalService error: {svc_err}")
-            pass
+            logger.warning(f"ProposalService error, falling back to signal query: {svc_err}")
 
         # Fallback: Generate proposals from signals
         from datetime import datetime, timedelta
@@ -4762,17 +4817,6 @@ async def add_issue_note(issue_id: str, body: AddIssueNoteRequest):
         conn = sqlite3.connect(store.db_path)
         cur = conn.cursor()
 
-        # Create notes table if not exists
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS issue_notes (
-                note_id TEXT PRIMARY KEY,
-                issue_id TEXT NOT NULL,
-                text TEXT NOT NULL,
-                actor TEXT,
-                created_at TEXT DEFAULT (datetime('now'))
-            )
-        """)
-
         import uuid
 
         note_id = str(uuid.uuid4())[:8]
@@ -4809,21 +4853,6 @@ async def get_watchers(hours: int = 24):
         conn = sqlite3.connect(store.db_path)
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
-
-        # Ensure watchers table exists (defensive)
-        cur.execute("""
-            CREATE TABLE IF NOT EXISTS watchers (
-                watcher_id TEXT PRIMARY KEY,
-                issue_id TEXT NOT NULL,
-                watch_type TEXT NOT NULL,
-                params TEXT NOT NULL DEFAULT '{}',
-                active INTEGER NOT NULL DEFAULT 1,
-                next_check_at TEXT NOT NULL,
-                last_checked_at TEXT,
-                triggered_at TEXT,
-                trigger_count INTEGER NOT NULL DEFAULT 0
-            )
-        """)
 
         # Get recently triggered watchers with issue details
         cur.execute(
@@ -5386,11 +5415,20 @@ async def seed_identities():
 
 
 # ==== Command Center ====
+# ⚠️  NON-CANONICAL — see CANONICALIZATION.md §6-7.
+# /api/command/client-health and /api/command/team-load are not called by any UI page.
+# Canonical routes:
+#   - Client health: /api/clients/health (used by UI)
+#   - Team load: /api/v2/team (used by UI)
+# These routes are scheduled for removal.
 
 
 @app.get("/api/command/client-health", response_model=DetailResponse)
 async def command_client_health():
-    """Client health overview for agency command center."""
+    """Client health overview for agency command center.
+
+    ⚠️  NON-CANONICAL — not called by UI. See CANONICALIZATION.md §6.
+    """
     try:
         from lib.command_center import ClientHealthView
 
@@ -5416,7 +5454,10 @@ async def command_client_detail(client_id: str):
 
 @app.get("/api/command/team-load", response_model=DetailResponse)
 async def command_team_load():
-    """Team load overview for agency command center."""
+    """Team load overview for agency command center.
+
+    ⚠️  NON-CANONICAL — not called by UI. See CANONICALIZATION.md §7.
+    """
     try:
         from lib.command_center import TeamLoadView
 

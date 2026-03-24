@@ -233,7 +233,8 @@ class CapacityCommandPage7Engine:
             rows = conn.execute(sql, params).fetchall()
             return [dict(r) for r in rows]
         except sqlite3.OperationalError:
-            return []
+            logger.error("Query failed in capacity_command_page7: %s", sql)
+            raise
         finally:
             conn.close()
 

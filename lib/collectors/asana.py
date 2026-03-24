@@ -36,6 +36,16 @@ class AsanaCollector(BaseCollector):
 
     source_name = "asana"
     target_table = "tasks"
+    OUTPUT_TABLES = [
+        "tasks",
+        "asana_custom_fields",
+        "asana_subtasks",
+        "asana_stories",
+        "asana_task_dependencies",
+        "asana_attachments",
+        "asana_portfolios",
+        "asana_goals",
+    ]
 
     def collect(self) -> dict[str, Any]:
         """Fetch tasks and expanded data from Asana using real API client."""

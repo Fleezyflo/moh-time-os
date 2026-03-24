@@ -55,17 +55,11 @@ def set_write_context(
     git_sha = git_sha or get_cached_git_sha()
     set_at = now_utc_iso()
 
-    # Ensure table exists (idempotent)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS write_context_v1 (
-            id INTEGER PRIMARY KEY CHECK (id = 1),
-            request_id TEXT NOT NULL,
-            actor TEXT NOT NULL,
-            source TEXT NOT NULL,
-            git_sha TEXT NOT NULL,
-            set_at TEXT NOT NULL
-        )
-    """)
+    # Ensure table exists (idempotent) — definition in lib/schema.py
+    from lib.schema import TABLES
+    from lib.schema_engine import _build_create_sql
+
+    conn.execute(_build_create_sql("write_context_v1", TABLES["write_context_v1"]))
 
     # Upsert the single row
     conn.execute(

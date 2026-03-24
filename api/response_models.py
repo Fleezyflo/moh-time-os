@@ -15,6 +15,49 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+# ==== Error Response ====
+# Unified error response format for all 4xx/5xx errors.
+# Used by the custom HTTPException handler registered in server.py.
+# Frontend can rely on this shape for ALL API errors.
+
+
+class ErrorResponse(BaseModel):
+    """Unified error response for all HTTP errors.
+
+    error_type values:
+        - "validation" — 400 Bad Request (invalid input)
+        - "auth" — 401 Unauthorized (missing or invalid token)
+        - "forbidden" — 403 Forbidden (insufficient permissions)
+        - "not_found" — 404 Not Found (entity does not exist)
+        - "conflict" — 409 Conflict (state conflict)
+        - "server" — 500+ Internal Server Error (unexpected failure)
+    """
+
+    error: str = Field(description="Human-readable error message")
+    error_type: str = Field(
+        description="Error category: validation, auth, forbidden, not_found, conflict, server"
+    )
+    detail: str | None = Field(default=None, description="Additional detail (optional)")
+    request_id: str | None = Field(
+        default=None, description="Correlation ID from middleware (if available)"
+    )
+
+
+def classify_error_type(status_code: int) -> str:
+    """Map HTTP status code to error_type string."""
+    if status_code == 400:
+        return "validation"
+    if status_code == 401:
+        return "auth"
+    if status_code == 403:
+        return "forbidden"
+    if status_code == 404:
+        return "not_found"
+    if status_code == 409:
+        return "conflict"
+    return "server"
+
+
 # ==== Intelligence Envelope ====
 # Used by intelligence_router.py and spec_router.py intelligence endpoints.
 # Shape: {status, data, computed_at, params, error?, error_code?}

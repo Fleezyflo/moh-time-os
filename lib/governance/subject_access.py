@@ -30,6 +30,7 @@ from enum import Enum
 from pathlib import Path
 
 from lib import safe_sql
+from lib.common.result_types import DataResult
 from lib.data_lifecycle import get_lifecycle_manager
 from lib.db import validate_identifier
 from lib.governance.anonymizer import Anonymizer
@@ -79,7 +80,13 @@ class SubjectDataReport:
     tables_with_data: list[str]
     total_records: int
     data_by_table: dict = field(default_factory=dict)  # {table: [records]}
+    tables_with_errors: dict = field(default_factory=dict)  # {table: error_msg}
     generated_at: str = ""
+
+    @property
+    def has_errors(self) -> bool:
+        """True if any tables failed during the search."""
+        return len(self.tables_with_errors) > 0
 
 
 @dataclass
@@ -124,22 +131,20 @@ class SubjectAccessManager:
         return conn
 
     def _init_schema(self):
-        """Create required tables if they don't exist."""
+        """Ensure subject_access_requests table exists.
+
+        Table definition lives in lib/schema.py (single source of truth).
+        schema_engine.converge() creates it at startup; this is a defensive
+        fallback for standalone usage.
+        """
         try:
+            from lib.schema import TABLES
+            from lib.schema_engine import _build_create_sql
+
             conn = self._get_connection()
-            conn.execute("""
-                CREATE TABLE IF NOT EXISTS subject_access_requests (
-                    request_id TEXT PRIMARY KEY,
-                    subject_identifier TEXT NOT NULL,
-                    request_type TEXT NOT NULL,
-                    requested_at TEXT NOT NULL,
-                    fulfilled_at TEXT,
-                    status TEXT NOT NULL DEFAULT 'pending',
-                    requested_by TEXT NOT NULL DEFAULT 'system',
-                    reason TEXT,
-                    created_at TEXT NOT NULL
-                )
-            """)
+            conn.execute(
+                _build_create_sql("subject_access_requests", TABLES["subject_access_requests"])
+            )
             conn.commit()
             conn.close()
             logger.info("Subject access request schema initialized")
@@ -153,7 +158,7 @@ class SubjectAccessManager:
         request_type: str,
         requested_by: str = "system",
         reason: str | None = None,
-    ) -> str:
+    ) -> DataResult[str]:
         """
         Create a new subject access request.
 
@@ -164,7 +169,7 @@ class SubjectAccessManager:
             reason: Optional reason for request
 
         Returns:
-            request_id
+            DataResult with request_id on success
         """
         try:
             request_id = str(uuid.uuid4())
@@ -208,17 +213,20 @@ class SubjectAccessManager:
                 f"Created SAR: request_id={request_id}, "
                 f"subject={subject_identifier}, type={request_type}"
             )
-            return request_id
+            return DataResult.ok(request_id)
 
         except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error creating subject access request: {e}")
-            raise
+            return DataResult.fail(str(e))
 
-    def _find_identifier_columns(self, table: str) -> list[str]:
+    def _find_identifier_columns(self, table: str) -> DataResult[list[str]]:
         """
         Find columns that might contain subject identifiers.
 
         Looks for email, name, and client_id patterns.
+
+        Returns:
+            DataResult with list of column names on success, error info on failure.
         """
         try:
             conn = self._get_connection()
@@ -236,23 +244,34 @@ class SubjectAccessManager:
                 ):
                     identifier_cols.append(col[1])
 
-            return identifier_cols
+            return DataResult.ok(identifier_cols)
 
         except (sqlite3.Error, ValueError, OSError) as e:
-            logger.error(f"Error finding identifier columns in {table}: {e}")
-            return []
+            logger.error("Error finding identifier columns in %s: %s", table, e, exc_info=True)
+            return DataResult.fail(str(e), error_type="storage")
 
-    def _search_table(self, table: str, subject_identifier: str) -> list[dict]:
+    def _search_table(self, table: str, subject_identifier: str) -> DataResult[list[dict]]:
         """
         Search table for records matching subject identifier.
 
         Uses email pattern matching, name matching, and ID matching.
+
+        Returns:
+            DataResult with list of matching record dicts on success,
+            error info on failure.
         """
         try:
-            identifier_cols = self._find_identifier_columns(table)
+            id_result = self._find_identifier_columns(table)
 
+            if id_result.failed:
+                return DataResult.fail(
+                    f"Cannot search {table}: {id_result.error}",
+                    error_type=id_result.error_type,
+                )
+
+            identifier_cols = id_result.data or []
             if not identifier_cols:
-                return []
+                return DataResult.ok([])
 
             validate_identifier(table)
             conn = self._get_connection()
@@ -278,7 +297,7 @@ class SubjectAccessManager:
 
             if not where_conditions:
                 conn.close()
-                return []
+                return DataResult.ok([])
 
             where_clause = " OR ".join(where_conditions)
             sql = safe_sql.select(table, where=where_clause)
@@ -288,13 +307,13 @@ class SubjectAccessManager:
             conn.close()
 
             # Convert rows to dicts
-            return [dict(row) for row in rows]
+            return DataResult.ok([dict(row) for row in rows])
 
         except (sqlite3.Error, ValueError, OSError) as e:
-            logger.error(f"Error searching table {table}: {e}")
-            return []
+            logger.error("Error searching table %s: %s", table, e, exc_info=True)
+            return DataResult.fail(str(e), error_type="storage")
 
-    def find_subject_data(self, subject_identifier: str) -> SubjectDataReport:
+    def find_subject_data(self, subject_identifier: str) -> DataResult[SubjectDataReport]:
         """
         Find all data related to a subject across all tables.
 
@@ -304,7 +323,7 @@ class SubjectAccessManager:
         - Client ID columns (exact match)
 
         Returns:
-            SubjectDataReport with all matching records
+            DataResult with SubjectDataReport on success
         """
         try:
             conn = self._get_connection()
@@ -322,20 +341,31 @@ class SubjectAccessManager:
 
             data_by_table = {}
             tables_with_data = []
+            tables_with_errors: dict[str, str] = {}
             total_records = 0
 
             for table in all_tables:
-                try:
-                    records = self._search_table(table, subject_identifier)
-                    if records:
-                        data_by_table[table] = records
-                        tables_with_data.append(table)
-                        total_records += len(records)
-                except (sqlite3.Error, ValueError, OSError) as e:
-                    logger.warning(f"Error searching {table}: {e}")
+                search_result = self._search_table(table, subject_identifier)
+                if search_result.failed:
+                    tables_with_errors[table] = search_result.error or "unknown error"
+                    logger.warning("SAR search failed for table %s: %s", table, search_result.error)
                     continue
 
+                records = search_result.data or []
+                if records:
+                    data_by_table[table] = records
+                    tables_with_data.append(table)
+                    total_records += len(records)
+
             timestamp = datetime.now(timezone.utc).isoformat()
+
+            if tables_with_errors:
+                logger.warning(
+                    "SAR for %s completed with %d table errors: %s",
+                    subject_identifier,
+                    len(tables_with_errors),
+                    list(tables_with_errors.keys()),
+                )
 
             # Log data access
             self.audit_log.log(
@@ -345,28 +375,32 @@ class SubjectAccessManager:
                 details={
                     "tables_searched": len(all_tables),
                     "tables_with_data": len(tables_with_data),
+                    "tables_with_errors": len(tables_with_errors),
                     "total_records": total_records,
                 },
             )
 
-            return SubjectDataReport(
-                subject_identifier=subject_identifier,
-                tables_searched=all_tables,
-                tables_with_data=tables_with_data,
-                total_records=total_records,
-                data_by_table=data_by_table,
-                generated_at=timestamp,
+            return DataResult.ok(
+                SubjectDataReport(
+                    subject_identifier=subject_identifier,
+                    tables_searched=all_tables,
+                    tables_with_data=tables_with_data,
+                    total_records=total_records,
+                    data_by_table=data_by_table,
+                    tables_with_errors=tables_with_errors,
+                    generated_at=timestamp,
+                )
             )
 
         except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error finding subject data: {e}")
-            raise
+            return DataResult.fail(str(e))
 
     def export_subject_data(
         self,
         subject_identifier: str,
         format: str = "json",
-    ) -> str:
+    ) -> DataResult[str]:
         """
         Export all subject data to a file.
 
@@ -375,10 +409,13 @@ class SubjectAccessManager:
             format: json, csv, or jsonl
 
         Returns:
-            Path to exported file
+            DataResult with path to exported file on success
         """
         try:
-            report = self.find_subject_data(subject_identifier)
+            report_result = self.find_subject_data(subject_identifier)
+            if report_result.failed:
+                return DataResult.fail(report_result.error or "find_subject_data failed")
+            report = report_result.data
 
             # Generate filename
             safe_subject = re.sub(r"[^\w\-@.]", "_", subject_identifier)
@@ -399,7 +436,7 @@ class SubjectAccessManager:
                     )
             else:
                 logger.error(f"Unsupported export format: {format}")
-                raise ValueError(f"Unsupported format: {format}")
+                return DataResult.fail(f"Unsupported format: {format}")
 
             # Log export
             self.audit_log.log(
@@ -414,11 +451,11 @@ class SubjectAccessManager:
             )
 
             logger.info(f"Exported subject data to {file_path}")
-            return file_path
+            return DataResult.ok(file_path)
 
         except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error exporting subject data: {e}")
-            raise
+            return DataResult.fail(str(e))
 
     def _get_identifier_value(self, row: dict, table: str) -> str | None:
         """
@@ -426,8 +463,11 @@ class SubjectAccessManager:
 
         Used to match which identifier was found in deletion queries.
         """
-        identifier_cols = self._find_identifier_columns(table)
-        for col in identifier_cols:
+        id_result = self._find_identifier_columns(table)
+        if id_result.failed:
+            logger.warning("Cannot get identifier value for %s: %s", table, id_result.error)
+            return None
+        for col in id_result.data or []:
             if col in row and row[col]:
                 return row[col]
         return None
@@ -436,7 +476,7 @@ class SubjectAccessManager:
         self,
         subject_identifier: str,
         dry_run: bool = True,
-    ) -> DeletionResult:
+    ) -> DataResult[DeletionResult]:
         """
         Delete all data for a subject (right to be forgotten).
 
@@ -447,10 +487,13 @@ class SubjectAccessManager:
             dry_run: If True, only report what would be deleted (default True)
 
         Returns:
-            DeletionResult with deletion details and audit trail
+            DataResult with DeletionResult on success
         """
         try:
-            report = self.find_subject_data(subject_identifier)
+            report_result = self.find_subject_data(subject_identifier)
+            if report_result.failed:
+                return DataResult.fail(report_result.error or "find_subject_data failed")
+            report = report_result.data
             tables_affected = []
             rows_deleted = 0
             tables_skipped = {}
@@ -463,7 +506,11 @@ class SubjectAccessManager:
                     tables_skipped[table] = "Protected system table"
                     continue
 
-                identifier_cols = self._find_identifier_columns(table)
+                id_result = self._find_identifier_columns(table)
+                if id_result.failed:
+                    tables_skipped[table] = f"Error finding identifier columns: {id_result.error}"
+                    continue
+                identifier_cols = id_result.data or []
                 if not identifier_cols:
                     tables_skipped[table] = "No identifier columns found"
                     continue
@@ -531,25 +578,27 @@ class SubjectAccessManager:
                 f"rows_deleted={rows_deleted}, tables_affected={len(tables_affected)}"
             )
 
-            return DeletionResult(
-                subject_identifier=subject_identifier,
-                tables_affected=tables_affected,
-                rows_deleted=rows_deleted,
-                rows_anonymized=0,
-                tables_skipped=tables_skipped,
-                completed_at=timestamp,
-                audit_log=audit_entries,
+            return DataResult.ok(
+                DeletionResult(
+                    subject_identifier=subject_identifier,
+                    tables_affected=tables_affected,
+                    rows_deleted=rows_deleted,
+                    rows_anonymized=0,
+                    tables_skipped=tables_skipped,
+                    completed_at=timestamp,
+                    audit_log=audit_entries,
+                )
             )
 
         except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error deleting subject data: {e}")
-            raise
+            return DataResult.fail(str(e))
 
     def anonymize_subject_data(
         self,
         subject_identifier: str,
         dry_run: bool = True,
-    ) -> DeletionResult:
+    ) -> DataResult[DeletionResult]:
         """
         Anonymize all data for a subject instead of deleting.
 
@@ -560,10 +609,13 @@ class SubjectAccessManager:
             dry_run: If True, only report what would be anonymized (default True)
 
         Returns:
-            DeletionResult with anonymization details
+            DataResult with DeletionResult on success
         """
         try:
-            report = self.find_subject_data(subject_identifier)
+            report_result = self.find_subject_data(subject_identifier)
+            if report_result.failed:
+                return DataResult.fail(report_result.error or "find_subject_data failed")
+            report = report_result.data
             tables_affected = []
             rows_anonymized = 0
             tables_skipped = {}
@@ -648,21 +700,23 @@ class SubjectAccessManager:
                 f"rows_anonymized={rows_anonymized}, tables_affected={len(tables_affected)}"
             )
 
-            return DeletionResult(
-                subject_identifier=subject_identifier,
-                tables_affected=tables_affected,
-                rows_deleted=0,
-                rows_anonymized=rows_anonymized,
-                tables_skipped=tables_skipped,
-                completed_at=timestamp,
-                audit_log=audit_entries,
+            return DataResult.ok(
+                DeletionResult(
+                    subject_identifier=subject_identifier,
+                    tables_affected=tables_affected,
+                    rows_deleted=0,
+                    rows_anonymized=rows_anonymized,
+                    tables_skipped=tables_skipped,
+                    completed_at=timestamp,
+                    audit_log=audit_entries,
+                )
             )
 
         except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error anonymizing subject data: {e}")
-            raise
+            return DataResult.fail(str(e))
 
-    def get_request_status(self, request_id: str) -> SubjectAccessRequest | None:
+    def get_request_status(self, request_id: str) -> DataResult[SubjectAccessRequest | None]:
         """Get status of a specific subject access request."""
         try:
             conn = self._get_connection()
@@ -674,24 +728,26 @@ class SubjectAccessManager:
             conn.close()
 
             if not row:
-                return None
+                return DataResult.ok(None)
 
-            return SubjectAccessRequest(
-                request_id=row["request_id"],
-                subject_identifier=row["subject_identifier"],
-                request_type=row["request_type"],
-                requested_at=row["requested_at"],
-                fulfilled_at=row["fulfilled_at"],
-                status=row["status"],
-                requested_by=row["requested_by"],
-                reason=row["reason"],
+            return DataResult.ok(
+                SubjectAccessRequest(
+                    request_id=row["request_id"],
+                    subject_identifier=row["subject_identifier"],
+                    request_type=row["request_type"],
+                    requested_at=row["requested_at"],
+                    fulfilled_at=row["fulfilled_at"],
+                    status=row["status"],
+                    requested_by=row["requested_by"],
+                    reason=row["reason"],
+                )
             )
 
         except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error getting request status: {e}")
-            raise
+            return DataResult.fail(str(e))
 
-    def list_requests(self, status: str | None = None) -> list[SubjectAccessRequest]:
+    def list_requests(self, status: str | None = None) -> DataResult[list[SubjectAccessRequest]]:
         """
         List all subject access requests.
 
@@ -699,7 +755,7 @@ class SubjectAccessManager:
             status: Optional filter by status (pending, processing, fulfilled, denied)
 
         Returns:
-            List of SubjectAccessRequest objects
+            DataResult with list of SubjectAccessRequest on success
         """
         try:
             conn = self._get_connection()
@@ -732,8 +788,8 @@ class SubjectAccessManager:
                     )
                 )
 
-            return requests
+            return DataResult.ok(requests)
 
         except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error listing requests: {e}")
-            raise
+            return DataResult.fail(str(e))

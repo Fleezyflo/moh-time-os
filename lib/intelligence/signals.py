@@ -10,9 +10,17 @@ This module contains DEFINITIONS ONLY. Detection logic is in signal_detector.py 
 Reference: data/signal_catalog_20260214.md
 """
 
+import json
+import logging
+import sqlite3
+import statistics
 import threading
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
 from enum import Enum
+from pathlib import Path
+
+import yaml
 
 # =============================================================================
 # ERROR TRACKING - Signal evaluation errors are tracked, not swallowed
@@ -751,11 +759,7 @@ if _validation_errors:
 # THRESHOLD CONFIGURATION - Load from thresholds.yaml
 # =============================================================================
 
-from pathlib import Path as _ThresholdPath  # noqa: E402 — conditional import
-
-import yaml  # noqa: E402 — conditional import
-
-THRESHOLDS_PATH = _ThresholdPath(__file__).parent / "thresholds.yaml"
+THRESHOLDS_PATH = Path(__file__).parent / "thresholds.yaml"
 
 
 def load_thresholds() -> dict:
@@ -887,11 +891,6 @@ apply_thresholds()
 # =============================================================================
 # SIGNAL DETECTION - Condition Evaluators
 # =============================================================================
-
-import logging  # noqa: E402 — conditional import
-import statistics  # noqa: E402 — conditional import
-from datetime import datetime, timedelta, timezone  # noqa: E402 — conditional import
-from pathlib import Path  # noqa: E402 — conditional import
 
 logger = logging.getLogger(__name__)
 
@@ -1749,9 +1748,6 @@ def detect_all_signals(
 # =============================================================================
 # SIGNAL STATE TRACKING
 # =============================================================================
-
-import json  # noqa: E402 — conditional import
-import sqlite3  # noqa: E402 — conditional import
 
 
 def _get_db_path(db_path: Path | None = None) -> Path:

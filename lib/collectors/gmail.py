@@ -35,6 +35,7 @@ class GmailCollector(BaseCollector):
 
     source_name = "gmail"
     target_table = "communications"
+    OUTPUT_TABLES = ["communications", "gmail_participants", "gmail_attachments", "gmail_labels"]
 
     def __init__(self, config: dict, store=None):
         super().__init__(config, store)

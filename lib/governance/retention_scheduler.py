@@ -56,40 +56,19 @@ class RetentionScheduler:
         return conn
 
     def _create_schema(self) -> None:
-        """Create scheduler tables."""
+        """Ensure retention_runs and retention_locks tables exist.
+
+        Table definitions live in lib/schema.py (single source of truth).
+        schema_engine.converge() creates them at startup; this is a defensive
+        fallback for standalone usage.
+        """
+        from lib.schema import TABLES
+        from lib.schema_engine import _build_create_sql
+
         conn = self._get_connection()
         try:
-            # Table for run history
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS retention_runs (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    schedule TEXT NOT NULL,
-                    started_at TEXT NOT NULL,
-                    completed_at TEXT,
-                    status TEXT NOT NULL,
-                    total_rows_deleted INTEGER,
-                    total_rows_archived INTEGER,
-                    total_rows_anonymized INTEGER,
-                    error_count INTEGER,
-                    warning_count INTEGER,
-                    duration_ms INTEGER,
-                    dry_run INTEGER NOT NULL
-                )
-                """
-            )
-
-            # Table for locking
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS retention_locks (
-                    lock_key TEXT PRIMARY KEY,
-                    acquired_at TEXT NOT NULL,
-                    released_at TEXT
-                )
-                """
-            )
-
+            conn.execute(_build_create_sql("retention_runs", TABLES["retention_runs"]))
+            conn.execute(_build_create_sql("retention_locks", TABLES["retention_locks"]))
             conn.commit()
             logger.debug("Scheduler schema tables created/verified")
         except (sqlite3.Error, ValueError, OSError) as e:
@@ -355,8 +334,11 @@ class RetentionScheduler:
 
         try:
             classifier = DataClassifier(str(self.db_path))
-            catalog = classifier.classify_database()
-            engine = RetentionEngine(self.db_path, catalog)
+            catalog_result = classifier.classify_database()
+            if not catalog_result.succeeded:
+                logger.error("Failed to classify database: %s", catalog_result.error)
+                return
+            engine = RetentionEngine(self.db_path, catalog_result.data)
 
             report = engine.enforce(dry_run=True)
 

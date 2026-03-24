@@ -33,6 +33,7 @@ class DriveCollector(BaseCollector):
 
     source_name = "drive"
     target_table = "drive_files"
+    OUTPUT_TABLES = ["drive_files"]
 
     def __init__(self, config: dict, store=None):
         super().__init__(config, store)
@@ -75,7 +76,9 @@ class DriveCollector(BaseCollector):
             days = self.config.get("lookback_days", 60)
             max_results = self.config.get("max_results", 300)
 
-            threshold = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat() + "Z"
+            threshold = (datetime.now(timezone.utc) - timedelta(days=days)).strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
+            )
 
             # Recent files
             recent_result = (

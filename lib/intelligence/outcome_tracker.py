@@ -74,42 +74,18 @@ class OutcomeTracker:
         self._ensure_table()
 
     def _ensure_table(self) -> None:
-        """Create signal_outcomes table if it doesn't exist."""
+        """Ensure signal_outcomes table exists.
+
+        Table definition lives in lib/schema.py (single source of truth).
+        schema_engine.converge() creates it at startup; this is a defensive
+        fallback for standalone usage.
+        """
+        from lib.schema import TABLES
+        from lib.schema_engine import _build_create_sql
+
         conn = sqlite3.connect(str(self.db_path))
         try:
-            conn.execute(
-                """
-                CREATE TABLE IF NOT EXISTS signal_outcomes (
-                    id TEXT PRIMARY KEY,
-                    signal_key TEXT NOT NULL,
-                    entity_type TEXT NOT NULL,
-                    entity_id TEXT NOT NULL,
-                    signal_type TEXT NOT NULL,
-                    detected_at TEXT NOT NULL,
-                    cleared_at TEXT NOT NULL,
-                    duration_days REAL NOT NULL,
-                    health_before REAL,
-                    health_after REAL,
-                    health_improved INTEGER,
-                    actions_taken TEXT,
-                    resolution_type TEXT NOT NULL,
-                    created_at TEXT NOT NULL
-                )
-                """
-            )
-            # Create indexes if not exist
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_signal_outcomes_entity "
-                "ON signal_outcomes(entity_type, entity_id)"
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_signal_outcomes_type "
-                "ON signal_outcomes(signal_type, resolution_type)"
-            )
-            conn.execute(
-                "CREATE INDEX IF NOT EXISTS idx_signal_outcomes_time "
-                "ON signal_outcomes(cleared_at DESC)"
-            )
+            conn.execute(_build_create_sql("signal_outcomes", TABLES["signal_outcomes"]))
             conn.commit()
         finally:
             conn.close()

@@ -52,7 +52,7 @@ def get_git_diff(path: str) -> str:
 def generate_evidence() -> dict:
     """Generate all evidence artifacts."""
     evidence = {
-        "generated_at": datetime.now(timezone.utc).isoformat() + "Z",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
         "git_sha": "",
         "git_branch": "",
         "sections": {},

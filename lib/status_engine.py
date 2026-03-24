@@ -300,12 +300,15 @@ def get_pending_proposals() -> list[dict]:
         return json.loads(proposals_file.read_text())
     except (json.JSONDecodeError, OSError) as e:
         logger.warning(f"Could not load proposals file: {e}")
-        return []
+        raise
 
 
 def approve_proposal(proposal_index: int) -> tuple[bool, str]:
     """Approve and execute a pending proposal."""
-    proposals = get_pending_proposals()
+    try:
+        proposals = get_pending_proposals()
+    except (json.JSONDecodeError, OSError) as e:
+        return False, f"Cannot load proposals: {e}"
 
     if proposal_index < 0 or proposal_index >= len(proposals):
         return False, "Invalid proposal index"
@@ -330,7 +333,10 @@ def approve_proposal(proposal_index: int) -> tuple[bool, str]:
 
 def reject_proposal(proposal_index: int, reason: str = None) -> tuple[bool, str]:
     """Reject a pending proposal."""
-    proposals = get_pending_proposals()
+    try:
+        proposals = get_pending_proposals()
+    except (json.JSONDecodeError, OSError) as e:
+        return False, f"Cannot load proposals: {e}"
 
     if proposal_index < 0 or proposal_index >= len(proposals):
         return False, "Invalid proposal index"

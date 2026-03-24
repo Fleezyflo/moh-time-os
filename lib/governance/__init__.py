@@ -74,19 +74,17 @@ __all__ = [
 ]
 
 # Re-export original GovernanceEngine for backward compat
-from lib.governance.governance_engine import GovernanceEngine, get_governance
-
-__all__ += [
-    "GovernanceEngine",
-    "get_governance",
-]
-from lib.governance.governance_engine import (  # noqa: E402 — conditional import
+from lib.governance.governance_engine import (
     DomainMode,
+    GovernanceEngine,
     get_domain_mode,
+    get_governance,
     set_domain_mode,
 )
 
 __all__ += [
+    "GovernanceEngine",
+    "get_governance",
     "DomainMode",
     "get_domain_mode",
     "set_domain_mode",

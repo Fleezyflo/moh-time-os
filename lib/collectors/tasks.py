@@ -32,6 +32,7 @@ class TasksCollector(BaseCollector):
 
     source_name = "tasks"
     target_table = "tasks"
+    OUTPUT_TABLES = ["tasks"]
 
     def __init__(self, config: dict, store=None):
         super().__init__(config, store)
@@ -189,7 +190,7 @@ class TasksCollector(BaseCollector):
         due = self._extract_due_date(task)
         if due:
             try:
-                due_date = datetime.strptime(due, "%Y-%m-%d")
+                due_date = datetime.strptime(due, "%Y-%m-%d").replace(tzinfo=timezone.utc)
                 days_until = (due_date - datetime.now(timezone.utc)).days
 
                 if days_until < 0:

@@ -159,9 +159,9 @@ class TestVelocity:
     """Tests for velocity computation."""
 
     @pytest.fixture
-    def engine(self):
+    def engine(self, tmp_path):
         """Create engine with mocked query engine."""
-        engine = TrajectoryEngine(db_path=None)
+        engine = TrajectoryEngine(db_path=tmp_path / "test.db")
         engine.engine = Mock()
         return engine
 
@@ -236,9 +236,9 @@ class TestAcceleration:
     """Tests for acceleration computation."""
 
     @pytest.fixture
-    def engine(self):
+    def engine(self, tmp_path):
         """Create engine with mocked query engine."""
-        engine = TrajectoryEngine(db_path=None)
+        engine = TrajectoryEngine(db_path=tmp_path / "test.db")
         engine.engine = Mock()
         return engine
 
@@ -290,9 +290,9 @@ class TestTrendDetection:
     """Tests for trend analysis."""
 
     @pytest.fixture
-    def engine(self):
+    def engine(self, tmp_path):
         """Create engine with mocked query engine."""
-        engine = TrajectoryEngine(db_path=None)
+        engine = TrajectoryEngine(db_path=tmp_path / "test.db")
         engine.engine = Mock()
         return engine
 
@@ -386,9 +386,9 @@ class TestSeasonality:
     """Tests for seasonality detection."""
 
     @pytest.fixture
-    def engine(self):
+    def engine(self, tmp_path):
         """Create engine with mocked query engine."""
-        engine = TrajectoryEngine(db_path=None)
+        engine = TrajectoryEngine(db_path=tmp_path / "test.db")
         engine.engine = Mock()
         return engine
 
@@ -444,9 +444,9 @@ class TestProjection:
     """Tests for forward projection."""
 
     @pytest.fixture
-    def engine(self):
+    def engine(self, tmp_path):
         """Create engine with mocked query engine."""
-        engine = TrajectoryEngine(db_path=None)
+        engine = TrajectoryEngine(db_path=tmp_path / "test.db")
         engine.engine = Mock()
         return engine
 
@@ -510,9 +510,9 @@ class TestFullTrajectory:
     """Tests for full trajectory analysis."""
 
     @pytest.fixture
-    def mock_engine(self):
+    def mock_engine(self, tmp_path):
         """Create engine with mocked query engine."""
-        engine = TrajectoryEngine(db_path=None)
+        engine = TrajectoryEngine(db_path=tmp_path / "test.db")
         engine.engine = Mock()
         return engine
 
@@ -642,16 +642,29 @@ class TestFullTrajectory:
 
         result = mock_engine.portfolio_health_trajectory()
 
-        assert isinstance(result, list)
-        assert len(result) > 0
+        assert result.succeeded
+        assert isinstance(result.data, list)
+        assert len(result.data) > 0
 
     def test_portfolio_health_trajectory_error_handling(self, mock_engine):
-        """Should handle errors gracefully."""
-        mock_engine.engine.client_portfolio_overview = Mock(side_effect=Exception("DB error"))
+        """Should return FAILED DataResult on error."""
+        mock_engine.engine.client_portfolio_overview = Mock(side_effect=ValueError("DB error"))
 
         result = mock_engine.portfolio_health_trajectory()
 
-        assert result == []
+        assert result.failed
+        assert result.data is None
+        assert "DB error" in (result.error or "")
+
+    def test_portfolio_health_trajectory_no_engine(self, mock_engine):
+        """Returns FAILED DataResult when engine not initialized."""
+        mock_engine.engine = None
+
+        result = mock_engine.portfolio_health_trajectory()
+
+        assert result.failed
+        assert "not initialized" in (result.error or "")
+        assert result.error_type == "config"
 
 
 # =====================================================================
@@ -758,9 +771,9 @@ class TestEdgeCases:
     """Tests for edge cases and error handling."""
 
     @pytest.fixture
-    def engine(self):
+    def engine(self, tmp_path):
         """Create engine with mocked query engine."""
-        engine = TrajectoryEngine(db_path=None)
+        engine = TrajectoryEngine(db_path=tmp_path / "test.db")
         engine.engine = Mock()
         return engine
 

@@ -270,8 +270,8 @@ def detect_xero_deposits(store) -> list[dict]:
                         )
                         break  # One candidate per contact
 
-    except (sqlite3.Error, ValueError, OSError) as e:
-        logger.info(f"Xero deposit detection error: {e}")
+    except (sqlite3.Error, ValueError, OSError, KeyError) as e:
+        logger.info("Xero deposit detection error: %s", e)
     return candidates
 
 

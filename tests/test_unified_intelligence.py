@@ -22,6 +22,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from lib.common.result_types import DataResult
 from lib.intelligence.correlation_engine import HealthGrade, IntelligenceBrief
 from lib.intelligence.unified_intelligence import (
     ClientIntelligence,
@@ -288,7 +289,7 @@ def test_run_intelligence_cycle_success(intelligence_layer, mock_pattern_results
 
                 with patch.object(intelligence_layer, "_get_trajectory_engine") as mock_traj:
                     mock_traj_obj = MagicMock()
-                    mock_traj_obj.portfolio_health_trajectory.return_value = []
+                    mock_traj_obj.portfolio_health_trajectory.return_value = DataResult.ok([])
                     mock_traj.return_value = mock_traj_obj
 
                     result = intelligence_layer.run_intelligence_cycle()
@@ -323,7 +324,7 @@ def test_run_intelligence_cycle_pattern_detection_error(intelligence_layer):
 
                 with patch.object(intelligence_layer, "_get_trajectory_engine") as mock_traj:
                     mock_traj_obj = MagicMock()
-                    mock_traj_obj.portfolio_health_trajectory.return_value = []
+                    mock_traj_obj.portfolio_health_trajectory.return_value = DataResult.ok([])
                     mock_traj.return_value = mock_traj_obj
 
                     result = intelligence_layer.run_intelligence_cycle()
@@ -349,7 +350,7 @@ def test_run_intelligence_cycle_correlation_error(intelligence_layer):
 
                 with patch.object(intelligence_layer, "_get_trajectory_engine") as mock_traj:
                     mock_traj_obj = MagicMock()
-                    mock_traj_obj.portfolio_health_trajectory.return_value = []
+                    mock_traj_obj.portfolio_health_trajectory.return_value = DataResult.ok([])
                     mock_traj.return_value = mock_traj_obj
 
                     result = intelligence_layer.run_intelligence_cycle()
@@ -394,7 +395,9 @@ def test_run_intelligence_cycle_all_components_mocked(
                     traj_obj = MagicMock()
                     traj_obj.to_dict.return_value = {"entity_id": "test"}
                     mock_traj_obj = MagicMock()
-                    mock_traj_obj.portfolio_health_trajectory.return_value = [traj_obj]
+                    mock_traj_obj.portfolio_health_trajectory.return_value = DataResult.ok(
+                        [traj_obj]
+                    )
                     mock_traj.return_value = mock_traj_obj
 
                     result = intelligence_layer.run_intelligence_cycle()
@@ -569,7 +572,7 @@ def test_get_portfolio_dashboard_success(intelligence_layer, mock_portfolio_prof
 
             with patch.object(intelligence_layer, "_get_trajectory_engine") as mock_traj:
                 mock_traj_obj = MagicMock()
-                mock_traj_obj.portfolio_health_trajectory.return_value = []
+                mock_traj_obj.portfolio_health_trajectory.return_value = DataResult.ok([])
                 mock_traj.return_value = mock_traj_obj
 
                 dashboard = intelligence_layer.get_portfolio_dashboard()
@@ -609,7 +612,9 @@ def test_get_portfolio_dashboard_with_declining_clients(
                 traj2.overall_health = "CRITICAL"
 
                 mock_traj_obj = MagicMock()
-                mock_traj_obj.portfolio_health_trajectory.return_value = [traj1, traj2]
+                mock_traj_obj.portfolio_health_trajectory.return_value = DataResult.ok(
+                    [traj1, traj2]
+                )
                 mock_traj.return_value = mock_traj_obj
 
                 dashboard = intelligence_layer.get_portfolio_dashboard()

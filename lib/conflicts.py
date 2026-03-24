@@ -115,7 +115,7 @@ def load_conflicts() -> dict[str, Conflict]:
         return {cid: Conflict.from_dict(c) for cid, c in data.items()}
     except (json.JSONDecodeError, TypeError) as e:
         logger.warning("Could not load conflicts file: %s", e)
-        return {}
+        raise
 
 
 def save_conflicts(conflicts: dict[str, Conflict]) -> None:

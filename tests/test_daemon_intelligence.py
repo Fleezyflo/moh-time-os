@@ -132,6 +132,8 @@ def mock_loop(test_db):
             loop = AutonomousLoop.__new__(AutonomousLoop)
             loop.store = MagicMock()
             loop.store.db_path = str(test_db)
+            loop.cycle_count = 0
+            loop.logger = __import__("logging").getLogger("test")
             return loop
     finally:
         # Restore original modules

@@ -267,8 +267,10 @@ class TestComputeClientCost:
         assert "cost_drivers" in data
 
     def test_client_cost_query_exception_handling(self, cost_engine, mock_query_engine):
-        """Exceptions in query are logged and None returned."""
-        mock_query_engine.client_deep_profile.side_effect = Exception("DB error")
+        """DB exceptions in query are logged and None returned."""
+        import sqlite3
+
+        mock_query_engine.client_deep_profile.side_effect = sqlite3.Error("DB error")
 
         result = cost_engine.compute_client_cost("cli-007")
 
@@ -616,9 +618,10 @@ class TestGetHiddenCostClients:
 
         result = cost_engine.get_hidden_cost_clients()
 
-        assert len(result) > 0
-        assert result[0]["client_id"] == "cli-001"
-        assert len(result[0]["cost_indicators"]) >= 2
+        assert result.succeeded
+        assert len(result.data) > 0
+        assert result.data[0]["client_id"] == "cli-001"
+        assert len(result.data[0]["cost_indicators"]) >= 2
 
     def test_hidden_cost_clients_high_communication(self, cost_engine, mock_query_engine):
         """Clients with high communication overhead are identified."""
@@ -652,16 +655,18 @@ class TestGetHiddenCostClients:
 
         result = cost_engine.get_hidden_cost_clients()
 
-        assert len(result) > 0
-        assert any("communication" in ind.lower() for ind in result[0]["cost_indicators"])
+        assert result.succeeded
+        assert len(result.data) > 0
+        assert any("communication" in ind.lower() for ind in result.data[0]["cost_indicators"])
 
     def test_hidden_cost_clients_empty_portfolio(self, cost_engine, mock_query_engine):
-        """Empty portfolio returns empty list."""
+        """Empty portfolio returns successful DataResult with empty list."""
         mock_query_engine.client_portfolio_overview.return_value = []
 
         result = cost_engine.get_hidden_cost_clients()
 
-        assert result == []
+        assert result.succeeded
+        assert result.data == []
 
     def test_hidden_cost_clients_requires_multiple_indicators(self, cost_engine, mock_query_engine):
         """Clients with <2 cost indicators are not included."""
@@ -690,7 +695,8 @@ class TestGetHiddenCostClients:
 
         result = cost_engine.get_hidden_cost_clients()
 
-        assert result == []
+        assert result.succeeded
+        assert result.data == []
 
     def test_hidden_cost_clients_sorted_by_efficiency(self, cost_engine, mock_query_engine):
         """Hidden cost clients are sorted by efficiency ratio."""
@@ -733,9 +739,10 @@ class TestGetHiddenCostClients:
 
         result = cost_engine.get_hidden_cost_clients()
 
+        assert result.succeeded
         # Should be sorted by efficiency (ascending)
-        if len(result) > 1:
-            assert result[0]["efficiency_ratio"] <= result[1]["efficiency_ratio"]
+        if len(result.data) > 1:
+            assert result.data[0]["efficiency_ratio"] <= result.data[1]["efficiency_ratio"]
 
 
 # =============================================================================
@@ -787,10 +794,11 @@ class TestGetProfitabilityRanking:
 
         result = cost_engine.get_profitability_ranking()
 
-        assert len(result) == 3
-        assert result[0]["name"] == "Best"
-        assert result[0]["efficiency_ratio"] > result[1]["efficiency_ratio"]
-        assert result[1]["efficiency_ratio"] > result[2]["efficiency_ratio"]
+        assert result.succeeded
+        assert len(result.data) == 3
+        assert result.data[0]["name"] == "Best"
+        assert result.data[0]["efficiency_ratio"] > result.data[1]["efficiency_ratio"]
+        assert result.data[1]["efficiency_ratio"] > result.data[2]["efficiency_ratio"]
 
     def test_profitability_ranking_includes_metrics(self, cost_engine, mock_query_engine):
         """Ranking includes required metrics."""
@@ -816,21 +824,75 @@ class TestGetProfitabilityRanking:
 
         result = cost_engine.get_profitability_ranking()
 
-        assert len(result) == 1
-        assert "client_id" in result[0]
-        assert "name" in result[0]
-        assert "efficiency_ratio" in result[0]
-        assert "revenue" in result[0]
-        assert "task_count" in result[0]
-        assert "profitability_band" in result[0]
+        assert result.succeeded
+        assert len(result.data) == 1
+        assert "client_id" in result.data[0]
+        assert "name" in result.data[0]
+        assert "efficiency_ratio" in result.data[0]
+        assert "revenue" in result.data[0]
+        assert "task_count" in result.data[0]
+        assert "profitability_band" in result.data[0]
 
     def test_profitability_ranking_empty_portfolio(self, cost_engine, mock_query_engine):
-        """Empty portfolio returns empty list."""
+        """Empty portfolio returns successful DataResult with empty list."""
         mock_query_engine.client_portfolio_overview.return_value = []
 
         result = cost_engine.get_profitability_ranking()
 
-        assert result == []
+        assert result.succeeded
+        assert result.data == []
+
+
+# =============================================================================
+# ERROR PATH TESTS — SECURITY-004
+# =============================================================================
+
+
+class TestGetHiddenCostClientsErrorPath:
+    """Test that get_hidden_cost_clients returns FAILED DataResult on error, not empty list."""
+
+    def test_get_hidden_cost_clients_db_error(self, cost_engine, mock_query_engine):
+        """DB error returns FAILED DataResult with error message."""
+        import sqlite3
+
+        mock_query_engine.client_portfolio_overview.side_effect = sqlite3.OperationalError(
+            "database is locked"
+        )
+
+        result = cost_engine.get_hidden_cost_clients()
+
+        assert result.failed
+        assert result.data is None
+        assert "database is locked" in (result.error or "")
+        assert result.error_type == "storage"
+
+    def test_get_hidden_cost_clients_value_error(self, cost_engine, mock_query_engine):
+        """ValueError returns FAILED DataResult."""
+        mock_query_engine.client_portfolio_overview.side_effect = ValueError("bad data")
+
+        result = cost_engine.get_hidden_cost_clients()
+
+        assert result.failed
+        assert "bad data" in (result.error or "")
+
+
+class TestGetProfitabilityRankingErrorPath:
+    """Test that get_profitability_ranking returns FAILED DataResult on error."""
+
+    def test_get_profitability_ranking_db_error(self, cost_engine, mock_query_engine):
+        """DB error returns FAILED DataResult with error message."""
+        import sqlite3
+
+        mock_query_engine.client_portfolio_overview.side_effect = sqlite3.OperationalError(
+            "no such table"
+        )
+
+        result = cost_engine.get_profitability_ranking()
+
+        assert result.failed
+        assert result.data is None
+        assert "no such table" in (result.error or "")
+        assert result.error_type == "storage"
 
 
 # =============================================================================
