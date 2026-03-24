@@ -177,7 +177,8 @@ def run_startup_migrations() -> dict:
         logger.info("MOH TIME OS Database Startup")
         logger.info("=" * 50)
         logger.info("Resolved DB path: %s", db_path)
-        logger.info("DB exists: %s", db_path.exists())
+        # db_path.exists() removed — it triggers determinism guards in tests
+        # and the next section (mkdir + get_connection) handles missing DB
         logger.info("Target SCHEMA_VERSION: %s", schema.SCHEMA_VERSION)
 
         # Ensure parent directory exists

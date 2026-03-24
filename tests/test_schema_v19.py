@@ -45,9 +45,9 @@ def _table_exists(conn, table_name):
 class TestSchemaVersion:
     """Verify schema version was bumped."""
 
-    def test_version_is_19(self):
-        """SCHEMA_VERSION must be 19 after PR1a."""
-        assert SCHEMA_VERSION == 19
+    def test_version_is_current(self):
+        """SCHEMA_VERSION must match current schema."""
+        assert SCHEMA_VERSION == 27
 
 
 class TestNotificationColumns:

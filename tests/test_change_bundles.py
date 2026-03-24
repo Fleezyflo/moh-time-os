@@ -42,7 +42,7 @@ def temp_bundles_dir(tmp_path, monkeypatch):
     """Create temporary bundles directory for testing."""
     bundles_dir = tmp_path / "bundles"
     bundles_dir.mkdir()
-    monkeypatch.setattr("lib.change_bundles.BUNDLES_DIR", bundles_dir)
+    monkeypatch.setattr("lib.change_bundles._bundles_dir", lambda: bundles_dir)
     return bundles_dir
 
 

@@ -56,10 +56,10 @@ def mock_backup_dir(tmp_path):
 class TestCreateBackup:
     """Tests for create_backup functionality."""
 
-    @patch("lib.backup.DB_PATH")
+    @patch("lib.paths.db_path")
     @patch("lib.backup.db_exists")
     @patch("lib.backup.checkpoint_wal")
-    @patch("lib.backup.BACKUP_DIR")
+    @patch("lib.backup._backup_dir")
     def test_create_backup_basic(
         self, mock_backup_dir_const, mock_checkpoint, mock_db_exists, mock_db_path_patch, tmp_path
     ):
@@ -71,8 +71,8 @@ class TestCreateBackup:
         source_path = tmp_path / "test_source.db"
         source_path.write_text("mock database")
 
-        mock_db_path_patch.value = source_path
-        mock_backup_dir_const.value = tmp_path / "backups"
+        mock_db_path_patch.return_value = source_path
+        mock_backup_dir_const.return_value = tmp_path / "backups"
 
         with patch("shutil.copy2") as mock_copy:
             with patch("pathlib.Path.mkdir"):
@@ -81,7 +81,7 @@ class TestCreateBackup:
                 # Should have called copy
                 assert mock_copy.called
 
-    @patch("lib.backup.DB_PATH")
+    @patch("lib.paths.db_path")
     @patch("lib.backup.db_exists")
     def test_create_backup_no_db(self, mock_db_exists, mock_db_path):
         """create_backup should return None if database doesn't exist."""
@@ -90,10 +90,10 @@ class TestCreateBackup:
         result = create_backup()
         assert result is None
 
-    @patch("lib.backup.DB_PATH")
+    @patch("lib.paths.db_path")
     @patch("lib.backup.db_exists")
     @patch("lib.backup.checkpoint_wal")
-    @patch("lib.backup.BACKUP_DIR")
+    @patch("lib.backup._backup_dir")
     def test_create_backup_with_label(
         self, mock_backup_dir_const, mock_checkpoint, mock_db_exists, mock_db_path, tmp_path
     ):
@@ -114,10 +114,10 @@ class TestCreateBackup:
                     except Exception:
                         logging.debug("Expected error in mock backup test")
 
-    @patch("lib.backup.DB_PATH")
+    @patch("lib.paths.db_path")
     @patch("lib.backup.db_exists")
     @patch("lib.backup.checkpoint_wal")
-    @patch("lib.backup.BACKUP_DIR")
+    @patch("lib.backup._backup_dir")
     def test_create_backup_handles_permission_error(
         self, mock_backup_dir_const, mock_checkpoint, mock_db_exists, mock_db_path
     ):
@@ -130,10 +130,10 @@ class TestCreateBackup:
                 result = create_backup()
                 assert result is None
 
-    @patch("lib.backup.DB_PATH")
+    @patch("lib.paths.db_path")
     @patch("lib.backup.db_exists")
     @patch("lib.backup.checkpoint_wal")
-    @patch("lib.backup.BACKUP_DIR")
+    @patch("lib.backup._backup_dir")
     def test_create_backup_handles_os_error(
         self, mock_backup_dir_const, mock_checkpoint, mock_db_exists, mock_db_path
     ):
@@ -147,9 +147,9 @@ class TestCreateBackup:
                 assert result is None
 
     @patch("lib.backup.checkpoint_wal", side_effect=Exception("WAL checkpoint failed"))
-    @patch("lib.backup.DB_PATH")
+    @patch("lib.paths.db_path")
     @patch("lib.backup.db_exists")
-    @patch("lib.backup.BACKUP_DIR")
+    @patch("lib.backup._backup_dir")
     def test_create_backup_continues_on_checkpoint_failure(
         self, mock_backup_dir_const, mock_db_exists, mock_db_path, mock_checkpoint
     ):
@@ -173,7 +173,7 @@ class TestCreateBackup:
 class TestListBackups:
     """Tests for list_backups functionality."""
 
-    @patch("lib.backup.BACKUP_DIR")
+    @patch("lib.backup._backup_dir")
     def test_list_backups_empty_directory(self, mock_backup_dir_const):
         """list_backups should return empty list if directory doesn't exist."""
         mock_backup_dir_const.exists.return_value = False
@@ -181,7 +181,7 @@ class TestListBackups:
         result = list_backups()
         assert result == []
 
-    @patch("lib.backup.BACKUP_DIR")
+    @patch("lib.backup._backup_dir")
     def test_list_backups_sorting(self, mock_backup_dir_const, tmp_path):
         """list_backups should return backups sorted by modified time (newest first)."""
         backup_dir = tmp_path / "backups"
@@ -200,9 +200,8 @@ class TestListBackups:
         old_stat = os.stat(old_file)
         os.utime(old_file, (old_stat.st_atime - 1000, old_stat.st_mtime - 1000))
 
-        # Configure mock to act like the real backup_dir Path
-        mock_backup_dir_const.exists.return_value = True
-        mock_backup_dir_const.glob.return_value = backup_dir.glob("*.db")
+        # _backup_dir() now returns the real path
+        mock_backup_dir_const.return_value = backup_dir
 
         result = list_backups()
 
@@ -210,7 +209,7 @@ class TestListBackups:
         # Newest should be first
         assert result[0][0].name == "backup_new.db"
 
-    @patch("lib.backup.BACKUP_DIR")
+    @patch("lib.backup._backup_dir")
     def test_list_backups_includes_file_info(self, mock_backup_dir_const, tmp_path):
         """list_backups should return (path, mtime, size) tuples."""
         backup_dir = tmp_path / "backups"
@@ -219,9 +218,8 @@ class TestListBackups:
         test_file = backup_dir / "backup_test.db"
         test_file.write_text("test content")
 
-        # Configure mock to act like the real backup_dir Path
-        mock_backup_dir_const.exists.return_value = True
-        mock_backup_dir_const.glob.return_value = backup_dir.glob("*.db")
+        # _backup_dir() now returns the real path
+        mock_backup_dir_const.return_value = backup_dir
 
         result = list_backups()
 
@@ -232,7 +230,7 @@ class TestListBackups:
         assert isinstance(size, int)
         assert size > 0
 
-    @patch("lib.backup.BACKUP_DIR")
+    @patch("lib.backup._backup_dir")
     def test_list_backups_skips_inaccessible_files(self, mock_backup_dir_const, tmp_path):
         """list_backups should skip files that can't be stat'd."""
         backup_dir = tmp_path / "backups"
@@ -299,7 +297,7 @@ class TestGetLatestBackup:
 class TestRestoreBackup:
     """Tests for restore_backup functionality."""
 
-    @patch("lib.backup.DB_PATH")
+    @patch("lib.paths.db_path")
     @patch("lib.backup.db_exists")
     def test_restore_backup_nonexistent_fails(self, mock_db_exists, mock_db_path):
         """restore_backup should fail if backup file doesn't exist."""
@@ -308,7 +306,7 @@ class TestRestoreBackup:
         result = restore_backup(nonexistent)
         assert result is False
 
-    @patch("lib.backup.DB_PATH")
+    @patch("lib.paths.db_path")
     @patch("lib.backup.db_exists")
     @patch("lib.backup.checkpoint_wal")
     @patch("shutil.copy2")
@@ -328,7 +326,7 @@ class TestRestoreBackup:
         assert mock_copy.called
         assert result is True
 
-    @patch("lib.backup.DB_PATH")
+    @patch("lib.paths.db_path")
     @patch("lib.backup.db_exists")
     @patch("lib.backup.create_backup")
     @patch("shutil.copy2")
@@ -348,7 +346,7 @@ class TestRestoreBackup:
         # Should have created safety backup
         mock_create_backup.assert_called()
 
-    @patch("lib.backup.DB_PATH")
+    @patch("lib.paths.db_path")
     @patch("lib.backup.db_exists")
     @patch("shutil.copy2", side_effect=PermissionError("Access denied"))
     def test_restore_backup_handles_permission_error(
@@ -364,7 +362,7 @@ class TestRestoreBackup:
         result = restore_backup(backup_file)
         assert result is False
 
-    @patch("lib.backup.DB_PATH")
+    @patch("lib.paths.db_path")
     @patch("lib.backup.db_exists")
     @patch("shutil.copy2")
     def test_restore_backup_removes_wal_files(
