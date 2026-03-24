@@ -29,9 +29,8 @@ def app_client():
 
     from fastapi.testclient import TestClient
 
-    from api.server import create_app
+    from api.server import app
 
-    app = create_app()
     return TestClient(app)
 
 

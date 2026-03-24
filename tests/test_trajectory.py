@@ -159,9 +159,9 @@ class TestVelocity:
     """Tests for velocity computation."""
 
     @pytest.fixture
-    def engine(self):
+    def engine(self, tmp_path):
         """Create engine with mocked query engine."""
-        engine = TrajectoryEngine(db_path=None)
+        engine = TrajectoryEngine(db_path=tmp_path / "test.db")
         engine.engine = Mock()
         return engine
 
@@ -236,9 +236,9 @@ class TestAcceleration:
     """Tests for acceleration computation."""
 
     @pytest.fixture
-    def engine(self):
+    def engine(self, tmp_path):
         """Create engine with mocked query engine."""
-        engine = TrajectoryEngine(db_path=None)
+        engine = TrajectoryEngine(db_path=tmp_path / "test.db")
         engine.engine = Mock()
         return engine
 
@@ -290,9 +290,9 @@ class TestTrendDetection:
     """Tests for trend analysis."""
 
     @pytest.fixture
-    def engine(self):
+    def engine(self, tmp_path):
         """Create engine with mocked query engine."""
-        engine = TrajectoryEngine(db_path=None)
+        engine = TrajectoryEngine(db_path=tmp_path / "test.db")
         engine.engine = Mock()
         return engine
 
@@ -386,9 +386,9 @@ class TestSeasonality:
     """Tests for seasonality detection."""
 
     @pytest.fixture
-    def engine(self):
+    def engine(self, tmp_path):
         """Create engine with mocked query engine."""
-        engine = TrajectoryEngine(db_path=None)
+        engine = TrajectoryEngine(db_path=tmp_path / "test.db")
         engine.engine = Mock()
         return engine
 
@@ -444,9 +444,9 @@ class TestProjection:
     """Tests for forward projection."""
 
     @pytest.fixture
-    def engine(self):
+    def engine(self, tmp_path):
         """Create engine with mocked query engine."""
-        engine = TrajectoryEngine(db_path=None)
+        engine = TrajectoryEngine(db_path=tmp_path / "test.db")
         engine.engine = Mock()
         return engine
 
@@ -510,9 +510,9 @@ class TestFullTrajectory:
     """Tests for full trajectory analysis."""
 
     @pytest.fixture
-    def mock_engine(self):
+    def mock_engine(self, tmp_path):
         """Create engine with mocked query engine."""
-        engine = TrajectoryEngine(db_path=None)
+        engine = TrajectoryEngine(db_path=tmp_path / "test.db")
         engine.engine = Mock()
         return engine
 
@@ -771,9 +771,9 @@ class TestEdgeCases:
     """Tests for edge cases and error handling."""
 
     @pytest.fixture
-    def engine(self):
+    def engine(self, tmp_path):
         """Create engine with mocked query engine."""
-        engine = TrajectoryEngine(db_path=None)
+        engine = TrajectoryEngine(db_path=tmp_path / "test.db")
         engine.engine = Mock()
         return engine
 
