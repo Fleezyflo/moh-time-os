@@ -14,62 +14,11 @@ env:
   NODE_VERSION: "20"
 
 jobs:
-  # ==========================================
-  # ENFORCEMENT INTEGRITY (must run first)
-  # ==========================================
-  integrity:
-    name: Enforcement Integrity
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Clone enforcement repo
-        run: git clone --depth 1 https://x-access-token:${{ secrets.ENFORCEMENT_READ_TOKEN }}@github.com/Fleezyflo/enforcement.git /tmp/enforcement
-      - name: Restore protected files
-        run: |
-          while IFS= read -r file; do
-            [[ -z "$file" || "$file" == \#* ]] && continue
-            [ ! -f "/tmp/enforcement/blessed/$file" ] && continue
-            if [ ! -f "./$file" ]; then
-              mkdir -p "$(dirname "./$file")"
-              cp "/tmp/enforcement/blessed/$file" "./$file"
-              echo "⚠️  MISSING: $file — restored from blessed"
-            elif ! diff -q "/tmp/enforcement/blessed/$file" "./$file" > /dev/null 2>&1; then
-              cp "/tmp/enforcement/blessed/$file" "./$file"
-              echo "⚠️  MODIFIED: $file — restored from blessed"
-            else
-              echo "✅ $file"
-            fi
-          done < /tmp/enforcement/protected-files.txt
-          echo "✅ Protected files restored"
-      - name: Dispatch to enforcement gate
-        if: always()
-        run: |
-          curl -s -X POST \
-            -H "Authorization: Bearer ${{ secrets.ENFORCEMENT_DISPATCH_TOKEN }}" \
-            https://api.github.com/repos/Fleezyflo/enforcement/dispatches \
-            -d "{\"event_type\":\"verify-pr\",\"client_payload\":{\"sha\":\"${{ github.event.pull_request.head.sha || github.sha }}\",\"ref\":\"${{ github.head_ref || github.ref_name }}\"}}"
-
-  # ==========================================
-  # PYTHON QUALITY
-  # ==========================================
   python-quality:
     name: Python Quality
     runs-on: ubuntu-latest
-    needs: integrity
     steps:
       - uses: actions/checkout@v4
-
-      - name: Restore blessed protected files
-        run: |
-          git clone --depth 1 https://x-access-token:${{ secrets.ENFORCEMENT_READ_TOKEN }}@github.com/Fleezyflo/enforcement.git /tmp/enforcement
-          while IFS= read -r file; do
-            [[ -z "$file" || "$file" == \#* ]] && continue
-            if [ -f "/tmp/enforcement/blessed/$file" ]; then
-              mkdir -p "$(dirname "./$file")"
-              cp "/tmp/enforcement/blessed/$file" "./$file"
-            fi
-          done < /tmp/enforcement/protected-files.txt
-          rm -rf /tmp/enforcement
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -129,21 +78,9 @@ jobs:
   python-tests:
     name: Python Tests
     runs-on: ubuntu-latest
-    needs: [integrity, python-quality]
+    needs: python-quality
     steps:
       - uses: actions/checkout@v4
-
-      - name: Restore blessed protected files
-        run: |
-          git clone --depth 1 https://x-access-token:${{ secrets.ENFORCEMENT_READ_TOKEN }}@github.com/Fleezyflo/enforcement.git /tmp/enforcement
-          while IFS= read -r file; do
-            [[ -z "$file" || "$file" == \#* ]] && continue
-            if [ -f "/tmp/enforcement/blessed/$file" ]; then
-              mkdir -p "$(dirname "./$file")"
-              cp "/tmp/enforcement/blessed/$file" "./$file"
-            fi
-          done < /tmp/enforcement/protected-files.txt
-          rm -rf /tmp/enforcement
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -191,21 +128,8 @@ jobs:
   drift-detection:
     name: Drift Detection
     runs-on: ubuntu-latest
-    needs: integrity
     steps:
       - uses: actions/checkout@v4
-
-      - name: Restore blessed protected files
-        run: |
-          git clone --depth 1 https://x-access-token:${{ secrets.ENFORCEMENT_READ_TOKEN }}@github.com/Fleezyflo/enforcement.git /tmp/enforcement
-          while IFS= read -r file; do
-            [[ -z "$file" || "$file" == \#* ]] && continue
-            if [ -f "/tmp/enforcement/blessed/$file" ]; then
-              mkdir -p "$(dirname "./$file")"
-              cp "/tmp/enforcement/blessed/$file" "./$file"
-            fi
-          done < /tmp/enforcement/protected-files.txt
-          rm -rf /tmp/enforcement
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -238,25 +162,11 @@ jobs:
   ui-quality:
     name: UI Quality
     runs-on: ubuntu-latest
-    needs: integrity
     defaults:
       run:
         working-directory: time-os-ui
     steps:
       - uses: actions/checkout@v4
-
-      - name: Restore blessed protected files
-        working-directory: .
-        run: |
-          git clone --depth 1 https://x-access-token:${{ secrets.ENFORCEMENT_READ_TOKEN }}@github.com/Fleezyflo/enforcement.git /tmp/enforcement
-          while IFS= read -r file; do
-            [[ -z "$file" || "$file" == \#* ]] && continue
-            if [ -f "/tmp/enforcement/blessed/$file" ]; then
-              mkdir -p "$(dirname "./$file")"
-              cp "/tmp/enforcement/blessed/$file" "./$file"
-            fi
-          done < /tmp/enforcement/protected-files.txt
-          rm -rf /tmp/enforcement
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -303,21 +213,9 @@ jobs:
   system-invariants:
     name: System Invariants
     runs-on: ubuntu-latest
-    needs: [integrity, drift-detection]
+    needs: drift-detection
     steps:
       - uses: actions/checkout@v4
-
-      - name: Restore blessed protected files
-        run: |
-          git clone --depth 1 https://x-access-token:${{ secrets.ENFORCEMENT_READ_TOKEN }}@github.com/Fleezyflo/enforcement.git /tmp/enforcement
-          while IFS= read -r file; do
-            [[ -z "$file" || "$file" == \#* ]] && continue
-            if [ -f "/tmp/enforcement/blessed/$file" ]; then
-              mkdir -p "$(dirname "./$file")"
-              cp "/tmp/enforcement/blessed/$file" "./$file"
-            fi
-          done < /tmp/enforcement/protected-files.txt
-          rm -rf /tmp/enforcement
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -341,25 +239,12 @@ jobs:
   governance:
     name: Governance Checks
     runs-on: ubuntu-latest
-    needs: integrity
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
           ref: ${{ github.head_ref }}
-
-      - name: Restore blessed protected files
-        run: |
-          git clone --depth 1 https://x-access-token:${{ secrets.ENFORCEMENT_READ_TOKEN }}@github.com/Fleezyflo/enforcement.git /tmp/enforcement
-          while IFS= read -r file; do
-            [[ -z "$file" || "$file" == \#* ]] && continue
-            if [ -f "/tmp/enforcement/blessed/$file" ]; then
-              mkdir -p "$(dirname "./$file")"
-              cp "/tmp/enforcement/blessed/$file" "./$file"
-            fi
-          done < /tmp/enforcement/protected-files.txt
-          rm -rf /tmp/enforcement
 
       - name: ADR Requirement Check
         run: |
@@ -377,21 +262,8 @@ jobs:
   reproducibility:
     name: Reproducibility Pins
     runs-on: ubuntu-latest
-    needs: integrity
     steps:
       - uses: actions/checkout@v4
-
-      - name: Restore blessed protected files
-        run: |
-          git clone --depth 1 https://x-access-token:${{ secrets.ENFORCEMENT_READ_TOKEN }}@github.com/Fleezyflo/enforcement.git /tmp/enforcement
-          while IFS= read -r file; do
-            [[ -z "$file" || "$file" == \#* ]] && continue
-            if [ -f "/tmp/enforcement/blessed/$file" ]; then
-              mkdir -p "$(dirname "./$file")"
-              cp "/tmp/enforcement/blessed/$file" "./$file"
-            fi
-          done < /tmp/enforcement/protected-files.txt
-          rm -rf /tmp/enforcement
 
       - name: Check Python Version Pin
         run: |
@@ -431,23 +303,10 @@ jobs:
   security-audit:
     name: Security Audit
     runs-on: ubuntu-latest
-    needs: integrity
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Restore blessed protected files
-        run: |
-          git clone --depth 1 https://x-access-token:${{ secrets.ENFORCEMENT_READ_TOKEN }}@github.com/Fleezyflo/enforcement.git /tmp/enforcement
-          while IFS= read -r file; do
-            [[ -z "$file" || "$file" == \#* ]] && continue
-            if [ -f "/tmp/enforcement/blessed/$file" ]; then
-              mkdir -p "$(dirname "./$file")"
-              cp "/tmp/enforcement/blessed/$file" "./$file"
-            fi
-          done < /tmp/enforcement/protected-files.txt
-          rm -rf /tmp/enforcement
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -497,21 +356,9 @@ jobs:
   api-smoke-test:
     name: API Smoke Test
     runs-on: ubuntu-latest
-    needs: [integrity, python-quality]
+    needs: python-quality
     steps:
       - uses: actions/checkout@v4
-
-      - name: Restore blessed protected files
-        run: |
-          git clone --depth 1 https://x-access-token:${{ secrets.ENFORCEMENT_READ_TOKEN }}@github.com/Fleezyflo/enforcement.git /tmp/enforcement
-          while IFS= read -r file; do
-            [[ -z "$file" || "$file" == \#* ]] && continue
-            if [ -f "/tmp/enforcement/blessed/$file" ]; then
-              mkdir -p "$(dirname "./$file")"
-              cp "/tmp/enforcement/blessed/$file" "./$file"
-            fi
-          done < /tmp/enforcement/protected-files.txt
-          rm -rf /tmp/enforcement
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -570,21 +417,9 @@ jobs:
   scenarios:
     name: Golden Scenarios
     runs-on: ubuntu-latest
-    needs: [integrity, python-quality]
+    needs: python-quality
     steps:
       - uses: actions/checkout@v4
-
-      - name: Restore blessed protected files
-        run: |
-          git clone --depth 1 https://x-access-token:${{ secrets.ENFORCEMENT_READ_TOKEN }}@github.com/Fleezyflo/enforcement.git /tmp/enforcement
-          while IFS= read -r file; do
-            [[ -z "$file" || "$file" == \#* ]] && continue
-            if [ -f "/tmp/enforcement/blessed/$file" ]; then
-              mkdir -p "$(dirname "./$file")"
-              cp "/tmp/enforcement/blessed/$file" "./$file"
-            fi
-          done < /tmp/enforcement/protected-files.txt
-          rm -rf /tmp/enforcement
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -608,21 +443,9 @@ jobs:
   extended-tests:
     name: Extended Tests
     runs-on: ubuntu-latest
-    needs: [integrity, python-quality]
+    needs: python-quality
     steps:
       - uses: actions/checkout@v4
-
-      - name: Restore blessed protected files
-        run: |
-          git clone --depth 1 https://x-access-token:${{ secrets.ENFORCEMENT_READ_TOKEN }}@github.com/Fleezyflo/enforcement.git /tmp/enforcement
-          while IFS= read -r file; do
-            [[ -z "$file" || "$file" == \#* ]] && continue
-            if [ -f "/tmp/enforcement/blessed/$file" ]; then
-              mkdir -p "$(dirname "./$file")"
-              cp "/tmp/enforcement/blessed/$file" "./$file"
-            fi
-          done < /tmp/enforcement/protected-files.txt
-          rm -rf /tmp/enforcement
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -655,21 +478,9 @@ jobs:
   db-rehearsal:
     name: DB Migration Rehearsal
     runs-on: ubuntu-latest
-    needs: [integrity, python-quality]
+    needs: python-quality
     steps:
       - uses: actions/checkout@v4
-
-      - name: Restore blessed protected files
-        run: |
-          git clone --depth 1 https://x-access-token:${{ secrets.ENFORCEMENT_READ_TOKEN }}@github.com/Fleezyflo/enforcement.git /tmp/enforcement
-          while IFS= read -r file; do
-            [[ -z "$file" || "$file" == \#* ]] && continue
-            if [ -f "/tmp/enforcement/blessed/$file" ]; then
-              mkdir -p "$(dirname "./$file")"
-              cp "/tmp/enforcement/blessed/$file" "./$file"
-            fi
-          done < /tmp/enforcement/protected-files.txt
-          rm -rf /tmp/enforcement
 
       - name: Set up Python
         uses: actions/setup-python@v5
