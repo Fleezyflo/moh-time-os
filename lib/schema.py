@@ -1027,6 +1027,10 @@ TABLES["gmail_participants"] = {
         ("email", "TEXT NOT NULL"),
         ("name", "TEXT"),
     ],
+    # Natural key: one row per (message, role, address). Without this the
+    # collector's INSERT OR REPLACE (state_store.insert_many) never conflicts
+    # and re-collection appends duplicates (caused 6.1M rows for ~6.8k distinct).
+    "unique": [("message_id", "role", "email")],
 }
 
 TABLES["gmail_attachments"] = {
@@ -1039,6 +1043,10 @@ TABLES["gmail_attachments"] = {
         ("size_bytes", "INTEGER"),
         ("attachment_id", "TEXT"),
     ],
+    # Natural key: the full attachment identity per message. Prevents the
+    # INSERT OR REPLACE append-duplication seen on the other gmail relation
+    # tables. (Live data currently has zero attachment duplicates.)
+    "unique": [("message_id", "filename", "mime_type", "size_bytes", "attachment_id")],
 }
 
 TABLES["gmail_labels"] = {
@@ -1049,6 +1057,10 @@ TABLES["gmail_labels"] = {
         ("label_id", "TEXT NOT NULL"),
         ("label_name", "TEXT"),
     ],
+    # Natural key: one row per (message, label). label_name is functionally
+    # determined by label_id. Prevents INSERT OR REPLACE append-duplication
+    # (caused 4.1M rows for ~4.6k distinct).
+    "unique": [("message_id", "label_id")],
 }
 
 # ---------------------------------------------------------------------------
