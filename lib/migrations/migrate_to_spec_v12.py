@@ -837,7 +837,7 @@ def verify_schema(conn):
 
 def run_migration():
     """Execute full migration."""
-    from lib import schema
+    from lib import safe_sql, schema
 
     logger.info("=" * 60)
     logger.info("MIGRATION TO MASTER_SPEC.md §12")
@@ -885,6 +885,15 @@ def run_migration():
             logger.info("\n✓ MIGRATION SUCCESSFUL")
         else:
             raise Exception("Schema verification failed")
+
+        # S3.2 completion stamp: record that this DB is now at the target schema
+        # version so the idempotency guard at the top of run_migration() actually
+        # guards THIS script's own output. Without this, a DB that this script
+        # migrates is left at its old user_version, and a re-run re-enters the
+        # destructive DROP+INSERT path. user_version is the canonical source of
+        # truth (matches schema_engine.py:618).
+        conn.execute(safe_sql.pragma_user_version_set(schema.SCHEMA_VERSION))
+        conn.commit()
 
     except (sqlite3.Error, ValueError, OSError) as e:
         conn.rollback()

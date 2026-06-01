@@ -421,7 +421,7 @@ def recreate_items_view(conn):
 
 def run_migration():
     """Run full schema rebuild."""
-    from lib import schema
+    from lib import safe_sql, schema
 
     logger.info("=" * 60)
     logger.info("Schema Rebuild Migration to §12")
@@ -488,6 +488,13 @@ def run_migration():
         proj_sql = cursor.fetchone()[0]
         if "CHECK (type IN" in proj_sql:
             logger.info("  ✓ projects.type CHECK constraint exists")
+
+        # S3.2 completion stamp: record the target schema version so the
+        # idempotency guard at the top of run_migration() guards THIS script's
+        # own output (a migrated DB left unstamped would re-enter the destructive
+        # rebuild on re-run). user_version is canonical (matches schema_engine).
+        conn.execute(safe_sql.pragma_user_version_set(schema.SCHEMA_VERSION))
+        conn.commit()
     except (sqlite3.Error, ValueError, OSError) as e:
         conn.rollback()
         logger.info(f"\n✗ Migration failed: {e}")
