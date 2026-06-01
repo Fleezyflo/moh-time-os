@@ -141,6 +141,25 @@
         "title": "ApproveRequest",
         "type": "object"
       },
+      "AuthModeResponse": {
+        "description": "Auth mode response.",
+        "properties": {
+          "auth_required": {
+            "title": "Auth Required",
+            "type": "boolean"
+          },
+          "mode": {
+            "title": "Mode",
+            "type": "string"
+          }
+        },
+        "required": [
+          "mode",
+          "auth_required"
+        ],
+        "title": "AuthModeResponse",
+        "type": "object"
+      },
       "BatchActionResponse": {
         "description": "Response for batch action proposal.",
         "properties": {
@@ -1966,6 +1985,30 @@
         "title": "ThresholdUpdate",
         "type": "object"
       },
+      "TokenResponse": {
+        "description": "Response body for token exchange (kept for UI compatibility).",
+        "properties": {
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "token",
+          "role",
+          "user_id"
+        ],
+        "title": "TokenResponse",
+        "type": "object"
+      },
       "UnmuteRequest": {
         "description": "Request body for unmuting an entity's notifications.",
         "properties": {
@@ -2083,6 +2126,12 @@
         "title": "WeightReviewPayload",
         "type": "object"
       }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "scheme": "bearer",
+        "type": "http"
+      }
     }
   },
   "info": {
@@ -2145,6 +2194,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Batch Propose",
         "tags": [
           "actions"
@@ -2221,6 +2275,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Action History",
         "tags": [
           "actions"
@@ -2281,6 +2340,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Pending Actions",
         "tags": [
           "actions"
@@ -2323,6 +2387,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Propose Action",
         "tags": [
           "actions"
@@ -2376,6 +2445,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Approve Action",
         "tags": [
           "actions"
@@ -2429,6 +2503,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Execute Action",
         "tags": [
           "actions"
@@ -2482,6 +2561,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Reject Action",
         "tags": [
           "actions"
@@ -2662,6 +2746,55 @@
           }
         },
         "summary": "Modify Approval"
+      }
+    },
+    "/api/auth/mode": {
+      "get": {
+        "description": "Report auth mode \u2014 always requires Bearer token.",
+        "operationId": "get_auth_mode_api_auth_mode_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthModeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Auth Mode",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/token": {
+      "post": {
+        "description": "Exchange Bearer token for user identity.\n\nValidates the API key and returns user info on success.",
+        "operationId": "exchange_token_api_auth_token_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Exchange Token",
+        "tags": [
+          "auth"
+        ]
       }
     },
     "/api/bundles": {
@@ -3312,6 +3445,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Handle Interactive Action",
         "tags": [
           "chat"
@@ -3354,6 +3492,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Handle Webhook",
         "tags": [
           "chat"
@@ -6125,6 +6268,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Query Audit Log",
         "tags": [
           "Governance"
@@ -6291,6 +6439,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Request Data Export",
         "tags": [
           "Governance"
@@ -6334,6 +6487,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Table Schema",
         "tags": [
           "Governance"
@@ -6377,6 +6535,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Export Status",
         "tags": [
           "Governance"
@@ -6399,6 +6562,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Exportable Tables",
         "tags": [
           "Governance"
@@ -6492,6 +6660,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Subject Access Requests",
         "tags": [
           "Governance"
@@ -6582,6 +6755,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Create Subject Access Request",
         "tags": [
           "Governance"
@@ -6625,6 +6803,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Subject Access Request",
         "tags": [
           "Governance"
@@ -6691,6 +6874,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Fulfill Subject Access Request",
         "tags": [
           "Governance"
@@ -9070,6 +9258,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Chat Analytics",
         "tags": [
           "Spec v2.9"
@@ -9176,6 +9369,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Clients",
         "tags": [
           "Spec v2.9"
@@ -9237,6 +9435,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Client Detail",
         "tags": [
           "Spec v2.9"
@@ -9280,6 +9483,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Client Ar Aging",
         "tags": [
           "Spec v2.9"
@@ -9323,6 +9531,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Client Attachments",
         "tags": [
           "Spec v2.9"
@@ -9366,6 +9579,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Client Email Participants",
         "tags": [
           "Spec v2.9"
@@ -9409,6 +9627,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Client Invoice Detail",
         "tags": [
           "Spec v2.9"
@@ -9493,6 +9716,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Client Invoices",
         "tags": [
           "Spec v2.9"
@@ -9607,6 +9835,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Client Signals",
         "tags": [
           "Spec v2.9"
@@ -9682,6 +9915,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Client Snapshot",
         "tags": [
           "Spec v2.9"
@@ -9737,6 +9975,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Client Team",
         "tags": [
           "Spec v2.9"
@@ -9803,6 +10046,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Couplings V2",
         "tags": [
           "Spec v2.9"
@@ -9908,6 +10156,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Engagements",
         "tags": [
           "Spec v2.9"
@@ -9951,6 +10204,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Engagement",
         "tags": [
           "Spec v2.9"
@@ -10014,6 +10272,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Transition Engagement",
         "tags": [
           "Spec v2.9"
@@ -10090,6 +10353,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Events V2",
         "tags": [
           "Spec v2.9"
@@ -10136,6 +10404,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Event History",
         "tags": [
           "Events"
@@ -10210,6 +10483,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Publish Event",
         "tags": [
           "Events"
@@ -10230,6 +10508,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Stream Events",
         "tags": [
           "Events"
@@ -10282,6 +10565,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Evidence V2",
         "tags": [
           "Spec v2.9"
@@ -10304,6 +10592,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Financial Detail",
         "tags": [
           "Spec v2.9"
@@ -10326,6 +10619,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Fix Data V2",
         "tags": [
           "Spec v2.9"
@@ -10388,6 +10686,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Resolve Fix Data",
         "tags": [
           "Spec v2.9"
@@ -10410,6 +10713,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Health Check",
         "tags": [
           "Spec v2.9"
@@ -10553,6 +10861,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Inbox",
         "tags": [
           "Spec v2.9"
@@ -10575,6 +10888,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Inbox Counts",
         "tags": [
           "Spec v2.9"
@@ -10659,6 +10977,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Inbox Recent",
         "tags": [
           "Spec v2.9"
@@ -10739,6 +11062,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Execute Inbox Action",
         "tags": [
           "Spec v2.9"
@@ -10809,6 +11137,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Mark Inbox Read",
         "tags": [
           "Spec v2.9"
@@ -10873,6 +11206,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Attention Debt",
         "tags": [
           "Intelligence"
@@ -10973,6 +11311,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Audit Trail Entries",
         "tags": [
           "Intelligence"
@@ -10995,6 +11338,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Daily Briefing",
         "tags": [
           "Intelligence"
@@ -11017,6 +11365,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Calibration Briefing",
         "tags": [
           "Intelligence"
@@ -11077,6 +11430,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Calibration Report",
         "tags": [
           "Intelligence"
@@ -11099,6 +11457,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Detect Changes",
         "tags": [
           "Intelligence"
@@ -11177,6 +11540,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Clients Compare",
         "tags": [
           "Intelligence"
@@ -11256,6 +11624,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Client Communication",
         "tags": [
           "Intelligence"
@@ -11343,6 +11716,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Client Compare",
         "tags": [
           "Intelligence"
@@ -11386,6 +11764,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Client Profile",
         "tags": [
           "Intelligence"
@@ -11429,6 +11812,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Client Tasks",
         "tags": [
           "Intelligence"
@@ -11496,6 +11884,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Client Trajectory",
         "tags": [
           "Intelligence"
@@ -11538,6 +11931,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Conversation",
         "tags": [
           "Intelligence"
@@ -11560,6 +11958,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Critical Items",
         "tags": [
           "Intelligence"
@@ -11582,6 +11985,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Data Quality Overview",
         "tags": [
           "Intelligence"
@@ -11625,6 +12033,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Client Intelligence",
         "tags": [
           "Intelligence"
@@ -11668,6 +12081,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Person Intelligence",
         "tags": [
           "Intelligence"
@@ -11690,6 +12108,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Portfolio Intelligence",
         "tags": [
           "Intelligence"
@@ -11746,6 +12169,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Entity Profile",
         "tags": [
           "Intelligence"
@@ -11802,6 +12230,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Explain Entity",
         "tags": [
           "Intelligence"
@@ -11824,6 +12257,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Financial Aging",
         "tags": [
           "Intelligence"
@@ -11846,6 +12284,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Compliance Report",
         "tags": [
           "Intelligence"
@@ -11868,6 +12311,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Intelligence Patterns",
         "tags": [
           "Spec v2.9"
@@ -11890,6 +12338,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Pattern Catalog",
         "tags": [
           "Intelligence"
@@ -11912,6 +12365,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Performance Profile",
         "tags": [
           "Intelligence"
@@ -11970,6 +12428,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Portfolio Overview",
         "tags": [
           "Intelligence"
@@ -12028,6 +12491,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Portfolio Risks",
         "tags": [
           "Intelligence"
@@ -12098,6 +12566,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Portfolio Trajectory",
         "tags": [
           "Intelligence"
@@ -12150,6 +12623,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Early Warnings",
         "tags": [
           "Intelligence"
@@ -12196,6 +12674,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Projects Health",
         "tags": [
           "Intelligence"
@@ -12239,6 +12722,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Project State",
         "tags": [
           "Intelligence"
@@ -12303,6 +12791,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Proposals",
         "tags": [
           "Intelligence"
@@ -12350,6 +12843,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Compare Scenarios",
         "tags": [
           "Intelligence"
@@ -12394,6 +12892,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Model Scenario",
         "tags": [
           "Intelligence"
@@ -12437,6 +12940,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Client Score",
         "tags": [
           "Intelligence"
@@ -12459,6 +12967,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Score History Summary",
         "tags": [
           "Intelligence"
@@ -12502,6 +13015,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Person Score",
         "tags": [
           "Intelligence"
@@ -12524,6 +13042,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Portfolio Score",
         "tags": [
           "Intelligence"
@@ -12567,6 +13090,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Project Score",
         "tags": [
           "Intelligence"
@@ -12589,6 +13117,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Record Scores",
         "tags": [
           "Intelligence"
@@ -12653,6 +13186,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Score History",
         "tags": [
           "Intelligence"
@@ -12699,6 +13237,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Signals",
         "tags": [
           "Intelligence"
@@ -12769,6 +13312,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Active Signals",
         "tags": [
           "Intelligence"
@@ -12789,6 +13337,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Export Signals",
         "tags": [
           "Intelligence"
@@ -12857,6 +13410,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Signal History",
         "tags": [
           "Intelligence"
@@ -12879,6 +13437,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Signals Summary",
         "tags": [
           "Intelligence"
@@ -12901,6 +13464,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Thresholds",
         "tags": [
           "Intelligence"
@@ -12923,6 +13491,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Intelligence Snapshot",
         "tags": [
           "Intelligence"
@@ -12945,6 +13518,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Team Capacity",
         "tags": [
           "Intelligence"
@@ -12967,6 +13545,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Team Distribution",
         "tags": [
           "Intelligence"
@@ -13010,6 +13593,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Team Person Profile",
         "tags": [
           "Intelligence"
@@ -13077,6 +13665,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Team Person Trajectory",
         "tags": [
           "Intelligence"
@@ -13147,6 +13740,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Trajectory",
         "tags": [
           "Intelligence"
@@ -13223,6 +13821,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Invoices V2",
         "tags": [
           "Spec v2.9"
@@ -13335,6 +13938,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Issues",
         "tags": [
           "Spec v2.9"
@@ -13375,6 +13983,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Create Issue From Proposal",
         "tags": [
           "Spec v2.9"
@@ -13418,6 +14031,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Issue",
         "tags": [
           "Spec v2.9"
@@ -13471,6 +14089,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Add Issue Note",
         "tags": [
           "Spec v2.9"
@@ -13524,6 +14147,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Resolve Issue",
         "tags": [
           "Spec v2.9"
@@ -13577,6 +14205,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Change Issue State",
         "tags": [
           "Spec v2.9"
@@ -13657,6 +14290,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Transition Issue",
         "tags": [
           "Spec v2.9"
@@ -13679,6 +14317,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Run Regression Watch Job",
         "tags": [
           "Spec v2.9"
@@ -13701,6 +14344,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Run Snooze Expiry Job",
         "tags": [
           "Spec v2.9"
@@ -13747,6 +14395,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Notification Analytics",
         "tags": [
           "Spec v2.9"
@@ -13789,6 +14442,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Mute Entity Notifications",
         "tags": [
           "Spec v2.9"
@@ -13811,6 +14469,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Active Mutes",
         "tags": [
           "Spec v2.9"
@@ -13853,6 +14516,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Unmute Entity Notifications",
         "tags": [
           "Spec v2.9"
@@ -13914,6 +14582,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Clients Paginated",
         "tags": [
           "Pagination"
@@ -13975,6 +14648,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Invoices Paginated",
         "tags": [
           "Pagination"
@@ -14036,6 +14714,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Signals Paginated",
         "tags": [
           "Pagination"
@@ -14097,6 +14780,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "List Tasks Paginated",
         "tags": [
           "Pagination"
@@ -14157,6 +14845,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Priorities V2",
         "tags": [
           "Spec v2.9"
@@ -14217,6 +14910,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Projects V2",
         "tags": [
           "Spec v2.9"
@@ -14239,6 +14937,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Asana Portfolio Context",
         "tags": [
           "Spec v2.9"
@@ -14319,6 +15022,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Proposals V2",
         "tags": [
           "Spec v2.9"
@@ -14374,6 +15082,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Proposal Detail V2",
         "tags": [
           "Spec v2.9"
@@ -14427,6 +15140,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Dismiss Proposal",
         "tags": [
           "Spec v2.9"
@@ -14480,6 +15198,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Snooze Proposal",
         "tags": [
           "Spec v2.9"
@@ -14525,6 +15248,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Search",
         "tags": [
           "Spec v2.9"
@@ -14568,6 +15296,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Task Asana Detail",
         "tags": [
           "Spec v2.9"
@@ -14590,6 +15323,11 @@
             "description": "Successful Response"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Team",
         "tags": [
           "Spec v2.9"
@@ -14633,6 +15371,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Person Calendar Detail",
         "tags": [
           "Spec v2.9"
@@ -14677,6 +15420,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Get Watchers V2",
         "tags": [
           "Spec v2.9"
@@ -14730,6 +15478,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Dismiss Watcher",
         "tags": [
           "Spec v2.9"
@@ -14783,6 +15536,11 @@
             "description": "Validation Error"
           }
         },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
         "summary": "Snooze Watcher",
         "tags": [
           "Spec v2.9"

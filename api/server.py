@@ -92,6 +92,20 @@ analyzers = AnalyzerOrchestrator(store=store)
 governance = get_governance(store=store)
 rate_limiter = RateLimiter()
 
+# ==== Security middleware (WS2) ====
+# AuthMiddleware is the single global gate enforcing Bearer auth on every
+# non-allowlisted route (the ~285 bare @app routes plus all mounted routers).
+from fastapi import Depends  # noqa: E402
+
+from api.auth import auth_router, require_auth  # noqa: E402
+from api.auth_middleware import AuthMiddleware, RateLimitMiddleware  # noqa: E402
+
+# NOTE: Starlette runs middleware in REVERSE registration order (last added runs
+# first). RateLimitMiddleware is added before AuthMiddleware so auth runs first
+# (reject unauthenticated requests before counting them against the limiter).
+app.add_middleware(RateLimitMiddleware, limiter=rate_limiter)
+app.add_middleware(AuthMiddleware)
+
 # UI directory (built Vite app)
 UI_DIR = paths.app_home() / "time-os-ui" / "dist"
 
@@ -107,15 +121,21 @@ from api.paginated_router import paginated_router  # noqa: E402
 from api.spec_router import spec_router  # noqa: E402
 from api.sse_router import sse_router  # noqa: E402
 
-app.include_router(spec_router, prefix="/api/v2")
-app.include_router(intelligence_router, prefix="/api/v2/intelligence")
-app.include_router(sse_router, prefix="/api/v2")
-app.include_router(paginated_router, prefix="/api/v2/paginated")
-app.include_router(export_router)
-app.include_router(governance_router)
+# Router-level auth dependency = defense-in-depth on top of AuthMiddleware, so a
+# mounted route stays gated even if the global middleware is ever removed (WS2).
+_AUTH_DEP = [Depends(require_auth)]
+app.include_router(spec_router, prefix="/api/v2", dependencies=_AUTH_DEP)
+app.include_router(intelligence_router, prefix="/api/v2/intelligence", dependencies=_AUTH_DEP)
+app.include_router(sse_router, prefix="/api/v2", dependencies=_AUTH_DEP)
+app.include_router(paginated_router, prefix="/api/v2/paginated", dependencies=_AUTH_DEP)
+app.include_router(export_router, dependencies=_AUTH_DEP)
+app.include_router(governance_router, dependencies=_AUTH_DEP)
 
-app.include_router(action_router, prefix="/api")
-app.include_router(chat_webhook_router, prefix="/api")
+app.include_router(action_router, prefix="/api", dependencies=_AUTH_DEP)
+app.include_router(chat_webhook_router, prefix="/api", dependencies=_AUTH_DEP)
+
+# Public auth handshake router — NO auth dependency (/auth/mode, /auth/token).
+app.include_router(auth_router, prefix="/api")
 
 
 # ==== DB Startup & Migrations ====

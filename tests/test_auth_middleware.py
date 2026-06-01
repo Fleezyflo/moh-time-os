@@ -59,3 +59,79 @@ class TestCorsConfig:
     def test_wildcard_with_credentials_is_hard_failure(self, monkeypatch, tmp_path):
         with pytest.raises(RuntimeError, match="CORS_ORIGINS"):
             _reload_server(monkeypatch, tmp_path, CORS_ORIGINS="*")
+
+
+class TestAuthMiddleware:
+    @pytest.fixture
+    def client(self, monkeypatch, tmp_path):
+        from fastapi.testclient import TestClient
+
+        server = _reload_server(monkeypatch, tmp_path, CORS_ORIGINS="http://localhost:5173")
+        # Plain TestClient (NOT a context manager): Starlette 0.5x only runs
+        # startup events under `with TestClient(...)`, so no DB-hitting startup fires.
+        return TestClient(server.app)
+
+    def test_health_is_public(self, client):
+        resp = client.get("/api/health")
+        assert resp.status_code != 401
+
+    def test_auth_mode_is_public(self, client):
+        resp = client.get("/api/auth/mode")
+        assert resp.status_code == 200
+        assert resp.json()["auth_required"] is True
+
+    def test_mutation_route_rejects_no_token(self, client):
+        resp = client.delete("/api/tasks/does-not-exist")
+        assert resp.status_code == 401, resp.text
+
+    def test_mutation_route_rejects_wrong_token(self, client):
+        resp = client.delete(
+            "/api/tasks/does-not-exist",
+            headers={"Authorization": "Bearer wrong-key"},
+        )
+        assert resp.status_code == 401, resp.text
+
+    def test_correct_token_passes_auth_layer(self, client):
+        # Correct token clears AuthMiddleware; the handler then 404s (task absent).
+        resp = client.delete(
+            "/api/tasks/does-not-exist",
+            headers={"Authorization": "Bearer test-secret-key-for-proof"},
+        )
+        assert resp.status_code != 401
+        assert resp.status_code == 404
+
+    def test_options_preflight_is_public(self, client):
+        resp = client.options(
+            "/api/tasks/x",
+            headers={
+                "Origin": "http://localhost:5173",
+                "Access-Control-Request-Method": "DELETE",
+            },
+        )
+        assert resp.status_code != 401
+
+
+class TestRouterDependencies:
+    def test_every_mounted_router_has_require_auth_dependency(self, monkeypatch, tmp_path):
+        """Each include_router'd APIRouter (except the public auth router) must
+        carry require_auth as a router-level dependency -- defense in depth."""
+        from api import auth
+
+        server = _reload_server(monkeypatch, tmp_path, CORS_ORIGINS="http://localhost:5173")
+        sample_paths = {
+            "/api/v2/proposals",
+            "/api/governance/sar",
+        }
+
+        def route_deps(path_to_find):
+            for route in server.app.routes:
+                if getattr(route, "path", None) == path_to_find:
+                    return [d.dependency for d in getattr(route, "dependencies", [])]
+            return None
+
+        for p in sample_paths:
+            deps = route_deps(p)
+            assert deps is not None, f"route {p} not found"
+            assert auth.require_auth in deps, f"{p} missing require_auth dependency"
+        # The public auth router must NOT require auth on its handshake routes.
+        assert auth.require_auth not in (route_deps("/api/auth/mode") or [])

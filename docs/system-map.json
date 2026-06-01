@@ -42,6 +42,11 @@
     },
     {
       "method": "GET",
+      "path": "/api/auth/mode",
+      "source": "api/auth.py"
+    },
+    {
+      "method": "GET",
       "path": "/api/bundles",
       "source": "api/server.py"
     },
@@ -1027,6 +1032,11 @@
     },
     {
       "method": "POST",
+      "path": "/api/auth/token",
+      "source": "api/auth.py"
+    },
+    {
+      "method": "POST",
       "path": "/api/bundles/rollback-last",
       "source": "api/server.py"
     },
@@ -1593,7 +1603,7 @@
   ],
   "generated_by": "scripts/generate_system_map.py",
   "summary": {
-    "api_routes_count": 282,
+    "api_routes_count": 284,
     "collectors_count": 13,
     "db_tables_count": 31,
     "ui_routes_count": 32
