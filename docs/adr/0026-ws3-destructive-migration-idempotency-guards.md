@@ -41,3 +41,25 @@ version.
   path is `schema_engine.converge()`, which is unaffected.
 - No change to the orphaned `_schema_version` table here; reconciling it is
   WS7.S7.1's job (a separate ADR).
+
+## Addendum (S3.6): v32 ALTER+backfill made atomic
+
+`lib/migrations/v32_signal_lifecycle.py::migrate()` added lifecycle columns
+(`first_detected_at`, `initial_severity`, `peak_severity`) via `ALTER TABLE ADD
+COLUMN`, committed mid-migration, then backfilled. A backfill failure left the
+columns added-but-unbackfilled.
+
+The original WS3 plan proposed simply deleting the mid-migration `conn.commit()`.
+That does NOT work: under sqlite3's default deferred isolation, DDL (`ALTER`)
+implicitly commits any pending transaction *before* it executes, so the column
+adds are committed regardless of the mid-migration commit, and the except
+handler's `conn.rollback()` cannot undo them (verified empirically: the column
+survives a rollback).
+
+The real fix: open the connection with `isolation_level=None` and wrap the
+ALTER loop + backfill in a single explicit `BEGIN`/`COMMIT`, with `ROLLBACK`
+(guarded for the no-active-transaction case) in the except. With an explicit
+transaction the ALTERs participate in it, so a backfill failure rolls back the
+column adds (verified). The optional `CREATE TABLE IF NOT EXISTS` setup commits
+on its own before the `BEGIN`. The entry point is `migrate(db_path)` (there is
+no `run_migration` in this module). No version-stamp change.
