@@ -25,6 +25,15 @@ sdist/
 develop-eggs/
 .installed.cfg
 
+# Claude Code agent scratch (machine-local; never track or scan)
+# NOTE: .claude/plan.md is intentionally tracked — do not ignore all of .claude/.
+.claude/worktrees/
+.claude/*.lock
+.claude/scheduled_tasks.lock
+# Worktrees preserved by aborted agent runs
+.preserved-worktree-*/
+preserved-worktree-*/
+
 # Test/lint caches
 .pytest_cache/
 .mypy_cache/
