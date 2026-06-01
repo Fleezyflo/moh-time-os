@@ -1,79 +1,92 @@
 # HANDOFF -- Audit Remediation
 
-**Generated:** 2026-03-13
-**Current Phase:** post-audit (all structural repair complete)
-**Current Session:** 24
-**Track:** Post-audit structural repair
+**Generated:** 2026-06-01
+**Current Phase:** post-audit (all structural repair complete; perf hardening continuing)
+**Current Session:** 25
+**Track:** Post-audit perf — detection pipeline (C2 → C2b)
 
 ---
 
 ## What Just Happened
 
-### Session 024 -- Entity Links Alignment, PatternDetectionResponse Wiring, Couplings Fix
+### Session 24 -- Phase C2b: bulk-trajectory path
 
-Branch: fix/data-loss-write-safety (continues from Session 023).
+Branch: `claude/fervent-germain-af8e0f` (rebased onto new main `a74b2a9`; C2 already merged via PR #114). PR: #TBD.
 
-**Four fixes applied:**
+C2b closes the LAST `detect_all_signals(quick=False)` bottleneck — the TREND/ANOMALY
+trajectory N×M that C2 deferred. The autonomous loop's Phase 1f hung because each
+trend/anomaly client+person signal called `engine.client_trajectory()` /
+`person_trajectory()` per entity, and each trajectory ran `client_metrics_in_period`
+once per window, firing 3 queries (`tasks/invoices/communications_in_period`) on a fresh
+`mode=ro` connection ⇒ ~5,514 `_execute` calls / 83s for the trajectory load alone.
 
-1. **server.py entity_links alignment** -- Removed runtime `CREATE TABLE IF NOT EXISTS entity_links` DDL (schema.py owns the table). Fixed `WHERE id = ?` to `WHERE link_id = ?` in resolve_fix_data_item(). Fixed `el.entity_id`/`el.entity_type`/`el.linked_id` to `el.to_entity_id`/`el.to_entity_type`/`el.from_artifact_id` in get_evidence().
+**Two files:**
+- `lib/query_engine.py` (+~210): `bulk_client_trajectories()` + `bulk_person_trajectories()`
+  (next to `client_trajectory()`), plus static helpers `_trajectory_windows()` /
+  `_window_index()`. Each runs the 3 period views ONCE across the full window span (no
+  per-entity filter) and buckets rows by (entity, window) in memory, reproducing the
+  per-entity metric aggregation + `_compute_trend` byte-for-byte. Built at the MAX window
+  count (num_windows=6, window_size=30); smaller requests are the most-recent-N slice of
+  the same 30-day grid. Person path accumulates per lowercased name then assigns to EVERY
+  person_id bearing it (matches the existing many-to-one `LOWER(assignee)=name` behavior,
+  incl. same-name dupes).
+- `lib/intelligence/signals.py` (+~150): `DetectionCache.trajectory_map` + `get_trajectory()`
+  (slices the primed map, recomputes trends on the slice, lazy fallback to the per-entity
+  engine call when unprimed) + `_slice_trajectory()`. `detect_all_signals(not quick)` primes
+  the map once (mirrors the C2 `score_map` prime). `_evaluate_trend`/`_evaluate_anomaly` gain
+  a `cache` param (the gap C2 closed for `_evaluate_compound`) and read the cache when present.
 
-2. **spec_router.py /couplings** -- Added `investigation_path, created_at, updated_at` to the SELECT to match the UI Coupling type contract.
+**Result (live-DB copy, 160 clients):** full-mode `detect_all_signals(quick=False)` now
+finishes in **23.9–24.3s**, `success=True`, 0 errors, 169 signals — DONE_OK. Trajectory
+load **5,514 → 6 `_execute` calls (919×), 83.4s → 3.5s**. Bulk vs per-entity EQUIVALENCE
+proven: 402 client + 36 person checks, 0 mismatches.
 
-3. **PatternDetectionResponse wiring** -- Added `PatternDetectionData` and `PatternDetectionResponse` to response_models.py. Changed `/intelligence/patterns` from `IntelligenceResponse` to `PatternDetectionResponse`. Endpoint now propagates detection_success, detection_errors, and detection_error_details from detect_all_patterns().
-
-4. **Test fixes** -- Fixed `RECOMMENDED_INDEXES` -> `PERFORMANCE_INDEXES` import (actual export name). Tightened spec_router typed response test to assert both `PatternDetectionResponse` and `PatternDetectionData` appear in endpoint source.
-
-**Files changed:**
-- `api/server.py` -- 3 entity_links fixes, runtime DDL removed
-- `api/spec_router.py` -- /couplings columns, PatternDetectionResponse wiring
-- `api/response_models.py` -- PatternDetectionData, PatternDetectionResponse added, stray import sqlite3 removed
-- `lib/schema.py` -- entity_links corrected (prior session, unstaged)
-- `lib/db_opt/indexes.py` -- entity_links index columns corrected (prior session, unstaged)
-- `tests/test_audit_remediation_v4_implementations.py` -- import fix, assertion fix
-- `docs/adr/0021-entity-links-schema-alignment.md` -- ADR for server.py + spec_router.py changes
-
-**Verification:** py_compile, ruff check, bandit -- all clean on changed files.
-
-### Remaining work
-
-All audit remediation phases (A-D) complete. Hostile review complete. Gap closure complete.
-
-1. **Merge PR** -- fix/data-loss-write-safety branch
-2. **PR #3 (backup VACUUM INTO)** -- `lib/backup.py`, `tests/test_backup.py`
-3. **PR #4 (schema + alerting + API handler)** -- `lib/schema_engine.py`, `lib/observability/health.py`, `api/server.py`
-4. **Polish follow-up:** Convert remaining raw SQL in NotificationEngine read methods to safe_sql.select().
+**Verification:** ruff (repo-wide) / ruff-format / bandit / py_compile / mypy strict-island
+all clean; `test_query_engine`(43)+`test_intelligence_signals`(29)+`test_intelligence_scoring`(41)+`test_signal_lifecycle`(13) = 126 passed. Pre-existing
+`test_trajectory.py` (48 errors, determinism guard on `TrajectoryEngine()`) and
+`test_daemon_intelligence.py` (11 fails, `AutonomousLoop.cycle_count`) reproduce on pristine
+main with my files reverted — not caused by C2b. Full log: `VERIFICATION_LOG_S24.md`.
 
 ---
 
 ## What's Next
 
-Merge the current PR. Then proceed to PR #3 and PR #4 from the original remediation plan.
+1. **Merge the C2b PR.**
+2. **Restart daemon/API — but the daemon plist runs `lib.daemon` FROM the main checkout**
+   `/Users/molhamhomsi/clawd/moh_time_os`, which is on the dirty `fix/portfolio-progressive-render`
+   branch whose `lib/` has neither C2 nor C2b. Restarting now reruns the hang. Gate: merge C2b →
+   move main checkout to `origin/main` (touches the off-limits dirty branch — Molham's call) →
+   re-install/load `~/Library/LaunchAgents/com.mohtime.daemon.plist` + `com.mohtimeos.api.plist` →
+   verify one cycle (`daemon_state.json` `autonomous.last_success` advances, `consecutive_failures`
+   168→0, cycle < 2 min). A full cycle still logs Xero `invalid_client` (dead token, separate from
+   detection).
+3. Phase B data freshness, Phase D intelligence verification — see root `HANDOFF.md` §Now.
+
+The authoritative resume doc is the **root** `/Users/molhamhomsi/clawd/moh_time_os/HANDOFF.md`
+(untracked, main-checkout-only). This file mirrors its C2b summary.
 
 ---
 
 ## Key Rules
 
-1. You write code. You never run anything.
-2. Commit subject under 72 chars, valid types only
-3. "HANDOFF.md removed and rewritten" required in commit body
-4. If 20+ deletions, include "Deletion rationale:" in body
-5. Match existing patterns obsessively
-6. No comments in command blocks
-7. `store.query()` is for reads ONLY -- all writes must go through `store.insert()`, `store.update()`, `store.delete()` to acquire `_write_lock`
-8. Schema (tables + indexes) lives in `lib/schema.py` only -- no runtime class may create or manage schema
-9. Deferred imports are justified only for circular dependency breaking or graceful degradation (try/except). Lazy stdlib imports are not acceptable.
-10. Test fixture stores must match production semantics exactly (INSERT OR REPLACE, not INSERT INTO)
-11. Test DB fixtures should be function-scoped (`tmp_path`) for per-test isolation, not session-scoped shared files
-12. `lib/governance/` has REAL production classes -- `lib/intelligence/data_governance.py` has toy in-memory versions. Always use the real ones.
-13. Mock tests MUST NOT be used when testing persistence boundaries -- they hide schema-code mismatches that crash on real SQLite.
-14. Production code columns must match lib/schema.py exactly -- no invented columns.
-15. ADR required when modifying api/server.py or api/spec_router.py (CI enforces via scripts/check_adr_required.sh).
-16. Deletion rationale required in commit body when >20 lines deleted (CI enforces via scripts/check_change_size.sh).
+1. This shell runs on Molham's Mac — run git/sqlite/gh/pre-commit yourself; ask before push/PR/merge and destructive live-DB ops.
+2. Commit subject under 72 chars, valid types only.
+3. "HANDOFF.md removed and rewritten" required in commit body.
+4. If 20+ deletions, include "Deletion rationale:" in body.
+5. Match existing patterns obsessively (C2b mirrors C2's score_map prime + cache-param threading exactly).
+6. No comments in command blocks.
+7. `store.query()` reads only; writes via `store.insert/update/delete`.
+8. Schema lives in `lib/schema.py` only.
+9. macOS: no `timeout` (use Python `signal.alarm`); system `python3` lacks `yaml` — use the main checkout's `.venv/bin/python` (3.11.13) for anything importing `lib/`; local ruff is 0.15.1 == pre-commit pinned, so formatting from here is safe.
+10. The daemon runs code from the MAIN CHECKOUT, not the worktree — a worktree-only fix is not "live" until the main checkout is on main.
+11. Test against a COPY of the live DB, never the live DB (daemon may touch it); pass a `Path` to `QueryEngine`/`detect_all_signals`, not a `str`.
 
 ---
 
 ## Documents to Read
 
 1. `audit-remediation/AGENT.md` -- This brief
-2. `audit-remediation/state.json` -- Current project state
-3. `CLAUDE.md` -- Repo-level engineering rules
+2. `/Users/molhamhomsi/clawd/moh_time_os/HANDOFF.md` -- Authoritative resume doc (root, untracked)
+3. `audit-remediation/VERIFICATION_LOG_S24.md` -- C2b verification log
+4. `audit-remediation/state.json` -- Current project state
+5. `CLAUDE.md` -- Repo-level engineering rules

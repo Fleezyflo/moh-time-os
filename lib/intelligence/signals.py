@@ -932,6 +932,11 @@ class DetectionCache:
         # Phase C2: bulk client score map, primed once in detect_all_signals.
         # None = not primed (composite_score branch falls back to lazy scoring).
         self.score_map: dict[str, dict] | None = None
+        # Phase C2b: bulk trajectory maps, primed once in detect_all_signals.
+        # {"client": {client_id: trajectory}, "person": {person_id: trajectory}}
+        # built at the MAX window count; get_trajectory() slices the most-recent N.
+        # None = not primed (trend/anomaly evaluators fall back to lazy trajectory).
+        self.trajectory_map: dict[str, dict[str, dict]] | None = None
 
     @property
     def clients(self) -> list:
@@ -1038,6 +1043,84 @@ class DetectionCache:
         if key not in self._metrics_cache:
             self._metrics_cache[key] = self.engine.client_metrics_in_period(client_id, since, until)
         return self._metrics_cache[key]
+
+    def get_trajectory(
+        self,
+        entity_type: str,
+        entity_id: str,
+        window_size_days: int,
+        num_windows: int,
+    ) -> dict | None:
+        """Trajectory for an entity, served from the bulk-primed map when available.
+
+        Phase C2b: when trajectory_map is primed (detect_all_signals non-quick), this
+        slices the most-recent num_windows from the entity's max-window trajectory and
+        recomputes trends on the slice — byte-identical to engine.client_trajectory /
+        person_trajectory because window i's boundaries depend only on i, window_size_days
+        and the build-time now. When unprimed (any direct caller), it falls back to the
+        lazy per-entity engine call, preserving pre-C2b behavior.
+
+        Returns the same shape as the engine trajectory functions, or None for entity
+        types/ids the bulk path does not serve (caller treats None as "not found").
+        """
+        traj_map = getattr(self, "trajectory_map", None)
+        if traj_map is not None:
+            primed = traj_map.get(entity_type)
+            if primed is not None:
+                full = primed.get(entity_id)
+                if full is None:
+                    # Entity absent from the primed universe (e.g. filtered out of
+                    # portfolio/load views): no trajectory, same as a fresh build on
+                    # an unknown id would yield no usable windows.
+                    return None
+                return self._slice_trajectory(entity_type, full, num_windows)
+
+        # Unprimed fallback — lazy per-entity trajectory (original behavior).
+        if entity_type == "client":
+            return self.engine.client_trajectory(
+                entity_id, window_size_days=window_size_days, num_windows=num_windows
+            )
+        if entity_type == "person":
+            return self.engine.person_trajectory(
+                entity_id, window_size_days=window_size_days, num_windows=num_windows
+            )
+        return None
+
+    @staticmethod
+    def _slice_trajectory(entity_type: str, full: dict, num_windows: int) -> dict:
+        """Most-recent num_windows of a primed trajectory, with trends recomputed.
+
+        The primed trajectory holds windows oldest→newest at the max window count; the
+        most-recent k windows are exactly a k-window trajectory (boundaries are
+        num_windows-independent). Trends are recomputed on the slice using the same
+        _compute_trend and metric keys as the source engine trajectory functions.
+        """
+        from lib.query_engine import _compute_trend
+
+        windows = full.get("windows", [])
+        sliced = windows[-num_windows:] if num_windows else windows
+
+        if entity_type == "person":
+            numeric_keys = ["tasks_assigned", "tasks_completed"]
+        else:
+            numeric_keys = [
+                "tasks_created",
+                "tasks_completed",
+                "invoices_issued",
+                "amount_invoiced",
+                "communications_count",
+            ]
+
+        trends = {}
+        for key in numeric_keys:
+            values = [w.get("metrics", {}).get(key, 0) or 0 for w in sliced]
+            trends[key] = _compute_trend(values)
+
+        result = dict(full)
+        result["num_windows"] = len(sliced)
+        result["windows"] = sliced
+        result["trends"] = trends
+        return result
 
 
 def _evaluate_threshold(
@@ -1207,32 +1290,56 @@ def _evaluate_threshold(
 
 
 def _evaluate_trend(
-    condition: dict, entity_type: str, entity_id: str, db_path: Path | None = None
+    condition: dict,
+    entity_type: str,
+    entity_id: str,
+    db_path: Path | None = None,
+    cache: DetectionCache = None,
 ) -> dict | None:
     """
     Evaluate a trend condition using trajectory functions.
 
     Returns evidence dict if triggered, None if not.
+
+    Phase C2b: when a primed cache is supplied, client/person trajectories are served
+    from the bulk-loaded trajectory map (cache.get_trajectory) instead of a per-entity
+    engine call, avoiding the N×(windows×3) fresh-connection query explosion. With no
+    cache (direct callers), the per-entity engine path is used unchanged.
     """
     engine = _get_engine(db_path)
     metric = condition.get("metric")
     direction = condition.get("direction", "declining")
     consecutive = condition.get("consecutive_periods", 3)
     period_days = condition.get("period_size_days", 30)
+    num_windows = consecutive + 1
 
     try:
         if entity_type == "client":
-            trajectory = engine.client_trajectory(
-                entity_id, window_size_days=period_days, num_windows=consecutive + 1
-            )
+            if cache is not None:
+                trajectory = cache.get_trajectory(
+                    "client", entity_id, window_size_days=period_days, num_windows=num_windows
+                )
+            else:
+                trajectory = engine.client_trajectory(
+                    entity_id, window_size_days=period_days, num_windows=num_windows
+                )
+            if trajectory is None:
+                return None
         elif entity_type == "person":
-            trajectory = engine.person_trajectory(
-                entity_id, window_size_days=period_days, num_windows=consecutive + 1
-            )
+            if cache is not None:
+                trajectory = cache.get_trajectory(
+                    "person", entity_id, window_size_days=period_days, num_windows=num_windows
+                )
+            else:
+                trajectory = engine.person_trajectory(
+                    entity_id, window_size_days=period_days, num_windows=num_windows
+                )
+            if trajectory is None:
+                return None
         elif entity_type == "portfolio":
             # Portfolio trajectory uses aggregate
             trajectories = engine.portfolio_trajectory(
-                window_size_days=period_days, num_windows=consecutive + 1
+                window_size_days=period_days, num_windows=num_windows
             )
             if not trajectories:
                 return None
@@ -1273,12 +1380,20 @@ def _evaluate_trend(
 
 
 def _evaluate_anomaly(
-    condition: dict, entity_type: str, entity_id: str, db_path: Path | None = None
+    condition: dict,
+    entity_type: str,
+    entity_id: str,
+    db_path: Path | None = None,
+    cache: DetectionCache = None,
 ) -> dict | None:
     """
     Evaluate an anomaly condition.
 
     Returns evidence dict if triggered, None if not.
+
+    Phase C2b: when a primed cache is supplied, the client baseline trajectory is served
+    from the bulk-loaded trajectory map (cache.get_trajectory) instead of a per-entity
+    engine call. With no cache (direct callers), the per-entity engine path is unchanged.
     """
     engine = _get_engine(db_path)
     metric = condition.get("metric")
@@ -1286,6 +1401,7 @@ def _evaluate_anomaly(
     baseline_days = condition.get("baseline_period_days", 180)
     measurement_days = condition.get("measurement_period_days", 30)
     direction = condition.get("direction", "any")
+    num_windows = baseline_days // 30
 
     try:
         # Get historical values for baseline
@@ -1296,9 +1412,16 @@ def _evaluate_anomaly(
 
         if entity_type == "client":
             # Get multiple periods to compute stddev
-            trajectory = engine.client_trajectory(
-                entity_id, window_size_days=30, num_windows=baseline_days // 30
-            )
+            if cache is not None:
+                trajectory = cache.get_trajectory(
+                    "client", entity_id, window_size_days=30, num_windows=num_windows
+                )
+            else:
+                trajectory = engine.client_trajectory(
+                    entity_id, window_size_days=30, num_windows=num_windows
+                )
+            if trajectory is None:
+                return None
             windows = trajectory.get("windows", [])
 
             if len(windows) < 3:
@@ -1473,9 +1596,9 @@ def evaluate_signal(
         if signal_def.category == SignalCategory.THRESHOLD:
             evidence = _evaluate_threshold(condition, entity_type, entity_id, db_path, cache)
         elif signal_def.category == SignalCategory.TREND:
-            evidence = _evaluate_trend(condition, entity_type, entity_id, db_path)
+            evidence = _evaluate_trend(condition, entity_type, entity_id, db_path, cache)
         elif signal_def.category == SignalCategory.ANOMALY:
-            evidence = _evaluate_anomaly(condition, entity_type, entity_id, db_path)
+            evidence = _evaluate_anomaly(condition, entity_type, entity_id, db_path, cache)
         elif signal_def.category == SignalCategory.COMPOUND:
             evidence = _evaluate_compound(
                 condition, entity_type, entity_id, db_path, _evaluated, cache=cache
@@ -1686,6 +1809,23 @@ def detect_all_signals(
             s["entity_id"]: s for s in score_all_clients(db_path) if s.get("entity_id")
         }
         logger.info(f"Primed {len(cache.score_map)} client scorecards for signal detection")
+
+        # Phase C2b: build client + person trajectory maps in a fixed number of bulk
+        # queries (3 full-span period queries per entity class) instead of letting each
+        # TREND/ANOMALY signal call client_trajectory/person_trajectory per entity
+        # (windows×3 fresh-connection queries × N entities — the remaining N×M blowup
+        # C2 deferred). Built at the MAX window count any signal needs (180-day anomaly
+        # baseline ⇒ 6 windows of 30 days); get_trajectory() serves smaller requests as
+        # the most-recent-N slice. Quick mode skips TREND/ANOMALY, so the map stays None.
+        cache.trajectory_map = {
+            "client": cache.engine.bulk_client_trajectories(window_size_days=30, num_windows=6),
+            "person": cache.engine.bulk_person_trajectories(window_size_days=30, num_windows=6),
+        }
+        logger.info(
+            "Primed %d client + %d person trajectories for signal detection",
+            len(cache.trajectory_map["client"]),
+            len(cache.trajectory_map["person"]),
+        )
 
     all_detected = []
 
