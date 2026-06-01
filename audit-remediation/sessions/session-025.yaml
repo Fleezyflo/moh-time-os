@@ -1,0 +1,35 @@
+session: 25
+date: "2026-06-01"
+phase: post-audit
+description: "Phase C2b -- bulk-trajectory path; full-mode detect_all_signals reaches DONE_OK in ~24s"
+status: complete
+branch: claude/fervent-germain-af8e0f
+
+tasks_completed:
+  - id: C2b-REBASE
+    description: "Rebase worktree branch onto new main a74b2a9 (C2 already merged via PR #114). Fast-forward, no conflicts."
+    files_modified: []
+
+  - id: C2b-BULK-QE
+    description: "Add bulk_client_trajectories() + bulk_person_trajectories() + _trajectory_windows()/_window_index() helpers. 3 full-span period queries per entity class, bucketed in memory by (entity, window). Reproduces client_metrics_in_period/person_load_in_period aggregation + _compute_trend byte-for-byte. Person path accumulates per lowercased name then assigns to every person_id with that name (matches many-to-one LOWER(assignee)=name semantics, incl. same-name dupes)."
+    files_modified:
+      - lib/query_engine.py
+
+  - id: C2b-CACHE-SIGNALS
+    description: "DetectionCache.trajectory_map + get_trajectory() (slice primed map, recompute trends on slice, lazy per-entity fallback when unprimed) + _slice_trajectory(). detect_all_signals(not quick) primes the map once (mirrors C2 score_map prime). _evaluate_trend/_evaluate_anomaly gain a cache param and read the cache when present; per-entity engine path unchanged for unprimed callers."
+    files_modified:
+      - lib/intelligence/signals.py
+
+  - id: C2b-PROOF
+    description: "Proved full-mode detect_all_signals(quick=False) on a fresh live-DB copy (160 clients): 23.9-24.3s, success=True, 0 errors, 169 signals -> DONE_OK. Trajectory load 5,514 -> 6 _execute calls (919x), 83.4s -> 3.5s. Bulk vs per-entity equivalence: 402 client + 36 person checks, 0 mismatches."
+    files_modified:
+      - audit-remediation/VERIFICATION_LOG_S24.md
+
+gaps_found:
+  - "RESTART BLOCKER: the daemon plist (ops/com.mohtime.daemon.plist) runs lib.daemon FROM the main checkout, which is on the dirty fix/portfolio-progressive-render branch whose lib/ has neither C2 nor C2b. Restarting the daemon before the main checkout is moved to origin/main would rerun the pre-C2 hang. Daemon NOT restarted this session -- gated on merge + main-checkout move (Molham's call, touches the off-limits dirty branch)."
+
+lessons:
+  - "The daemon runs code from the MAIN CHECKOUT working dir, not the worktree. A worktree-only (or even merged-to-main) fix is not 'live' for the daemon until the main checkout itself is moved onto main. Always check what working dir a launchctl plist's ProgramArguments points at before claiming a fix is deployed."
+  - "Window i's boundaries in client_trajectory/person_trajectory depend only on i, window_size_days, and build-time now -- NOT on num_windows. So the most-recent k windows of an N-window trajectory equal a fresh k-window trajectory. One max-window (6) bulk build serves every signal's smaller request (k in 3/4/6) via a slice + trend recompute."
+  - "Person trajectory metrics are name-based (LOWER(assignee)=person_name), and that mapping is many-to-one: two person_ids with the same name get identical counts in the per-entity path. A bulk path keyed name->single-id (last writer wins) silently zeros all but one -- caught by full-population equivalence testing (the 'Dana Oraibi' collision), not by spot-checks. Bulk rewrites of per-entity logic must be proven equivalent across the ENTIRE population, not a sample."
+  - "DONE_OK is not a literal in the codebase -- it is shorthand for 'the autonomous-loop Phase 1f (full-mode detect_all_signals) completes successfully and fast' rather than hanging. The operational test is: detect_all_signals(quick=False) returns success=True with 0 errors in < ~120s on a live-DB copy."

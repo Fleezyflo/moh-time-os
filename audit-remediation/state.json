@@ -3,7 +3,7 @@
   "project": "MOH Time OS — Audit Remediation",
   "owner": "Fleezyflo",
   "current_phase": "post-audit",
-  "current_session": 23,
+  "current_session": 25,
   "phases": {
     "phase-01": {
       "status": "complete",
@@ -167,8 +167,8 @@
       "tasks_complete": 10
     }
   },
-  "last_pr": 70,
-  "last_verified": null,
+  "last_pr": 114,
+  "last_verified": "2026-06-01",
   "enforcement": {
     "repo": "Fleezyflo/enforcement",
     "read_token_secret": "ENFORCEMENT_READ_TOKEN",

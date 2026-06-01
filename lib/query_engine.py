@@ -894,6 +894,238 @@ class QueryEngine:
             "trends": trends,
         }
 
+    @staticmethod
+    def _trajectory_windows(window_size_days: int, num_windows: int) -> list[tuple[str, str]]:
+        """Window boundaries for a trajectory, oldest first.
+
+        Reproduces the per-entity grid in client_trajectory/person_trajectory exactly:
+        window i ends at now - i*window_size_days and starts window_size_days earlier;
+        windows are inserted oldest-first. Boundaries depend only on i, window_size_days
+        and now, so the most-recent k of an N-window grid equal a fresh k-window grid.
+        Bounds are ISO 'YYYY-MM-DD' strings, matching the [since, until) string compares
+        the *_in_period queries use.
+        """
+        from datetime import datetime, timedelta, timezone
+
+        end_date = datetime.now(timezone.utc)
+        windows: list[tuple[str, str]] = []
+        for i in range(num_windows):
+            window_end = end_date - timedelta(days=i * window_size_days)
+            window_start = window_end - timedelta(days=window_size_days)
+            windows.insert(0, (window_start.strftime("%Y-%m-%d"), window_end.strftime("%Y-%m-%d")))
+        return windows
+
+    @staticmethod
+    def _window_index(value: str | None, bounds: list[tuple[str, str]]) -> int | None:
+        """Index of the window [since, until) containing an ISO date/datetime string.
+
+        Uses the same lexicographic 'value >= since AND value < until' comparison the
+        *_in_period queries use (ISO-8601 sorts correctly as text), so bucketing matches
+        the per-entity queries byte-for-byte. Returns None if outside every window.
+        """
+        if not value:
+            return None
+        for idx, (since, until) in enumerate(bounds):
+            if since <= value < until:
+                return idx
+        return None
+
+    def bulk_client_trajectories(
+        self, window_size_days: int = 30, num_windows: int = 6
+    ) -> dict[str, dict]:
+        """Trajectories for ALL clients in a fixed number of bulk queries.
+
+        Equivalent to calling client_trajectory(client_id, window_size_days, num_windows)
+        for every client in client_portfolio_overview(), but runs the three period views
+        ONCE across the full window span (no per-client filter) and buckets rows in memory
+        instead of firing 3 queries per window per client on fresh connections.
+
+        Returns {client_id: trajectory_dict} where each value has the same shape as
+        client_trajectory() (client_id, window_size_days, num_windows, windows, trends).
+        """
+        bounds = self._trajectory_windows(window_size_days, num_windows)
+        span_start, span_end = bounds[0][0], bounds[-1][1]
+
+        clients = self.client_portfolio_overview()
+
+        completed_statuses = ("done", "complete", "completed")
+        numeric_keys = [
+            "tasks_created",
+            "tasks_completed",
+            "invoices_issued",
+            "amount_invoiced",
+            "communications_count",
+        ]
+
+        # Per-client, per-window metric accumulators, pre-seeded so clients with no
+        # activity in the span still get zero-filled windows (matching the per-entity
+        # path, which queries each client and gets empty result sets → zeros).
+        def _empty_metrics(client_id: str, since: str, until: str) -> dict:
+            return {
+                "client_id": client_id,
+                "period_start": since,
+                "period_end": until,
+                "tasks_created": 0,
+                "tasks_completed": 0,
+                "invoices_issued": 0,
+                "amount_invoiced": 0,
+                "amount_paid": 0,
+                "communications_count": 0,
+            }
+
+        buckets: dict[str, list[dict]] = {}
+        for client in clients:
+            cid = client.get("client_id")
+            if cid is None:
+                continue
+            buckets[cid] = [_empty_metrics(cid, s, u) for (s, u) in bounds]
+
+        for task in self.tasks_in_period(span_start, span_end):
+            cid = task.get("client_id")
+            if cid is None or cid not in buckets:
+                continue
+            w = self._window_index(task.get("created_at"), bounds)
+            if w is None:
+                continue
+            m = buckets[cid][w]
+            m["tasks_created"] += 1
+            if task.get("task_status") in completed_statuses:
+                m["tasks_completed"] += 1
+
+        for inv in self.invoices_in_period(span_start, span_end):
+            cid = inv.get("client_id")
+            if cid is None or cid not in buckets:
+                continue
+            w = self._window_index(inv.get("issue_date"), bounds)
+            if w is None:
+                continue
+            m = buckets[cid][w]
+            amount = inv.get("amount", 0) or 0
+            m["invoices_issued"] += 1
+            m["amount_invoiced"] += amount
+            if inv.get("invoice_status") == "paid":
+                m["amount_paid"] += amount
+
+        for comm in self.communications_in_period(span_start, span_end):
+            cid = comm.get("client_id")
+            if cid is None or cid not in buckets:
+                continue
+            w = self._window_index(comm.get("occurred_at"), bounds)
+            if w is None:
+                continue
+            buckets[cid][w]["communications_count"] += 1
+
+        trajectories: dict[str, dict] = {}
+        for cid, window_metrics in buckets.items():
+            windows_data = [
+                {"period_start": m["period_start"], "period_end": m["period_end"], "metrics": m}
+                for m in window_metrics
+            ]
+            trends = {}
+            for key in numeric_keys:
+                values = [w["metrics"].get(key, 0) or 0 for w in windows_data]
+                trends[key] = _compute_trend(values)
+            trajectories[cid] = {
+                "client_id": cid,
+                "window_size_days": window_size_days,
+                "num_windows": num_windows,
+                "windows": windows_data,
+                "trends": trends,
+            }
+        return trajectories
+
+    def bulk_person_trajectories(
+        self, window_size_days: int = 30, num_windows: int = 6
+    ) -> dict[str, dict]:
+        """Trajectories for ALL persons in a fixed number of bulk queries.
+
+        Equivalent to person_trajectory(person_id, window_size_days, num_windows) for
+        every person in resource_load_distribution(), but runs one task query across the
+        full span and buckets by LOWER(assignee) instead of one person_load_in_period
+        call per window per person.
+
+        Person metrics are name-based: person_trajectory resolves a person_id to a name
+        and counts every task whose LOWER(assignee) matches that name. That mapping is
+        many-to-one — if two person_ids share a name they get identical counts — so this
+        accumulates per lowercased name and assigns each name's windows to EVERY person_id
+        bearing it, reproducing the per-entity result exactly (including same-name dupes).
+
+        Returns {person_id: trajectory_dict} with the same shape as person_trajectory()
+        (person_id, person_name, window_size_days, num_windows, windows, trends).
+        """
+        bounds = self._trajectory_windows(window_size_days, num_windows)
+        span_start, span_end = bounds[0][0], bounds[-1][1]
+
+        persons = self.resource_load_distribution()
+        completed_statuses = ("done", "complete", "completed")
+
+        # Person ids grouped by lowercased name, plus each id's display name.
+        ids_by_name: dict[str, list[str]] = {}
+        names: dict[str, str] = {}
+        for person in persons:
+            pid = person.get("person_id")
+            pname = person.get("person_name")
+            if pid is None or not pname:
+                continue
+            names[pid] = pname
+            ids_by_name.setdefault(pname.lower(), []).append(pid)
+
+        # Per-name per-window [assigned, completed] accumulators, seeded to zero so a
+        # person with no tasks in the span still gets zero-filled windows.
+        name_windows: dict[str, list[list[int]]] = {
+            name: [[0, 0] for _ in bounds] for name in ids_by_name
+        }
+
+        for task in self.tasks_in_period(span_start, span_end):
+            assignee = task.get("assignee")
+            if not assignee:
+                continue
+            slot = name_windows.get(assignee.lower())
+            if slot is None:
+                continue
+            w = self._window_index(task.get("created_at"), bounds)
+            if w is None:
+                continue
+            slot[w][0] += 1
+            if task.get("task_status") in completed_statuses:
+                slot[w][1] += 1
+
+        trajectories: dict[str, dict] = {}
+        for name, ids in ids_by_name.items():
+            counts = name_windows[name]
+            for pid in ids:
+                pname = names[pid]
+                windows_data = []
+                for (since, until), (total, completed) in zip(bounds, counts, strict=True):
+                    metrics = {
+                        "person_name": pname,
+                        "period_start": since,
+                        "period_end": until,
+                        "tasks_assigned": total,
+                        "tasks_completed": completed,
+                        "completion_rate": round(100 * completed / total, 1) if total > 0 else 0,
+                    }
+                    windows_data.append(
+                        {"period_start": since, "period_end": until, "metrics": metrics}
+                    )
+                trends = {
+                    "tasks_assigned": _compute_trend(
+                        [w["metrics"]["tasks_assigned"] for w in windows_data]
+                    ),
+                    "tasks_completed": _compute_trend(
+                        [w["metrics"]["tasks_completed"] for w in windows_data]
+                    ),
+                }
+                trajectories[pid] = {
+                    "person_id": pid,
+                    "person_name": pname,
+                    "window_size_days": window_size_days,
+                    "num_windows": num_windows,
+                    "windows": windows_data,
+                    "trends": trends,
+                }
+        return trajectories
+
     def portfolio_trajectory(
         self, window_size_days: int = 30, num_windows: int = 6, min_activity: int = 1
     ) -> list[dict]:
