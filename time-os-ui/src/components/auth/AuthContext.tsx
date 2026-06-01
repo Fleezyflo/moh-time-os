@@ -1,6 +1,7 @@
 /* eslint-disable react-refresh/only-export-components -- Context is core functionality */
 // Auth context — single-user system, always authenticated
 import { createContext, useContext, type ReactNode } from 'react';
+import { getApiToken, setApiToken } from '../../lib/auth';
 
 interface AuthState {
   token: string;
@@ -15,7 +16,7 @@ interface AuthContextType extends AuthState {
 }
 
 const AUTH: AuthState = {
-  token: 'local',
+  token: getApiToken(),
   role: 'owner',
   userId: 'molham',
   isAuthenticated: true,
@@ -34,8 +35,8 @@ export function useAuth() {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const value: AuthContextType = {
     ...AUTH,
-    login: async () => {
-      // No-op — always authenticated
+    login: async (apiKey: string) => {
+      setApiToken(apiKey);
     },
     logout: () => {
       // No-op — can't log out of a single-user system

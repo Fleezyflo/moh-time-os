@@ -38,7 +38,11 @@ export function useEventStream({
     }
 
     try {
-      // EventSource doesn't support custom headers, so we pass token as query param
+      // KNOWN LIMITATION (sse-token-in-url-query-string): the browser EventSource
+      // API cannot set request headers, so the token must travel as ?token=. This
+      // can leak via server/proxy access logs and Referer. Mitigations: the
+      // /events/publish injector is gated server-side (WS2); the stream route
+      // validates the token; do not log query strings on the proxy.
       const url = new URL(`${apiBase}/events/stream`, window.location.origin);
       url.searchParams.append('token', token);
 
