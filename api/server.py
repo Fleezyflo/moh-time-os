@@ -3281,7 +3281,9 @@ async def debug_config():
         "middleware_stack": middleware_stack,
         "collector_intervals": collector_intervals,
         "rate_limits": {
-            "enabled": rate_limiter is not None,
+            # True only when RateLimitMiddleware is actually registered, not
+            # merely when the RateLimiter object exists (WS2: was always-True).
+            "enabled": any(m.cls.__name__ == "RateLimitMiddleware" for m in app.user_middleware),
         },
         "environment": os.getenv("MOH_TIME_OS_ENV", "development"),
         "ui_dir": str(UI_DIR),

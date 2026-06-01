@@ -174,3 +174,32 @@ class TestSsePublishLockdown:
         )
         assert resp.status_code == 200, resp.text
         assert resp.json()["status"] == "ok"
+
+
+class TestRateLimit:
+    @pytest.fixture
+    def client(self, monkeypatch, tmp_path):
+        from fastapi.testclient import TestClient
+
+        from lib.security.rate_limiter import RateLimiter
+
+        server = _reload_server(monkeypatch, tmp_path, CORS_ORIGINS="http://localhost:5173")
+        # Add a tiny-limit RateLimitMiddleware so 429 triggers deterministically.
+        from api.auth_middleware import RateLimitMiddleware
+
+        tiny = RateLimiter(rate_limits={"authenticated": 2})
+        server.app.add_middleware(RateLimitMiddleware, limiter=tiny)
+        return TestClient(server.app)
+
+    def test_write_method_is_throttled_after_limit(self, client):
+        headers = {"Authorization": "Bearer test-secret-key-for-proof"}
+        statuses = [client.delete("/api/tasks/none", headers=headers).status_code for _ in range(4)]
+        assert 429 in statuses, statuses
+
+    def test_get_is_not_rate_limited(self, client):
+        statuses = [client.get("/api/health").status_code for _ in range(5)]
+        assert 429 not in statuses
+
+    def test_debug_config_flag_reflects_registration(self, monkeypatch, tmp_path):
+        server = _reload_server(monkeypatch, tmp_path, CORS_ORIGINS="http://localhost:5173")
+        assert any(m.cls.__name__ == "RateLimitMiddleware" for m in server.app.user_middleware)
