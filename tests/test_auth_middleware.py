@@ -39,6 +39,12 @@ def _reload_server(monkeypatch, tmp_path, **env):
 
     state_store.StateStore._instance = None
 
+    # Reload api.auth FIRST so its module-level _API_KEY re-reads the env var
+    # (it is captured at import time; a stale value would reject the test token).
+    import api.auth
+
+    importlib.reload(api.auth)
+
     import api.server as server
 
     return importlib.reload(server)
@@ -135,3 +141,36 @@ class TestRouterDependencies:
             assert auth.require_auth in deps, f"{p} missing require_auth dependency"
         # The public auth router must NOT require auth on its handshake routes.
         assert auth.require_auth not in (route_deps("/api/auth/mode") or [])
+
+
+class TestSsePublishLockdown:
+    @pytest.fixture
+    def client(self, monkeypatch, tmp_path):
+        from fastapi.testclient import TestClient
+
+        server = _reload_server(monkeypatch, tmp_path, CORS_ORIGINS="http://localhost:5173")
+        return TestClient(server.app)
+
+    def test_publish_route_has_local_dependency(self):
+        """The publish route carries its OWN Depends(require_auth), not only the
+        router-level one -- visible to anyone reading sse_router in isolation."""
+        from api.sse_router import sse_router
+
+        route = next(r for r in sse_router.routes if getattr(r, "path", "") == "/events/publish")
+        assert len(route.dependencies) >= 1
+
+    def test_publish_rejects_no_token(self, client):
+        resp = client.post(
+            "/api/v2/events/publish",
+            params={"event_type": "signal_new", "message": "pwned"},
+        )
+        assert resp.status_code == 401, resp.text
+
+    def test_publish_accepts_correct_token(self, client):
+        resp = client.post(
+            "/api/v2/events/publish",
+            params={"event_type": "signal_new", "message": "ok"},
+            headers={"Authorization": "Bearer test-secret-key-for-proof"},
+        )
+        assert resp.status_code == 200, resp.text
+        assert resp.json()["status"] == "ok"

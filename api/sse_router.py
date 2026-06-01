@@ -26,9 +26,10 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
+from api.auth import require_auth
 from api.response_models import DetailResponse
 
 logger = logging.getLogger(__name__)
@@ -242,7 +243,11 @@ def get_event_history(limit: int = Query(100, description="Maximum events to ret
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@sse_router.post("/events/publish", response_model=DetailResponse)
+@sse_router.post(
+    "/events/publish",
+    response_model=DetailResponse,
+    dependencies=[Depends(require_auth)],
+)
 async def publish_event(
     event_type: str = Query(..., description="Type of event"),
     message: str = Query(..., description="Event message"),
