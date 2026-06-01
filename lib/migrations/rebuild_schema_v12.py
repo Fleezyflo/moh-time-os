@@ -421,9 +421,29 @@ def recreate_items_view(conn):
 
 def run_migration():
     """Run full schema rebuild."""
+    from lib import schema
+
     logger.info("=" * 60)
     logger.info("Schema Rebuild Migration to §12")
     logger.info("=" * 60)
+
+    # S3.2 idempotency guard: unconditional DROP TABLE + rebuild. Self-skip
+    # when PRAGMA user_version already meets the target (user_version is the
+    # source of truth; the _schema_version table is orphaned).
+    _guard_db_path = str(paths.db_path())
+    _guard_conn = sqlite3.connect(_guard_db_path)
+    try:
+        current_version = _guard_conn.execute("PRAGMA user_version").fetchone()[0]
+    finally:
+        _guard_conn.close()
+    if current_version >= schema.SCHEMA_VERSION:
+        logger.info(
+            "Skipping rebuild_schema_v12: user_version=%s >= target=%s",
+            current_version,
+            schema.SCHEMA_VERSION,
+        )
+        return {"skipped": True, "reason": "already at schema version"}
+
     # Backup first
     backup_path = backup_db()
 

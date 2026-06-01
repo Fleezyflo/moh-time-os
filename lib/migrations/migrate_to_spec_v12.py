@@ -837,9 +837,31 @@ def verify_schema(conn):
 
 def run_migration():
     """Execute full migration."""
+    from lib import schema
+
     logger.info("=" * 60)
     logger.info("MIGRATION TO MASTER_SPEC.md §12")
     logger.info("=" * 60)
+
+    # S3.2 idempotency guard: this migration unconditionally DROP TABLE +
+    # rename + INSERT...SELECT. Re-running on an already-migrated DB drops the
+    # live table and copies from the renamed schema -> data loss. Self-skip
+    # when PRAGMA user_version is already at/above the target schema version.
+    # user_version is the source of truth (the _schema_version table is
+    # orphaned, holds {3,4001,4004}, and must not be read here).
+    _guard_conn = get_conn()
+    try:
+        current_version = _guard_conn.execute("PRAGMA user_version").fetchone()[0]
+    finally:
+        _guard_conn.close()
+    if current_version >= schema.SCHEMA_VERSION:
+        logger.info(
+            "Skipping migrate_to_spec_v12: user_version=%s >= target=%s",
+            current_version,
+            schema.SCHEMA_VERSION,
+        )
+        return {"skipped": True, "reason": "already at schema version"}
+
     backup_path = backup_db()
 
     conn = get_conn()
