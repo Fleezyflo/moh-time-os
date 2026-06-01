@@ -184,7 +184,11 @@ class SQLiteAdapter(DatabaseAdapter):
             self.conn.execute("BEGIN")
             yield
             self.conn.execute("COMMIT")
-        except (sqlite3.Error, ValueError, OSError) as e:
+        except Exception as e:
+            # Roll back on ANY exception raised inside the transaction block,
+            # not just sqlite3/value/OS errors. A domain exception (RuntimeError,
+            # KeyError, etc.) escaping with a narrow except would skip ROLLBACK
+            # and leave the open BEGIN dangling / partially applied.
             logger.error(f"SQLiteAdapter.transaction error: {e}")
             self.conn.execute("ROLLBACK")
             raise
@@ -284,7 +288,11 @@ class PostgreSQLAdapter(DatabaseAdapter):
         try:
             yield
             self.conn.commit()
-        except (sqlite3.Error, ValueError, OSError):
+        except Exception:
+            # Roll back on ANY exception raised inside the transaction block,
+            # not just sqlite3/value/OS errors. A domain exception (RuntimeError,
+            # KeyError, etc.) escaping with a narrow except would skip rollback
+            # and leave the connection in an aborted-transaction state.
             self.conn.rollback()
             raise
 
