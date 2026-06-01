@@ -13,6 +13,40 @@ from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 
+# Directories that are not first-party source and must never be scanned by the
+# tree-walking contract tests below. A forbidden import (e.g.
+# ``from collectors.scheduled_collect``) can only legitimately appear in project
+# source, never in vendored deps (.venv), agent/worktree scratch (.claude), VCS
+# internals (.git), or build output. Walking those produced false failures: a
+# stale copy of this very test inside a ``.claude/worktrees/*`` checkout tripped
+# the assertion against itself.
+_SKIP_DIR_NAMES = frozenset(
+    {
+        ".git",
+        ".venv",
+        "venv",
+        ".claude",
+        "node_modules",
+        "_archive",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".ruff_cache",
+        "__pycache__",
+    }
+)
+
+
+def _iter_source_py_files(root: Path):
+    """Yield ``*.py`` files under *root*, pruning non-source directories.
+
+    Prunes whole subtrees in ``_SKIP_DIR_NAMES`` so transient/vendored content
+    (``.venv``, ``.claude/worktrees``, ``.git``, build caches) is never scanned.
+    """
+    for path in root.rglob("*.py"):
+        if _SKIP_DIR_NAMES.intersection(path.parts):
+            continue
+        yield path
+
 
 class TestSingleRegistry:
     """Ensure there is only ONE collector registry."""
@@ -58,9 +92,10 @@ class TestLegacyRemoved:
 
     def test_no_scheduled_collect_imports(self):
         """No Python files should import from collectors.scheduled_collect."""
-        for py_file in PROJECT_ROOT.rglob("*.py"):
-            # Skip archived files and this test file itself
-            if "_archive" in str(py_file) or py_file == Path(__file__):
+        for py_file in _iter_source_py_files(PROJECT_ROOT):
+            # Skip this test file itself (it names the forbidden imports in
+            # assertion messages); non-source trees are already pruned.
+            if py_file == Path(__file__):
                 continue
             content = py_file.read_text()
             assert "from collectors.scheduled_collect" not in content, (
