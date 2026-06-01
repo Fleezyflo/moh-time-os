@@ -57,12 +57,19 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS middleware - configurable via CORS_ORIGINS env var
-# Dev default: allow all origins; Production: set CORS_ORIGINS to comma-separated list
-cors_origins_env = os.getenv("CORS_ORIGINS", "*")
-cors_origins = (
-    ["*"] if cors_origins_env == "*" else [o.strip() for o in cors_origins_env.split(",")]
-)
+# CORS middleware - explicit allowlist only. A missing CORS_ORIGINS defaults to
+# the Vite dev origin; "*"+credentials is a hard startup failure because Starlette
+# reflects the Origin under allow_origins=["*"]+allow_credentials=True, enabling
+# credentialed CSRF against the (now-authenticated) mutation surface (WS2).
+DEFAULT_DEV_ORIGIN = "http://localhost:5173"
+cors_origins_env = os.getenv("CORS_ORIGINS", DEFAULT_DEV_ORIGIN)
+if cors_origins_env.strip() == "*":
+    raise RuntimeError(
+        "CORS_ORIGINS='*' is forbidden: wildcard origins with credentials reflect "
+        "the request Origin and enable credentialed CSRF. Set an explicit "
+        "comma-separated allowlist (e.g. CORS_ORIGINS=http://localhost:5173)."
+    )
+cors_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()] or [DEFAULT_DEV_ORIGIN]
 
 app.add_middleware(
     CORSMiddleware,
@@ -71,15 +78,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Log CORS wildcard warning in production
-if cors_origins_env == "*":
-    env_name = os.getenv("MOH_TIME_OS_ENV", "development")
-    if env_name not in ("development", "test", "artifact_validation"):
-        logger.warning(
-            "CORS_ORIGINS=* in %s environment -- restrict for production",
-            env_name,
-        )
 
 # Security headers middleware (CSP, HSTS, etc.)
 app.add_middleware(SecurityHeadersMiddleware)
