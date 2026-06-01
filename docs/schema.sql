@@ -775,7 +775,8 @@ CREATE TABLE IF NOT EXISTS [gmail_participants] (
     message_id TEXT NOT NULL,
     role TEXT NOT NULL,
     email TEXT NOT NULL,
-    name TEXT
+    name TEXT,
+    UNIQUE(message_id, role, email)
 )
 
 CREATE TABLE IF NOT EXISTS [gmail_attachments] (
@@ -785,7 +786,8 @@ CREATE TABLE IF NOT EXISTS [gmail_attachments] (
     filename TEXT NOT NULL,
     mime_type TEXT,
     size_bytes INTEGER,
-    attachment_id TEXT
+    attachment_id TEXT,
+    UNIQUE(message_id, filename, mime_type, size_bytes, attachment_id)
 )
 
 CREATE TABLE IF NOT EXISTS [gmail_labels] (
@@ -793,7 +795,8 @@ CREATE TABLE IF NOT EXISTS [gmail_labels] (
     thread_id TEXT,
     message_id TEXT NOT NULL,
     label_id TEXT NOT NULL,
-    label_name TEXT
+    label_name TEXT,
+    UNIQUE(message_id, label_id)
 )
 
 CREATE TABLE IF NOT EXISTS [drive_files] (
