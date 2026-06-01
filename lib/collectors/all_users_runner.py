@@ -641,9 +641,14 @@ def collect_chat_for_user(
                     debug_print(f"ERROR fetching messages from {space_name[:20]}...: {e}")
                     break
 
-        # Store cursor
-        set_cursor(db_path, "chat", user, "last_until", until)
-        debug_print(f"CURSOR: chat write new={until}")
+        # S3.4: only advance the cursor when messages were actually fetched, so
+        # a zero-row (empty/glitched) range is re-fetched next sweep rather than
+        # silently marked synced.
+        if total_messages > 0:
+            set_cursor(db_path, "chat", user, "last_until", until)
+            debug_print(f"CURSOR: chat write new={until}")
+        else:
+            debug_print("CURSOR: chat zero messages -- NOT advancing cursor")
 
         result["ok"] = True
         result["count"] = total_messages
@@ -746,9 +751,14 @@ def collect_drive_for_user(
             page_token = next_page_token
             debug_print("nextPageToken present for files, continuing...")
 
-        # Store cursor
-        set_cursor(db_path, "drive", user, "last_until", until)
-        debug_print(f"CURSOR: drive write new={until}")
+        # S3.4: only advance the cursor when files were actually fetched, so a
+        # zero-row (empty/glitched) range is re-fetched next sweep rather than
+        # silently marked synced.
+        if len(files) > 0:
+            set_cursor(db_path, "drive", user, "last_until", until)
+            debug_print(f"CURSOR: drive write new={until}")
+        else:
+            debug_print("CURSOR: drive zero files -- NOT advancing cursor")
 
         result["ok"] = True
         result["count"] = len(files)
