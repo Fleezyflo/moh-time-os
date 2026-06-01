@@ -503,20 +503,22 @@ class TestKeyInfoDataclass:
 
 
 class TestAuthIntegration:
-    """Test integration with auth.py (passthrough for single-user system)."""
+    """Test integration with auth.py (real 401 gate for single-user system)."""
 
-    def test_require_auth_always_passes(self):
-        """require_auth is a passthrough — always returns a token."""
+    def test_require_auth_rejects_missing_credentials(self):
+        """require_auth raises 401 when no Bearer token is supplied."""
+        from fastapi import HTTPException
+
         from api.auth import require_auth
 
         request = MagicMock()
         loop = asyncio.new_event_loop()
         try:
-            result = loop.run_until_complete(require_auth(request, None))
+            with pytest.raises(HTTPException) as exc:
+                loop.run_until_complete(require_auth(request, None))
         finally:
             loop.close()
-        assert result == "local"
-        assert request.state.role == "owner"
+        assert exc.value.status_code == 401
 
 
 class TestEdgeCases:
