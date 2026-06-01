@@ -89,43 +89,106 @@ def get_db_tables() -> list[dict]:
     return tables
 
 
+def _parse_router_mounts(server_content: str) -> dict[str, str]:
+    """Map each router module to its include_router(prefix=...) mount prefix.
+
+    server.py declares routers as ``from api.<module> import <symbol>`` (optionally
+    ``as <alias>``) and mounts them with ``app.include_router(<symbol>, prefix="...")``.
+    The include_router call keys on the imported symbol, not the module name, so the
+    alias must be resolved to recover the owning module. Routers mounted without a
+    prefix argument map to "" (their own APIRouter prefix carries the full path).
+    """
+    symbol_to_module: dict[str, str] = {}
+    for match in re.finditer(
+        r"from\s+api\.(\w+)\s+import\s+(\w+)(?:\s+as\s+(\w+))?",
+        server_content,
+    ):
+        module, imported, alias = match.group(1), match.group(2), match.group(3)
+        symbol_to_module[alias or imported] = module
+
+    module_to_mount: dict[str, str] = {}
+    for match in re.finditer(
+        r'app\.include_router\(\s*(\w+)\s*(?:,\s*prefix\s*=\s*["\']([^"\']*)["\'])?',
+        server_content,
+    ):
+        symbol, prefix = match.group(1), (match.group(2) or "")
+        module = symbol_to_module.get(symbol)
+        if module is not None:
+            module_to_mount[module] = prefix
+    return module_to_mount
+
+
+def _parse_router_declaration(content: str) -> tuple[str | None, str]:
+    """Return (local router variable, own APIRouter prefix) for a router file.
+
+    Matches the ``<var> = APIRouter(...)`` assignment and scans its argument span
+    (which may span multiple lines) for ``prefix="..."``. Returns (None, "") when the
+    file declares no APIRouter (e.g. api/server.py, which uses the ``app`` object).
+    """
+    match = re.search(r"(\w+)\s*=\s*APIRouter\s*\(", content)
+    if not match:
+        return None, ""
+    var = match.group(1)
+    start, depth, i = match.end(), 1, match.end()
+    while i < len(content) and depth > 0:
+        char = content[i]
+        if char == "(":
+            depth += 1
+        elif char == ")":
+            depth -= 1
+        i += 1
+    prefix_match = re.search(r'prefix\s*=\s*["\']([^"\']*)["\']', content[start : i - 1])
+    return var, (prefix_match.group(1) if prefix_match else "")
+
+
 def get_api_routes() -> list[dict]:
-    """Extract API routes from all router files including sub-routers."""
+    """Extract fully-qualified API routes from all router files including sub-routers.
+
+    The recorded path is ``mount_prefix + own_prefix + decorator_path`` so it matches a
+    real request URL. ``@app.<method>`` routes in server.py are already absolute and are
+    recorded verbatim.
+    """
     routes = []
 
-    # Find all router files referenced in server.py
-    router_files = {"api/server.py", "api/spec_router.py"}
     server_path = Path("api/server.py")
-    if server_path.exists():
-        content = server_path.read_text()
-        # Find include_router() calls to discover sub-routers
-        for match in re.finditer(
-            r"from\s+api\.(\w+)\s+import\s+(\w+)",
-            content,
-        ):
-            module = match.group(1)
-            router_files.add(f"api/{module}.py")
+    server_content = server_path.read_text() if server_path.exists() else ""
+    module_to_mount = _parse_router_mounts(server_content)
 
-    # Process all discovered router files
-    for api_file in router_files:
-        path = Path(api_file)
+    # Discover router modules from server.py imports (plus server itself and spec_router)
+    modules = {"server", "spec_router"}
+    for match in re.finditer(r"from\s+api\.(\w+)\s+import\s+\w+", server_content):
+        modules.add(match.group(1))
+
+    for module in modules:
+        path = Path(f"api/{module}.py")
         if not path.exists():
             continue
 
         content = path.read_text()
+        router_var, own_prefix = _parse_router_declaration(content)
+        mount_prefix = module_to_mount.get(module, "")
 
-        # Match @app.get/post/put/delete/patch decorators and @router/spec_router decorators
+        # Decorators reference the file-local router variable (often `router`) or `app`
+        decorator_names = {"app"}
+        if router_var:
+            decorator_names.add(router_var)
+        name_alternation = "|".join(re.escape(n) for n in sorted(decorator_names))
+
         for match in re.finditer(
-            r'@(?:app|router|spec_router|intelligence_router|sse_router|paginated_router|export_router|governance_router|action_router)\.(get|post|put|delete|patch)\s*\(\s*["\']([^"\']+)["\']',
+            rf'@(?:{name_alternation})\.(get|post|put|delete|patch)\s*\(\s*["\']([^"\']+)["\']',
             content,
         ):
             method = match.group(1).upper()
-            route_path = match.group(2)
+            decorator_path = match.group(2)
+            if match.group(0).startswith("@app."):
+                full_path = decorator_path
+            else:
+                full_path = f"{mount_prefix}{own_prefix}{decorator_path}"
             routes.append(
                 {
                     "method": method,
-                    "path": route_path,
-                    "source": api_file,
+                    "path": full_path,
+                    "source": f"api/{module}.py",
                 }
             )
 
@@ -150,11 +213,86 @@ def get_ui_routes() -> list[dict]:
     return routes
 
 
+# Wrapper helpers and fetch() that issue HTTP requests in the UI
+_UI_CALL_RE = re.compile(r"(?:fetchJson|postJson|patchJson|putJson|delJson|fetch)\s*\(\s*`([^`]*)`")
+# Query-string template tails use these variable names by convention
+_QUERY_VARS = frozenset({"qs", "query"})
+
+
+def _resolve_api_base(content: str) -> str | None:
+    """Resolve a file's ``const API_BASE`` to its literal string value.
+
+    Handles ``const API_BASE = '/lit'`` and ``const API_BASE = ENV || '/lit'`` (the env
+    fallback after ``||`` is the literal used at build time when the env var is unset).
+    Returns None when the file defines no API_BASE.
+    """
+    match = re.search(r"const\s+API_BASE\s*=\s*([^\n;]+)", content)
+    if not match:
+        return None
+    expr = match.group(1)
+    fallback = re.search(r"""\|\|\s*['"]([^'"]+)['"]""", expr)
+    if fallback:
+        return fallback.group(1)
+    literal = re.search(r"""['"]([^'"]+)['"]""", expr)
+    return literal.group(1) if literal else None
+
+
+def _strip_query_tail(path: str) -> str:
+    """Drop query-string tails while preserving path-param interpolations.
+
+    Cuts at the first literal ``?`` and at the first ``${...}`` that is not a bare path
+    param. Path params look like ``${clientId}``; query builders look like
+    ``${qs ? '?' + qs : ''}`` or the trailing ``${query}``.
+    """
+    question = path.find("?")
+    if question != -1:
+        path = path[:question]
+    out: list[str] = []
+    i = 0
+    while i < len(path):
+        if path.startswith("${", i):
+            close = path.find("}", i)
+            if close == -1:
+                # Truncated (an inner backtick ended the literal early) -- drop the rest
+                break
+            body = path[i + 2 : close]
+            if re.fullmatch(r"\w+", body) and body not in _QUERY_VARS:
+                out.append(path[i : close + 1])
+                i = close + 1
+                continue
+            break
+        out.append(path[i])
+        i += 1
+    return "".join(out)
+
+
+def _normalize_ui_endpoint(raw: str, api_base: str | None) -> str | None:
+    """Resolve ``${API_BASE}`` / ``${apiBase}`` and strip query tails.
+
+    Returns a comparable ``/api/...`` path, or None when the call is not an API call
+    (no resolvable base and no literal ``/api`` segment).
+    """
+    raw = raw.strip()
+    for token in ("${API_BASE}", "${apiBase}"):
+        if raw.startswith(token):
+            if api_base is None:
+                return None
+            raw = api_base + raw[len(token) :]
+            break
+    path = _strip_query_tail(raw)
+    if not path.startswith("/api"):
+        return None
+    return path
+
+
 def get_ui_api_calls() -> list[dict]:
     """Extract API calls from UI source files.
 
-    Supports both direct fetch() calls and fetchJson/postJson wrapper calls
-    with template literals like fetchJson(`${API_BASE}/api/...`).
+    Handles direct ``fetch()`` calls and the ``fetchJson``/``postJson``/``patchJson``/
+    ``putJson``/``delJson`` wrappers, including multi-line calls. ``${API_BASE}`` is
+    resolved per file (e.g. lib/api.ts -> "/api/v2", intelligence/api.ts ->
+    "/api/v2/intelligence") and query-string tails are stripped so endpoints are
+    directly comparable to api_routes.
     """
     api_calls = []
 
@@ -162,47 +300,17 @@ def get_ui_api_calls() -> list[dict]:
     if not src_dir.exists():
         return api_calls
 
-    for ts_file in src_dir.rglob("*.ts"):
-        content = ts_file.read_text()
-        # Match fetch calls to /api/
-        for match in re.finditer(r'fetch\s*\(\s*[`"\']([^`"\']*\/api\/[^`"\']+)[`"\']', content):
+    for source_file in sorted(src_dir.rglob("*.ts")) + sorted(src_dir.rglob("*.tsx")):
+        content = source_file.read_text()
+        api_base = _resolve_api_base(content)
+        for match in _UI_CALL_RE.finditer(content):
+            endpoint = _normalize_ui_endpoint(match.group(1), api_base)
+            if endpoint is None:
+                continue
             api_calls.append(
                 {
-                    "endpoint": match.group(1),
-                    "source": str(ts_file.relative_to(src_dir)),
-                }
-            )
-        # Match fetchJson/postJson with ${API_BASE} template literals
-        for match in re.finditer(
-            r"(?:fetchJson|postJson)\s*\(\s*`\$\{API_BASE\}([^`]+)`",
-            content,
-        ):
-            api_calls.append(
-                {
-                    "endpoint": match.group(1),
-                    "source": str(ts_file.relative_to(src_dir)),
-                }
-            )
-
-    for tsx_file in src_dir.rglob("*.tsx"):
-        content = tsx_file.read_text()
-        # Match fetch calls to /api/
-        for match in re.finditer(r'fetch\s*\(\s*[`"\']([^`"\']*\/api\/[^`"\']+)[`"\']', content):
-            api_calls.append(
-                {
-                    "endpoint": match.group(1),
-                    "source": str(tsx_file.relative_to(src_dir)),
-                }
-            )
-        # Match fetchJson/postJson with ${API_BASE} template literals
-        for match in re.finditer(
-            r"(?:fetchJson|postJson)\s*\(\s*`\$\{API_BASE\}([^`]+)`",
-            content,
-        ):
-            api_calls.append(
-                {
-                    "endpoint": match.group(1),
-                    "source": str(tsx_file.relative_to(src_dir)),
+                    "endpoint": endpoint,
+                    "source": str(source_file.relative_to(src_dir)),
                 }
             )
 
