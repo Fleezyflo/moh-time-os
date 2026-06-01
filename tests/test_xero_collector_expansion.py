@@ -799,3 +799,76 @@ class TestBackwardCompatibility:
 
         # Test None
         assert parse_xero_date(None) is None
+
+
+class TestXeroDestructiveDeleteGuard:
+    """S3.1 + ACCREC-empty: a fetch that yields zero receivables must NOT run the
+    destructive ``DELETE FROM invoices WHERE source='xero'`` and must report STALE,
+    so the prior receivables rows survive a transient/degenerate fetch."""
+
+    def _no_secondary(self, mock_list_invoices, mc, mcn, mbt, mtr, invoices):
+        """Wire all client fns: list_invoices returns `invoices`, rest return []."""
+        mock_list_invoices.return_value = invoices
+        mc.return_value = []
+        mcn.return_value = []
+        mbt.return_value = []
+        mtr.return_value = []
+
+    def _delete_calls(self, mock_store):
+        return [
+            c
+            for c in mock_store.query.call_args_list
+            if c.args and "DELETE FROM invoices" in c.args[0]
+        ]
+
+    @patch("engine.xero_client.list_tax_rates")
+    @patch("engine.xero_client.list_bank_transactions")
+    @patch("engine.xero_client.list_credit_notes")
+    @patch("engine.xero_client.list_contacts")
+    @patch("engine.xero_client.list_invoices")
+    def test_empty_fetch_skips_delete_and_reports_stale(
+        self, mock_list_invoices, mc, mcn, mbt, mtr
+    ):
+        mock_store = MagicMock(spec=StateStore)
+        mock_store.query.return_value = []
+        collector = XeroCollector(config={}, store=mock_store)
+        # Both PAID and AUTHORISED fetches return empty (transient glitch).
+        self._no_secondary(mock_list_invoices, mc, mcn, mbt, mtr, [])
+
+        result = collector.sync()
+
+        assert self._delete_calls(mock_store) == [], "empty fetch must not DELETE existing invoices"
+        assert result["status"] == "stale"
+        assert result["success"] is False
+
+    @patch("engine.xero_client.list_tax_rates")
+    @patch("engine.xero_client.list_bank_transactions")
+    @patch("engine.xero_client.list_credit_notes")
+    @patch("engine.xero_client.list_contacts")
+    @patch("engine.xero_client.list_invoices")
+    def test_nonempty_all_non_accrec_fetch_skips_delete_and_reports_stale(
+        self, mock_list_invoices, mc, mcn, mbt, mtr
+    ):
+        """Non-empty fetch where EVERY invoice is non-ACCREC (only bills/ACCPAY,
+        zero receivables) must NOT wipe the AR rows and must NOT report SUCCESS."""
+        mock_store = MagicMock(spec=StateStore)
+        mock_store.query.return_value = []
+        collector = XeroCollector(config={}, store=mock_store)
+        # PAID call returns two ACCPAY bills; AUTHORISED returns []. No ACCREC at all.
+        accpay = [
+            {"Type": "ACCPAY", "InvoiceNumber": "BILL-1", "Status": "PAID", "Total": 10},
+            {"Type": "ACCPAY", "InvoiceNumber": "BILL-2", "Status": "PAID", "Total": 20},
+        ]
+        mock_list_invoices.side_effect = [accpay, []]
+        mc.return_value = []
+        mcn.return_value = []
+        mbt.return_value = []
+        mtr.return_value = []
+
+        result = collector.sync()
+
+        assert self._delete_calls(mock_store) == [], (
+            "all-non-ACCREC fetch must not DELETE the receivables rows"
+        )
+        assert result["status"] == "stale"
+        assert result["success"] is False

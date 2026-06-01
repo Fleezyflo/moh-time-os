@@ -284,9 +284,17 @@ class TimeOSDaemon:
                     "total_runs": state.total_runs,
                     "total_failures": state.total_failures,
                 }
-            _state_file().parent.mkdir(parents=True, exist_ok=True)
-            with open(_state_file(), "w") as f:
+            state_path = _state_file()
+            state_path.parent.mkdir(parents=True, exist_ok=True)
+            # S3.5 atomic write: write to a temp file in the same directory,
+            # then os.replace() (atomic on POSIX) so a crash mid-write cannot
+            # corrupt daemon_state.json.
+            tmp_path = state_path.with_name(state_path.name + ".tmp")
+            with open(tmp_path, "w") as f:
                 json.dump(data, f, indent=2)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp_path, state_path)
         except (sqlite3.Error, ValueError, OSError) as e:
             self.logger.warning(f"Failed to save state: {e}")
 

@@ -52,11 +52,20 @@ def migrate(db_path: Path | None = None) -> dict:
     Returns dict with migration results.
     """
     db = db_path or paths.db_path()
-    conn = sqlite3.connect(str(db))
+    # S3.6: manual transaction control (isolation_level=None) so the ALTER TABLE
+    # ADD COLUMN adds and the backfill commit ATOMICALLY inside one explicit
+    # BEGIN/COMMIT. Under sqlite3's default deferred mode, DDL (ALTER) auto-
+    # commits before it runs, so a later backfill failure would leave columns
+    # added-but-unbackfilled with no way to roll them back. With an explicit
+    # BEGIN, the ALTERs participate in the transaction and a backfill failure
+    # rolls them back (verified).
+    conn = sqlite3.connect(str(db), isolation_level=None)
     results = {"added_columns": [], "backfilled": 0, "skipped_columns": []}
 
     try:
-        # Check signal_state exists
+        # Check signal_state exists. The optional table create is setup, not part
+        # of the atomic ALTER+backfill unit, so it commits on its own (autocommit
+        # is in effect until the explicit BEGIN below).
         tables = [
             row[0]
             for row in conn.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
@@ -80,7 +89,9 @@ def migrate(db_path: Path | None = None) -> dict:
                 )
                 """
             )
-            conn.commit()
+
+        # Begin the atomic ALTER + backfill transaction.
+        conn.execute("BEGIN")
 
         # Add new columns if they don't exist
         for col_name, col_type, default in NEW_COLUMNS:
@@ -94,8 +105,6 @@ def migrate(db_path: Path | None = None) -> dict:
             conn.execute(sql)
             results["added_columns"].append(col_name)
             logger.info("Added column: %s %s%s", col_name, col_type, default_clause)
-
-        conn.commit()
 
         # Backfill: set first_detected_at = detected_at where NULL
         cursor = conn.execute(
@@ -125,13 +134,21 @@ def migrate(db_path: Path | None = None) -> dict:
             """
         )
 
-        conn.commit()
+        # Commit the atomic ALTER + backfill transaction.
+        conn.execute("COMMIT")
         logger.info("v32 migration complete: %s", results)
         return results
 
     except (sqlite3.Error, ValueError, OSError) as exc:
         logger.error("v32 migration failed: %s", exc)
-        conn.rollback()
+        # Roll back the ALTER + backfill transaction so columns are not left
+        # added-but-unbackfilled. Guard the ROLLBACK: if the failure occurred
+        # before BEGIN (no active transaction), ROLLBACK would itself raise and
+        # mask the real error.
+        try:
+            conn.execute("ROLLBACK")
+        except sqlite3.OperationalError:
+            logger.debug("v32 rollback: no active transaction to roll back")
         raise
     finally:
         conn.close()

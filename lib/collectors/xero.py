@@ -288,6 +288,46 @@ class XeroCollector:
                 f"Total invoices to process: {len(all_invoices)} ({len(paid_invoices)} paid, {len(authorised_invoices)} authorised)"
             )
 
+            # S3.1 destructive-delete guard. The DELETE below
+            # (DELETE FROM invoices WHERE source='xero') is committed standalone
+            # (StateStore opens its own connection per CRUD), then receivables are
+            # re-inserted row by row. Two degenerate fetches would wipe all prior
+            # AR rows with no rollback and still report SUCCESS:
+            #   (a) list_invoices() returns [] without raising (transient glitch);
+            #   (b) list_invoices() returns rows but NONE are Type==ACCREC (only
+            #       bills/ACCPAY, zero receivables) -- the ACCREC filter in the
+            #       store loop then yields zero inserts after the DELETE.
+            # In both cases treat it as a failed refresh: skip the DELETE, retain
+            # prior data, report STALE.
+            accrec_invoices = [inv for inv in all_invoices if inv.get("Type") == "ACCREC"]
+            if not accrec_invoices:
+                reason = (
+                    "empty invoice fetch"
+                    if not all_invoices
+                    else "no receivable (ACCREC) invoices in fetch"
+                )
+                logger.warning(
+                    "Xero fetch yielded no receivables (%s); skipping destructive "
+                    "DELETE and retaining prior data (STALE).",
+                    reason,
+                )
+                self.circuit_breaker.record_failure()
+                cr = CollectorResult(
+                    source="xero",
+                    status=CollectorStatus.STALE,
+                    error=f"{reason} -- prior data retained",
+                    error_type="empty_fetch",
+                    circuit_breaker_state=self.circuit_breaker.state,
+                )
+                self.store.update_sync_state(
+                    "xero",
+                    success=False,
+                    error=reason,
+                    error_type="empty_fetch",
+                    status=cr.status.value,
+                )
+                return cr.to_dict()
+
             # Fetch secondary data (non-blocking).
             # IMPORTANT: fetch failures are tracked in secondary_fetch_errors
             # so escalate_to_partial() can detect them. Without this, a fetch

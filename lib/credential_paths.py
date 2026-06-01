@@ -48,8 +48,17 @@ def credentials_json() -> Path:
     """
     Path to .credentials.json (Asana, Xero tokens etc.).
 
-    Uses the project config directory from lib.paths.
+    Resolution order:
+    1. CREDENTIALS_JSON_FILE env var (explicit override -- keeps live secret
+       material out of the repo tree; required after S3.3 key rotation).
+    2. Project config directory default: <repo>/config/.credentials.json.
+
+    Returns:
+        Path to the credentials file. Caller must check .exists() before use.
     """
+    env_val = os.environ.get("CREDENTIALS_JSON_FILE")
+    if env_val:
+        return Path(env_val).expanduser().resolve()
     return paths.project_root() / "config" / ".credentials.json"
 
 

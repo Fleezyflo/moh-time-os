@@ -421,9 +421,29 @@ def recreate_items_view(conn):
 
 def run_migration():
     """Run full schema rebuild."""
+    from lib import safe_sql, schema
+
     logger.info("=" * 60)
     logger.info("Schema Rebuild Migration to §12")
     logger.info("=" * 60)
+
+    # S3.2 idempotency guard: unconditional DROP TABLE + rebuild. Self-skip
+    # when PRAGMA user_version already meets the target (user_version is the
+    # source of truth; the _schema_version table is orphaned).
+    _guard_db_path = str(paths.db_path())
+    _guard_conn = sqlite3.connect(_guard_db_path)
+    try:
+        current_version = _guard_conn.execute("PRAGMA user_version").fetchone()[0]
+    finally:
+        _guard_conn.close()
+    if current_version >= schema.SCHEMA_VERSION:
+        logger.info(
+            "Skipping rebuild_schema_v12: user_version=%s >= target=%s",
+            current_version,
+            schema.SCHEMA_VERSION,
+        )
+        return {"skipped": True, "reason": "already at schema version"}
+
     # Backup first
     backup_path = backup_db()
 
@@ -468,6 +488,13 @@ def run_migration():
         proj_sql = cursor.fetchone()[0]
         if "CHECK (type IN" in proj_sql:
             logger.info("  ✓ projects.type CHECK constraint exists")
+
+        # S3.2 completion stamp: record the target schema version so the
+        # idempotency guard at the top of run_migration() guards THIS script's
+        # own output (a migrated DB left unstamped would re-enter the destructive
+        # rebuild on re-run). user_version is canonical (matches schema_engine).
+        conn.execute(safe_sql.pragma_user_version_set(schema.SCHEMA_VERSION))
+        conn.commit()
     except (sqlite3.Error, ValueError, OSError) as e:
         conn.rollback()
         logger.info(f"\n✗ Migration failed: {e}")
