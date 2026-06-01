@@ -320,9 +320,14 @@ def collect_gmail_for_user(
             page_token = next_page_token
             debug_print("nextPageToken present, continuing pagination...")
 
-        # Store cursor (last_until timestamp)
-        set_cursor(db_path, "gmail", user, "last_until", until)
-        debug_print(f"CURSOR: gmail write new={until}")
+        # S3.4: only advance the cursor when rows were actually fetched.
+        # Advancing on a zero-row range (transient/empty glitch) would mark
+        # the range synced and the gap would never be re-fetched.
+        if total_count > 0:
+            set_cursor(db_path, "gmail", user, "last_until", until)
+            debug_print(f"CURSOR: gmail write new={until}")
+        else:
+            debug_print("CURSOR: gmail zero rows -- NOT advancing cursor")
 
         result["ok"] = True
         result["count"] = total_count
@@ -469,9 +474,14 @@ def collect_calendar_for_user(
             # Store cursor per calendar (for per-calendar sync if needed later)
             set_cursor(db_path, "calendar", user, f"calendar:{cal_id}:last_until", until)
 
-        # Store user-level cursor for incremental sync
-        set_cursor(db_path, "calendar", user, "last_until", until)
-        debug_print(f"CURSOR: calendar write new={until}")
+        # S3.4: only advance the user-level cursor when events were fetched.
+        # The user-level cursor gates whether the whole range is re-swept; a
+        # zero-event range must stay un-advanced so the gap is re-fetched.
+        if total_events > 0:
+            set_cursor(db_path, "calendar", user, "last_until", until)
+            debug_print(f"CURSOR: calendar write new={until}")
+        else:
+            debug_print("CURSOR: calendar zero events -- NOT advancing cursor")
 
         result["ok"] = True
         result["count"] = total_events
