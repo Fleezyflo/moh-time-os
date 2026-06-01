@@ -929,6 +929,9 @@ class DetectionCache:
         self._metrics_cache = {}
         self._overdue_counts = None  # Batch-loaded overdue task counts
         self._last_comm_days = None  # Batch-loaded days since last communication
+        # Phase C2: bulk client score map, primed once in detect_all_signals.
+        # None = not primed (composite_score branch falls back to lazy scoring).
+        self.score_map: dict[str, dict] | None = None
 
     @property
     def clients(self) -> list:
@@ -1097,9 +1100,18 @@ def _evaluate_threshold(
                 current_value = cache.get_overdue_count(entity_id)
 
             elif metric == "composite_score":
-                from lib.intelligence.scorecard import score_client
+                # Phase C2: read the bulk score map primed once in
+                # detect_all_signals (a single score_all_clients pass) instead
+                # of calling the single-client score_client() per entity (the
+                # N*M blowup that hung the cycle). If the cache was not primed
+                # (any direct caller), fall back to a lazy per-entity score.
+                score_map = getattr(cache, "score_map", None)
+                if score_map is not None:
+                    scorecard = score_map.get(entity_id, {})
+                else:
+                    from lib.intelligence.scorecard import score_client
 
-                scorecard = score_client(entity_id, cache.db_path)
+                    scorecard = score_client(entity_id, cache.db_path)
                 current_value = scorecard.get("composite_score")
 
             elif metric in client:
@@ -1342,6 +1354,7 @@ def _evaluate_compound(
     entity_id: str,
     db_path: Path | None = None,
     _evaluated: dict | None = None,
+    cache: DetectionCache = None,
 ) -> dict | None:
     """
     Evaluate a compound condition by checking sub-conditions.
@@ -1367,8 +1380,11 @@ def _evaluate_compound(
                 results.append({"ref": ref_id, "triggered": False, "error": "unknown signal"})
                 continue
 
-            # Evaluate the referenced signal
-            ref_result = evaluate_signal(ref_signal, entity_type, entity_id, db_path, _evaluated)
+            # Evaluate the referenced signal (forward cache to avoid a fresh
+            # DetectionCache + full client_portfolio_overview scan per ref).
+            ref_result = evaluate_signal(
+                ref_signal, entity_type, entity_id, db_path, _evaluated, cache=cache
+            )
             results.append(
                 {
                     "ref": ref_id,
@@ -1380,7 +1396,7 @@ def _evaluate_compound(
             # Inline condition
             sub_type = sub["type"]
             if sub_type == "threshold":
-                sub_result = _evaluate_threshold(sub, entity_type, entity_id, db_path)
+                sub_result = _evaluate_threshold(sub, entity_type, entity_id, db_path, cache)
             else:
                 sub_result = None
 
@@ -1461,7 +1477,9 @@ def evaluate_signal(
         elif signal_def.category == SignalCategory.ANOMALY:
             evidence = _evaluate_anomaly(condition, entity_type, entity_id, db_path)
         elif signal_def.category == SignalCategory.COMPOUND:
-            evidence = _evaluate_compound(condition, entity_type, entity_id, db_path, _evaluated)
+            evidence = _evaluate_compound(
+                condition, entity_type, entity_id, db_path, _evaluated, cache=cache
+            )
     except (sqlite3.Error, ValueError, OSError) as e:
         # Log with full traceback for debugging
         logger.warning(f"Error evaluating signal {signal_def.id}: {e}", exc_info=True)
@@ -1654,6 +1672,21 @@ def detect_all_signals(
     """
     # Create cache for this detection run - loads data once
     cache = DetectionCache(db_path)
+
+    # Phase C2: build the client score map in ONE bulk pass (score_all_clients
+    # loads all data once and scores in memory) so the composite_score branch
+    # reads cache.score_map.get(entity_id) instead of calling score_client()
+    # once per entity (the N*M blowup that hung the cycle). Quick mode evaluates
+    # only THRESHOLD signals, so the HEALTH/TREND composite_score signals never
+    # run there and the map is left unset (None).
+    if not quick:
+        from lib.intelligence.scorecard import score_all_clients
+
+        cache.score_map = {
+            s["entity_id"]: s for s in score_all_clients(db_path) if s.get("entity_id")
+        }
+        logger.info(f"Primed {len(cache.score_map)} client scorecards for signal detection")
+
     all_detected = []
 
     # Error collector for this detection run
