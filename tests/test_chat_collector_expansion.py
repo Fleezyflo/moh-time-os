@@ -393,10 +393,12 @@ def test_sync_stores_all_tables(
     assert result["source"] == "chat"
     assert result["collected"] == 1
     assert result["transformed"] == 1
-    assert result["secondary_tables"]["reactions"] == 5
-    assert result["secondary_tables"]["attachments"] == 5
-    assert result["secondary_tables"]["space_metadata"] == 5
-    assert result["secondary_tables"]["space_members"] == 5
+    # CollectorResult.to_dict() serializes each secondary table as a nested
+    # {"stored": int, "error": str|None} dict, not a bare count.
+    assert result["secondary_tables"]["reactions"]["stored"] == 5
+    assert result["secondary_tables"]["attachments"]["stored"] == 5
+    assert result["secondary_tables"]["space_metadata"]["stored"] == 5
+    assert result["secondary_tables"]["space_members"]["stored"] == 5
 
     # Verify insert_many was called for all tables
     assert mock_store.insert_many.call_count == 5  # messages + 4 secondary tables

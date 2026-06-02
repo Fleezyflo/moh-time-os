@@ -752,11 +752,14 @@ class TestSyncMethod:
 
         result = collector.sync()
 
-        # Should have successful sync
-        assert result["success"] is True
+        # CollectorResult.to_dict() shape: primary count is `stored`, not
+        # `stored_tasks`. list_portfolios/list_goals are not mocked here, so they
+        # raise inside collect(); those fetch failures escalate the result to
+        # PARTIAL (success=False by design) even though the primary table stored.
+        assert result["status"] == "partial"
         assert "collected" in result
         assert "transformed" in result
-        assert "stored_tasks" in result
+        assert result["stored"] > 0
         assert "secondary_tables" in result
 
         # Verify store calls
@@ -796,5 +799,8 @@ class TestSyncMethod:
 
         result = collector.sync()
 
-        # Should still succeed because tasks were stored
-        assert result["success"] is True
+        # Primary table ("tasks") stored despite secondary failures. Under the
+        # typed CollectorResult contract, secondary failures escalate to PARTIAL
+        # (success=False), but the primary `stored` count proves data got through.
+        assert result["status"] == "partial"
+        assert result["stored"] == 1

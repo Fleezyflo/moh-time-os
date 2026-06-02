@@ -553,7 +553,7 @@ def test_transform_attachments_across_messages(collector):
 
 def test_transform_labels_basic(collector):
     """Test basic label transformation."""
-    result = collector._transform_labels("thread_1", ["INBOX", "STARRED"])
+    result = collector._transform_labels("thread_1", "msg_1", ["INBOX", "STARRED"])
     assert len(result) == 2
     assert any(label["label_id"] == "INBOX" for label in result)
     assert any(label["label_id"] == "STARRED" for label in result)
@@ -561,13 +561,13 @@ def test_transform_labels_basic(collector):
 
 def test_transform_labels_empty(collector):
     """Test with no labels."""
-    result = collector._transform_labels("thread_1", [])
+    result = collector._transform_labels("thread_1", "msg_1", [])
     assert result == []
 
 
 def test_transform_labels_inferred_names(collector):
     """Test that label names are inferred."""
-    result = collector._transform_labels("thread_1", ["UNREAD", "IMPORTANT"])
+    result = collector._transform_labels("thread_1", "msg_1", ["UNREAD", "IMPORTANT"])
     unread = next(label for label in result if label["label_id"] == "UNREAD")
     assert unread["label_name"] is not None
 
@@ -677,7 +677,8 @@ def test_sync_stores_to_primary_table(mock_collect, collector, mock_store):
     result = collector.sync()
 
     assert result["success"] is True
-    assert result["stored_primary"] > 0
+    # CollectorResult.to_dict() exposes the primary count as `stored`.
+    assert result["stored"] > 0
     # Verify store.insert_many was called with communications table
     calls = list(mock_store.insert_many.call_args_list)
     assert any("communications" in str(call) for call in calls)
@@ -721,8 +722,9 @@ def test_sync_stores_to_secondary_tables(mock_store):
     result = collector.sync()
 
     assert result["success"] is True
-    # Check that secondary tables were called
-    secondary_stats = result["stored_secondary"]
+    # CollectorResult.to_dict() records secondary writes under `secondary_tables`,
+    # keyed by table name with a {"stored", "error"} payload each.
+    secondary_stats = result["secondary_tables"]
     assert "participants" in secondary_stats or "attachments" in secondary_stats
 
 
@@ -731,10 +733,13 @@ def test_sync_secondary_table_failure_doesnt_block_primary(mock_collect, collect
     """Test that secondary table failures don't block primary storage."""
 
     def side_effect(*args, **kwargs):
-        # First call (communications) succeeds, secondary tables fail
+        # First call (communications) succeeds, secondary tables fail.
+        # RuntimeError is a member of COLLECTOR_ERRORS, so sync() catches and
+        # records it (a bare Exception would escape — real store errors are
+        # sqlite3.Error, which is also in COLLECTOR_ERRORS).
         if "communications" in args[0]:
             return 1
-        raise Exception("Secondary table failed")
+        raise RuntimeError("Secondary table failed")
 
     mock_thread = {
         "id": "t1",
@@ -766,6 +771,8 @@ def test_sync_secondary_table_failure_doesnt_block_primary(mock_collect, collect
 
     result = collector.sync()
 
-    # Sync should still succeed despite secondary table errors
-    assert result["success"] is True
-    assert result["stored_primary"] > 0
+    # Primary (communications) stored despite secondary failures. Secondary
+    # failures escalate the typed result to PARTIAL (success=False by design);
+    # the primary `stored` count proves primary storage was not blocked.
+    assert result["status"] == "partial"
+    assert result["stored"] > 0
