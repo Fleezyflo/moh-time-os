@@ -19,6 +19,7 @@ from dataclasses import asdict, dataclass
 from enum import Enum
 from pathlib import Path
 
+from lib.intelligence.errors import TrajectoryComputationError
 from lib.query_engine import get_engine
 
 logger = logging.getLogger(__name__)
@@ -561,13 +562,21 @@ class TrajectoryEngine:
     # FULL TRAJECTORY
     # =====================================================================
 
-    def client_full_trajectory(self, client_id: str, windows: int = 12) -> FullTrajectory | None:
+    def client_full_trajectory(
+        self, client_id: str, windows: int = 12, traj: dict | None = None
+    ) -> FullTrajectory | None:
         """
         Comprehensive trajectory analysis for a client.
 
         Args:
             client_id: Client ID
             windows: Number of time windows to analyze
+            traj: Optional pre-built trajectory dict (same shape as
+                engine.client_trajectory: {client_id, window_size_days,
+                num_windows, windows, trends}). When supplied (e.g. from
+                portfolio_health_trajectory's bulk map), the per-entity
+                engine.client_trajectory query is skipped — this is the C2b
+                bulk path. When None, the per-entity query runs (direct callers).
 
         Returns:
             FullTrajectory or None if client not found
@@ -584,10 +593,12 @@ class TrajectoryEngine:
 
             client_name = profile.get("client_name", client_id)
 
-            # Get trajectory from query engine
-            traj = self.engine.client_trajectory(
-                client_id, window_size_days=30, num_windows=windows
-            )
+            # Get trajectory: reuse the bulk-built window set when provided,
+            # otherwise fall back to the per-entity engine query.
+            if traj is None:
+                traj = self.engine.client_trajectory(
+                    client_id, window_size_days=30, num_windows=windows
+                )
 
             # Analyze each metric
             metrics = {}
@@ -690,6 +701,12 @@ class TrajectoryEngine:
         """
         Trajectory for all clients in portfolio.
 
+        Phase C2b bulk path: builds ONE bulk trajectory map for the whole
+        portfolio via engine.bulk_client_trajectories() (a fixed number of
+        full-span queries) instead of calling client_trajectory per client
+        (the N×windows×3 fresh-connection blowup). Each client's FullTrajectory
+        is then computed from its slice of the bulk map.
+
         Returns:
             List of FullTrajectory objects
         """
@@ -699,10 +716,16 @@ class TrajectoryEngine:
 
         try:
             clients = self.engine.client_portfolio_overview()
+            # One bulk pass for all clients, at the window count this method needs.
+            # num_windows=12 matches windows=12 below (NOT the method default 6).
+            bulk_map = self.engine.bulk_client_trajectories(window_size_days=30, num_windows=12)
             results = []
 
             for client in clients:
-                traj = self.client_full_trajectory(client["client_id"], windows=12)
+                client_id = client["client_id"]
+                traj = self.client_full_trajectory(
+                    client_id, windows=12, traj=bulk_map.get(client_id)
+                )
                 if traj:
                     results.append(traj)
 
@@ -710,4 +733,4 @@ class TrajectoryEngine:
 
         except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Error computing portfolio trajectory: {e}", exc_info=True)
-            return []
+            raise TrajectoryComputationError(f"portfolio trajectory computation failed: {e}") from e
