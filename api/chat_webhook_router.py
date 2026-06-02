@@ -238,9 +238,9 @@ async def handle_interactive_action(request: InteractiveActionRequest) -> dict:
                 return {"text": "Missing action_id parameter"}
 
             try:
-                from lib.actions.action_framework import ActionFramework
+                from api.action_router import get_action_framework
 
-                framework = ActionFramework()
+                framework = get_action_framework()
                 success = framework.approve_action(action_id, approved_by=sender_email)
                 if success:
                     return {"text": f"✓ Action {action_id} approved by {sender_email}"}
@@ -259,9 +259,9 @@ async def handle_interactive_action(request: InteractiveActionRequest) -> dict:
                 return {"text": "Missing action_id parameter"}
 
             try:
-                from lib.actions.action_framework import ActionFramework
+                from api.action_router import get_action_framework
 
-                framework = ActionFramework()
+                framework = get_action_framework()
                 success = framework.reject_action(
                     action_id, rejected_by=sender_email, reason=reason
                 )

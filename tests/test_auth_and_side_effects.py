@@ -305,10 +305,23 @@ class TestChatCommandSenderVerification:
             }
         }
 
-        result = handler.handle_event(event)
+        # Mock the framework so the authorized path proceeds to action lookup
+        # without touching the live DB (conftest blocks live DB access). This
+        # test asserts the auth boundary only, not approve_action's behavior.
+        mock_framework = MagicMock()
+        mock_framework.approve_action.return_value = False
+        with patch(
+            "api.action_router.get_action_framework",
+            return_value=mock_framework,
+        ):
+            result = handler.handle_event(event)
+
         card_text = str(result)
         # Should NOT contain "Unauthorized" — it proceeds to action lookup
         assert "Unauthorized" not in card_text
+        mock_framework.approve_action.assert_called_once_with(
+            "action_123", approved_by="owner@example.com"
+        )
 
     def test_reject_rejects_no_sender_email(self):
         """Missing sender email blocks privileged commands."""

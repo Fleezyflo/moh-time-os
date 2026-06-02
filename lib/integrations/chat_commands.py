@@ -429,9 +429,9 @@ class SlashCommandHandler:
         action_id = params[0]
 
         try:
-            from lib.actions.action_framework import ActionFramework
+            from api.action_router import get_action_framework
 
-            framework = ActionFramework()
+            framework = get_action_framework()
             success = framework.approve_action(action_id, approved_by=sender_email)
             if success:
                 msg = f"✓ Action {action_id} approved by {sender_email}"
@@ -486,9 +486,9 @@ class SlashCommandHandler:
         reason = " ".join(params[1:]) if len(params) > 1 else "No reason provided"
 
         try:
-            from lib.actions.action_framework import ActionFramework
+            from api.action_router import get_action_framework
 
-            framework = ActionFramework()
+            framework = get_action_framework()
             success = framework.reject_action(
                 action_id,
                 rejected_by=sender_email,
