@@ -100,6 +100,14 @@ For EVERY method call added or modified, one row. Filled BEFORE each edit.
 - **Regression:** full `test_intelligence_signals.py` WS5 = **30 passed** vs baseline 005956b = **29 passed** (+1 = my new test, 0 regressions). The branch already returned None; only the wasted query was removed (zero output change).
 - Files: lib/intelligence/signals.py, tests/test_intelligence_signals.py. ruff clean; bandit clean.
 
+### Task 5 — ADR-0028 dual findings stores (OVERRIDE: 0028, not 0026)
+- **Override applied:** ADR number **0028** (`ls docs/adr/` → highest on disk is 0027; 0026=WS3, 0027=WS2 taken). Created `docs/adr/0028-dual-findings-stores.md` (NOT the plan's `0026`). No `dual-findings` collision (grep = 1 file).
+- **All factual claims verified before writing:** `TABLES["signal_state"]`=schema.py:1598; `TABLES["detection_findings"]`=:1649, preview=:1678. `lib/detectors/__init__.py:53` writes detection_findings; `lib/detectors/morning_brief.py:67,77,87` read it; api/server.py has 7 detection_findings refs. **Separation proven:** `grep -rn signal_state lib/detectors/` = EMPTY; `grep -rn detection_findings lib/intelligence/` = EMPTY → the two lineages never cross-write. Decision: keep separate; signal_state is canonical for active findings.
+- Files: docs/adr/0028-dual-findings-stores.md (Create). Markdown only.
+
+### Task 6 — signal_suppression fixture schema
+- **Pre-verified:** `signal_suppressions`=schema.py:1879, `signal_dismiss_log`=:1893 (canonical TABLES defs); `create_fresh(conn)` builds all TABLES.
+
 ---
 
 ## Pre-Commit Verification
