@@ -66,6 +66,36 @@ class HealthResponse(BaseModel):
     timestamp: str = Field(description="ISO timestamp")
 
 
+# ==== Collector Sync Status ====
+# One per-collector entry in CollectorOrchestrator.get_status() / /api/sync/status.
+# Represents BOTH a healthy collector (init_failed=False) and one that failed to
+# initialize (init_failed=True, init_error set). Healthy entries carry freshness
+# and circuit-breaker signals; failed-init entries carry only enabled/healthy/init_*.
+
+
+class CollectorStatusEntry(BaseModel):
+    """Status of a single collector, healthy or init-failed."""
+
+    enabled: bool = Field(description="Whether the collector is enabled")
+    healthy: bool = Field(description="True only when no error, data fresh, breaker closed")
+    status: str | None = Field(
+        default=None, description="healthy, degraded, failed, or None for init-failed"
+    )
+    items_synced: int = Field(default=0, description="Items synced on the last cycle")
+    last_sync: str | None = Field(default=None, description="ISO timestamp of last sync attempt")
+    last_success: str | None = Field(default=None, description="ISO timestamp of last success")
+    error: str | None = Field(default=None, description="Last sync error, if any")
+    stale: bool = Field(default=False, description="True if data freshness has lapsed")
+    circuit_breaker_state: str | None = Field(default=None, description="Circuit breaker state")
+    sync_interval: int | None = Field(
+        default=None, description="Configured sync interval (seconds)"
+    )
+    init_failed: bool = Field(
+        default=False, description="True if the collector failed to initialize"
+    )
+    init_error: str | None = Field(default=None, description="Initialization error message, if any")
+
+
 # ==== Client Index ====
 # /clients returns grouped client buckets, not a flat list.
 
