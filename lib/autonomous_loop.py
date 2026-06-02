@@ -729,6 +729,11 @@ class AutonomousLoop:
             logger.error(f"Intelligence: trajectory analysis failed: {e}")
 
         # --- 2. Detect signals and update signal state ---
+        # Initialize before the try so that if detect_all_signals raises (and is
+        # caught below), the four downstream readers of signal_results (recency
+        # weighting, event emission, decision recording, brief assembly) still see
+        # a valid empty shape instead of hitting UnboundLocalError.
+        signal_results: dict = {"signals": []}
         try:
             signal_results = detect_all_signals(db_path)
             detected = signal_results.get("signals", [])

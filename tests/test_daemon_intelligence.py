@@ -132,6 +132,11 @@ def mock_loop(test_db):
             loop = AutonomousLoop.__new__(AutonomousLoop)
             loop.store = MagicMock()
             loop.store.db_path = str(test_db)
+            # __init__ is stubbed above, so attributes it normally sets are absent.
+            # _intelligence_phase reads self.cycle_count (autonomous_loop.py:630), which
+            # __init__ initializes to 0 (autonomous_loop.py:75). Set it on the double so
+            # the method runs as it would on a real, fully-constructed loop.
+            loop.cycle_count = 0
             return loop
     finally:
         # Restore original modules
@@ -460,7 +465,7 @@ class TestIsolation:
 
         with (
             patch(
-                "lib.intelligence.scorecard.score_all_clients", side_effect=Exception("DB error")
+                "lib.intelligence.scorecard.score_all_clients", side_effect=ValueError("DB error")
             ),
             patch("lib.intelligence.scorecard.score_all_projects", return_value=[]),
             patch("lib.intelligence.scorecard.score_all_persons", return_value=[]),
@@ -504,7 +509,8 @@ class TestIsolation:
             patch("lib.intelligence.scorecard.score_all_projects", return_value=[]),
             patch("lib.intelligence.scorecard.score_all_persons", return_value=[]),
             patch(
-                "lib.intelligence.signals.detect_all_signals", side_effect=Exception("Signal crash")
+                "lib.intelligence.signals.detect_all_signals",
+                side_effect=ValueError("Signal crash"),
             ),
             patch("lib.intelligence.patterns.detect_all_patterns", return_value=fake_patterns),
         ):
@@ -517,11 +523,11 @@ class TestIsolation:
     def test_all_sub_steps_fail_gracefully(self, mock_loop, test_db):
         """If everything raises, still return a valid results dict."""
         with (
-            patch("lib.intelligence.scorecard.score_all_clients", side_effect=Exception("fail")),
-            patch("lib.intelligence.scorecard.score_all_projects", side_effect=Exception("fail")),
-            patch("lib.intelligence.scorecard.score_all_persons", side_effect=Exception("fail")),
-            patch("lib.intelligence.signals.detect_all_signals", side_effect=Exception("fail")),
-            patch("lib.intelligence.patterns.detect_all_patterns", side_effect=Exception("fail")),
+            patch("lib.intelligence.scorecard.score_all_clients", side_effect=ValueError("fail")),
+            patch("lib.intelligence.scorecard.score_all_projects", side_effect=ValueError("fail")),
+            patch("lib.intelligence.scorecard.score_all_persons", side_effect=ValueError("fail")),
+            patch("lib.intelligence.signals.detect_all_signals", side_effect=ValueError("fail")),
+            patch("lib.intelligence.patterns.detect_all_patterns", side_effect=ValueError("fail")),
         ):
             results = mock_loop._intelligence_phase()
 
