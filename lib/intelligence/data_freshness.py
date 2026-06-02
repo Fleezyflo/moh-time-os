@@ -151,6 +151,27 @@ class DataFreshnessTracker:
         finally:
             conn.close()
 
+    def record_collection_for_source(
+        self,
+        source: str,
+        record_count: int = 1,
+        collected_at: datetime | None = None,
+    ) -> None:
+        """Record a successful collector run for a whole source.
+
+        Convenience wrapper used by the orchestrator choke point so that
+        every collector run (gmail, xero, asana, …) lands a row in the
+        data_freshness table. Uses entity_type='source', entity_id=source
+        so the freshness dashboard can report per-source staleness.
+        """
+        self.record_collection(
+            entity_type="source",
+            entity_id=source,
+            source=source,
+            collected_at=collected_at,
+            record_count=record_count,
+        )
+
     def get_freshness(
         self,
         entity_type: str,

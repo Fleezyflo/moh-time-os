@@ -6,11 +6,13 @@ import json
 import secrets
 import socketserver
 import sys
+import time
 import urllib.parse
 import webbrowser
 
 import httpx
 
+from engine.xero_client import XERO_TOKEN_TTL_SECONDS
 from lib import paths
 
 
@@ -148,9 +150,17 @@ def main():
     with open(_config_path(), "w") as f:
         json.dump(creds, f, indent=2)
 
+    # Write the access token WITH an expiry stamp (engine.xero_client two-field
+    # contract) so a just-minted token isn't immediately rejected + refreshed.
     cache_path = _config_path().replace(".credentials.json", ".xero_token_cache.json")
     with open(cache_path, "w") as f:
-        json.dump({"access_token": tokens["access_token"]}, f)
+        json.dump(
+            {
+                "access_token": tokens["access_token"],
+                "expires_at": time.time() + XERO_TOKEN_TTL_SECONDS,
+            },
+            f,
+        )
 
     print("\n" + "=" * 50)
     print("✅ SUCCESS! Xero connected.")

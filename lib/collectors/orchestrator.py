@@ -7,18 +7,25 @@ No legacy scripts, no gog CLI, no importlib hacks.
 """
 
 import logging
+import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any
 
 import yaml
 
 from lib import paths
-from lib.collector_registry import CollectorLock
+from lib.collector_registry import COLLECTOR_REGISTRY, CollectorLock, get_collector_map
 from lib.collectors.resilience import COLLECTOR_ERRORS
 from lib.collectors.result import CollectorResult, CollectorStatus, classify_error
 from lib.state_tracker import mark_collected
 
 from ..state_store import StateStore, get_store
+
+# The canonical collector registry (lib/collector_registry.get_collector_map) is
+# the single source of truth used at runtime by _init_collectors. These names are
+# also re-exported here so callers/tests can patch e.g.
+# `lib.collectors.orchestrator.AsanaCollector` and so the orchestrator module
+# still names every collector class it orchestrates.
 from .asana import AsanaCollector
 from .calendar import CalendarCollector
 from .chat import ChatCollector
@@ -28,10 +35,40 @@ from .gmail import GmailCollector
 from .tasks import TasksCollector
 from .xero import XeroCollector
 
+__all__ = [
+    "AsanaCollector",
+    "CalendarCollector",
+    "ChatCollector",
+    "CollectorOrchestrator",
+    "ContactsCollector",
+    "DriveCollector",
+    "GmailCollector",
+    "TasksCollector",
+    "XeroCollector",
+]
+
 logger = logging.getLogger(__name__)
 
 # Per-collector timeout in seconds
 COLLECTOR_TIMEOUT_SECONDS = 300
+
+# Default inbox-enrichment batch size per collect cycle. Read at call time from
+# MOH_INBOX_ENRICH_LIMIT so backlogs don't drain at a fixed 20/cycle (and so the
+# env override is honored without a module reload).
+DEFAULT_INBOX_ENRICH_LIMIT = 20
+
+
+def _core_sources_from_registry() -> dict[str, dict]:
+    """Derive {source: {enabled, sync_interval}} from the canonical registry.
+
+    The registry (lib/collector_registry.py) is the single source of truth for
+    which collectors exist and their default sync intervals. The orchestrator
+    must not maintain a second copy.
+    """
+    return {
+        name: {"enabled": spec.enabled, "sync_interval": spec.sync_interval_seconds}
+        for name, spec in COLLECTOR_REGISTRY.items()
+    }
 
 
 class CollectorOrchestrator:
@@ -61,39 +98,19 @@ class CollectorOrchestrator:
         return {"sources": {}}
 
     def _init_collectors(self):
-        """Initialize enabled collectors."""
-        # Map config names to collector classes
-        collector_map = {
-            "tasks": TasksCollector,
-            "calendar": CalendarCollector,
-            "chat": ChatCollector,
-            "gmail": GmailCollector,
-            "asana": AsanaCollector,
-            "xero": XeroCollector,
-            "drive": DriveCollector,
-            "contacts": ContactsCollector,
-        }
-
+        """Initialize enabled collectors from the canonical registry."""
+        collector_map = get_collector_map()
         sources = self.config.get("sources", {})
+        core_sources = _core_sources_from_registry()
 
-        # Always enable core collectors
-        core_sources = {
-            "tasks": {"enabled": True, "sync_interval": 300},
-            "calendar": {"enabled": True, "sync_interval": 60},
-            "chat": {"enabled": True, "sync_interval": 300},
-            "gmail": {"enabled": True, "sync_interval": 120},
-            "asana": {"enabled": True, "sync_interval": 300},
-            "xero": {"enabled": True, "sync_interval": 300},
-            "drive": {"enabled": True, "sync_interval": 600},
-            "contacts": {"enabled": True, "sync_interval": 600},
-        }
-
-        # Merge config with core
+        # Merge config over registry defaults. A source absent from sources.yaml
+        # falls back to the registry default. An explicit enabled:false in
+        # sources.yaml is HONORED (operators can disable a core collector).
         for name, default_cfg in core_sources.items():
             if name not in sources:
-                sources[name] = default_cfg
-            elif not sources[name].get("enabled"):
-                sources[name]["enabled"] = True
+                sources[name] = dict(default_cfg)
+            else:
+                sources[name].setdefault("sync_interval", default_cfg["sync_interval"])
 
         for source_name, source_config in sources.items():
             if not source_config.get("enabled", False):
@@ -138,6 +155,7 @@ class CollectorOrchestrator:
                 # Mark collected for SUCCESS or PARTIAL — both wrote primary data
                 if result.get("status") in ("success", "partial"):
                     mark_collected(name)
+                    self._record_freshness(name, result.get("stored", 0) or 0)
                 return result
             except COLLECTOR_ERRORS as e:
                 self.logger.error("Sync failed for %s: %s", name, e)
@@ -148,6 +166,23 @@ class CollectorOrchestrator:
                     error_type=classify_error(e),
                 )
                 return cr.to_dict()
+
+    def _record_freshness(self, source: str, stored: int) -> None:
+        """Record a successful collector run in the data_freshness table.
+
+        Single choke point: every collector (including the standalone
+        XeroCollector and the sync()-overriding Asana/Gmail collectors)
+        funnels through _sync_one, so this is the one place that keeps the
+        DataFreshnessTracker in lockstep with actual collection. Failure to
+        record must never break a sync — log and move on.
+        """
+        try:
+            from lib.intelligence.data_freshness import DataFreshnessTracker
+
+            tracker = DataFreshnessTracker(db_path=paths.db_path())
+            tracker.record_collection_for_source(source, record_count=stored)
+        except COLLECTOR_ERRORS as e:
+            self.logger.debug("Freshness record failed for %s: %s", source, e)
 
     def sync_all(self, *, force: bool = False) -> dict[str, Any]:
         """Sync all collectors in parallel with per-collector locks."""
@@ -192,6 +227,11 @@ class CollectorOrchestrator:
                 executor.submit(self._sync_one, name, force=force): name for name in sources_to_sync
             }
 
+            # NOTE: future.result(timeout=...) frees this waiting caller but
+            # does NOT kill a wedged worker thread. SIGALRM (watchdog.py) can't
+            # interrupt a pool worker either (it only fires on the main thread).
+            # The safety net is CollectorLock's 60s TTL self-heal: a hung worker
+            # stops its heartbeat and the lock is reclaimed next cycle.
             for future in as_completed(futures):
                 name = futures[future]
                 try:
@@ -243,7 +283,8 @@ class CollectorOrchestrator:
             from lib.ui_spec_v21.inbox_enricher import run_enrichment_batch
 
             self.logger.info("Running inbox enrichment")
-            enrichment_stats = run_enrichment_batch(use_llm=True, limit=20)
+            limit = int(os.environ.get("MOH_INBOX_ENRICH_LIMIT", str(DEFAULT_INBOX_ENRICH_LIMIT)))
+            enrichment_stats = run_enrichment_batch(use_llm=True, limit=limit)
             results["inbox_enrichment"] = enrichment_stats
         except COLLECTOR_ERRORS as e:
             self.logger.warning("Inbox enrichment failed: %s", e)

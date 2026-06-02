@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from lib import paths
+from lib.collector_registry import CollectorLock
 from lib.collectors.resilience import COLLECTOR_ERRORS
 from lib.compat import UTC
 from lib.credential_paths import google_sa_file
@@ -34,6 +35,22 @@ logger = logging.getLogger(__name__)
 def _sa_file():
     """Resolve SA file at call time to respect env overrides."""
     return google_sa_file()
+
+
+# Busy timeout for all runner DB connections, matching StateStore (30s) so
+# concurrent CLI+daemon runs wait instead of raising 'database is locked'.
+_DB_TIMEOUT_SECONDS = 30.0
+
+
+def _connect(db_path: Path) -> sqlite3.Connection:
+    """Open a SQLite connection with a busy timeout and WAL journal.
+
+    The runner historically used bare sqlite3.connect() (no timeout, no WAL),
+    which corrupts cursors and raises under daemon+CLI concurrency.
+    """
+    conn = sqlite3.connect(str(db_path), timeout=_DB_TIMEOUT_SECONDS)
+    conn.execute("PRAGMA journal_mode=WAL")
+    return conn
 
 
 # Service account configuration
@@ -58,22 +75,28 @@ def debug_print(msg: str) -> None:
 
 
 def get_internal_users(db_path: Path) -> list[str]:
-    """Get all internal user emails from people table."""
-    if not db_path.exists():
-        logger.error(f"Database not found: {db_path}")
-        return []
+    """Get all internal user emails from the people table.
 
-    conn = sqlite3.connect(str(db_path))
-    cursor = conn.cursor()
-    cursor.execute("SELECT email FROM people WHERE type='internal' AND email IS NOT NULL")
-    emails = [row[0] for row in cursor.fetchall()]
-    conn.close()
-    return emails
+    Raises FileNotFoundError when the DB is absent — returning [] here would
+    silently skip ALL multi-tenant ingestion (project policy: no return [] on
+    failure).
+    """
+    if not db_path.exists():
+        logger.error("Database not found: %s", db_path)
+        raise FileNotFoundError(f"Database not found: {db_path}")
+
+    conn = _connect(db_path)
+    try:
+        cursor = conn.cursor()
+        cursor.execute("SELECT email FROM people WHERE type='internal' AND email IS NOT NULL")
+        return [row[0] for row in cursor.fetchall()]
+    finally:
+        conn.close()
 
 
 def ensure_tables(db_path: Path) -> None:
     """Create required tables if not exist."""
-    conn = sqlite3.connect(str(db_path))
+    conn = _connect(db_path)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS sync_cursor (
             service TEXT NOT NULL,
@@ -98,7 +121,7 @@ def ensure_tables(db_path: Path) -> None:
 
 def is_blocklisted(db_path: Path, subject: str) -> tuple[bool, str | None]:
     """Check if subject is blocklisted. Returns (is_blocked, reason)."""
-    conn = sqlite3.connect(str(db_path))
+    conn = _connect(db_path)
     cursor = conn.execute(
         "SELECT reason FROM subject_blocklist WHERE subject=?",
         (subject,),
@@ -114,7 +137,7 @@ def add_to_blocklist(
     db_path: Path, subject: str, reason: str, error_detail: str | None = None
 ) -> None:
     """Add subject to blocklist."""
-    conn = sqlite3.connect(str(db_path))
+    conn = _connect(db_path)
     conn.execute(
         """
         INSERT OR REPLACE INTO subject_blocklist (subject, reason, error_detail, updated_at)
@@ -128,7 +151,7 @@ def add_to_blocklist(
 
 def get_blocklist_count(db_path: Path) -> int:
     """Get count of blocklisted subjects."""
-    conn = sqlite3.connect(str(db_path))
+    conn = _connect(db_path)
     cursor = conn.execute("SELECT COUNT(*) FROM subject_blocklist")
     row = cursor.fetchone()
     count: int = row[0] if row else 0
@@ -138,7 +161,7 @@ def get_blocklist_count(db_path: Path) -> int:
 
 def get_cursor(db_path: Path, service: str, subject: str, key: str) -> str | None:
     """Get stored cursor value."""
-    conn = sqlite3.connect(str(db_path))
+    conn = _connect(db_path)
     cursor = conn.execute(
         "SELECT value FROM sync_cursor WHERE service=? AND subject=? AND key=?",
         (service, subject, key),
@@ -150,7 +173,7 @@ def get_cursor(db_path: Path, service: str, subject: str, key: str) -> str | Non
 
 def set_cursor(db_path: Path, service: str, subject: str, key: str, value: str) -> None:
     """Store cursor value."""
-    conn = sqlite3.connect(str(db_path))
+    conn = _connect(db_path)
     conn.execute(
         """
         INSERT OR REPLACE INTO sync_cursor (service, subject, key, value, updated_at)
@@ -272,8 +295,8 @@ def collect_gmail_for_user(
                 if cursor_dt > since_dt_check:
                     effective_since = stored_cursor
                     debug_print(f"CURSOR: gmail read old={since} -> advancing to {effective_since}")
-            except ValueError:
-                pass  # Invalid cursor format, use CLI since
+            except ValueError as e:
+                logger.debug("gmail cursor parse failed for %s (%r): %s", user, stored_cursor, e)
 
         # Convert dates to Gmail query format: after:YYYY/MM/DD before:YYYY/MM/DD
         since_dt = datetime.fromisoformat(
@@ -389,8 +412,8 @@ def collect_calendar_for_user(
                     debug_print(
                         f"CURSOR: calendar read old={since} -> advancing to {effective_since}"
                     )
-            except ValueError:
-                pass
+            except ValueError as e:
+                logger.debug("calendar cursor parse failed for %s (%r): %s", user, stored_cursor, e)
 
         # Convert dates to RFC3339
         since_rfc = effective_since if "T" in effective_since else effective_since + "T00:00:00Z"
@@ -541,8 +564,8 @@ def collect_chat_for_user(
                 if cursor_dt > since_dt_check:
                     effective_since = stored_cursor
                     debug_print(f"CURSOR: chat read old={since} -> advancing to {effective_since}")
-            except ValueError:
-                pass
+            except ValueError as e:
+                logger.debug("chat cursor parse failed for %s (%r): %s", user, stored_cursor, e)
 
         # Parse since/until for local filtering
         since_dt = datetime.fromisoformat(
@@ -706,8 +729,8 @@ def collect_drive_for_user(
                 if cursor_dt > since_dt_check:
                     effective_since = stored_cursor
                     debug_print(f"CURSOR: drive read old={since} -> advancing to {effective_since}")
-            except ValueError:
-                pass
+            except ValueError as e:
+                logger.debug("drive cursor parse failed for %s (%r): %s", user, stored_cursor, e)
 
         # Build query with modifiedTime filter
         since_rfc = effective_since if "T" in effective_since else effective_since + "T00:00:00Z"
@@ -938,7 +961,35 @@ def run_all_users(
     """
     Run collection for all internal users across specified services.
     Returns coverage report JSON with detailed categorization.
+
+    Guarded by a CollectorLock("all_users") so a second concurrent invocation
+    (daemon + CLI) is skipped rather than double-processing every user and
+    contending on the same DB file.
     """
+    lock = CollectorLock("all_users")
+    with lock:
+        if not lock.acquired:
+            logger.warning("all_users_runner already running -- skipping this invocation")
+            return {"skipped": True}
+        return _run_all_users_locked(
+            since=since,
+            until=until,
+            limit_users=limit_users,
+            limit_per_user=limit_per_user,
+            dry_run=dry_run,
+            services=services,
+        )
+
+
+def _run_all_users_locked(
+    since: str,
+    until: str,
+    limit_users: int | None = None,
+    limit_per_user: int = 50,
+    dry_run: bool = False,
+    services: list[str] | None = None,
+) -> dict[str, Any]:
+    """Body of run_all_users, executed while holding the all_users lock."""
     db_path = paths.db_path()
     ensure_tables(db_path)
 

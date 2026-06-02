@@ -47,6 +47,26 @@ def parse_xero_date(value: str | None) -> str | None:
     return None
 
 
+def _xero_invoice_row_id(inv: dict) -> str:
+    """Deterministic row id for a Xero invoice, used for BOTH the invoice row and
+    its line_items FK so they never diverge.
+
+    Prefers Xero's unique InvoiceID GUID. Falls back to a sanitized InvoiceNumber,
+    then (if both are missing — should not happen for real Xero data) a stable
+    token so the two derivation sites still agree. Must NOT depend on any mutable
+    per-loop counter (the old `INV-{invoices_stored}` default differed between the
+    primary loop and the line_items loop, orphaning the FK).
+    """
+    inv_guid = inv.get("InvoiceID")
+    if inv_guid:
+        return f"xero_{inv_guid}"
+    inv_number = inv.get("InvoiceNumber")
+    if inv_number:
+        safe_number = inv_number.replace(" ", "_").replace("/", "-").replace("#", "")
+        return f"xero_{safe_number}"
+    return "xero_unknown"
+
+
 class XeroCollector:
     """
     Collector that syncs full invoice history from Xero.
@@ -370,13 +390,17 @@ class XeroCollector:
                 all_tax_rates = []
                 secondary_fetch_errors["tax_rates"] = f"fetch failed: {e}"
 
-            # Clear old Xero invoices
-            self.store.query("DELETE FROM invoices WHERE source = 'xero'")
-
             # Build client mapping cache
             client_cache = {}
 
-            # Process and store invoices
+            # Process invoices. Rows are accumulated and written in ONE atomic
+            # DELETE+reinsert via store.replace_source_rows (below), instead of a
+            # standalone DELETE followed by a per-row insert loop. The old shape
+            # committed the DELETE on its own connection, so a mid-loop failure
+            # wiped all prior receivables with no rollback (and the un-paged
+            # fetch could truncate at 100, wiping the remainder). The ACCREC
+            # empty-fetch guard above already prevents the empty-wipe case.
+            invoice_rows: list[dict] = []
             invoices_stored = 0
             clients_with_invoices = set()
             ar_by_client = {}  # client_id -> {total, overdue, max_days}
@@ -387,7 +411,7 @@ class XeroCollector:
                     continue
 
                 contact_name = inv.get("Contact", {}).get("Name", "Unknown")
-                inv_number = inv.get("InvoiceNumber", f"INV-{invoices_stored}")
+                inv_number = inv.get("InvoiceNumber", "")
                 xero_status = inv.get("Status", "AUTHORISED")
 
                 # Get amounts
@@ -428,52 +452,68 @@ class XeroCollector:
                 else:
                     aging = "current"
 
-                # Generate unique ID
-                inv_id = f"xero_{inv_number.replace(' ', '_').replace('/', '-').replace('#', '')}"
+                # Deterministic GUID-first row id (shared with the line_items FK
+                # derivation below so they never diverge).
+                inv_id = _xero_invoice_row_id(inv)
 
-                # Store invoice
-                try:
-                    self.store.insert(
-                        "invoices",
-                        {
-                            "id": inv_id,
-                            "source": "xero",
-                            "external_id": inv_number,
-                            "client_id": client_id,
-                            "client_name": contact_name,
-                            "amount": total_amount,  # Store full invoice amount, not just amount_due
-                            "currency": inv.get("CurrencyCode", "AED"),
-                            "issue_date": issue_date,
-                            "due_date": due_date,
-                            "status": status,
-                            "aging_bucket": aging if status != "paid" else None,
-                            "payment_date": payment_date,
-                            "created_at": now,
-                            "updated_at": now,
-                        },
-                    )
-                    invoices_stored += 1
+                # Accumulate the invoice row for the atomic batch write below.
+                invoice_rows.append(
+                    {
+                        "id": inv_id,
+                        "source": "xero",
+                        "external_id": inv_number,
+                        "client_id": client_id,
+                        "client_name": contact_name,
+                        "amount": total_amount,  # Store full invoice amount, not just amount_due
+                        "currency": inv.get("CurrencyCode", "AED"),
+                        "issue_date": issue_date,
+                        "due_date": due_date,
+                        "status": status,
+                        "aging_bucket": aging if status != "paid" else None,
+                        "payment_date": payment_date,
+                        "created_at": now,
+                        "updated_at": now,
+                    }
+                )
+                invoices_stored += 1
 
-                    if client_id:
-                        clients_with_invoices.add(client_id)
+                if client_id:
+                    clients_with_invoices.add(client_id)
 
-                        # Track AR for outstanding invoices
-                        if status in ("sent", "overdue"):
-                            if client_id not in ar_by_client:
-                                ar_by_client[client_id] = {
-                                    "total": 0.0,
-                                    "overdue": 0.0,
-                                    "max_days": 0,
-                                }
-                            ar_by_client[client_id]["total"] += amount_due
-                            if status == "overdue":
-                                ar_by_client[client_id]["overdue"] += amount_due
-                                ar_by_client[client_id]["max_days"] = max(
-                                    ar_by_client[client_id]["max_days"], days_overdue
-                                )
+                    # Track AR for outstanding invoices
+                    if status in ("sent", "overdue"):
+                        if client_id not in ar_by_client:
+                            ar_by_client[client_id] = {
+                                "total": 0.0,
+                                "overdue": 0.0,
+                                "max_days": 0,
+                            }
+                        ar_by_client[client_id]["total"] += amount_due
+                        if status == "overdue":
+                            ar_by_client[client_id]["overdue"] += amount_due
+                            ar_by_client[client_id]["max_days"] = max(
+                                ar_by_client[client_id]["max_days"], days_overdue
+                            )
 
-                except COLLECTOR_ERRORS as e:
-                    logger.warning(f"Failed to store invoice {inv_number}: {e}")
+            # Atomically replace all xero invoices in ONE transaction: the DELETE
+            # and every reinsert commit together, so a failure rolls back and the
+            # prior receivables are retained (never a half-cleared table).
+            try:
+                self.store.replace_source_rows("invoices", "source", "xero", invoice_rows)
+            except COLLECTOR_ERRORS as e:
+                logger.error("Atomic invoice replace failed; prior data retained: %s", e)
+                self.circuit_breaker.record_failure()
+                cr = CollectorResult(
+                    source="xero",
+                    status=CollectorStatus.FAILED,
+                    error=f"invoice replace failed: {e}",
+                    error_type=classify_error(e),
+                    circuit_breaker_state=self.circuit_breaker.state,
+                )
+                self.store.update_sync_state(
+                    "xero", success=False, error=str(e), error_type="db_error", status="failed"
+                )
+                return cr.to_dict()
 
             # Update client AR fields
             ar_updated = 0
@@ -524,26 +564,38 @@ class XeroCollector:
                 "tax_rates": 0,
             }
 
-            # Line items from invoices
+            # Line items from invoices. The line_items FK (invoice_id) MUST match
+            # the primary invoice row id — same deterministic GUID-first derivation
+            # via _xero_invoice_row_id (NOT the old colliding/counter-dependent form
+            # that diverged between this loop and the primary loop).
             line_items_rows = []
             for inv in all_invoices:
                 if inv.get("Type") != "ACCREC":
                     continue
-                inv_number = inv.get("InvoiceNumber", f"INV-{invoices_stored}")
-                inv_id = f"xero_{inv_number.replace(' ', '_').replace('/', '-').replace('#', '')}"
+                inv_id = _xero_invoice_row_id(inv)
                 line_items = inv.get("LineItems", [])
                 if line_items:
                     rows = self._transform_line_items(inv_id, line_items)
                     line_items_rows.extend(rows)
 
-            if line_items_rows:
-                try:
-                    stored = self.store.insert_many("xero_line_items", line_items_rows)
-                    secondary_stats["line_items"] = stored
-                    logger.info(f"Stored {stored} line items")
-                except COLLECTOR_ERRORS as e:
-                    logger.warning(f"Failed to store line_items: {e}")
-                    secondary_errors["line_items"] = str(e)
+            # Always replace (even with an empty list) — we are past the ACCREC
+            # empty-fetch guard, so the invoice set is valid; an empty line_items
+            # set then genuinely means "no line items this cycle", and stale rows
+            # for now-removed invoices must be cleared rather than left dangling.
+            try:
+                # xero_line_items.id is AUTOINCREMENT and rows carry no id, so
+                # INSERT OR REPLACE can't dedupe. Atomically replace the whole
+                # (xero-only) table so each sync replaces rather than endlessly
+                # appends a duplicate set — and a mid-insert failure rolls back
+                # (DELETE + reinserts share one transaction), never leaving the
+                # table half-cleared. (The atomic invoice replace above already
+                # rebuilt the parent rows.)
+                stored = self.store.replace_all_rows("xero_line_items", line_items_rows)
+                secondary_stats["line_items"] = stored
+                logger.info(f"Stored {stored} line items")
+            except COLLECTOR_ERRORS as e:
+                logger.warning(f"Failed to store line_items: {e}")
+                secondary_errors["line_items"] = str(e)
 
             # Contacts
             if all_contacts:

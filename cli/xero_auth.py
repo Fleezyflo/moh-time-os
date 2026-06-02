@@ -7,12 +7,14 @@ import os
 import secrets
 import socketserver
 import sys
+import time
 import urllib.parse
 import webbrowser
 from typing import Any
 
 import httpx
 
+from engine.xero_client import XERO_TOKEN_TTL_SECONDS
 from lib import paths
 
 
@@ -218,10 +220,14 @@ def main():
     creds["xero"]["tenant_id"] = tenant_id
     save_credentials(creds)
 
-    # Also save access token to cache
+    # Also save access token to cache WITH an expiry stamp, matching the
+    # engine.xero_client two-field contract — otherwise get_access_token would
+    # reject this just-minted token (no expires_at) and refresh immediately.
     cache_path = os.path.join(os.path.dirname(_config_path()), ".xero_token_cache.json")
     with open(cache_path, "w") as f:
-        json.dump({"access_token": access_token}, f)
+        json.dump(
+            {"access_token": access_token, "expires_at": time.time() + XERO_TOKEN_TTL_SECONDS}, f
+        )
 
     print("\n" + "=" * 60)
     print("✅ SUCCESS! Xero authorization complete.")

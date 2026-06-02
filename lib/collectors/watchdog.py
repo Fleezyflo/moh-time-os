@@ -30,7 +30,15 @@ class WatchdogTimer:
         watchdog = WatchdogTimer(timeout_seconds=300)
         result = watchdog.run(some_collector_function)
 
-    Note: Only works on Unix systems. SIGALRM is not available on Windows.
+    LIMITATION -- NOT wired into the threaded collector path on purpose:
+    signal.alarm/SIGALRM only fires on the MAIN thread. The orchestrator runs
+    collectors inside a ThreadPoolExecutor (see orchestrator._sync_impl), so a
+    WatchdogTimer used inside a worker would never fire. The hung-collector
+    mitigation there is CollectorLock's TTL self-healing (60s): a wedged worker
+    stops its heartbeat and the lock is reclaimed on the next cycle. This class
+    remains usable for MAIN-THREAD callers (e.g. a single synchronous CLI run).
+
+    Note: only works on Unix. SIGALRM is unavailable on Windows.
     """
 
     def __init__(self, timeout_seconds: int = 300):
