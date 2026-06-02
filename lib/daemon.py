@@ -854,12 +854,19 @@ class TimeOSDaemon:
             "jobs": {},
         }
 
-        # Load job states
+        # Load job states. Filter to the currently-registered job set so orphan
+        # jobs (e.g. "autonomous", "backup") left in daemon_state.json by the
+        # removed subprocess daemon do not surface. Mirrors _load_state (which
+        # applies the same `name in registered` filter).
         if _state_file().exists():
             try:
                 with open(_state_file()) as f:
                     data = json.load(f)
-                status["jobs"] = data.get("jobs", {})
+                registered = set(TimeOSDaemon().jobs.keys())
+                persisted_jobs = data.get("jobs", {})
+                status["jobs"] = {
+                    name: state for name, state in persisted_jobs.items() if name in registered
+                }
                 status["state_updated"] = data.get("updated_at")
             except (json.JSONDecodeError, OSError) as e:
                 # State file exists but is corrupt/unreadable
