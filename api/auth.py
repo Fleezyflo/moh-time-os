@@ -49,6 +49,7 @@ def _get_api_key() -> str:
 PUBLIC_PATH_PREFIXES: tuple[str, ...] = (
     "/health",
     "/api/health",
+    "/api/ready",
     "/api/auth/mode",
     "/api/auth/token",
     "/docs",

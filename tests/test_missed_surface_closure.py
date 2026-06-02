@@ -100,20 +100,10 @@ ALL_MUTATION_ENDPOINTS = [
 # Intentionally public endpoints — no auth required
 PUBLIC_ENDPOINTS = [
     ("GET", "/api/health"),
-    # /api/ready is documented as public (api/auth.py:47 "liveness/readiness") but is
-    # missing from api/auth.py PUBLIC_PATH_PREFIXES, so it currently returns 401.
-    # That is a production auth-config fix (separate concern from this test-isolation
-    # fix, and api/auth.py is security-sensitive). xfail(strict) here flips to a failure
-    # the moment /api/ready is correctly exempted, prompting removal of this marker.
-    pytest.param(
-        "GET",
-        "/api/ready",
-        marks=pytest.mark.xfail(
-            reason="/api/ready missing from api/auth.py PUBLIC_PATH_PREFIXES — "
-            "tracked as a separate production auth-config fix",
-            strict=True,
-        ),
-    ),
+    # /api/ready is documented as public (api/auth.py:47 "liveness/readiness") and is
+    # now listed in api/auth.py PUBLIC_PATH_PREFIXES, so load balancers can reach it
+    # unauthenticated.
+    ("GET", "/api/ready"),
     ("GET", "/api/auth/mode"),
 ]
 
