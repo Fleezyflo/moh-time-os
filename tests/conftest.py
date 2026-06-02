@@ -355,3 +355,32 @@ def fixture_db_path(tmp_path_factory):
     conn = create_fixture_db(db_path)
     conn.close()
     return db_path
+
+
+@pytest.fixture(autouse=True)
+def reset_outbox_singleton(monkeypatch, fixture_db_path):
+    """Isolate the lib.outbox singleton from the live DB for every test.
+
+    ActionFramework.__init__ (lib/actions/action_framework.py:143) always calls
+    get_outbox(), whose process-global _outbox (lib/outbox.py:409) lazily builds
+    SideEffectOutbox(db_path=None) → get_db_path_str() → the LIVE DB unless an
+    override is set. Cold (in isolation) that trips the determinism guard above;
+    warm (in the full suite) it silently binds to whichever DB the first
+    constructor saw — an order-dependent flake.
+
+    Two-part fix, conftest-root so no per-test patch is required:
+      1. Point MOH_TIME_OS_DB at the session fixture DB (lib/paths.py:49-50,
+         lib/db.py:57) so any cold construction lands on the guard-permitted
+         fixture DB, never live.
+      2. Reset _outbox to None before and after each test so no singleton leaks
+         across tests.
+
+    Composes with tests that already patch get_outbox or pass an explicit
+    db_path — those override this; the env var only matters on cold construction.
+    """
+    import lib.outbox as _outbox_mod
+
+    monkeypatch.setenv("MOH_TIME_OS_DB", str(fixture_db_path))
+    monkeypatch.setattr(_outbox_mod, "_outbox", None)
+    yield
+    _outbox_mod._outbox = None
