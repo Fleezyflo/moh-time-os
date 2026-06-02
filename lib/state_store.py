@@ -109,6 +109,90 @@ class StateStore:
 
         return len(items)
 
+    def replace_source_rows(
+        self, table: str, source_column: str, source_value: str, rows: list[dict]
+    ) -> int:
+        """Atomically replace all rows for a source: DELETE then INSERT, one txn.
+
+        Deletes every row in *table* where ``source_column = source_value`` and
+        inserts *rows*, all inside a single transaction. If any statement
+        raises (e.g. a transform produced a value that fails a NOT NULL/CHECK
+        constraint), the whole operation is rolled back so the DELETE is undone
+        and the prior rows are retained — never a half-cleared table.
+
+        This exists because each plain CRUD call opens its own connection and
+        commits independently, so a DELETE followed by a per-row insert loop
+        commits the DELETE standalone; a mid-loop failure would erase the prior
+        data with no rollback. Callers that do destructive delete-then-reinsert
+        (e.g. the Xero collector) must use this instead.
+
+        Returns the number of rows inserted. Passing an empty *rows* list just
+        clears the source (callers needing a "never wipe on empty fetch" guard
+        must check upstream before calling — see the Xero ACCREC guard).
+        """
+        db_module.validate_identifier(table)
+        db_module.validate_identifier(source_column)
+
+        insert_sql = None
+        if rows:
+            columns = list(rows[0].keys())
+            for col in columns:
+                db_module.validate_identifier(col)
+            insert_sql = safe_sql.insert_or_replace(table, columns)
+
+        delete_sql = safe_sql.delete(table, where=f"{source_column} = ?")
+
+        with self._get_conn() as conn:
+            try:
+                conn.execute(delete_sql, [source_value])
+                if insert_sql is not None:
+                    for row in rows:
+                        values = [
+                            json.dumps(v) if isinstance(v, dict | list) else v for v in row.values()
+                        ]
+                        conn.execute(insert_sql, values)
+            except Exception:
+                conn.rollback()
+                raise
+
+        return len(rows)
+
+    def replace_all_rows(self, table: str, rows: list[dict]) -> int:
+        """Atomically replace EVERY row in *table*: DELETE all then INSERT, one txn.
+
+        Like replace_source_rows but for a wholly-owned table that has no source
+        column (e.g. xero_line_items, which is 100% Xero data and rebuilt each
+        sync). DELETE + reinserts share one transaction; any failure rolls back so
+        the table is never left empty/half-cleared. Returns rows inserted.
+        """
+        db_module.validate_identifier(table)
+
+        insert_sql = None
+        if rows:
+            columns = list(rows[0].keys())
+            for col in columns:
+                db_module.validate_identifier(col)
+            insert_sql = safe_sql.insert_or_replace(table, columns)
+
+        # `where="1=1"` is a constant literal (no user data) -> full-table delete
+        # via the validated builder, so no f-string SQL and no new suppression.
+        delete_sql = safe_sql.delete(table, where="1=1")
+
+        with self._get_conn() as conn:
+            try:
+                conn.execute(delete_sql)
+                if insert_sql is not None:
+                    for row in rows:
+                        values = [
+                            json.dumps(v) if isinstance(v, dict | list) else v for v in row.values()
+                        ]
+                        conn.execute(insert_sql, values)
+            except Exception:
+                conn.rollback()
+                raise
+
+        return len(rows)
+
     def get(self, table: str, id: str) -> dict | None:
         """Get a single row by ID."""
         db_module.validate_identifier(table)

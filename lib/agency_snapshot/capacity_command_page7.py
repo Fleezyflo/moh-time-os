@@ -20,6 +20,22 @@ from lib.compat import StrEnum
 logger = logging.getLogger(__name__)
 
 
+def _parse_event_dt(value: str) -> datetime:
+    """Parse an event timestamp to a NAIVE datetime.
+
+    The live `events` table mixes tz-aware timestamps (e.g. timed meetings
+    `...+04:00`) and naive ones (all-day blocks at T00:00:00). The capacity
+    window bounds are naive (datetime.combine), so every event datetime is
+    normalized to naive here to keep comparisons/subtractions valid — a mix of
+    aware and naive raised "can't compare/subtract offset-naive and
+    offset-aware datetimes" once the page actually read live `events` rows.
+    """
+    dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    if dt.tzinfo is not None:
+        dt = dt.replace(tzinfo=None)
+    return dt
+
+
 # ==============================================================================
 # ENUMS & TYPES (per spec)
 # ==============================================================================
@@ -282,7 +298,7 @@ class CapacityCommandPage7Engine:
 
         # Calendar sync
         last_sync = self._query_one("""
-            SELECT MAX(synced_at) as last_sync FROM calendar_events
+            SELECT MAX(updated_at) as last_sync FROM events
         """)
         if last_sync and last_sync.get("last_sync"):
             self.calendar_last_sync_at = last_sync["last_sync"]
@@ -338,7 +354,14 @@ class CapacityCommandPage7Engine:
                 sync_time = datetime.fromisoformat(
                     self.calendar_last_sync_at.replace("Z", "+00:00")
                 )
-                hours_ago = (self.now - sync_time.replace(tzinfo=None)).total_seconds() / 3600
+                # self.now is tz-aware (UTC); normalize sync_time to aware UTC so
+                # the subtraction is valid whether the stored timestamp was naive
+                # (events.updated_at can be either). The old code stripped tzinfo
+                # off sync_time, making it naive vs aware self.now -> TypeError,
+                # which was swallowed and forced reality_gap_confidence=LOW.
+                if sync_time.tzinfo is None:
+                    sync_time = sync_time.replace(tzinfo=timezone.utc)
+                hours_ago = (self.now - sync_time).total_seconds() / 3600
                 if hours_ago > 24:
                     why_low.append(f"calendar stale ({hours_ago:.0f}h)")
             except (ValueError, TypeError, AttributeError) as e:
@@ -548,8 +571,9 @@ class CapacityCommandPage7Engine:
 
         events = self._query_all(
             """
-            SELECT id, title, start_time, end_time, event_type, is_focus_block
-            FROM calendar_events
+            SELECT id, title, start_time, end_time, event_type,
+                   CASE WHEN event_type = 'focusTime' THEN 1 ELSE 0 END AS is_focus_block
+            FROM events
             WHERE start_time >= ? AND end_time <= ?
         """,
             (start.isoformat(), end.isoformat()),
@@ -564,8 +588,8 @@ class CapacityCommandPage7Engine:
 
         for event in events:
             try:
-                start_dt = datetime.fromisoformat(event["start_time"])
-                end_dt = datetime.fromisoformat(event["end_time"])
+                start_dt = _parse_event_dt(event["start_time"])
+                end_dt = _parse_event_dt(event["end_time"])
                 duration_hours = (end_dt - start_dt).total_seconds() / 3600
 
                 if event.get("is_focus_block"):
@@ -597,8 +621,8 @@ class CapacityCommandPage7Engine:
                 try:
                     sorted_events.append(
                         {
-                            "start": datetime.fromisoformat(e["start_time"]),
-                            "end": datetime.fromisoformat(e["end_time"]),
+                            "start": _parse_event_dt(e["start_time"]),
+                            "end": _parse_event_dt(e["end_time"]),
                         }
                     )
                 except (ValueError, TypeError, KeyError) as exc:

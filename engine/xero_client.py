@@ -8,6 +8,7 @@ Token cache still uses .xero_token_cache.json for the rotating access token.
 import json
 import logging
 import os
+import time
 from dataclasses import dataclass
 from typing import Any
 
@@ -21,7 +22,39 @@ TOKEN_CACHE_PATH = str(xero_token_cache())
 XERO_OAUTH_ENDPOINT = "https://identity.xero.com/connect/token"
 XERO_API_BASE = "https://api.xero.com/api.xro/2.0"
 
+# Xero access tokens live 30 minutes. Refresh ~60s early to avoid edge expiry.
+XERO_TOKEN_TTL_SECONDS = 1800
+XERO_TOKEN_REFRESH_SKEW_SECONDS = 60
+
+# Xero's Accounting API returns at most 100 records per page; callers must page.
+XERO_PAGE_SIZE = 100
+
 logger = logging.getLogger(__name__)
+
+
+def _read_token_cache() -> dict[str, Any]:
+    """Read the access-token cache. Returns {} when missing/unreadable."""
+    if not os.path.exists(TOKEN_CACHE_PATH):
+        return {}
+    try:
+        with open(TOKEN_CACHE_PATH) as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, json.JSONDecodeError):
+        logger.debug("Token cache read failed", exc_info=True)
+        return {}
+
+
+def _cached_access_token_if_valid() -> str | None:
+    """Return the cached access token if present and not near expiry."""
+    cache = _read_token_cache()
+    token = cache.get("access_token")
+    expires_at = cache.get("expires_at")
+    if not token or not isinstance(expires_at, int | float):
+        return None
+    if time.time() >= (expires_at - XERO_TOKEN_REFRESH_SKEW_SECONDS):
+        return None
+    return token
 
 
 @dataclass
@@ -104,10 +137,13 @@ def save_tokens(access_token: str, refresh_token: str) -> None:
     When using env vars, the rotated refresh token is logged as a warning so
     the operator can update the env var.
     """
-    # Save access token to cache
+    # Save access token to cache with an expiry stamp so callers can reuse it.
     os.makedirs(os.path.dirname(TOKEN_CACHE_PATH), exist_ok=True)
     with open(TOKEN_CACHE_PATH, "w") as f:
-        json.dump({"access_token": access_token}, f)
+        json.dump(
+            {"access_token": access_token, "expires_at": time.time() + XERO_TOKEN_TTL_SECONDS},
+            f,
+        )
 
     # Update refresh token — file-based or env-var mode
     if os.environ.get("XERO_REFRESH_TOKEN"):
@@ -154,10 +190,19 @@ def refresh_access_token(creds: XeroCredentials) -> str:
 
 
 def get_access_token() -> tuple[str, str]:
-    """Get valid access token and tenant_id, refreshing if needed."""
+    """Get a valid access token and tenant_id.
+
+    Reuses the cached access token until it is within
+    XERO_TOKEN_REFRESH_SKEW_SECONDS of expiry; only then does it hit
+    identity.xero.com. This stops the previous behavior of refreshing on
+    every single API call.
+    """
     creds = load_credentials()
 
-    # Always refresh to ensure valid token (they expire in 30 min)
+    cached = _cached_access_token_if_valid()
+    if cached:
+        return cached, creds.tenant_id
+
     access_token = refresh_access_token(creds)
     return access_token, creds.tenant_id
 
@@ -202,13 +247,30 @@ def list_contacts(
 
 
 def list_invoices(*, status: str | None = None) -> list[dict]:
-    """List invoices. Status: DRAFT, SUBMITTED, AUTHORISED, PAID, VOIDED."""
-    endpoint = "Invoices"
-    if status:
-        endpoint += f'?where=Status=="{status}"'
+    """List ALL invoices across pages. Status: DRAFT/SUBMITTED/AUTHORISED/PAID/VOIDED.
 
-    data = xero_get(endpoint)
-    return data.get("Invoices", [])
+    Xero's Accounting Invoices endpoint returns at most XERO_PAGE_SIZE (100)
+    invoices per page. A single un-paged GET silently truncates at 100, which —
+    combined with the collector's DELETE+reinsert — would wipe every receivable
+    past the first page and still report success. So we page until a page comes
+    back shorter than the page size (the last page).
+    """
+    base = "Invoices"
+    where = f'?where=Status=="{status}"' if status else ""
+
+    all_invoices: list[dict] = []
+    page = 1
+    while True:
+        sep = "&" if where else "?"
+        endpoint = f"{base}{where}{sep}page={page}"
+        data = xero_get(endpoint)
+        batch = data.get("Invoices", [])
+        all_invoices.extend(batch)
+        if len(batch) < XERO_PAGE_SIZE:
+            break
+        page += 1
+
+    return all_invoices
 
 
 def list_bills(*, status: str | None = None) -> list[dict]:

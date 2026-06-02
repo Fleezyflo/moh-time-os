@@ -14,6 +14,7 @@ from datetime import date, datetime, timezone
 from typing import Any
 
 from .base import BaseCollector
+from .reconcile import tombstone_missing
 from .resilience import COLLECTOR_ERRORS
 from .result import CollectorResult, CollectorStatus, classify_error
 
@@ -164,6 +165,11 @@ class AsanaCollector(BaseCollector):
                 "portfolios": portfolios,
                 "goals": goals,
                 "_secondary_fetch_errors": secondary_fetch_errors,
+                # True only when EVERY project's task fetch succeeded. A partial
+                # fetch (some projects failed) yields an incomplete task set, so
+                # tombstoning must be skipped — deleting "missing" rows would wipe
+                # still-live tasks from the failed projects.
+                "_primary_fetch_complete": failed_projects == 0,
             }
 
         except COLLECTOR_ERRORS as e:
@@ -628,6 +634,24 @@ class AsanaCollector(BaseCollector):
                 status=cr.status.value,
             )
             self.circuit_breaker.record_success()
+
+            # Tombstone Asana tasks deleted upstream (source-scoped, empty-guarded).
+            # The seen-set is derived from the transformed rows that were actually
+            # STORED (transformed_tasks). Gate on _primary_fetch_complete: a partial
+            # project fetch yields an incomplete seen-set, and tombstoning then would
+            # delete still-live tasks from the failed projects — so skip it. Runs in
+            # its own try so a cleanup failure never flips this SUCCESS/PARTIAL to FAILED.
+            primary_complete = raw_data.get("_primary_fetch_complete", False)
+            if cr.status in (CollectorStatus.SUCCESS, CollectorStatus.PARTIAL) and primary_complete:
+                try:
+                    seen_ids = {row["id"] for row in transformed_tasks if row.get("id")}
+                    tombstone_missing(
+                        self.store.db_path, table="tasks", source="asana", seen_ids=seen_ids
+                    )
+                except COLLECTOR_ERRORS as e:
+                    self.logger.warning("asana tombstone failed (data retained): %s", e)
+            elif not primary_complete:
+                self.logger.info("asana: partial task fetch -- skipping tombstone (data retained)")
 
             return cr.to_dict()
 

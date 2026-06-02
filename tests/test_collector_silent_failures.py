@@ -16,6 +16,7 @@ Test scenarios:
 - Circuit breaker (stale state)
 """
 
+import importlib
 import sqlite3
 from datetime import datetime, timezone
 from typing import Any
@@ -43,11 +44,32 @@ class FakeStore:
         self.sync_states: dict[str, dict] = {}
         self.tables: dict[str, list] = {}
         self._fail_on_table: str | None = None
+        # Real StateStore exposes db_path (used by freshness wiring + tombstoning).
+        self.db_path = ":memory:"
 
     def insert_many(self, table: str, rows: list[dict]) -> int:
         if self._fail_on_table and table == self._fail_on_table:
             raise sqlite3.OperationalError(f"table {table} is locked")
         self.tables.setdefault(table, []).extend(rows)
+        return len(rows)
+
+    def replace_source_rows(
+        self, table: str, source_column: str, source_value: str, rows: list[dict]
+    ) -> int:
+        """Mimic StateStore.replace_source_rows: atomic delete-by-source + reinsert."""
+        if self._fail_on_table and table == self._fail_on_table:
+            raise sqlite3.OperationalError(f"table {table} is locked")
+        existing = self.tables.setdefault(table, [])
+        kept = [r for r in existing if r.get(source_column) != source_value]
+        kept.extend(rows)
+        self.tables[table] = kept
+        return len(rows)
+
+    def replace_all_rows(self, table: str, rows: list[dict]) -> int:
+        """Mimic StateStore.replace_all_rows: atomic full-table clear + reinsert."""
+        if self._fail_on_table and table == self._fail_on_table:
+            raise sqlite3.OperationalError(f"table {table} is locked")
+        self.tables[table] = list(rows)
         return len(rows)
 
     def update_sync_state(
@@ -658,7 +680,11 @@ class TestXeroCollectorResult:
         mock_httpx.post = MagicMock()
         mock_httpx.get = MagicMock()
 
-        # Remove engine.xero_client from cache so it will be re-imported inside sync()
+        # Remove engine.xero_client from cache so it will be re-imported inside sync().
+        # Ensure the REAL module is captured first (import if absent) so the teardown
+        # can restore the original object identity — otherwise a later test's lazy
+        # `from engine.xero_client import ...` re-imports against the real creds path.
+        importlib.import_module("engine.xero_client")
         saved_modules = {}
         for mod_name in list(sys.modules):
             if mod_name == "engine.xero_client" or mod_name.startswith("engine.xero_client."):
@@ -676,11 +702,26 @@ class TestXeroCollectorResult:
                 sys.modules["httpx"] = original_httpx
             else:
                 sys.modules.pop("httpx", None)
-            # Restore engine.xero_client
+            # Restore engine.xero_client to a CLEAN importable state. Pop the
+            # mock-httpx-contaminated copy, restore any genuinely-cached originals,
+            # then re-import so sys.modules['engine.xero_client'] is the real,
+            # un-patched module. (Leaving it absent forced a later lazy
+            # `from engine.xero_client import ...` to re-import against the real
+            # creds path -> RuntimeError under full-suite ordering.)
             for mod_name in list(sys.modules):
                 if mod_name == "engine.xero_client" or mod_name.startswith("engine.xero_client."):
                     sys.modules.pop(mod_name)
             sys.modules.update(saved_modules)
+            if "engine.xero_client" not in sys.modules:
+                importlib.import_module("engine.xero_client")
+            # Re-bind the parent package attribute too: `from engine.xero_client
+            # import X` resolves via engine.xero_client (the parent attr), NOT
+            # sys.modules. Restoring only sys.modules left engine.xero_client
+            # pointing at the popped (un-patched) object, so a later test's
+            # patch on the sys.modules object was invisible to the collector.
+            import engine as _engine_pkg
+
+            _engine_pkg.xero_client = sys.modules["engine.xero_client"]
 
         # Proof 1: status is "failed" — not empty success, not stale, not partial
         assert result["status"] == "failed"
@@ -1038,6 +1079,8 @@ class TestXeroSecondaryFetchFailure:
         mock_httpx.post = MagicMock()
         mock_httpx.get = MagicMock()
 
+        # Capture the REAL module first so teardown restores the original identity.
+        importlib.import_module("engine.xero_client")
         saved_modules = {}
         for mod_name in list(sys.modules):
             if mod_name == "engine.xero_client" or mod_name.startswith("engine.xero_client."):
@@ -1052,7 +1095,7 @@ class TestXeroSecondaryFetchFailure:
         return saved_modules, original_httpx
 
     def _teardown_xero_module(self, saved_modules, original_httpx):
-        """Restore original module state."""
+        """Restore original module state, leaving engine.xero_client importable."""
         import sys
 
         if original_httpx is not None:
@@ -1063,6 +1106,15 @@ class TestXeroSecondaryFetchFailure:
             if mod_name == "engine.xero_client" or mod_name.startswith("engine.xero_client."):
                 sys.modules.pop(mod_name)
         sys.modules.update(saved_modules)
+        # Re-import a clean copy so a later lazy `from engine.xero_client import`
+        # doesn't re-import against the real creds path under full-suite ordering.
+        if "engine.xero_client" not in sys.modules:
+            importlib.import_module("engine.xero_client")
+        # Re-bind the parent package attribute (see test_xero_real_boundary_api_failure):
+        # `from engine.xero_client import X` resolves via the parent attr, not sys.modules.
+        import engine as _engine_pkg
+
+        _engine_pkg.xero_client = sys.modules["engine.xero_client"]
 
     def test_contacts_fetch_failure_produces_partial(self):
         """Primary invoices succeed, but list_contacts raises → status=partial."""

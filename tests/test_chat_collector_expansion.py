@@ -452,10 +452,13 @@ def test_sync_no_messages(collector, mock_store):
 # =============================================================================
 
 
+@patch("lib.collectors.chat.ChatCollector._get_service")
 @patch("lib.collectors.chat.ChatCollector._list_spaces")
 @patch("lib.collectors.chat.ChatCollector._list_messages")
 @patch("lib.collectors.chat.ChatCollector._list_members")
-def test_collect_basic(mock_members, mock_messages, mock_spaces, collector, mock_space):
+def test_collect_basic(
+    mock_members, mock_messages, mock_spaces, mock_get_service, collector, mock_space
+):
     """Test basic collect flow."""
     mock_spaces.return_value = [mock_space]
     mock_messages.return_value = [

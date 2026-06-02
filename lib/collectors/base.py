@@ -28,6 +28,13 @@ class BaseCollector(ABC):
         self.logger = logging.getLogger(self.__class__.__name__)
         self.last_sync: datetime | None = None
         self.sync_interval: int = config.get("sync_interval", 300)
+        # Rows stored by the most recent sync() — set in sync(), read by
+        # tombstoning subclasses to build a seen-set from the actual stored fetch.
+        self._last_synced_rows: list[dict] = []
+        # Raw fetch dict from the most recent sync() — lets a subclass read
+        # fetch-completeness metadata (e.g. _primary_fetch_complete) before
+        # deciding whether tombstoning is safe.
+        self._last_raw_data: dict[str, Any] = {}
 
         # Resilience infrastructure
         self.retry_config = RetryConfig(
@@ -158,6 +165,14 @@ class BaseCollector(ABC):
 
             # Step 3: Store in state (THE WIRING)
             stored = self.store.insert_many(self.target_table, transformed)
+            # Expose exactly the rows that were stored this cycle so a subclass
+            # (e.g. tombstoning collectors) can derive a seen-set from the SAME
+            # fetch that populated the table — never a second collect() that could
+            # diverge and delete just-stored live rows. Also expose the raw fetch
+            # so a subclass can read fetch-completeness metadata (e.g.
+            # _primary_fetch_complete) before deciding to tombstone.
+            self._last_synced_rows = transformed
+            self._last_raw_data = raw_data
 
             # Step 4: Determine status, update sync state, record success
             self.last_sync = datetime.now(timezone.utc)

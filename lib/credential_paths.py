@@ -25,9 +25,10 @@ def google_sa_file() -> Path:
 
     Resolution order:
     1. GOOGLE_SA_FILE env var (explicit override — required for CI/Docker/Linux)
-    2. Platform-specific default:
-       - macOS: ~/Library/Application Support/gogcli/sa-bW9saGFtQGhybW55LmNv.json
-       - Linux: ~/.config/gogcli/sa-bW9saGFtQGhybW55LmNv.json
+    2. Platform-specific default (filename from GOOGLE_SA_FILENAME, default
+       service-account.json):
+       - macOS: ~/Library/Application Support/gogcli/<sa_filename>
+       - Linux: ~/.config/gogcli/<sa_filename>
 
     Returns:
         Path to the SA file. Caller must check .exists() before use.
@@ -36,7 +37,9 @@ def google_sa_file() -> Path:
     if env_val:
         return Path(env_val).expanduser().resolve()
 
-    sa_filename = "sa-bW9saGFtQGhybW55LmNv.json"
+    # Filename is configurable so generic path code does not leak a specific
+    # user's identity (the previous default base64-encoded a real email).
+    sa_filename = os.environ.get("GOOGLE_SA_FILENAME", "service-account.json")
     system = platform.system()
     if system == "Darwin":
         return Path.home() / "Library" / "Application Support" / "gogcli" / sa_filename

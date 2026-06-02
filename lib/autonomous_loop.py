@@ -679,7 +679,9 @@ class AutonomousLoop:
 
             freshness_tracker = DataFreshnessTracker(db_path)
             freshness_dashboard = freshness_tracker.get_freshness_dashboard()
-            results["data_freshness_sources"] = len(freshness_dashboard.get("sources", []))
+            results["data_freshness_sources"] = len(
+                freshness_dashboard.get("avg_freshness_by_source", {})
+            )
         except (sqlite3.Error, ValueError, OSError) as e:
             logger.error(f"Intelligence: data freshness tracking failed: {e}")
 
