@@ -477,6 +477,8 @@ class TestSyncHealthSurfacing:
 
     def test_B_get_status_mixed_healthy_and_failed(self):
         """[B] get_status shows both healthy collectors and failed ones."""
+        from datetime import datetime, timezone
+
         from lib.collectors.orchestrator import CollectorOrchestrator
 
         orch = object.__new__(CollectorOrchestrator)
@@ -485,14 +487,18 @@ class TestSyncHealthSurfacing:
             "tasks": type("Fake", (), {"sync_interval": 300})(),
         }
         orch.init_failures = {"gmail": "auth error"}
+        # Use a just-now timestamp: "healthy" requires data fresher than 3x the
+        # sync_interval (900s here). A hardcoded calendar date would make this
+        # test pass only near that date and rot into a stale-data failure later.
+        recent = datetime.now(timezone.utc).isoformat()
         orch.store = type(
             "FakeStore",
             (),
             {
                 "get_sync_states": lambda self: {
                     "tasks": {
-                        "last_sync": "2026-03-13T10:00:00",
-                        "last_success": "2026-03-13T10:00:00",
+                        "last_sync": recent,
+                        "last_success": recent,
                         "items_synced": 42,
                         "error": None,
                     },
