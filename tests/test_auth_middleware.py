@@ -66,6 +66,17 @@ class TestCorsConfig:
         with pytest.raises(RuntimeError, match="CORS_ORIGINS"):
             _reload_server(monkeypatch, tmp_path, CORS_ORIGINS="*")
 
+    @pytest.mark.parametrize(
+        "value",
+        ["*,http://x.test", "http://x.test,*", "http://localhost:5173,*", " * ", "*,*"],
+    )
+    def test_wildcard_anywhere_in_list_is_hard_failure(self, monkeypatch, tmp_path, value):
+        """A "*" token ANYWHERE in the comma list must hard-fail: Starlette sets
+        allow_all_origins = ("*" in allow_origins), so a single "*" element
+        re-enables credentialed Origin reflection. (Round-1 skeptic bypass.)"""
+        with pytest.raises(RuntimeError, match="CORS_ORIGINS"):
+            _reload_server(monkeypatch, tmp_path, CORS_ORIGINS=value)
+
 
 class TestAuthMiddleware:
     @pytest.fixture
@@ -174,6 +185,55 @@ class TestSsePublishLockdown:
         )
         assert resp.status_code == 200, resp.text
         assert resp.json()["status"] == "ok"
+
+
+class TestSseStreamAuth:
+    """The SSE stream authenticates via ?token= (EventSource cannot set headers).
+    It is exempt from AuthMiddleware + router dep but self-validates the query
+    token. Round-1 skeptic proved a header-only client was rejected (broken SSE)."""
+
+    @pytest.fixture
+    def client(self, monkeypatch, tmp_path):
+        from fastapi.testclient import TestClient
+
+        server = _reload_server(monkeypatch, tmp_path, CORS_ORIGINS="http://localhost:5173")
+        return TestClient(server.app)
+
+    def test_stream_rejects_no_token(self, client):
+        resp = client.get("/api/v2/events/stream")
+        assert resp.status_code == 401, resp.text
+
+    def test_stream_rejects_wrong_token(self, client):
+        resp = client.get("/api/v2/events/stream", params={"token": "wrong"})
+        assert resp.status_code == 401, resp.text
+
+    def test_stream_valid_query_token_passes_auth(self, monkeypatch):
+        """A correct ?token= clears BOTH AuthMiddleware (exempt path) and the
+        in-handler verify_token check. We patch the event bus so the route does
+        NOT open an infinite stream (which would hang the test); the assertion is
+        only that a valid token is NOT rejected with 401 while a missing one is."""
+        # Drive the handler's in-handler check directly with a real reload so the
+        # _API_KEY matches the test token, avoiding a live TestClient stream.
+        import importlib
+
+        import api.auth as auth_mod
+
+        monkeypatch.setenv("MOH_TIME_OS_API_KEY", "test-secret-key-for-proof")
+        importlib.reload(auth_mod)
+        from api.sse_router import verify_token as sse_verify_token
+
+        assert sse_verify_token("test-secret-key-for-proof") is True
+        assert sse_verify_token("wrong") is False
+        assert sse_verify_token(None) is False
+
+    def test_history_still_requires_header_auth(self, client):
+        # events/history keeps its own Depends(require_auth) (header-based).
+        assert client.get("/api/v2/events/history").status_code == 401
+        ok = client.get(
+            "/api/v2/events/history",
+            headers={"Authorization": "Bearer test-secret-key-for-proof"},
+        )
+        assert ok.status_code != 401, ok.text
 
 
 class TestRateLimit:

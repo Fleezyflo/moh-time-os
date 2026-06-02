@@ -23,6 +23,12 @@ logger = logging.getLogger(__name__)
 # Methods that mutate state or trigger destructive/governance actions.
 _WRITE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
+# The SSE stream is the one route that cannot use the Authorization header (the
+# browser EventSource API forbids custom headers), so it authenticates via a
+# ?token= query param validated IN the handler (api/sse_router.stream_events).
+# AuthMiddleware lets this exact path through; the handler self-validates.
+_SELF_AUTH_PATHS = frozenset({"/api/v2/events/stream"})
+
 
 def _bearer_token(scope: Scope) -> str | None:
     """Extract the Bearer token from the ASGI scope headers, if present."""
@@ -63,8 +69,9 @@ class AuthMiddleware:
         method = scope.get("method", "GET")
         path = scope.get("path", "")
 
-        # CORS preflight and the public allowlist bypass auth.
-        if method == "OPTIONS" or auth.is_public_path(path):
+        # CORS preflight, the public allowlist, and the self-authenticating SSE
+        # stream (validates ?token= in-handler) bypass the header-based gate.
+        if method == "OPTIONS" or auth.is_public_path(path) or path in _SELF_AUTH_PATHS:
             await self.app(scope, receive, send)
             return
 

@@ -10496,8 +10496,28 @@
     },
     "/api/v2/events/stream": {
       "get": {
-        "description": "Server-Sent Events endpoint for real-time data push.\n\nReturns SSE stream with events:\n- signal_new: New signal detected\n- resolution_update: Resolution queue item changed\n- metric_refresh: Dashboard metrics updated\n- system_status: Heartbeat/connection status\n\nKeep-alive heartbeat sent every 30 seconds.",
+        "description": "Server-Sent Events endpoint for real-time data push.\n\nReturns SSE stream with events:\n- signal_new: New signal detected\n- resolution_update: Resolution queue item changed\n- metric_refresh: Dashboard metrics updated\n- system_status: Heartbeat/connection status\n\nKeep-alive heartbeat sent every 30 seconds.\n\nAUTH: the browser EventSource API cannot set request headers, so this route\nauthenticates via the ?token= query param (validated here in constant time)\ninstead of the Authorization header. It is therefore exempt from the global\nAuthMiddleware and the router-level dependency, and self-validates instead.",
         "operationId": "stream_events_api_v2_events_stream_get",
+        "parameters": [
+          {
+            "description": "Bearer token (EventSource cannot set headers)",
+            "in": "query",
+            "name": "token",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Bearer token (EventSource cannot set headers)",
+              "title": "Token"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -10506,13 +10526,18 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
-        "security": [
-          {
-            "HTTPBearer": []
-          }
-        ],
         "summary": "Stream Events",
         "tags": [
           "Events"

@@ -3728,6 +3728,11 @@ export interface paths {
          *     - system_status: Heartbeat/connection status
          *
          *     Keep-alive heartbeat sent every 30 seconds.
+         *
+         *     AUTH: the browser EventSource API cannot set request headers, so this route
+         *     authenticates via the ?token= query param (validated here in constant time)
+         *     instead of the Authorization header. It is therefore exempt from the global
+         *     AuthMiddleware and the router-level dependency, and self-validates instead.
          */
         get: operations["stream_events_api_v2_events_stream_get"];
         put?: never;
@@ -12442,7 +12447,10 @@ export interface operations {
     };
     stream_events_api_v2_events_stream_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Bearer token (EventSource cannot set headers) */
+                token?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -12456,6 +12464,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

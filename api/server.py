@@ -63,13 +63,17 @@ app = FastAPI(
 # credentialed CSRF against the (now-authenticated) mutation surface (WS2).
 DEFAULT_DEV_ORIGIN = "http://localhost:5173"
 cors_origins_env = os.getenv("CORS_ORIGINS", DEFAULT_DEV_ORIGIN)
-if cors_origins_env.strip() == "*":
+cors_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()] or [DEFAULT_DEV_ORIGIN]
+# Reject "*" as ANY parsed element, not just the bare "*" string. Starlette sets
+# allow_all_origins = ("*" in allow_origins), so "*,x" / "host,*" would still
+# enable credentialed Origin reflection (credentialed CSRF) against the
+# authenticated mutation surface. Validate element-level (WS2).
+if "*" in cors_origins:
     raise RuntimeError(
-        "CORS_ORIGINS='*' is forbidden: wildcard origins with credentials reflect "
+        "CORS_ORIGINS contains '*': wildcard origins with credentials reflect "
         "the request Origin and enable credentialed CSRF. Set an explicit "
         "comma-separated allowlist (e.g. CORS_ORIGINS=http://localhost:5173)."
     )
-cors_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()] or [DEFAULT_DEV_ORIGIN]
 
 app.add_middleware(
     CORSMiddleware,
@@ -126,7 +130,10 @@ from api.sse_router import sse_router  # noqa: E402
 _AUTH_DEP = [Depends(require_auth)]
 app.include_router(spec_router, prefix="/api/v2", dependencies=_AUTH_DEP)
 app.include_router(intelligence_router, prefix="/api/v2/intelligence", dependencies=_AUTH_DEP)
-app.include_router(sse_router, prefix="/api/v2", dependencies=_AUTH_DEP)
+# sse_router is NOT blanket-gated: its routes are gated individually
+# (events/history + events/publish carry Depends(require_auth); events/stream
+# self-validates ?token= because the browser EventSource API cannot set headers).
+app.include_router(sse_router, prefix="/api/v2")
 app.include_router(paginated_router, prefix="/api/v2/paginated", dependencies=_AUTH_DEP)
 app.include_router(export_router, dependencies=_AUTH_DEP)
 app.include_router(governance_router, dependencies=_AUTH_DEP)
