@@ -119,12 +119,15 @@ class TestErrorPropagation:
 
         collector = TasksCollector(config={}, store=MagicMock())
 
-        # Mock _run_command to raise an exception
-        with patch.object(collector, "_run_command", side_effect=Exception("Command failed")):
+        # collect() fetches via the Google Tasks API (_get_service), not a CLI
+        # command. Patch that seam to fail so the test exercises the real error
+        # path without making a network call. The contract (base.py:69) is that
+        # collect() MUST propagate the failure rather than fake success.
+        with patch.object(collector, "_get_service", side_effect=Exception("Service failed")):
             with pytest.raises(Exception) as exc_info:
                 collector.collect()
 
-            assert "Command failed" in str(exc_info.value)
+            assert "Service failed" in str(exc_info.value)
 
 
 if __name__ == "__main__":
