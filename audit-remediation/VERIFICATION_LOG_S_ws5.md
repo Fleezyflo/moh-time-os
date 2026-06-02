@@ -106,7 +106,23 @@ For EVERY method call added or modified, one row. Filled BEFORE each edit.
 - Files: docs/adr/0028-dual-findings-stores.md (Create). Markdown only.
 
 ### Task 6 — signal_suppression fixture schema
-- **Pre-verified:** `signal_suppressions`=schema.py:1879, `signal_dismiss_log`=:1893 (canonical TABLES defs); `create_fresh(conn)` builds all TABLES.
+- **Pre-verified:** `signal_suppressions`=schema.py:1879, `signal_dismiss_log`=:1893 (canonical TABLES defs); `create_fresh(conn: sqlite3.Connection) -> dict`=schema_engine.py:629 builds all TABLES; `SignalSuppression(db_path: Path)`=signal_suppression.py:85, `dismiss_signal`=:107; `import sqlite3` already at test file line 7.
+- **[DECISION] honored:** fix in the FIXTURE (apply canonical schema via create_fresh), NOT self-provisioning in the constructor (would diverge from centralized-schema convention; live tables exist).
+- **Step 1 FAIL (observed):** `sqlite3.OperationalError: no such table: signal_dismiss_log` at signal_suppression.py:124. Full file = **20 failed** (entire suite red — bare tmp_path DB has no schema).
+- **Step 3 PASS:** after fixture applies create_fresh → **20 passed**. RED is the mutation proof (revert fixture → 20 fail on missing table). This FIXES 20 pre-existing failures (baseline 005956b: 20 failed → WS5: 20 passed).
+- Files: tests/test_signal_suppression.py. ruff clean.
+
+---
+
+## Per-task summary
+
+| Task | Files | Tests | Net effect vs baseline 005956b |
+|------|-------|-------|--------------------------------|
+| 1+2 (commit 2c9a76f) | trajectory.py, errors.py(new), test_trajectory_bulk.py(new), test_trajectory.py | test_trajectory_bulk 4 pass; test_trajectory 70 pass/1 pre-existing-fail | +4 new tests; test_trajectory unchanged (70/1) |
+| 3 (commit b31d811) | daemon.py, test_daemon_intelligence_mode.py(new) | 3 pass | +3 new tests; daemon surface 0 net-new failures |
+| 4 (commit 44fe704) | signals.py, test_intelligence_signals.py | 30 pass | +1 new test (29→30); 0 regressions |
+| 5 (commit 9b48015) | docs/adr/0028-dual-findings-stores.md(new) | n/a | doc only |
+| 6 (commit TBD) | test_signal_suppression.py | 20 pass | FIXES 20 pre-existing failures (20 fail → 20 pass) |
 
 ---
 
