@@ -5,11 +5,15 @@ Every assertion would fail if the code still referenced phantom columns.
 """
 
 import json
+import os
 import sqlite3
+import tempfile
 from contextlib import contextmanager
+from unittest.mock import patch
 
 import pytest
 
+from lib.actions.action_framework import ActionFramework
 from tests.fixtures.fixture_db import create_fixture_db
 
 # =============================================================================
@@ -97,6 +101,35 @@ def fixture_store(tmp_path):
     conn = create_fixture_db(db_path)
     conn.close()
     return _FixtureStore(db_path)
+
+
+@pytest.fixture
+def framework(fixture_store):
+    """Provide an ActionFramework backed by the fixture store.
+
+    ActionFramework.__init__ calls lib.outbox.get_outbox(), whose lazy singleton
+    opens the live DB via sqlite3.connect when cold. In isolation (singleton not
+    yet warmed by another test) that trips conftest's determinism guard. Inject a
+    temp-DB-backed outbox via patch so construction is deterministic and isolated.
+    Pattern mirrors tests/test_action_framework.py:112 and
+    tests/test_auth_and_side_effects.py:409.
+    """
+    from lib.outbox import SideEffectOutbox
+
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
+        outbox_db_path = f.name
+
+    outbox = SideEffectOutbox(db_path=outbox_db_path)
+    with patch("lib.outbox.get_outbox", return_value=outbox):
+        fw = ActionFramework(store=fixture_store, dry_run=True)
+
+    try:
+        yield fw
+    finally:
+        try:
+            os.unlink(outbox_db_path)
+        except FileNotFoundError:
+            pass
 
 
 # =============================================================================
@@ -221,16 +254,15 @@ class TestStoreProposal:
     source/confidence_score → encoded in payload._meta JSON.
     """
 
-    def test_store_proposal_inserts_with_valid_columns(self, fixture_store):
+    def test_store_proposal_inserts_with_valid_columns(self, fixture_store, framework):
         """_store_proposal() must insert without OperationalError."""
         from lib.actions.action_framework import (
-            ActionFramework,
             ActionProposal,
             ActionSource,
             RiskLevel,
         )
 
-        fw = ActionFramework(store=fixture_store, dry_run=True)
+        fw = framework
         proposal = ActionProposal(
             id="action_test_001",
             type="task_create",
@@ -261,16 +293,15 @@ class TestStoreProposal:
         assert payload["_meta"]["source"] == "signal"
         assert payload["_meta"]["confidence_score"] == 0.85
 
-    def test_store_proposal_preserves_payload_data(self, fixture_store):
+    def test_store_proposal_preserves_payload_data(self, fixture_store, framework):
         """Original payload keys survive alongside _meta."""
         from lib.actions.action_framework import (
-            ActionFramework,
             ActionProposal,
             ActionSource,
             RiskLevel,
         )
 
-        fw = ActionFramework(store=fixture_store, dry_run=True)
+        fw = framework
         proposal = ActionProposal(
             id="action_test_002",
             type="email_send",
@@ -304,17 +335,16 @@ class TestRejectAction:
     Rejection info encoded into error (TEXT) and result (TEXT).
     """
 
-    def test_reject_stores_in_error_and_result(self, fixture_store):
+    def test_reject_stores_in_error_and_result(self, fixture_store, framework):
         """Rejection info written to error and result columns."""
         from lib.actions.action_framework import (
-            ActionFramework,
             ActionProposal,
             ActionSource,
             ActionStatus,
             RiskLevel,
         )
 
-        fw = ActionFramework(store=fixture_store, dry_run=True)
+        fw = framework
 
         # First store a proposal
         proposal = ActionProposal(
@@ -342,12 +372,9 @@ class TestRejectAction:
         assert rejection["rejected_by"] == "moh"
         assert rejection["reason"] == "Too risky for now"
 
-    def test_reject_nonexistent_returns_false(self, fixture_store):
+    def test_reject_nonexistent_returns_false(self, framework):
         """Rejecting nonexistent action returns False."""
-        from lib.actions.action_framework import ActionFramework
-
-        fw = ActionFramework(store=fixture_store, dry_run=True)
-        result = fw.reject_action("nonexistent_id", "moh", "n/a")
+        result = framework.reject_action("nonexistent_id", "moh", "n/a")
         assert result is False
 
 
@@ -362,7 +389,7 @@ class TestGetActionHistory:
     Bug fix A-S1: target_id does not exist. Filter uses target_system instead.
     """
 
-    def test_history_filters_by_target_system(self, fixture_store):
+    def test_history_filters_by_target_system(self, fixture_store, framework):
         """entity_id filter maps to target_system column."""
         # Insert two actions with different target_system values
         fixture_store.insert(
@@ -388,9 +415,7 @@ class TestGetActionHistory:
             },
         )
 
-        from lib.actions.action_framework import ActionFramework
-
-        fw = ActionFramework(store=fixture_store, dry_run=True)
+        fw = framework
 
         # Filter by target_system = "task"
         results = fw.get_action_history(entity_id="task")
@@ -402,7 +427,7 @@ class TestGetActionHistory:
         assert len(results) == 1
         assert results[0]["id"] == "hist_002"
 
-    def test_history_no_filter_returns_all(self, fixture_store):
+    def test_history_no_filter_returns_all(self, fixture_store, framework):
         """No entity_id filter returns all terminal-status actions."""
         fixture_store.insert(
             "actions",
@@ -427,13 +452,10 @@ class TestGetActionHistory:
             },
         )
 
-        from lib.actions.action_framework import ActionFramework
-
-        fw = ActionFramework(store=fixture_store, dry_run=True)
-        results = fw.get_action_history()
+        results = framework.get_action_history()
         assert len(results) == 2
 
-    def test_history_type_filter(self, fixture_store):
+    def test_history_type_filter(self, fixture_store, framework):
         """action_type filter works on type column."""
         fixture_store.insert(
             "actions",
@@ -458,9 +480,6 @@ class TestGetActionHistory:
             },
         )
 
-        from lib.actions.action_framework import ActionFramework
-
-        fw = ActionFramework(store=fixture_store, dry_run=True)
-        results = fw.get_action_history(action_type="task_create")
+        results = framework.get_action_history(action_type="task_create")
         assert len(results) == 1
         assert results[0]["type"] == "task_create"
