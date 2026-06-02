@@ -10,6 +10,7 @@
 		<string>/Users/molhamhomsi/clawd/moh_time_os/.venv/bin/python</string>
 		<string>-m</string>
 		<string>lib.daemon</string>
+		<string>start</string>
 	</array>
 
 	<key>WorkingDirectory</key>
