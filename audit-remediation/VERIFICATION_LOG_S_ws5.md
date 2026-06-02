@@ -165,6 +165,27 @@ All 5 tasks `verify=pass`, `mutation_proved=True`, 0/15 refutes (FIX-R1 test ali
 
 A Round 3 is required (a real in-scope defect was fixed) to confirm FIX-R2 introduces no regression and re-verify on the now-faster path.
 
+## Adversarial verify Workflow round 3 (workflow wq21htivc, 20 read-only agents) — all 5 PASS, 0/15 refutes, FIX-R2 confirmed
+
+All 5 tasks `verify=pass`, `mutation_proved=True`, **0/15 refutes** with full skeptic coverage (subagent_tokens 1.62M, all 20 agents returned StructuredOutput). FIX-R2 introduced no regression:
+- **T1 now mutation-proves BOTH the bulk-traj AND the deep-profile-skip:** verifier's Mutation A (drop `traj=` AND `client_name=`) → BOTH `client_trajectory.assert_not_called()` AND `client_deep_profile.assert_not_called()` FAIL (call_count=2 each — the N×M blowup returns). Mutation B (num_windows 12→6) → exact-kwargs assertion FAILS. The literal 12 is pinned in source (trajectory.py:734) + test (test_trajectory_bulk.py:82-84). Skeptics ran byte-identical-equivalence PoCs on the real fixture DB (bulk-12 == per-entity-12, 0 shape/value mismatches) and confirmed the absent-client fallback fires per-entity with num_windows=12 and the name still threaded.
+- **T2/T3/T4/T6** re-confirmed sound (typed-error OSError chain caught at all caller sites incl. the daemon `_run_job`/`except` wrapper; default-OFF + call-time env proven by single-process multi-env PoC; dead-call removal mutation-proved; fixture-not-constructor proven by empty `git diff` on source).
+- **No skeptic reproduced any in-scope defect.** The FIX-R2 perf concern from Round 2 no longer appears (resolved). All encountered failures (`test_unified_intelligence.py` bare-Exception ×4, `test_daemon_intelligence.py` cycle_count, `test_daemon_resilience.py` STATE_FILE/PID_FILE module-constant refactor, `test_canonical_pipeline.py` docstring-grep flake) independently re-proven pre-existing on main (byte-identical test files / identical failures on base) and correctly excluded as non-refutation grounds.
+
+**Convergence:** Round 1 (0/15, drove FIX-R1 stale-test alignment) → Round 2 (0/15 refutes but the T1 lens reproduced a REAL in-scope perf defect with a 110s live-DB PoC → FIX-R2) → Round 3 (0/15, FIX-R2 confirmed regression-free, perf 110s→0.15s). Matches the WS4 pattern: the adversarial process caught a real defect (the residual deep-profile N×M blowup) that solo verification + the original plan both missed. **WS5 verified sound. Proceeding to PHASE 4 pre-merge.**
+
+## Per-task FINAL commit map (7 commits on fix/ws5-detection-intelligence)
+
+| Commit | Scope |
+|--------|-------|
+| 2c9a76f | T1 bulk migration + T2 typed error (cohesive: same method's error path) |
+| b31d811 | T3 MOH_INTELLIGENCE_FULL_MODE switch (default OFF) |
+| 44fe704 | T4 delete dead portfolio_trajectory call |
+| 9b48015 | T5 ADR-0028 dual findings stores |
+| c81810d | T6 signal_suppression fixture schema |
+| 48fb05d | FIX-R1 (round 1): align portfolio error test to typed-error contract |
+| 7d8b459 | FIX-R2 (round 2): skip per-client deep-profile in bulk path (110s→0.15s) |
+
 ---
 
 ## Pre-Commit Verification
