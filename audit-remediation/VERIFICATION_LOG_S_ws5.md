@@ -188,20 +188,24 @@ All 5 tasks `verify=pass`, `mutation_proved=True`, **0/15 refutes** with full sk
 
 ---
 
-## Pre-Commit Verification
+## Pre-Commit / Pre-Merge Verification (PHASE 4, after rebase onto origin/main 005956b)
 
 | Check | Result | Output snippet |
 |-------|--------|---------------|
-| `ruff check` on changed files | | |
-| `ruff format --check` on changed files | | |
-| `bandit -ll --skip B101,B608` on changed source files | | |
-| `pytest` (WS5 + regression surface) | | |
-| `check_mypy_baseline.py --strict-only` | | |
-| Every method call in changed files resolves to a real `def` | | |
-| Verification log included in `git add` | | |
+| `ruff check` on all changed files | PASS | "All checks passed!" (trajectory.py, errors.py, signals.py, daemon.py + 5 test files) |
+| `ruff format` on changed files | PASS | formatted on Mac via pinned .venv (0.15.1), re-staged each commit |
+| `bandit -ll --skip B101,B608` on changed source | PASS | "No issues identified." (trajectory.py, errors.py, signals.py, daemon.py) |
+| WS5 test surface | PASS | **129 passed / 0 failed** (test_trajectory_bulk, test_trajectory, test_daemon_intelligence_mode, test_intelligence_signals, test_signal_suppression) |
+| **Full-suite regression (vs fresh baseline 005956b)** | **PASS — NET-NEW = 0** | branch **300** failures vs baseline **321**; `comm -13 baseline branch` = EMPTY (zero net-new); WS5 FIXES 21 pre-existing (20 test_signal_suppression + 1 test_trajectory error_handling). Regression-free + net-positive. |
+| `check_mypy_baseline.py --strict-only` | PASS (exit 0) | "Strict island errors: 0 ... Mypy check passed (strict islands clean, baseline stable)". Legacy 159 < baseline 813. WS5 files not in strict islands; 0 new mypy errors. No .mypy-baseline.txt resync needed (check passed clean). |
+| Every method call in changed files resolves to a real `def` | PASS | all interfaces read + cited in the Pre-Edit tables above (client_full_trajectory, bulk_client_trajectories, client_portfolio_overview, client_deep_profile, detect_all_signals, create_fresh, portfolio_trajectory) |
+| Verification log included in `git add` | PASS | this file staged with every commit |
+| Adversarial verify (3 rounds, read-only) | PASS | R1 0/15 (→FIX-R1), R2 0/15 + 1 real perf PoC (→FIX-R2), R3 0/15 confirmed. See rounds above. |
 
 ## PR Scope Check
 
-| Planned PR | Files in this commit | Matches plan? |
+| Planned PR | Files in this branch | Matches plan? |
 |-----------|---------------------|--------------|
-| WS5 (one PR per plan, 6 tasks) | | |
+| WS5 (ONE PR, 6 tasks) | lib/intelligence/trajectory.py, lib/intelligence/errors.py (new), lib/intelligence/signals.py, lib/daemon.py, docs/adr/0028-dual-findings-stores.md (new), tests/test_trajectory_bulk.py (new), tests/test_daemon_intelligence_mode.py (new), tests/test_intelligence_signals.py, tests/test_signal_suppression.py, tests/test_trajectory.py, audit-remediation/VERIFICATION_LOG_S_ws5.md | YES — every file maps to a WS5 task (T1-T6) or an adversarial-round fix (FIX-R1/R2) or the verification log. No unrelated concerns bundled. |
+
+**Net-new failure proof (the regression-free gate):** `comm -13 /tmp/ws5_baseline_failures.txt /tmp/ws5_branch_failures.txt` returned EMPTY — there is NO test that fails on the WS5 branch but passes on origin/main 005956b. 21 baseline failures are FIXED by WS5 (all under test_signal_suppression.py + test_portfolio_health_trajectory_error_handling).
