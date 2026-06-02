@@ -212,6 +212,35 @@ def _extract_path_from_uri(database: str) -> str:
     return path
 
 
+# Repr prefixes of every unittest.mock type. A mock stringifies to e.g.
+# "<MagicMock name='db_path()' id=...>"; matching the prefix catches the mock
+# whether `database` is the mock object itself or an already-str()'d repr.
+_MOCK_REPR_PREFIXES = (
+    "<MagicMock",
+    "<NonCallableMagicMock",
+    "<Mock",
+    "<NonCallableMock",
+    "<AsyncMock",
+    "<PropertyMock",
+)
+
+
+def _is_phantom_db_target(database, db_str: str) -> bool:
+    """True if `database` is a mocked/None path that would leak a phantom file.
+
+    A test that mocks the DB path so a provider returns a MagicMock or None
+    makes production code call ``sqlite3.connect(str(that))``. SQLite then
+    creates an empty file in the CWD named after the repr (e.g.
+    ``<MagicMock name='db_path()' id=...>`` or ``None``). These never match the
+    live-DB patterns, so without this check the leak is silent. See PR #132.
+    """
+    if database is None:
+        return True
+    if db_str == "None":
+        return True
+    return any(db_str.startswith(prefix) for prefix in _MOCK_REPR_PREFIXES)
+
+
 def _guarded_sqlite_connect(database, *args, **kwargs):
     """Intercept sqlite3.connect to block live DB access.
 
@@ -223,6 +252,20 @@ def _guarded_sqlite_connect(database, *args, **kwargs):
 
     # Log the connection attempt for audit
     _log_db_probe("sqlite3.connect", actual_path)
+
+    # Block mocked/None targets BEFORE handing off to the real connect, which
+    # would otherwise create an empty phantom file named after the repr.
+    if _is_phantom_db_target(database, db_str):
+        raise RuntimeError(
+            f"DETERMINISM VIOLATION: Test attempted to sqlite3.connect to a "
+            f"mocked/None DB path ({db_str!r}).\n"
+            "A path-provider (e.g. paths.db_path) was mocked without a real "
+            "return value, so connect() would create an empty phantom file in "
+            "the repo root named after the repr.\n"
+            "Fix: build a real fixture DB and point the path at it. See "
+            "tests/fixtures/fixture_db.py (create_fixture_db) and the recipe in "
+            "tests/test_auth_and_side_effects.py."
+        )
 
     # Check against forbidden patterns using pure string comparison
     # No filesystem probes - use _is_forbidden_path which is string-only
