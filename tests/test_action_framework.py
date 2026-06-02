@@ -17,7 +17,9 @@ Covers:
 """
 
 import json
-from unittest.mock import Mock
+import os
+import tempfile
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -108,8 +110,30 @@ def policy_engine():
 
 @pytest.fixture
 def framework(mock_store, policy_engine):
-    """Provide an action framework instance."""
-    return ActionFramework(store=mock_store, policy_engine=policy_engine, dry_run=False)
+    """Provide an action framework instance.
+
+    ActionFramework.__init__ calls lib.outbox.get_outbox(), whose lazy singleton
+    opens the live DB via sqlite3.connect when cold. In isolation (singleton not
+    yet warmed by another test) that trips conftest's determinism guard. Inject a
+    temp-DB-backed outbox via patch so construction is deterministic and isolated.
+    Pattern mirrors tests/test_auth_and_side_effects.py:409.
+    """
+    from lib.outbox import SideEffectOutbox
+
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
+        outbox_db_path = f.name
+
+    outbox = SideEffectOutbox(db_path=outbox_db_path)
+    with patch("lib.outbox.get_outbox", return_value=outbox):
+        fw = ActionFramework(store=mock_store, policy_engine=policy_engine, dry_run=False)
+
+    try:
+        yield fw
+    finally:
+        try:
+            os.unlink(outbox_db_path)
+        except FileNotFoundError:
+            pass
 
 
 # =============================================================================
@@ -503,7 +527,13 @@ class TestActionFrameworkApproval:
 
         action = framework._get_proposal(action_id)
         assert action["status"] == ActionStatus.REJECTED.value
-        assert action["rejection_reason"] == "Not needed"
+        # Bug fix A-U1: actions table has no rejection_reason column. reject_action
+        # encodes the reason into error (TEXT) and result (JSON with rejected_by/reason).
+        # See lib/actions/action_framework.py:285-296.
+        assert action["error"] == "Not needed"
+        rejection = json.loads(action["result"])
+        assert rejection["rejected_by"] == "user_1"
+        assert rejection["reason"] == "Not needed"
 
     def test_cannot_approve_non_existent_action(self, framework):
         """Should fail to approve non-existent action."""
