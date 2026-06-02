@@ -122,7 +122,35 @@ For EVERY method call added or modified, one row. Filled BEFORE each edit.
 | 3 (commit b31d811) | daemon.py, test_daemon_intelligence_mode.py(new) | 3 pass | +3 new tests; daemon surface 0 net-new failures |
 | 4 (commit 44fe704) | signals.py, test_intelligence_signals.py | 30 pass | +1 new test (29→30); 0 regressions |
 | 5 (commit 9b48015) | docs/adr/0028-dual-findings-stores.md(new) | n/a | doc only |
-| 6 (commit TBD) | test_signal_suppression.py | 20 pass | FIXES 20 pre-existing failures (20 fail → 20 pass) |
+| 6 (commit c81810d) | test_signal_suppression.py | 20 pass | FIXES 20 pre-existing failures (20 fail → 20 pass) |
+
+---
+
+## Adversarial verify Workflow round 1 (workflow wvvvscyk2, 20 read-only agents) — ALL 5 tasks PASS, 0/15 refutes
+
+Independent verify (re-run suite + mutation-proof on /tmp copies) + 3 skeptics (correctness-regression / data-safety / spec-completeness) per committed task, read-only against the ws5 worktree using the existing main `.venv` by absolute path. NO `isolation:'worktree'` (would leak — .venv gitignored).
+
+| Task | verify | mutation_proved | skeptic refutes | passed |
+|------|--------|-----------------|-----------------|--------|
+| T1-bulk-trajectory | pass | True | 0/3 | ✅ |
+| T2-typed-error | pass | True | 0/3 | ✅ |
+| T3-full-mode-switch | pass | True | 0/3 | ✅ |
+| T4-dead-code | pass | True | 0/3 | ✅ |
+| T6-suppression-fixture | pass | True | 0/3 | ✅ |
+
+**Watch-items each independently cleared with live PoCs / /tmp mutations / git-diff proofs:**
+- **num_windows=12 mismatch (T1):** verifier mutated /tmp copy (dropped `traj=`) → `client_trajectory.assert_not_called()` FAILED (called 2×) — test genuinely guards the fix. Literal `12` confirmed in BOTH source (trajectory.py:721,727) and test assertion; bulk default `6` (query_engine.py:934) is overridden → 12 is load-bearing. Absent-client fallback (bulk_map.get→None→per-entity traj=None path) proven intact. Skeptics: bulk_client_trajectories ALWAYS builds each value with the `windows` key (query_engine.py:1018-1034) → malformed-slice case unreachable.
+- **typed error raises vs swallowed (T2):** /tmp mutation (revert raise→return []) → `pytest.raises(TrajectoryComputationError)` FAILS on mutant. MRO `TrajectoryComputationError→IntelligenceError→OSError` confirmed; caught at ALL caller sites (autonomous_loop.py:721, unified_intelligence.py:279,442) AND the daemon `_run_job` wrapper (daemon.py:476) → neither crashes the daemon nor silently logs as 0. client_full_trajectory still returns None on its own errors (unchanged).
+- **default OFF + call-time env (T3):** two /tmp mutants (hardcode quick=True → full-mode test fails; hardcode quick=False → default test fails) — both wirings load-bearing. Single-process PoC: unset→True, =1→False, =0→True proves call-time read (not import-frozen). Class is `TimeOSDaemon` (daemon.py:142).
+- **full-mode N×M safety (T3):** full-mode detect_all_signals primes the cache (signals.py:1800-1818); per-entity engine fallback gated behind `cache is None` → never hit on the daemon path; portfolio TREND returns None immediately. T1 is sufficient to make full mode safe.
+- **T4 dead-code:** /tmp mutation (re-add the call) → `portfolio_trajectory.assert_not_called()` FAILS (called 1×). engine.portfolio_trajectory still exists at query_engine.py:1129 (only the call removed). Branch still returns None; client/person branches byte-identical.
+- **T6 fixture-not-constructor:** `git diff main HEAD -- lib/intelligence/signal_suppression.py` EMPTY (source unchanged); fix is +13 lines in the fixture only. /tmp mutation (revert fixture) → `no such table: signal_dismiss_log`. 20/20 pass.
+
+**No in-scope defect reproduced by any of the 15 skeptics.** All pre-existing failures the agents encountered (`test_portfolio_health_trajectory_error_handling` bare-Exception; 4 `test_unified_intelligence.py` engine errors; `test_audit_remediation_v4` orchestrator AttributeError) were independently re-proven pre-existing on main (byte-identical test files / identical failure on base) and correctly excluded as non-refutation grounds.
+
+**One completeness nit (NOT a refute) → driven to a fix:** the correctness-regression skeptic for T1/T2 flagged that `test_portfolio_health_trajectory_error_handling` still asserted `result == []` (the OLD contract T2 removed) rather than `pytest.raises(TrajectoryComputationError)`. It was a pre-existing failure (bare `Exception` never in the catch tuple — fails on main too), but post-T2 the assertion documents a removed contract. **FIX-R1:** updated the test to use a realistic `sqlite3.OperationalError` and assert `pytest.raises(TrajectoryComputationError)` — aligning it with T2's contract AND turning the last pre-existing failure green. Mutation proof: revert T2's raise→return [] makes this test fail (function returns [] instead of raising). Folded into the T1+T2 commit (it is the T2 contract). After FIX-R1: `test_trajectory.py` = 71 passed / 0 failed; full WS5 surface = **128 passed / 0 failed**.
+
+**Decision on rounds:** Round 1 returned 0/15 refutes with full skeptic coverage (subagent_tokens 1.58M, all 20 agents returned StructuredOutput — no harness starvation) and every watch-item cleared by an independent PoC. WS5 is far smaller/simpler than WS4 (no data-loss surfaces, no Xero/concurrency, no destructive SQL). The single nit was a stale-test alignment, not a code defect. Running a Round 2 after FIX-R1 to confirm the test change is itself sound and re-confirm 0 refutes on the now-zero-failure surface.
 
 ---
 

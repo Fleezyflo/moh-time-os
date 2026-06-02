@@ -656,12 +656,23 @@ class TestFullTrajectory:
         mock_engine.engine.client_trajectory.assert_not_called()
 
     def test_portfolio_health_trajectory_error_handling(self, mock_engine):
-        """Should handle errors gracefully."""
-        mock_engine.engine.client_portfolio_overview = Mock(side_effect=Exception("DB error"))
+        """A DB/engine failure must raise TrajectoryComputationError, not return [].
 
-        result = mock_engine.portfolio_health_trajectory()
+        WS5 Task 2: the error path now raises a typed error (subclass of OSError) so a
+        genuine engine failure is distinguishable from an empty portfolio, instead of
+        being masked as `return []`. Uses a realistic sqlite3 error (the previous bare
+        Exception was never in the caught (sqlite3.Error, ValueError, OSError) tuple).
+        """
+        import sqlite3
 
-        assert result == []
+        from lib.intelligence.errors import TrajectoryComputationError
+
+        mock_engine.engine.client_portfolio_overview = Mock(
+            side_effect=sqlite3.OperationalError("DB error")
+        )
+
+        with pytest.raises(TrajectoryComputationError):
+            mock_engine.portfolio_health_trajectory()
 
 
 # =====================================================================
