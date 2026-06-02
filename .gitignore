@@ -126,3 +126,23 @@ cron.md
 loga.md
 *-diagnostic.md
 codebase-hygiene-report.md
+
+# One-off audit/handoff scratch produced by remediation sessions — these are
+# transient working artifacts (reports, plans, salvaged patches, throwaway
+# archives), not source. Ignore so they can't pollute `git status` or be
+# swept into a commit by a stray `git add -A`. Real deliverables get committed
+# explicitly by their owning session, not blanket-tracked from the worktree.
+/Archive.zip
+*.docx
+/AUDIT_PROMPT.md
+/AUDIT_SUMMARY.txt
+/CANONICALIZATION.md
+/NEXT_AGENT_PROMPT.md
+/OPERATIONAL_AUDIT_*.md
+/REMEDIATION_PATH_*.md
+/TECH_DEBT_*.md
+/system-audit.md
+/audit-2026-*/
+audit-remediation/salvage/
+audit-remediation/wf_ws*.js
+docs/superpowers/
