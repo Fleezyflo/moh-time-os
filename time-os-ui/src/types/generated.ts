@@ -288,6 +288,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/auth/mode": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Auth Mode
+         * @description Report auth mode — always requires Bearer token.
+         */
+        get: operations["get_auth_mode_api_auth_mode_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/auth/token": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Exchange Token
+         * @description Exchange Bearer token for user identity.
+         *
+         *     Validates the API key and returns user info on success.
+         */
+        post: operations["exchange_token_api_auth_token_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/bundles": {
         parameters: {
             query?: never;
@@ -3686,6 +3728,11 @@ export interface paths {
          *     - system_status: Heartbeat/connection status
          *
          *     Keep-alive heartbeat sent every 30 seconds.
+         *
+         *     AUTH: the browser EventSource API cannot set request headers, so this route
+         *     authenticates via the ?token= query param (validated here in constant time)
+         *     instead of the Authorization header. It is therefore exempt from the global
+         *     AuthMiddleware and the router-level dependency, and self-validates instead.
          */
         get: operations["stream_events_api_v2_events_stream_get"];
         put?: never;
@@ -5986,6 +6033,16 @@ export interface components {
             approved_by: string;
         };
         /**
+         * AuthModeResponse
+         * @description Auth mode response.
+         */
+        AuthModeResponse: {
+            /** Auth Required */
+            auth_required: boolean;
+            /** Mode */
+            mode: string;
+        };
+        /**
          * BatchActionResponse
          * @description Response for batch action proposal.
          */
@@ -6910,6 +6967,18 @@ export interface components {
             threshold: number;
         };
         /**
+         * TokenResponse
+         * @description Response body for token exchange (kept for UI compatibility).
+         */
+        TokenResponse: {
+            /** Role */
+            role: string;
+            /** Token */
+            token: string;
+            /** User Id */
+            user_id: string;
+        };
+        /**
          * UnmuteRequest
          * @description Request body for unmuting an entity's notifications.
          */
@@ -7374,6 +7443,46 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_auth_mode_api_auth_mode_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuthModeResponse"];
+                };
+            };
+        };
+    };
+    exchange_token_api_auth_token_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TokenResponse"];
                 };
             };
         };
@@ -12338,7 +12447,10 @@ export interface operations {
     };
     stream_events_api_v2_events_stream_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Bearer token (EventSource cannot set headers) */
+                token?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -12352,6 +12464,15 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

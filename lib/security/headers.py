@@ -134,31 +134,15 @@ class SecurityHeadersMiddleware:
             await self.app(scope, receive, send)
             return
 
-        # Extract request headers
-        request_headers = dict(scope.get("headers", []))
-        origin = None
-        for key, value in request_headers.items():
-            if key.lower() == b"origin":
-                origin = value.decode("utf-8", errors="ignore")
-                break
-
         async def send_with_headers(message):
             """Wrap send to inject security headers."""
             if message["type"] == "http.response.start":
                 # Extract headers from response
                 headers = list(message.get("headers", []))
 
-                # Add CORS headers if origin is provided
-                if origin and is_cors_allowed(origin, self.allowed_origins):
-                    headers.append((b"access-control-allow-origin", origin.encode()))
-                    headers.append(
-                        (b"access-control-allow-methods", ",".join(CORS_ALLOWED_METHODS).encode())
-                    )
-                    headers.append(
-                        (b"access-control-allow-headers", ",".join(CORS_ALLOWED_HEADERS).encode())
-                    )
-                    headers.append((b"access-control-max-age", str(CORS_MAX_AGE).encode()))
-                    headers.append((b"access-control-allow-credentials", b"true"))
+                # CORS is owned solely by CORSMiddleware in api/server.py.
+                # SecurityHeadersMiddleware no longer emits access-control-* headers
+                # to avoid two competing CORS header sets on one response (WS2).
 
                 # Add CSP header
                 headers.append((b"content-security-policy", CSP_POLICY.encode()))

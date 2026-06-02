@@ -40,17 +40,33 @@ def monkeypatch_module():
     mp.undo()
 
 
+# API key for the wired AuthMiddleware (WS2); the mutation route below now
+# requires a Bearer token, so the test client must present it.
+_TEST_API_KEY = "test-secret-key-for-proof"
+_AUTH_HEADERS = {"Authorization": f"Bearer {_TEST_API_KEY}"}
+
+
 @pytest.fixture(scope="module")
 def client(fixture_db_path, monkeypatch_module):
     """Create test client with fixture DB injected."""
     # Redirect lib.paths.db_path AND data_dir to fixture DB BEFORE importing app
     monkeypatch_module.setattr(lib.paths, "db_path", lambda: fixture_db_path)
     monkeypatch_module.setattr(lib.paths, "data_dir", lambda: fixture_db_path.parent)
+    # Set a known API key and reload api.auth so its import-time _API_KEY matches
+    # the Bearer token the tests send (WS2 AuthMiddleware now gates mutations).
+    monkeypatch_module.setenv("MOH_TIME_OS_API_KEY", _TEST_API_KEY)
+    import importlib
+
+    import api.auth
+
+    importlib.reload(api.auth)
 
     # Now import and create the app (it will use the patched path)
-    from api.server import app
+    import api.server
 
-    return TestClient(app)
+    importlib.reload(api.server)
+
+    return TestClient(api.server.app)
 
 
 class TestStubEndpoints:
@@ -61,6 +77,7 @@ class TestStubEndpoints:
         response = client.post(
             "/api/tasks/link",
             json={"links": [{"task_id": "t1", "project_id": "p1"}]},
+            headers=_AUTH_HEADERS,
         )
         # Should return 200 with results (not 501)
         assert response.status_code == 200

@@ -10,11 +10,15 @@ Proves:
 6. Chat command sender verification blocks unauthorized approve/reject
 """
 
+import importlib
 import os
 import tempfile
 from unittest.mock import MagicMock, patch
 
 import pytest
+
+import lib.paths
+from tests.fixtures.fixture_db import create_fixture_db
 
 # ═══════════════════════════════════════════════════════════════════════
 # Part 1: Authentication — prove every mutation endpoint rejects 401
@@ -22,17 +26,39 @@ import pytest
 
 
 @pytest.fixture
-def app_client():
-    """Create a test client with auth enforced."""
-    # Must set API key before importing auth module
-    os.environ["MOH_TIME_OS_API_KEY"] = "test-secret-key-for-proof"
+def app_client(tmp_path, monkeypatch):
+    """Test client with auth enforced.
+
+    Builds a seeded fixture DB, patches lib.paths.db_path/data_dir to it, resets
+    the StateStore singleton, and reloads api.auth (so its import-time _API_KEY
+    re-reads the env) then api.server. Uses a plain TestClient (NOT a context
+    manager) so no DB-touching startup event fires. This dodges both the
+    determinism guard and the removed create_app contract.
+    """
+    db_path = tmp_path / "fixture.db"
+    conn = create_fixture_db(db_path)
+    conn.close()
+
+    monkeypatch.setenv("MOH_TIME_OS_ENV", "test")
+    monkeypatch.setenv("MOH_TIME_OS_DB", str(db_path))
+    monkeypatch.setenv("MOH_TIME_OS_API_KEY", "test-secret-key-for-proof")
+    monkeypatch.setattr(lib.paths, "db_path", lambda: db_path)
+    monkeypatch.setattr(lib.paths, "data_dir", lambda: db_path.parent)
 
     from fastapi.testclient import TestClient
 
-    from api.server import create_app
+    import lib.state_store as state_store
 
-    app = create_app()
-    return TestClient(app)
+    state_store.StateStore._instance = None
+
+    import api.auth
+
+    importlib.reload(api.auth)
+
+    import api.server as server
+
+    server = importlib.reload(server)
+    return TestClient(server.app)
 
 
 class TestAuthEnforcement:
@@ -81,11 +107,23 @@ class TestAuthEnforcement:
         )
 
     def test_accepts_correct_token(self, app_client):
-        """Auth mode endpoint is public; token exchange works with correct key."""
-        resp = app_client.get("/api/auth/mode")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["auth_required"] is True
+        """A correct Bearer token clears the auth layer (no 401)."""
+        headers = {"Authorization": "Bearer test-secret-key-for-proof"}
+        resp = app_client.get("/api/actions/pending", headers=headers)
+        assert resp.status_code != 401, resp.text
+
+    def test_destructive_delete_task_requires_auth(self, app_client):
+        """The bare @app DELETE /api/tasks/{id} route is gated (401 w/o token)."""
+        resp = app_client.delete("/api/tasks/does-not-exist")
+        assert resp.status_code == 401, resp.text
+
+    def test_sar_fulfill_delete_requires_auth(self, app_client):
+        """GDPR SAR fulfill (?action=delete&dry_run=false) is gated (401)."""
+        resp = app_client.post(
+            "/api/governance/sar/fake/fulfill",
+            params={"action": "delete", "dry_run": "false"},
+        )
+        assert resp.status_code == 401, resp.text
 
     def test_is_auth_enabled_returns_true(self):
         """is_auth_enabled() always returns True — no bypass path."""

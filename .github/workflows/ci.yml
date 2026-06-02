@@ -107,6 +107,9 @@ jobs:
       - name: Run Safety tests
         run: uv run pytest tests/test_safety.py -v --tb=short
 
+      - name: Run Auth tests
+        run: uv run pytest tests/test_auth_middleware.py "tests/test_auth_and_side_effects.py::TestAuthEnforcement" "tests/test_key_manager.py::TestAuthIntegration" -v --tb=short
+
       - name: Run Negative tests
         run: uv run pytest tests/negative/ -v --tb=short
 

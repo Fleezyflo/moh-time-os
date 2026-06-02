@@ -13,6 +13,7 @@ import type {
   Evidence,
   ApiListResponse,
 } from '../types/api';
+import { authHeader } from './auth';
 
 // API base URL: configurable via env, defaults to /api/v2 for spec-compliant endpoints
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v2';
@@ -97,7 +98,7 @@ export class ApiError extends Error {
 async function fetchJson<T>(url: string): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(url);
+    res = await fetch(url, { headers: { ...authHeader() } });
   } catch {
     // Network error (offline, CORS, etc.)
     const apiError = new ApiError(0, 'Network Error', 'Unable to connect to server');
@@ -428,7 +429,7 @@ export async function fetchClientsHealth(): Promise<{
 async function postJson<T>(url: string, body: Record<string, unknown>): Promise<T> {
   const res = await fetch(url, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -563,7 +564,7 @@ export async function checkHealth(): Promise<HealthResponse> {
 async function patchJson<T>(url: string, body: Record<string, unknown>): Promise<T> {
   const res = await fetch(url, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -576,7 +577,7 @@ async function patchJson<T>(url: string, body: Record<string, unknown>): Promise
 async function putJson<T>(url: string, body: Record<string, unknown>): Promise<T> {
   const res = await fetch(url, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
@@ -1368,7 +1369,7 @@ export async function dismissEmail(emailId: string): Promise<{ success: boolean;
 async function deleteJson<T>(url: string): Promise<T> {
   const res = await fetch(url, {
     method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...authHeader() },
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));

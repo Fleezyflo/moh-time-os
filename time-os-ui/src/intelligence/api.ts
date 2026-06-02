@@ -4,6 +4,8 @@
  * Typed functions for all intelligence layer endpoints.
  */
 
+import { authHeader } from '../lib/auth';
+
 const API_BASE = '/api/v2/intelligence';
 
 // =============================================================================
@@ -272,7 +274,7 @@ export interface TrajectoryData {
  * Typed fetch wrapper with basic error handling.
  */
 async function fetchJson<T>(url: string): Promise<ApiResponse<T>> {
-  const response = await fetch(url);
+  const response = await fetch(url, { headers: { ...authHeader() } });
   if (!response.ok) {
     // Try to extract structured error from response body
     let errorMessage = `API error: ${response.status} ${response.statusText}`;

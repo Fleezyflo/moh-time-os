@@ -57,12 +57,23 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS middleware - configurable via CORS_ORIGINS env var
-# Dev default: allow all origins; Production: set CORS_ORIGINS to comma-separated list
-cors_origins_env = os.getenv("CORS_ORIGINS", "*")
-cors_origins = (
-    ["*"] if cors_origins_env == "*" else [o.strip() for o in cors_origins_env.split(",")]
-)
+# CORS middleware - explicit allowlist only. A missing CORS_ORIGINS defaults to
+# the Vite dev origin; "*"+credentials is a hard startup failure because Starlette
+# reflects the Origin under allow_origins=["*"]+allow_credentials=True, enabling
+# credentialed CSRF against the (now-authenticated) mutation surface (WS2).
+DEFAULT_DEV_ORIGIN = "http://localhost:5173"
+cors_origins_env = os.getenv("CORS_ORIGINS", DEFAULT_DEV_ORIGIN)
+cors_origins = [o.strip() for o in cors_origins_env.split(",") if o.strip()] or [DEFAULT_DEV_ORIGIN]
+# Reject "*" as ANY parsed element, not just the bare "*" string. Starlette sets
+# allow_all_origins = ("*" in allow_origins), so "*,x" / "host,*" would still
+# enable credentialed Origin reflection (credentialed CSRF) against the
+# authenticated mutation surface. Validate element-level (WS2).
+if "*" in cors_origins:
+    raise RuntimeError(
+        "CORS_ORIGINS contains '*': wildcard origins with credentials reflect "
+        "the request Origin and enable credentialed CSRF. Set an explicit "
+        "comma-separated allowlist (e.g. CORS_ORIGINS=http://localhost:5173)."
+    )
 
 app.add_middleware(
     CORSMiddleware,
@@ -71,15 +82,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Log CORS wildcard warning in production
-if cors_origins_env == "*":
-    env_name = os.getenv("MOH_TIME_OS_ENV", "development")
-    if env_name not in ("development", "test", "artifact_validation"):
-        logger.warning(
-            "CORS_ORIGINS=* in %s environment -- restrict for production",
-            env_name,
-        )
 
 # Security headers middleware (CSP, HSTS, etc.)
 app.add_middleware(SecurityHeadersMiddleware)
@@ -93,6 +95,20 @@ collectors = CollectorOrchestrator(store=store)
 analyzers = AnalyzerOrchestrator(store=store)
 governance = get_governance(store=store)
 rate_limiter = RateLimiter()
+
+# ==== Security middleware (WS2) ====
+# AuthMiddleware is the single global gate enforcing Bearer auth on every
+# non-allowlisted route (the ~285 bare @app routes plus all mounted routers).
+from fastapi import Depends  # noqa: E402
+
+from api.auth import auth_router, require_auth  # noqa: E402
+from api.auth_middleware import AuthMiddleware, RateLimitMiddleware  # noqa: E402
+
+# NOTE: Starlette runs middleware in REVERSE registration order (last added runs
+# first). RateLimitMiddleware is added before AuthMiddleware so auth runs first
+# (reject unauthenticated requests before counting them against the limiter).
+app.add_middleware(RateLimitMiddleware, limiter=rate_limiter)
+app.add_middleware(AuthMiddleware)
 
 # UI directory (built Vite app)
 UI_DIR = paths.app_home() / "time-os-ui" / "dist"
@@ -109,15 +125,24 @@ from api.paginated_router import paginated_router  # noqa: E402
 from api.spec_router import spec_router  # noqa: E402
 from api.sse_router import sse_router  # noqa: E402
 
-app.include_router(spec_router, prefix="/api/v2")
-app.include_router(intelligence_router, prefix="/api/v2/intelligence")
+# Router-level auth dependency = defense-in-depth on top of AuthMiddleware, so a
+# mounted route stays gated even if the global middleware is ever removed (WS2).
+_AUTH_DEP = [Depends(require_auth)]
+app.include_router(spec_router, prefix="/api/v2", dependencies=_AUTH_DEP)
+app.include_router(intelligence_router, prefix="/api/v2/intelligence", dependencies=_AUTH_DEP)
+# sse_router is NOT blanket-gated: its routes are gated individually
+# (events/history + events/publish carry Depends(require_auth); events/stream
+# self-validates ?token= because the browser EventSource API cannot set headers).
 app.include_router(sse_router, prefix="/api/v2")
-app.include_router(paginated_router, prefix="/api/v2/paginated")
-app.include_router(export_router)
-app.include_router(governance_router)
+app.include_router(paginated_router, prefix="/api/v2/paginated", dependencies=_AUTH_DEP)
+app.include_router(export_router, dependencies=_AUTH_DEP)
+app.include_router(governance_router, dependencies=_AUTH_DEP)
 
-app.include_router(action_router, prefix="/api")
-app.include_router(chat_webhook_router, prefix="/api")
+app.include_router(action_router, prefix="/api", dependencies=_AUTH_DEP)
+app.include_router(chat_webhook_router, prefix="/api", dependencies=_AUTH_DEP)
+
+# Public auth handshake router — NO auth dependency (/auth/mode, /auth/token).
+app.include_router(auth_router, prefix="/api")
 
 
 # ==== DB Startup & Migrations ====
@@ -3263,7 +3288,9 @@ async def debug_config():
         "middleware_stack": middleware_stack,
         "collector_intervals": collector_intervals,
         "rate_limits": {
-            "enabled": rate_limiter is not None,
+            # True only when RateLimitMiddleware is actually registered, not
+            # merely when the RateLimiter object exists (WS2: was always-True).
+            "enabled": any(m.cls.__name__ == "RateLimitMiddleware" for m in app.user_middleware),
         },
         "environment": os.getenv("MOH_TIME_OS_ENV", "development"),
         "ui_dir": str(UI_DIR),

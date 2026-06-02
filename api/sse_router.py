@@ -26,9 +26,10 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
+from api.auth import require_auth, verify_token
 from api.response_models import DetailResponse
 
 logger = logging.getLogger(__name__)
@@ -183,7 +184,9 @@ async def _heartbeat_generator(
 
 
 @sse_router.get("/events/stream")
-async def stream_events() -> StreamingResponse:
+async def stream_events(
+    token: str | None = Query(None, description="Bearer token (EventSource cannot set headers)"),
+) -> StreamingResponse:
     """
     Server-Sent Events endpoint for real-time data push.
 
@@ -194,7 +197,18 @@ async def stream_events() -> StreamingResponse:
     - system_status: Heartbeat/connection status
 
     Keep-alive heartbeat sent every 30 seconds.
+
+    AUTH: the browser EventSource API cannot set request headers, so this route
+    authenticates via the ?token= query param (validated here in constant time)
+    instead of the Authorization header. It is therefore exempt from the global
+    AuthMiddleware and the router-level dependency, and self-validates instead.
     """
+    if not verify_token(token):
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required. Provide ?token= (EventSource).",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     event_bus = get_event_bus()
     try:
         queue = await event_bus.subscribe()
@@ -212,7 +226,11 @@ async def stream_events() -> StreamingResponse:
         raise HTTPException(status_code=500, detail="Failed to establish SSE stream") from e
 
 
-@sse_router.get("/events/history", response_model=DetailResponse)
+@sse_router.get(
+    "/events/history",
+    response_model=DetailResponse,
+    dependencies=[Depends(require_auth)],
+)
 def get_event_history(limit: int = Query(100, description="Maximum events to return")):
     """
     Get recent event history.
@@ -242,7 +260,11 @@ def get_event_history(limit: int = Query(100, description="Maximum events to ret
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
-@sse_router.post("/events/publish", response_model=DetailResponse)
+@sse_router.post(
+    "/events/publish",
+    response_model=DetailResponse,
+    dependencies=[Depends(require_auth)],
+)
 async def publish_event(
     event_type: str = Query(..., description="Type of event"),
     message: str = Query(..., description="Event message"),

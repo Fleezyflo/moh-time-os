@@ -44,6 +44,39 @@ def _get_api_key() -> str:
     return _API_KEY
 
 
+# Paths reachable without a credential: liveness/readiness, auth handshake,
+# CORS preflight, and the static UI shell. Everything else requires a Bearer token.
+PUBLIC_PATH_PREFIXES: tuple[str, ...] = (
+    "/health",
+    "/api/health",
+    "/api/auth/mode",
+    "/api/auth/token",
+    "/docs",
+    "/openapi.json",
+    "/redoc",
+    "/favicon.ico",
+    "/assets",
+)
+
+
+def is_public_path(path: str) -> bool:
+    """True if the request path is in the unauthenticated allowlist."""
+    if path in ("/", ""):
+        return True
+    return any(path == p or path.startswith(p + "/") for p in PUBLIC_PATH_PREFIXES)
+
+
+def verify_token(token: str | None) -> bool:
+    """Constant-time comparison of a presented token against the active API key.
+
+    Returns False for a missing/empty token. Shared by require_auth (the
+    FastAPI dependency) and AuthMiddleware (the global ASGI gate).
+    """
+    if not token:
+        return False
+    return secrets.compare_digest(token, _get_api_key())
+
+
 async def require_auth(
     request: Request,
     credentials: HTTPAuthorizationCredentials | None = Depends(security),
