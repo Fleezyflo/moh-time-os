@@ -1337,16 +1337,11 @@ def _evaluate_trend(
             if trajectory is None:
                 return None
         elif entity_type == "portfolio":
-            # Portfolio trajectory uses aggregate
-            trajectories = engine.portfolio_trajectory(
-                window_size_days=period_days, num_windows=num_windows
-            )
-            if not trajectories:
-                return None
-            # Aggregate across all clients
-            trajectory = {"trends": {}}
-            # Use portfolio-level aggregation from team capacity trends
-            # For now, skip portfolio trends (need custom implementation)
+            # Portfolio-level trend aggregation is not implemented. Return None
+            # immediately WITHOUT running engine.portfolio_trajectory() — that call
+            # used to loop every client (the N×M path that bypasses the C2b cache)
+            # only to discard the result. sig_portfolio_quality_declining stays inert
+            # until real portfolio aggregation is built; no wasted query runs now.
             return None
         else:
             return None

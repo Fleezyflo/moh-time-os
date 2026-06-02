@@ -85,7 +85,20 @@ For EVERY method call added or modified, one row. Filled BEFORE each edit.
 | lib/daemon.py (`_handle_intelligence`) | `self.logger.info(...)` | module-level `from lib import paths` daemon.py:33; logger set in __init__ | yes | mode logged before detection | n/a |
 
 **Override applied:** default OFF. `full_mode = os.environ.get("MOH_INTELLIGENCE_FULL_MODE","0").strip().lower() in ("1","true","yes")`; unset/"0"/anything-else → False → `quick=not False = True` (today's exact behavior). **PLAN DEVIATION (idiomatic):** plan's Step 3 added a redundant local `import os` inside the method — DROPPED because `import os` is already module-level at daemon.py:24 (verified) and the existing env-switch idiom at :619 uses module-level `os` with no local import. Env read is still at call time (inside the method body), satisfying the no-import-time-freeze requirement.
-**Test patch targets verified:** `detect_all_signals`/`update_signal_state` imported INSIDE `_handle_intelligence` (`from lib.intelligence.signals import ...`) → `monkeypatch.setattr("lib.intelligence.signals.detect_all_signals", ...)` is seen at call time. `ProposalService` defined at lib/v4/proposal_service.py:22, imported inside method → patch at definition module is seen. `Daemon.__new__(Daemon)` + `daemon.logger=MagicMock()` skips __init__ side effects; `paths.db_path()` runs for real (harmless, detect mocked).
+**Test patch targets verified:** `detect_all_signals`/`update_signal_state` imported INSIDE `_handle_intelligence` (`from lib.intelligence.signals import ...`) → `monkeypatch.setattr("lib.intelligence.signals.detect_all_signals", ...)` is seen at call time. `ProposalService` defined at lib/v4/proposal_service.py:22, imported inside method → patch at definition module is seen. `TimeOSDaemon.__new__(TimeOSDaemon)` + `daemon.logger=MagicMock()` skips __init__ side effects; `paths.db_path()` runs for real (harmless, detect mocked).
+
+### Task 4 — Delete portfolio-TREND dead code
+
+| File edited | Method called | Defined at (file:line) | Signature confirmed | Return type matches usage | Callers checked |
+|-------------|--------------|----------------------|--------------------|--------------------------|-----------------|
+| lib/intelligence/signals.py (`_evaluate_trend` portfolio branch) | DELETED `engine.portfolio_trajectory(window_size_days=, num_windows=)` | query_engine.py:1129 (still exists, just no longer called from this branch) | yes — the call removed; branch now `return None` immediately | n/a (return None unchanged) | `_evaluate_trend` (signals.py:1292); portfolio branch only reachable when entity_type=="portfolio"; the sole signal that hits it (`sig_portfolio_quality_declining`, signals.py:429) stays inert (returned None before too) |
+
+**Task 4 evidence (fail→pass observed):**
+- `engine.portfolio_trajectory` confirmed real method at query_engine.py:1129 (so `assert_not_called()` is meaningful, not a phantom); `_get_engine` at signals.py:899 (test patches it); `sig_portfolio_quality_declining` at signals.py:429 (stays inert).
+- **Step 2 FAIL (observed):** `AssertionError: Expected 'portfolio_trajectory' to not have been called. Called 1 times. Calls: [call(window_size_days=30, num_windows=4), call().__bool__()]` — proves the dead call + the emptiness `if not trajectories` ran.
+- **Step 4 PASS:** after deleting the call (branch → immediate `return None`), test passes. RED is the mutation proof.
+- **Regression:** full `test_intelligence_signals.py` WS5 = **30 passed** vs baseline 005956b = **29 passed** (+1 = my new test, 0 regressions). The branch already returned None; only the wasted query was removed (zero output change).
+- Files: lib/intelligence/signals.py, tests/test_intelligence_signals.py. ruff clean; bandit clean.
 
 ---
 
