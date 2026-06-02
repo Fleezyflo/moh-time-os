@@ -10,9 +10,11 @@ These tests verify:
 6. Non-canonical routes exist but are documented as such
 """
 
+import ast
 import importlib
 import inspect
 import sqlite3
+import textwrap
 from pathlib import Path
 from unittest.mock import patch
 
@@ -102,6 +104,28 @@ def _create_minimal_db(db_path: Path) -> None:
         );
     """)
     conn.close()
+
+
+def _called_names(method) -> set[str]:
+    """Return the set of function/method names actually CALLED in a method body.
+
+    Parses the method source with ``ast`` and walks every ``ast.Call`` node,
+    collecting the callee's name (bare ``foo()``) or attribute (``obj.foo()``).
+    This deliberately ignores names that appear only in docstrings, comments,
+    or imports, so substring-based false positives (e.g. a docstring that merely
+    mentions a function) cannot trip a "this function is not called" assertion.
+    """
+    source = textwrap.dedent(inspect.getsource(method))
+    tree = ast.parse(source)
+    names: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Call):
+            func = node.func
+            if isinstance(func, ast.Attribute):
+                names.add(func.attr)
+            elif isinstance(func, ast.Name):
+                names.add(func.id)
+    return names
 
 
 # ===========================================================================
@@ -214,14 +238,22 @@ class TestIntelligenceCanonicalPath:
     """Verify daemon intelligence uses the focused canonical path."""
 
     def test_handle_intelligence_calls_detect_all_signals(self):
-        """Daemon intelligence calls detect_all_signals, not generate_intelligence_snapshot."""
-        source = inspect.getsource(
+        """Daemon intelligence calls detect_all_signals, not generate_intelligence_snapshot.
+
+        Asserts against the set of names actually CALLED in the method body
+        (parsed via ``ast``), not raw-source substrings. The docstring of
+        ``_handle_intelligence`` mentions ``generate_intelligence_snapshot`` by
+        name to document why it is *not* used here; a substring check would
+        false-positive on that mention. The call-graph check only flags a real
+        invocation, so it still fails if someone adds an actual call.
+        """
+        called = _called_names(
             importlib.import_module("lib.daemon").TimeOSDaemon._handle_intelligence
         )
-        assert "detect_all_signals" in source
-        assert "update_signal_state" in source
-        assert "ProposalService" in source
-        assert "generate_intelligence_snapshot" not in source, (
+        assert "detect_all_signals" in called
+        assert "update_signal_state" in called
+        assert "ProposalService" in called
+        assert "generate_intelligence_snapshot" not in called, (
             "Daemon must NOT call generate_intelligence_snapshot — "
             "that's for API-time use per CANONICALIZATION.md §C1"
         )
