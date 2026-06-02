@@ -62,6 +62,14 @@ logs/
 *.bak
 *.backup
 
+# Test-isolation leak artifacts: when a test mocks db_path()/a connect path and
+# code does sqlite3.connect(str(mock_or_none)), SQLite creates a file literally
+# named after the repr. These are empty junk, never real data. Ignore so they
+# can't pollute `git status` or be committed by a stray `git add -A`.
+# (Mirrors the existing ':memory:' rule below — same class of leak.)
+<MagicMock *>
+None
+
 # Logs
 *.log
 
