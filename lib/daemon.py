@@ -574,12 +574,25 @@ class TimeOSDaemon:
         db_path_str = str(paths.db_path())
         db_path_obj = Path(db_path_str)
 
-        # Step 1: Detect signals from current data
-        self.logger.info("Running signal detection...")
+        # Step 1: Detect signals from current data.
+        # MOH_INTELLIGENCE_FULL_MODE gates full-catalog detection. Default (unset/"0")
+        # keeps the fast in-process path (quick=True, THRESHOLD-only). Set to "1"/"true"/
+        # "yes" to evaluate all 23 signals (TREND/ANOMALY/COMPOUND), which primes the bulk
+        # score/trajectory maps in detect_all_signals. Full mode is only safe now that
+        # portfolio_health_trajectory uses the bulk path (no N×12 blowup). The env var is
+        # read here at call time (not frozen at import) so the daemon picks up changes on
+        # restart without code edits — matching the MOH_GCHAT_WEBHOOK_URL idiom below.
+        full_mode = os.environ.get("MOH_INTELLIGENCE_FULL_MODE", "0").strip().lower() in (
+            "1",
+            "true",
+            "yes",
+        )
+        mode_label = "full (all signals)" if full_mode else "quick (threshold-only)"
+        self.logger.info("Running signal detection in %s mode...", mode_label)
         try:
             from lib.intelligence.signals import detect_all_signals, update_signal_state
 
-            detection = detect_all_signals(db_path_obj, quick=True)
+            detection = detect_all_signals(db_path_obj, quick=not full_mode)
             detected_signals = detection.get("signals", [])
             self.logger.info(f"Signals detected: {len(detected_signals)}")
 

@@ -623,7 +623,7 @@ class TestFullTrajectory:
         assert "overall_health" in data
 
     def test_portfolio_health_trajectory(self, mock_engine):
-        """Should analyze multiple clients."""
+        """Should analyze multiple clients via the bulk-trajectory path."""
         # Mock client list
         clients = [
             {"client_id": "c1", "client_name": "Client 1"},
@@ -631,27 +631,48 @@ class TestFullTrajectory:
         ]
         mock_engine.engine.client_portfolio_overview = Mock(return_value=clients)
 
-        # Mock profiles and trajectories
+        # Mock profiles
         mock_engine.engine.client_deep_profile = Mock(
             side_effect=[
                 self._create_mock_profile(),
                 {**self._create_mock_profile(), "client_id": "c2", "client_name": "Client 2"},
             ]
         )
-        mock_engine.engine.client_trajectory = Mock(return_value=self._create_mock_trajectory())
+        # portfolio_health_trajectory now builds ONE bulk map and feeds each client
+        # from its slice (the C2b bulk path) — mock bulk_client_trajectories, not the
+        # per-entity client_trajectory.
+        mock_engine.engine.bulk_client_trajectories = Mock(
+            return_value={
+                "c1": self._create_mock_trajectory(),
+                "c2": {**self._create_mock_trajectory(), "client_id": "c2"},
+            }
+        )
 
         result = mock_engine.portfolio_health_trajectory()
 
         assert isinstance(result, list)
         assert len(result) > 0
+        # The bulk path must NOT fall back to per-entity client_trajectory.
+        mock_engine.engine.client_trajectory.assert_not_called()
 
     def test_portfolio_health_trajectory_error_handling(self, mock_engine):
-        """Should handle errors gracefully."""
-        mock_engine.engine.client_portfolio_overview = Mock(side_effect=Exception("DB error"))
+        """A DB/engine failure must raise TrajectoryComputationError, not return [].
 
-        result = mock_engine.portfolio_health_trajectory()
+        WS5 Task 2: the error path now raises a typed error (subclass of OSError) so a
+        genuine engine failure is distinguishable from an empty portfolio, instead of
+        being masked as `return []`. Uses a realistic sqlite3 error (the previous bare
+        Exception was never in the caught (sqlite3.Error, ValueError, OSError) tuple).
+        """
+        import sqlite3
 
-        assert result == []
+        from lib.intelligence.errors import TrajectoryComputationError
+
+        mock_engine.engine.client_portfolio_overview = Mock(
+            side_effect=sqlite3.OperationalError("DB error")
+        )
+
+        with pytest.raises(TrajectoryComputationError):
+            mock_engine.portfolio_health_trajectory()
 
 
 # =====================================================================

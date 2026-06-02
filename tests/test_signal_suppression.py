@@ -20,7 +20,20 @@ from lib.intelligence.signal_suppression import (
 
 @pytest.fixture
 def suppression(tmp_path):
+    # Provision the canonical schema (signal_suppressions + signal_dismiss_log
+    # are defined in lib/schema.py and created by schema_engine.create_fresh).
+    # SignalSuppression assumes the schema is already present — consistent with
+    # the centralized-schema convention — so the fixture, not the constructor,
+    # is responsible for applying it (see ADR / finding rationale).
+    from lib import schema_engine
+
     db_path = tmp_path / "test_suppress.db"
+    conn = sqlite3.connect(str(db_path))
+    try:
+        schema_engine.create_fresh(conn)
+        conn.commit()
+    finally:
+        conn.close()
     return SignalSuppression(db_path=db_path)
 
 

@@ -618,3 +618,26 @@ class TestSignalClearing:
         # Should NOT be cleared yet (cooldown not expired)
         active = get_active_signals(entity_id="cool-client", db_path=fixture_db)
         assert len(active) == 1
+
+
+class TestPortfolioTrendDeadCodeRemoved:
+    """The portfolio TREND branch must not run the wasteful N×M portfolio_trajectory query."""
+
+    def test_portfolio_trend_returns_none_without_querying_trajectory(self):
+        from unittest.mock import MagicMock, patch
+
+        from lib.intelligence.signals import _evaluate_trend
+
+        condition = {
+            "metric": "avg_completion_rate",
+            "direction": "declining",
+            "consecutive_periods": 3,
+            "period_size_days": 30,
+        }
+        fake_engine = MagicMock()
+        with patch("lib.intelligence.signals._get_engine", return_value=fake_engine):
+            result = _evaluate_trend(condition, "portfolio", "portfolio", db_path=None)
+
+        assert result is None
+        # The dead portfolio_trajectory() call must be gone.
+        fake_engine.portfolio_trajectory.assert_not_called()
