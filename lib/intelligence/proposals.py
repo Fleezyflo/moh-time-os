@@ -1,5 +1,13 @@
 """
-Intelligence proposal generation for MOH TIME OS.
+Intelligence proposal generation for MOH TIME OS (in-memory, API-time only).
+
+NON-CANONICAL FOR THE DAEMON: This in-memory proposal engine is NOT the canonical
+persistent proposal path and must NOT be wired into the daemon pipeline. Per
+CANONICALIZATION.md §B.3, §C.1, and §D, the canonical persistent producer is the
+V4 proposal service (``lib/v4/proposal_service.py`` →
+``generate_proposals_from_signals()`` → ``proposals_v4`` table). This module is
+kept ONLY to power the on-demand briefing API, which regenerates proposals fresh
+per request; its output is ephemeral and is not a separate persistence path.
 
 Assembles scores, signals, and patterns into actionable intelligence.
 This is the layer that turns detection into communication.

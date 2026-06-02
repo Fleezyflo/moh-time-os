@@ -1,6 +1,13 @@
 """
-Autonomous Loop - The heart of MOH TIME OS.
-This is the MAIN WIRING - connects all components into one running system.
+Autonomous Loop - NON-CANONICAL on-demand pipeline for MOH TIME OS.
+
+NON-CANONICAL: This is NOT the canonical runtime. Per CANONICALIZATION.md §9 and
+§D, the canonical automatic runner is the daemon (``lib/daemon.py``), which runs
+the canonical 8-stage pipeline via the LaunchAgent. This loop is DEMOTED to a
+manual/debug trigger: it runs only on-demand via ``POST /api/cycle`` and never
+auto-runs. It has more stages than the daemon, but it is intentionally NOT kept
+in sync with the daemon pipeline — accept that divergence rather than maintaining
+two parallel runtimes. For production behavior, read and change ``lib/daemon.py``.
 """
 
 import argparse
