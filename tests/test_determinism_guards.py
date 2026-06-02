@@ -106,6 +106,60 @@ class TestSQLiteSiblingFilesBlocked:
             sqlite3.connect(f"{HOME_DB_ABSOLUTE}-wal")
 
 
+class TestMockedPathConnectBlocked:
+    """
+    Regression tests for the phantom-file leak (PR #132).
+
+    When a test mocks the DB path so a path-provider returns a MagicMock or
+    None, production code does ``sqlite3.connect(str(that))``. SQLite then
+    creates an empty file in the CWD named literally after the repr — e.g.
+    ``<MagicMock name='db_path()' id=...>`` or ``None``. These don't match the
+    live-DB patterns, so the live-DB guard never fired and the leak was silent.
+
+    The guard must reject these targets loudly so the offending test fails at
+    the connect site (with a stack trace) instead of polluting the repo root.
+    """
+
+    def test_bare_magicmock_target_blocked(self):
+        """Connecting to a bare MagicMock raises instead of leaking a file."""
+        from unittest.mock import MagicMock
+
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
+            sqlite3.connect(MagicMock())
+
+    def test_magicmock_db_path_repr_blocked(self):
+        """The exact historical signature (a called MagicMock) is blocked."""
+        from unittest.mock import MagicMock
+
+        # Mirrors production: paths.db_path() returns an unconfigured mock and
+        # the code does sqlite3.connect(str(...)). str() yields the repr.
+        mocked_path = MagicMock().db_path()
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
+            sqlite3.connect(str(mocked_path))
+
+    def test_none_object_target_blocked(self):
+        """Connecting to None (the object) raises instead of leaking 'None'."""
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
+            sqlite3.connect(None)
+
+    def test_none_string_target_blocked(self):
+        """Connecting to the literal string 'None' raises (str(None) leak)."""
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
+            sqlite3.connect("None")
+
+    def test_no_phantom_file_created_in_cwd(self, tmp_path, monkeypatch):
+        """After a blocked mock connect, no phantom file lands in the CWD."""
+        from unittest.mock import MagicMock
+
+        monkeypatch.chdir(tmp_path)
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
+            sqlite3.connect(str(MagicMock().db_path()))
+        with pytest.raises(RuntimeError, match="DETERMINISM VIOLATION"):
+            sqlite3.connect(str(None))
+        leaked = [p.name for p in tmp_path.iterdir()]
+        assert leaked == [], f"phantom files leaked into CWD: {leaked}"
+
+
 class TestURIFormatBlocked:
     """
     Regression tests for SQLite URI format variations.
