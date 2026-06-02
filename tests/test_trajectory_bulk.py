@@ -83,6 +83,33 @@ def test_portfolio_health_trajectory_calls_bulk_once():
         window_size_days=30, num_windows=12
     )
     engine.engine.client_trajectory.assert_not_called()
+    # And ZERO per-entity client_deep_profile calls: the client name comes from the
+    # portfolio overview, so the bulk path must not fire N deep-profile queries (each
+    # of which opens fresh connections — the residual N×4 blowup the bulk fix would
+    # otherwise leave behind). The entity_name must still be the overview name.
+    engine.engine.client_deep_profile.assert_not_called()
+    assert {r.entity_name for r in results} == {"Acme", "Beta"}
+
+
+def test_client_full_trajectory_uses_supplied_client_name():
+    """When client_name is supplied, no per-entity client_deep_profile call happens."""
+    engine = TrajectoryEngine(db_path=None)
+    engine.engine = MagicMock()
+
+    prebuilt = {
+        "client_id": "c1",
+        "window_size_days": 30,
+        "num_windows": 6,
+        "windows": _bulk_windows(),
+        "trends": {},
+    }
+    result = engine.client_full_trajectory("c1", windows=12, traj=prebuilt, client_name="Acme")
+
+    assert isinstance(result, FullTrajectory)
+    assert result.entity_id == "c1"
+    assert result.entity_name == "Acme"
+    # The supplied-name path must NOT call the per-entity deep-profile query.
+    engine.engine.client_deep_profile.assert_not_called()
 
 
 def test_portfolio_health_trajectory_raises_on_engine_error():

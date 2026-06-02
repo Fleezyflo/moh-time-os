@@ -563,7 +563,11 @@ class TrajectoryEngine:
     # =====================================================================
 
     def client_full_trajectory(
-        self, client_id: str, windows: int = 12, traj: dict | None = None
+        self,
+        client_id: str,
+        windows: int = 12,
+        traj: dict | None = None,
+        client_name: str | None = None,
     ) -> FullTrajectory | None:
         """
         Comprehensive trajectory analysis for a client.
@@ -577,6 +581,13 @@ class TrajectoryEngine:
                 portfolio_health_trajectory's bulk map), the per-entity
                 engine.client_trajectory query is skipped — this is the C2b
                 bulk path. When None, the per-entity query runs (direct callers).
+            client_name: Optional pre-resolved client display name. When supplied
+                (e.g. from portfolio_health_trajectory's client_portfolio_overview
+                rows), the per-entity engine.client_deep_profile lookup is SKIPPED —
+                that profile is otherwise fetched only for the name and fires 4
+                fresh-connection queries per client (a residual N×4 blowup on top of
+                the bulk-trajectory fix). When None, the per-entity deep-profile
+                lookup runs (direct callers, and the existence check it provides).
 
         Returns:
             FullTrajectory or None if client not found
@@ -586,12 +597,14 @@ class TrajectoryEngine:
             return None
 
         try:
-            # Get client info
-            profile = self.engine.client_deep_profile(client_id)
-            if not profile:
-                return None
-
-            client_name = profile.get("client_name", client_id)
+            # Get client info: reuse the name from the portfolio overview when
+            # provided, otherwise fall back to the per-entity deep-profile lookup
+            # (which also serves as the client-existence check for direct callers).
+            if client_name is None:
+                profile = self.engine.client_deep_profile(client_id)
+                if not profile:
+                    return None
+                client_name = profile.get("client_name", client_id)
 
             # Get trajectory: reuse the bulk-built window set when provided,
             # otherwise fall back to the per-entity engine query.
@@ -723,8 +736,13 @@ class TrajectoryEngine:
 
             for client in clients:
                 client_id = client["client_id"]
+                # Thread the name from the overview so client_full_trajectory does
+                # not re-fetch a per-client deep profile just for the name.
                 traj = self.client_full_trajectory(
-                    client_id, windows=12, traj=bulk_map.get(client_id)
+                    client_id,
+                    windows=12,
+                    traj=bulk_map.get(client_id),
+                    client_name=client.get("client_name", client_id),
                 )
                 if traj:
                     results.append(traj)

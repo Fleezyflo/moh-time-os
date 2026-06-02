@@ -152,6 +152,19 @@ Independent verify (re-run suite + mutation-proof on /tmp copies) + 3 skeptics (
 
 **Decision on rounds:** Round 1 returned 0/15 refutes with full skeptic coverage (subagent_tokens 1.58M, all 20 agents returned StructuredOutput — no harness starvation) and every watch-item cleared by an independent PoC. WS5 is far smaller/simpler than WS4 (no data-loss surfaces, no Xero/concurrency, no destructive SQL). The single nit was a stale-test alignment, not a code defect. Running a Round 2 after FIX-R1 to confirm the test change is itself sound and re-confirm 0 refutes on the now-zero-failure surface.
 
+## Adversarial verify Workflow round 2 (workflow wc1im2q92, 20 read-only agents) — all 5 PASS 0/15 refutes; T1 lens caught a REAL in-scope PERF defect (PoC)
+
+All 5 tasks `verify=pass`, `mutation_proved=True`, 0/15 refutes (FIX-R1 test alignment held; verifier mutated /tmp copy reverting raise→[] and confirmed it fails). Round 2's T1 mutation also proved num_windows=12 is load-bearing (mutated 12→6 → assertion FAILS). BUT the T1 correctness-regression skeptic, measuring on the LIVE DB, surfaced a **real in-scope defect with a measured PoC** (engineering correctness is not a majority vote — a lens with a working PoC wins, per the process):
+
+- **FIX-R2 (PERF — the plan's HEADLINE goal only partially met; PoC reproduced):** `portfolio_health_trajectory()` measured **110.28s** on the live DB (134 clients), NOT the claimed ~0.1s. Decomposition: `bulk_client_trajectories` ALONE = 0.10s (the bulk fix works), but `client_full_trajectory` STILL called `client_deep_profile(client_id)` PER CLIENT (trajectory.py:590) = 108.36s for 134 clients — the SAME fresh-connection N-blowup (`QueryEngine._execute` opens a new read-only connection per call, query_engine.py:77; deep_profile fires 4 queries/client) the bulk fix's docstring claims to eliminate. The deep profile was fetched ONLY for `profile["client_name"]` (verified: `profile` used at trajectory.py:590,591,594 and NOWHERE else in the method). Since full mode (Task 3) re-hits this path, the plan's premise ("full mode safe now that portfolio_health_trajectory uses the bulk path") was NOT actually satisfied.
+  - **Fix:** added `client_name: str | None = None` to `client_full_trajectory`; when supplied, the per-entity `client_deep_profile` lookup is SKIPPED (the existence check is unnecessary on the bulk path — the client came from `client_portfolio_overview()`, so it exists). `portfolio_health_trajectory` threads `client.get("client_name", client_id)` from the overview rows (which already carry `client_name`, query_engine.py:177-188). Direct callers (client_name=None) keep the per-entity deep-profile lookup + existence check unchanged.
+  - **TDD:** Step-2 FAIL observed: `test_portfolio_health_trajectory_calls_bulk_once` → `client_deep_profile ... Called 2 times. Calls: [call('c1'), call('c2')]`; `test_client_full_trajectory_uses_supplied_client_name` → `TypeError: ... unexpected keyword argument 'client_name'`. Step-4 PASS after the fix. **Mutation proof = the RED step** (without client_name threading, deep_profile fires per client).
+  - **Perf PROVEN on live DB (read-only timed run, signal.alarm guard):** `clients=134 trajectories=134 elapsed=0.15s` — down from 110.28s. The plan's ~0.1s headline goal is now actually met. Full mode is genuinely safe.
+  - Files: lib/intelligence/trajectory.py, tests/test_trajectory_bulk.py. ruff clean. Full WS5 surface after FIX-R2 = **129 passed / 0 failed**.
+  - Direct-caller regression: `test_client_full_trajectory_found` and the other TestFullTrajectory tests (client_name=None) still pass → the deep-profile + existence-check path is intact.
+
+A Round 3 is required (a real in-scope defect was fixed) to confirm FIX-R2 introduces no regression and re-verify on the now-faster path.
+
 ---
 
 ## Pre-Commit Verification
