@@ -68,6 +68,25 @@ For EVERY method call added or modified, one row. Filled BEFORE each edit.
 
 **Note on origin/main movement:** baseline advanced `0852199` → `005956b` (PR #139 `feat/collector-status-entry-recovery` merged mid-session). The PHASE-4 regression comparison uses `005956b` (current origin/main). Will rebase onto current origin/main before pushing.
 
+### Task 3 evidence (fail→pass observed)
+- **PLAN-TEST BUG caught by TDD:** plan's test imported `from lib.daemon import Daemon` → `ImportError: cannot import name 'Daemon'`. The class is **`TimeOSDaemon`** (daemon.py:142), not `Daemon`. Fixed the test helper. (Same class of plan-test bug WS4 hit with `CapacityCommandPage7Engine`.)
+- **Step 2 FAIL (observed, post-fix):** `test_full_mode_env_runs_quick_false` → `AssertionError: assert True is False` (daemon hardcodes `quick=True`). `test_default_mode_is_quick` + `test_explicit_zero_is_quick` PASS pre-change (today's default IS quick=True) — proving the change preserves default-OFF.
+- **Step 4 PASS:** after `quick=not full_mode` (env read at call time), all 3 pass. RED step is the mutation proof (revert → full-mode test fails).
+- **CALL-TIME read proven:** same daemon process, two test invocations with different env (unset vs "1") yield different `quick` → env is NOT import-frozen.
+- **Regression PROVEN pre-existing (vs baseline 005956b, identical per-file):** test_daemon_intelligence.py 11 failed/1 passed (BOTH — root cause `AttributeError: 'AutonomousLoop' object has no attribute 'cycle_count'`, unrelated to mode switch); test_daemon_resilience.py 1 failed/19 errors (BOTH); test_daemon_state_atomic.py 2 passed; test_daemon_status.py 4 passed. Net-new daemon failures = 0.
+- Files: lib/daemon.py, tests/test_daemon_intelligence_mode.py. ruff clean; bandit clean.
+
+### Task 3 — MOH_INTELLIGENCE_FULL_MODE switch (DEFAULT OFF)
+
+| File edited | Method called | Defined at (file:line) | Signature confirmed | Return type matches usage | Callers checked |
+|-------------|--------------|----------------------|--------------------|--------------------------|-----------------|
+| lib/daemon.py (`_handle_intelligence`) | `detect_all_signals(db_path_obj, quick=not full_mode)` | signals.py:1779 | yes — `(db_path=None, quick=False, categories=None) -> dict` | yes (`.get("signals", [])`) | sole scheduled caller is daemon `_handle_intelligence:582`; `quick` passed as keyword (test asserts `kwargs["quick"]`) |
+| lib/daemon.py (`_handle_intelligence`) | `os.environ.get("MOH_INTELLIGENCE_FULL_MODE", "0")` | stdlib; `import os` ALREADY at daemon.py:24 (module-level) | yes | read AT CALL TIME inside the method (NOT import-time frozen) — matches existing idiom `os.environ.get("MOH_GCHAT_WEBHOOK_URL","")` at daemon.py:619 | n/a |
+| lib/daemon.py (`_handle_intelligence`) | `self.logger.info(...)` | module-level `from lib import paths` daemon.py:33; logger set in __init__ | yes | mode logged before detection | n/a |
+
+**Override applied:** default OFF. `full_mode = os.environ.get("MOH_INTELLIGENCE_FULL_MODE","0").strip().lower() in ("1","true","yes")`; unset/"0"/anything-else → False → `quick=not False = True` (today's exact behavior). **PLAN DEVIATION (idiomatic):** plan's Step 3 added a redundant local `import os` inside the method — DROPPED because `import os` is already module-level at daemon.py:24 (verified) and the existing env-switch idiom at :619 uses module-level `os` with no local import. Env read is still at call time (inside the method body), satisfying the no-import-time-freeze requirement.
+**Test patch targets verified:** `detect_all_signals`/`update_signal_state` imported INSIDE `_handle_intelligence` (`from lib.intelligence.signals import ...`) → `monkeypatch.setattr("lib.intelligence.signals.detect_all_signals", ...)` is seen at call time. `ProposalService` defined at lib/v4/proposal_service.py:22, imported inside method → patch at definition module is seen. `Daemon.__new__(Daemon)` + `daemon.logger=MagicMock()` skips __init__ side effects; `paths.db_path()` runs for real (harmless, detect mocked).
+
 ---
 
 ## Pre-Commit Verification
