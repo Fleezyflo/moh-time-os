@@ -75,7 +75,14 @@ class DriveCollector(BaseCollector):
             days = self.config.get("lookback_days", 60)
             max_results = self.config.get("max_results", 300)
 
-            threshold = (datetime.now(timezone.utc) - timedelta(days=days)).isoformat() + "Z"
+            # RFC 3339 with a single zone designator. isoformat() on an
+            # offset-aware UTC datetime already emits "+00:00"; appending "Z"
+            # produced "...+00:00Z" (two designators), which Drive rejects with
+            # HttpError 400 "Invalid Value" reason=invalid location=q. strftime
+            # never emits an offset, so the double-designator bug cannot recur.
+            threshold = (datetime.now(timezone.utc) - timedelta(days=days)).strftime(
+                "%Y-%m-%dT%H:%M:%SZ"
+            )
 
             # Recent files
             recent_result = (

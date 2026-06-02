@@ -433,6 +433,85 @@ class TestDriveCollectorFailure:
                 drive.collect()
 
 
+class TestDriveQueryFormat:
+    """Drive q-string modifiedTime bound must be valid RFC 3339.
+
+    Regression: collect() built the bound as ``isoformat() + "Z"`` on an
+    offset-aware UTC datetime, yielding ``...+00:00Z`` (TWO zone designators).
+    Drive rejects that with ``HttpError 400 "Invalid Value" reason=invalid
+    location=q`` and silently returns 0 files, so Drive was never collected.
+    """
+
+    def _capture_recent_q(self) -> str:
+        """Run collect() against a mocked service and return the recent-files q."""
+        from lib.collectors.drive import DriveCollector
+
+        store = FakeStore()
+        drive = DriveCollector(config={"max_retries": 0}, store=store)
+
+        captured: dict[str, str] = {}
+
+        def list_side_effect(**kwargs):
+            # The recent-files query filters on modifiedTime; the shared query
+            # uses sharedWithMe. Capture only the modifiedTime one.
+            if "modifiedTime" in kwargs.get("q", ""):
+                captured["q"] = kwargs["q"]
+            request = MagicMock()
+            request.execute.return_value = {"files": []}
+            return request
+
+        service = MagicMock()
+        service.files.return_value.list.side_effect = list_side_effect
+
+        with patch.object(drive, "_get_service", return_value=service):
+            drive.collect()
+
+        assert "q" in captured, "collect() never issued a modifiedTime query"
+        return captured["q"]
+
+    def test_modified_time_has_exactly_one_zone_designator(self):
+        """The modifiedTime literal must carry one zone designator, not two."""
+        import re
+
+        q = self._capture_recent_q()
+
+        # Extract the quoted modifiedTime literal: modifiedTime > '<literal>'
+        match = re.search(r"modifiedTime > '([^']*)'", q)
+        assert match, f"could not find modifiedTime literal in q: {q!r}"
+        literal = match.group(1)
+
+        # A valid RFC 3339 timestamp ends in EITHER 'Z' OR a numeric offset
+        # (+HH:MM / -HH:MM), never both.
+        ends_with_z = literal.endswith("Z")
+        # Offset sign appears in the time portion (after the 'T'), e.g. +00:00.
+        time_part = literal.split("T", 1)[-1]
+        has_offset = "+" in time_part or "-" in time_part
+
+        assert not (ends_with_z and has_offset), (
+            f"modifiedTime literal {literal!r} has TWO zone designators "
+            "(trailing 'Z' AND a numeric offset); Drive rejects this with "
+            "HttpError 400 'Invalid Value'"
+        )
+        assert ends_with_z or has_offset, (
+            f"modifiedTime literal {literal!r} has NO zone designator; "
+            "RFC 3339 requires exactly one"
+        )
+
+    def test_modified_time_is_parseable_rfc3339(self):
+        """The literal must round-trip through datetime parsing as UTC."""
+        import re
+
+        q = self._capture_recent_q()
+        match = re.search(r"modifiedTime > '([^']*)'", q)
+        assert match, f"could not find modifiedTime literal in q: {q!r}"
+        literal = match.group(1)
+
+        # datetime.fromisoformat handles offsets and (3.11+) a trailing 'Z'.
+        parsed = datetime.fromisoformat(literal)
+        assert parsed.tzinfo is not None, "parsed bound must be timezone-aware"
+        assert parsed.utcoffset() == timezone.utc.utcoffset(None)
+
+
 class TestContactsCollectorFailure:
     """Contacts collect() must raise, not return {'contacts': [], ...}."""
 
