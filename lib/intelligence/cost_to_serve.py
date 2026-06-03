@@ -258,7 +258,7 @@ class CostToServeEngine:
                 cost_drivers=cost_drivers,
             )
 
-        except (sqlite3.Error, ValueError, OSError) as e:
+        except Exception as e:
             logger.error(f"Error computing client cost for {client_id}: {e}", exc_info=True)
             return None
 
@@ -330,7 +330,7 @@ class CostToServeEngine:
                 has_scope_creep=has_scope_creep,
             )
 
-        except (sqlite3.Error, ValueError, OSError) as e:
+        except Exception as e:
             logger.error(f"Error computing project cost for {project_id}: {e}", exc_info=True)
             return None
 
@@ -440,7 +440,7 @@ class CostToServeEngine:
                 bottom_unprofitable=bottom_unprofitable,
             )
 
-        except (sqlite3.Error, ValueError, OSError) as e:
+        except Exception as e:
             logger.error(f"Error computing portfolio profitability: {e}", exc_info=True)
             return None
 
@@ -508,7 +508,7 @@ class CostToServeEngine:
 
             return sorted(hidden_cost_clients, key=lambda c: c["efficiency_ratio"])
 
-        except (sqlite3.Error, ValueError, OSError) as e:
+        except Exception as e:
             logger.error(f"Error identifying hidden cost clients: {e}", exc_info=True)
             return []
 
@@ -546,7 +546,7 @@ class CostToServeEngine:
 
             return sorted(rankings, key=lambda r: r["efficiency_ratio"], reverse=True)
 
-        except (sqlite3.Error, ValueError, OSError) as e:
+        except Exception as e:
             logger.error(f"Error computing profitability ranking: {e}", exc_info=True)
             return []
 

@@ -22,7 +22,6 @@ Code rules enforced:
 """
 
 import logging
-import sqlite3
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -280,7 +279,7 @@ class ScenarioEngine:
                 capacity_impact_pct=-task_pct,
             )
 
-        except (sqlite3.Error, ValueError, OSError) as e:
+        except Exception as e:
             logger.error(f"Error modeling client loss for {client_id}: {e}", exc_info=True)
             return None
 
@@ -422,7 +421,7 @@ class ScenarioEngine:
                 capacity_impact_pct=task_gain_pct,
             )
 
-        except (sqlite3.Error, ValueError, OSError) as e:
+        except Exception as e:
             logger.error(f"Error modeling client addition: {e}", exc_info=True)
             return None
 
@@ -499,7 +498,7 @@ class ScenarioEngine:
                 logger.error(f"Unknown change_type: {change_type}")
                 return None
 
-        except (sqlite3.Error, ValueError, OSError) as e:
+        except Exception as e:
             logger.error(f"Error modeling resource change for {person_name}: {e}", exc_info=True)
             return None
 
@@ -870,7 +869,7 @@ class ScenarioEngine:
                 capacity_impact_pct=0.0,
             )
 
-        except (sqlite3.Error, ValueError, OSError) as e:
+        except Exception as e:
             logger.error(f"Error modeling pricing change for {client_id}: {e}", exc_info=True)
             return None
 
@@ -965,7 +964,7 @@ class ScenarioEngine:
                 else 0,
             )
 
-        except (sqlite3.Error, ValueError, OSError) as e:
+        except Exception as e:
             logger.error(f"Error modeling capacity shift for {lane_id}: {e}", exc_info=True)
             return None
 
@@ -1076,7 +1075,7 @@ class ScenarioEngine:
                 capacity_impact_pct=0.0,
             )
 
-        except (sqlite3.Error, ValueError, OSError) as e:
+        except Exception as e:
             logger.error(f"Error modeling workload rebalance: {e}", exc_info=True)
             return None
 
@@ -1145,7 +1144,7 @@ class ScenarioEngine:
                 tradeoff_summary=tradeoff_summary,
             )
 
-        except (sqlite3.Error, ValueError, OSError) as e:
+        except Exception as e:
             logger.error(f"Error comparing scenarios: {e}", exc_info=True)
             return None
 
