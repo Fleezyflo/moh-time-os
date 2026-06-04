@@ -5,6 +5,7 @@ All components read from and write to this single source of truth.
 
 import json
 import logging
+import re
 import sqlite3
 import threading
 from contextlib import contextmanager
@@ -16,6 +17,49 @@ from lib import db as db_module
 from lib import paths, safe_sql
 
 logger = logging.getLogger(__name__)
+
+# Statements that mutate data or schema. Routed through query() they would bypass
+# the write lock and the typed helpers, so query() rejects them (use execute_write()
+# / transaction() instead). Anything not listed here — SELECT, WITH, EXPLAIN, PRAGMA,
+# VALUES — is treated as a read and allowed.
+_WRITE_KEYWORDS = frozenset(
+    {
+        "INSERT",
+        "UPDATE",
+        "DELETE",
+        "REPLACE",
+        "CREATE",
+        "DROP",
+        "ALTER",
+        "TRUNCATE",
+        "VACUUM",
+        "ATTACH",
+        "DETACH",
+        "REINDEX",
+    }
+)
+
+# Strips a leading SQL comment: a `-- line` comment through end of line, or a
+# `/* block */` comment (non-greedy). Applied repeatedly so stacked/leading
+# comments and whitespace are peeled before the first keyword is read.
+_LEADING_COMMENT_RE = re.compile(r"^\s*(?:--[^\n]*\n|/\*.*?\*/)", re.DOTALL)
+_FIRST_WORD_RE = re.compile(r"[A-Za-z_]+")
+
+
+def _first_sql_keyword(sql: str) -> str:
+    """Return the uppercased first SQL keyword, ignoring leading whitespace/comments.
+
+    Returns "" when the statement is empty or has no leading word token.
+    """
+    stripped = sql
+    while True:
+        new = _LEADING_COMMENT_RE.sub("", stripped, count=1)
+        if new == stripped:
+            break
+        stripped = new
+    stripped = stripped.lstrip()
+    match = _FIRST_WORD_RE.match(stripped)
+    return match.group(0).upper() if match else ""
 
 
 class StateStore:
@@ -254,8 +298,14 @@ class StateStore:
     def query(self, sql: str, params: list = None) -> list[dict]:
         """Execute a read-only query. Returns list of dicts.
 
-        For writes/DDL use ``execute_write()`` or ``transaction()`` instead.
+        Rejects write/DDL statements (INSERT/UPDATE/DELETE/REPLACE/CREATE/DROP/
+        ALTER and friends) with a RuntimeError — those must go through
+        ``execute_write()`` or ``transaction()`` so the write lock and typed
+        helpers are not bypassed. SELECT, WITH...SELECT, EXPLAIN and PRAGMA reads
+        are allowed.
         """
+        if _first_sql_keyword(sql) in _WRITE_KEYWORDS:
+            raise RuntimeError("query() is read-only; use execute_write()")
         return [dict(row) for row in self._raw_query(sql, params)]
 
     def _raw_query(self, sql: str, params: list = None) -> list[sqlite3.Row]:
