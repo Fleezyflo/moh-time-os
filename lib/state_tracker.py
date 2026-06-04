@@ -119,7 +119,7 @@ def mark_collected(source: str) -> None:
     # UPDATE only last_sync; leave items_synced, status, error, etc. intact.
     # If no row exists yet (first-ever sync), the collector's own
     # update_sync_state() call has already created it.
-    store.query(
+    store.execute_write(
         "UPDATE sync_state SET last_sync = ? WHERE source = ?",
         [now, source],
     )

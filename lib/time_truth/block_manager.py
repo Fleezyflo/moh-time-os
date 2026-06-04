@@ -168,7 +168,7 @@ class BlockManager:
         # All checks passed - assign
         now = datetime.now(timezone.utc).isoformat()
 
-        self.store.query(
+        self.store.execute_write(
             "UPDATE time_blocks SET task_id = ?, updated_at = ? WHERE id = ?",
             [task_id, now, block_id],
         )
@@ -190,7 +190,7 @@ class BlockManager:
         now = datetime.now(timezone.utc).isoformat()
 
         # Clear block
-        self.store.query(
+        self.store.execute_write(
             "UPDATE time_blocks SET task_id = NULL, updated_at = ? WHERE id = ?",
             [now, block_id],
         )
