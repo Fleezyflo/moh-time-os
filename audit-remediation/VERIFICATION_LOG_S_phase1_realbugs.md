@@ -187,3 +187,35 @@ hides outages (CLAUDE.md: "No stubs returning success").
 | bandit | PASS | exit 0 |
 
 Files in this commit: `lib/intelligence/engine.py`, this log. One purpose (BUG-5). NO test file changed (the 6 fixed tests were already correct; the 7th — `get_critical_items` dict shape — is BUG-5b, a separate PR).
+
+**BUG-5 status: shipped — PR #149.**
+
+---
+
+## BUG-2 — correlation_confidence subtracts naive vs aware datetimes  [branch: fix/correlation-confidence-naive-aware-tz]
+
+### Root cause
+`CorrelationConfidenceCalculator._temporal_proximity` (correlation_confidence.py:175) computed
+`reference_time - signal.detected_at`. `reference_time` defaults to `datetime.now(timezone.utc)`
+(aware) while `signal.detected_at` can be **naive** (test helper builds naive `datetime(...)`;
+production `persistence.py:271` reads a stored value that may lack tz). Subtracting mixed-awareness
+datetimes raises `TypeError: can't subtract offset-naive and offset-aware datetimes`. The 12 failing
+tests are exactly those that omit `reference_time` (→ aware default vs naive `detected_at`).
+
+### Fix
+Added module-level `_as_utc(dt)`: naive → assume UTC (tag), aware → convert to UTC. Normalize BOTH
+operands before subtraction. Production robustness fix; the tests already correctly exercise the
+default-`reference_time` path (no test change).
+
+### Pre-Commit Verification
+| Check | Result | Output |
+|-------|--------|--------|
+| TDD red (before) | CONFIRMED | `12 failed, 7 passed` test_correlation_confidence |
+| TDD green (after) | PASS | `19 passed` test_correlation_confidence |
+| regression (correlation_engine) | PASS | `62 passed` |
+| ruff / ruff format / bandit | PASS | clean |
+
+Files in this commit: `lib/intelligence/correlation_confidence.py`, this log. One purpose (BUG-2).
+(Note: PR #147 was rebased twice as parallel PRs #145/#146/#148/#149 merged ahead of it; the only
+conflict each time was this shared log file, resolved by taking main's sections + re-appending BUG-2.
+The BUG-2 production fix never conflicted.)
