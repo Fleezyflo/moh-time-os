@@ -93,6 +93,10 @@ class ChatCollector(BaseCollector):
             all_messages = []
             space_metadata = {}
             space_members_by_space = {}
+            # Per-space sub-operation failures. A space whose messages or members
+            # fail to fetch is recorded here instead of aborting the whole cycle
+            # (the spaces that DID succeed are still collected and stored).
+            partial_failures: list[dict[str, str]] = []
 
             # For each space, collect messages, metadata, and members
             for space in spaces:
@@ -104,7 +108,13 @@ class ChatCollector(BaseCollector):
                 space_metadata[space_name] = space
 
                 # Collect messages
-                messages = self._list_messages(service, space_name, max_messages_per_space)
+                messages, msg_error = self._list_messages(
+                    service, space_name, max_messages_per_space
+                )
+                if msg_error is not None:
+                    partial_failures.append(
+                        {"space": space_name, "component": "messages", "error": msg_error}
+                    )
                 for msg in messages:
                     msg["_space_name"] = space_name
                     msg["_space_display_name"] = space.get("displayName", space_name)
@@ -118,13 +128,22 @@ class ChatCollector(BaseCollector):
                         space_members_by_space[space_name] = members
                 except COLLECTOR_ERRORS as e:
                     self.logger.warning(f"Failed to fetch members for {space_name}: {e}")
+                    partial_failures.append(
+                        {"space": space_name, "component": "members", "error": str(e)}
+                    )
 
-            return {
+            result: dict[str, Any] = {
                 "messages": all_messages,
                 "spaces": spaces,
                 "space_metadata": space_metadata,
                 "space_members_by_space": space_members_by_space,
             }
+            # Only surface the partial-failure keys when something actually failed,
+            # so a fully-successful collect() omits them entirely.
+            if partial_failures:
+                result["partial_failures"] = partial_failures
+                result["partial_failure_count"] = len(partial_failures)
+            return result
 
         except COLLECTOR_ERRORS as e:
             self.logger.error(f"Chat collection failed: {e}")
@@ -144,16 +163,23 @@ class ChatCollector(BaseCollector):
             self.logger.warning(f"Error listing spaces: {e}")
             return []
 
-    def _list_messages(self, service, space_name: str, max_messages: int = 30) -> list[dict]:
-        """List messages in a space."""
+    def _list_messages(
+        self, service, space_name: str, max_messages: int = 30
+    ) -> tuple[list[dict], str | None]:
+        """List messages in a space.
+
+        Returns a ``(messages, error)`` tuple: ``error`` is None on success and a
+        message string when the fetch failed (so ``collect()`` can record a
+        per-space partial failure instead of silently dropping the space).
+        """
         try:
             results = (
                 service.spaces().messages().list(parent=space_name, pageSize=max_messages).execute()
             )
-            return list(results.get("messages", []))
+            return list(results.get("messages", [])), None
         except COLLECTOR_ERRORS as e:
             self.logger.warning(f"Failed to fetch messages for {space_name}: {e}")
-            return []
+            return [], str(e)
 
     def _list_members(self, service, space_name: str) -> list[dict]:
         """List members in a space."""
@@ -494,7 +520,17 @@ class ChatCollector(BaseCollector):
             )
             self.circuit_breaker.record_success()
 
-            return cr.to_dict()
+            # Propagate per-space partial failures from collect() into the sync
+            # result. These are sub-operation failures (one space's messages or
+            # members) — the overall sync still succeeded, so success stays True.
+            result = cr.to_dict()
+            collect_partial_failures = raw_data.get("partial_failures")
+            if collect_partial_failures:
+                result["partial_failures"] = collect_partial_failures
+                result["partial_failure_count"] = raw_data.get(
+                    "partial_failure_count", len(collect_partial_failures)
+                )
+            return result
 
         except COLLECTOR_ERRORS as e:
             self.logger.error(f"Sync failed for {self.source_name}: {e}")

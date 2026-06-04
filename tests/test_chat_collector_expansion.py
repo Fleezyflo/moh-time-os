@@ -463,16 +463,20 @@ def test_collect_basic(
 ):
     """Test basic collect flow."""
     mock_spaces.return_value = [mock_space]
-    mock_messages.return_value = [
-        {
-            "name": "msg1",
-            "sender": {"displayName": "User"},
-            "text": "test",
-            "createTime": "2026-02-21T10:00:00Z",
-            "reactionCounts": [],
-            "attachments": [],
-        }
-    ]
+    # _list_messages returns a (messages, error) tuple; error is None on success.
+    mock_messages.return_value = (
+        [
+            {
+                "name": "msg1",
+                "sender": {"displayName": "User"},
+                "text": "test",
+                "createTime": "2026-02-21T10:00:00Z",
+                "reactionCounts": [],
+                "attachments": [],
+            }
+        ],
+        None,
+    )
     mock_members.return_value = []
 
     result = collector.collect()
@@ -481,6 +485,8 @@ def test_collect_basic(
     assert "spaces" in result
     assert "space_metadata" in result
     assert "space_members_by_space" in result
+    # Successful collect omits the partial-failure keys.
+    assert "partial_failures" not in result
 
 
 # =============================================================================
