@@ -198,7 +198,7 @@ class CommitmentManager:
             return False, f"Commitment already linked to task {commitment.task_id}"
 
         now = datetime.now(timezone.utc).isoformat()
-        self.store.query(
+        self.store.execute_write(
             "UPDATE commitments SET task_id = ?, status = 'linked', updated_at = ? WHERE commitment_id = ?",
             [task_id, now, commitment_id],
         )
@@ -218,7 +218,7 @@ class CommitmentManager:
             return False, "Commitment not found"
 
         now = datetime.now(timezone.utc).isoformat()
-        self.store.query(
+        self.store.execute_write(
             "UPDATE commitments SET task_id = NULL, status = 'open', updated_at = ? WHERE commitment_id = ?",
             [now, commitment_id],
         )
@@ -228,7 +228,7 @@ class CommitmentManager:
     def mark_done(self, commitment_id: str) -> tuple[bool, str]:
         """Mark a commitment as done."""
         now = datetime.now(timezone.utc).isoformat()
-        self.store.query(
+        self.store.execute_write(
             "UPDATE commitments SET status = 'done', updated_at = ? WHERE commitment_id = ?",
             [now, commitment_id],
         )
@@ -237,7 +237,7 @@ class CommitmentManager:
     def mark_broken(self, commitment_id: str) -> tuple[bool, str]:
         """Mark a commitment as broken (not fulfilled)."""
         now = datetime.now(timezone.utc).isoformat()
-        self.store.query(
+        self.store.execute_write(
             "UPDATE commitments SET status = 'broken', updated_at = ? WHERE commitment_id = ?",
             [now, commitment_id],
         )

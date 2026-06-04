@@ -59,7 +59,7 @@ class ClientLinker:
             if existing[0]["client_id"] == client_id:
                 return True, "Already linked"
             # Update link
-            self.store.query(
+            self.store.execute_write(
                 """
                     UPDATE client_projects
                     SET client_id = ?, linked_at = ?
@@ -80,7 +80,7 @@ class ClientLinker:
 
     def unlink_project(self, project_id: str) -> tuple[bool, str]:
         """Remove project-client link."""
-        self.store.query("DELETE FROM client_projects WHERE project_id = ?", [project_id])
+        self.store.execute_write("DELETE FROM client_projects WHERE project_id = ?", [project_id])
         return True, "Project unlinked"
 
     def auto_link_by_name(self) -> dict:

@@ -66,7 +66,9 @@ class DebtTracker:
         if not rows:
             return False, "Debt entry not found"
         now = datetime.now(timezone.utc).isoformat()
-        self.store.query("UPDATE time_debt SET resolved_at = ? WHERE id = ?", [now, debt_id])
+        self.store.execute_write(
+            "UPDATE time_debt SET resolved_at = ? WHERE id = ?", [now, debt_id]
+        )
         return True, "Debt resolved"
 
     def get_debt_report(self, lane: str | None = None) -> dict:
