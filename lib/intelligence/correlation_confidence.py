@@ -20,6 +20,19 @@ from statistics import mean, stdev
 logger = logging.getLogger(__name__)
 
 
+def _as_utc(dt: datetime) -> datetime:
+    """Return *dt* as a timezone-aware UTC datetime.
+
+    A naive datetime is assumed to already be UTC (the codebase's convention)
+    and is tagged with UTC; an aware datetime is converted to UTC. This lets
+    arithmetic mix datetimes that originated naive (parsed from a stored ISO
+    string) with aware ones (``datetime.now(timezone.utc)``) without raising.
+    """
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
 @dataclass
 class CorrelationSignalEvidence:
     """Evidence for one signal contributing to a correlation."""
@@ -169,10 +182,15 @@ class CorrelationConfidenceCalculator:
         proximities = []
         half_life_hours = self.cycle_length_hours * 3
 
+        # detected_at may be naive (e.g. parsed from a stored ISO string without a
+        # tz) while reference_time defaults to aware UTC. Subtracting mixed-awareness
+        # datetimes raises TypeError, so coerce both to aware UTC (naive => UTC).
+        ref = _as_utc(reference_time)
+
         for signal in present:
             hours_since = max(
                 0.0,
-                (reference_time - signal.detected_at).total_seconds() / 3600,
+                (ref - _as_utc(signal.detected_at)).total_seconds() / 3600,
             )
             # 2^(-hours_since / half_life_hours)
             proximity = 2 ** (-hours_since / half_life_hours)
