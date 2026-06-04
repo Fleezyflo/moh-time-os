@@ -245,7 +245,7 @@ class TestSeasonalModifiers:
         with patch.object(adjuster._calendar, "get_season", return_value="q4_close"):
             with patch.object(
                 adjuster._calendar,
-                "day_context",
+                "get_day_context",
                 return_value=Mock(is_ramadan=False),
             ):
                 result = adjuster.run_adjustment_cycle([], reference_date=q4_date)
@@ -261,7 +261,7 @@ class TestSeasonalModifiers:
         with patch.object(adjuster._calendar, "get_season", return_value="normal"):
             with patch.object(
                 adjuster._calendar,
-                "day_context",
+                "get_day_context",
                 return_value=Mock(is_ramadan=True),
             ):
                 modifiers = adjuster.get_seasonal_modifiers(date(2025, 3, 15))
@@ -275,7 +275,7 @@ class TestSeasonalModifiers:
         with patch.object(adjuster._calendar, "get_season", return_value="summer_slowdown"):
             with patch.object(
                 adjuster._calendar,
-                "day_context",
+                "get_day_context",
                 return_value=Mock(is_ramadan=False),
             ):
                 modifiers = adjuster.get_seasonal_modifiers(date(2025, 7, 15))
@@ -288,7 +288,7 @@ class TestSeasonalModifiers:
         with patch.object(adjuster._calendar, "get_season", return_value="normal"):
             with patch.object(
                 adjuster._calendar,
-                "day_context",
+                "get_day_context",
                 return_value=Mock(is_ramadan=False),
             ):
                 modifiers = adjuster.get_seasonal_modifiers(date(2025, 4, 15))
@@ -428,7 +428,7 @@ class TestEndToEnd:
         with patch.object(adjuster._calendar, "get_season", return_value="normal"):
             with patch.object(
                 adjuster._calendar,
-                "day_context",
+                "get_day_context",
                 return_value=Mock(is_ramadan=False),
             ):
                 result = adjuster.run_adjustment_cycle(feedback)
