@@ -42,7 +42,9 @@ def temp_bundles_dir(tmp_path, monkeypatch):
     """Create temporary bundles directory for testing."""
     bundles_dir = tmp_path / "bundles"
     bundles_dir.mkdir()
-    monkeypatch.setattr("lib.change_bundles.BUNDLES_DIR", bundles_dir)
+    # The module-level BUNDLES_DIR constant was replaced by the _bundles_dir()
+    # resolver (paths.data_dir()/"bundles") in the paths refactor; patch that.
+    monkeypatch.setattr("lib.change_bundles._bundles_dir", lambda: bundles_dir)
     return bundles_dir
 
 

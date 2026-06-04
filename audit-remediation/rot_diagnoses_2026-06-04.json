@@ -1,0 +1,172 @@
+[
+  {
+    "file": "tests/test_change_bundles.py",
+    "failure_kind": "fixture_rot_patch_target",
+    "root_cause": "Test fixture at test_change_bundles.py:45 patches lib.change_bundles.BUNDLES_DIR, a module-level constant that no longer exists. The path refactor (commit moving constants to lib/paths.py) replaced BUNDLES_DIR with a resolver function _bundles_dir() at change_bundles.py:26-29 that calls paths.data_dir().",
+    "stale_symbol": "lib.change_bundles.BUNDLES_DIR",
+    "correct_target": "lib.change_bundles._bundles_dir",
+    "proposed_fix": "At test_change_bundles.py:45, change:\n    monkeypatch.setattr(\"lib.change_bundles.BUNDLES_DIR\", bundles_dir)\nto:\n    monkeypatch.setattr(\"lib.change_bundles._bundles_dir\", lambda: bundles_dir)",
+    "real_bug_risk": "Low. The _bundles_dir() function at lib/change_bundles.py:26-29 is straightforward (calls paths.data_dir(), creates if needed, returns). Once the fixture is patched correctly, tests will exercise real path resolution logic, which is unlikely to hide production bugs. The only surface risk: if _bundles_dir() had been hiding a bug in paths.data_dir() or in directory creation (permissions, missing parent), tests would now exercise it. Worth verifying: test that writes bundle files can actually persist them to disk (bundle_file.write_text works without exceptions).",
+    "confidence": "high"
+  },
+  {
+    "file": "tests/test_daemon_resilience.py",
+    "failure_kind": "fixture_rot_patch_target",
+    "root_cause": "The test fixtures at lines 33-35 and 307-309 attempt to patch module-level constants STATE_FILE, PID_FILE, and LOG_FILE that no longer exist in lib.daemon. These constants were refactored into internal helper functions _state_file(), _pid_file(), and _log_file() (lib/daemon.py:74-83) as part of a paths centralization refactor that moved constants from individual lib modules into lib/paths.py resolver functions.",
+    "stale_symbol": "lib.daemon.STATE_FILE, lib.daemon.PID_FILE, lib.daemon.LOG_FILE (module-level constants removed in refactor)",
+    "correct_target": "lib.daemon._state_file, lib.daemon._pid_file, lib.daemon._log_file (internal functions at lines 74-83 of lib/daemon.py)",
+    "proposed_fix": "Replace the three monkeypatch.setattr calls in fixture daemon (lines 33-35) with:\n```python\nmonkeypatch.setattr(\"lib.daemon._state_file\", lambda: temp_daemon_dirs / \"daemon_state.json\")\nmonkeypatch.setattr(\"lib.daemon._pid_file\", lambda: temp_daemon_dirs / \"daemon.pid\")\nmonkeypatch.setattr(\"lib.daemon._log_file\", lambda: temp_daemon_dirs / \"daemon.log\")\n```\n\nAnd replace the identical three calls in test_consecutive_failures_persist_across_restarts (lines 307-309) with the same pattern.\n\nAlternatively, monkeypatch.setattr can use return_value with from unittest.mock.patch.object style:\n```python\nfrom unittest.mock import patch\n# In fixture: use within context manager for all daemon creation\n# Or mock at setup: patch.object(daemon_mod, \"_state_file\", return_value=temp_daemon_dirs / \"daemon_state.json\")\n```\n\nThe lambda approach is simpler for monkeypatch and avoids needing context managers or patch.object.",
+    "real_bug_risk": "Low. This is pure fixture rot\u2014the functions being patched delegate directly to paths.data_dir() without any side effects. Once the fixture is corrected, the daemon will write state/pid/log files to the temp directory and read them back. Key things to verify post-fix: (1) _load_state() successfully deserializes persisted state from the temp location (test line 323-328 checks this), (2) daemon initialization completes without hitting the real ~/.moh_time_os directory (isolation), (3) logging setup succeeds with the mocked _log_file() path. No real production bugs are hidden here\u2014the refactor itself was clean, just the test fixture wasn't updated.",
+    "confidence": "high"
+  },
+  {
+    "file": "tests/test_backup.py",
+    "failure_kind": "fixture_rot_patch_target",
+    "root_cause": "The test file attempts to patch removed module-level constants lib.backup.DB_PATH (line 59, 84, 93, 117, 133, 150, 302, 311, 331, 351, 367) and lib.backup.BACKUP_DIR (line 62, 96, 120, 136, 152, 176, 184, 213, 235) that were eliminated in the paths refactor. The production code in lib/backup.py now uses lib.paths.db_path() function (lines 16, 44, 113, 116-117) and _backup_dir() helper (line 15) instead. The old constants never get imported/defined, so @patch decorators fail at test setup with AttributeError.",
+    "stale_symbol": "lib.backup.DB_PATH and lib.backup.BACKUP_DIR (module-level constants that were removed)",
+    "correct_target": "lib.paths.db_path (resolver function); lib.backup._backup_dir (helper function that returns paths.db_path().parent / \"backups\")",
+    "proposed_fix": "Replace all @patch(\"lib.backup.DB_PATH\") and @patch(\"lib.backup.BACKUP_DIR\") decorators with @patch(\"lib.paths.db_path\") and @patch(\"lib.backup._backup_dir\") respectively. Example transformation for TestCreateBackup.test_create_backup_basic (lines 59-64):\n\nOLD:\n@patch(\"lib.backup.DB_PATH\")\n@patch(\"lib.backup.db_exists\")\n@patch(\"lib.backup.checkpoint_wal\")\n@patch(\"lib.backup.BACKUP_DIR\")\ndef test_create_backup_basic(self, mock_backup_dir_const, mock_checkpoint, mock_db_exists, mock_db_path_patch, tmp_path):\n\nNEW:\n@patch(\"lib.backup._backup_dir\")\n@patch(\"lib.backup.db_exists\")\n@patch(\"lib.backup.checkpoint_wal\")\n@patch(\"lib.paths.db_path\")\ndef test_create_backup_basic(self, mock_db_path, mock_checkpoint, mock_db_exists, mock_backup_dir, tmp_path):\n\nThen update the mock setup from mock_db_path_patch.value = X to mock_db_path.return_value = X, and mock_backup_dir_const.value = X to mock_backup_dir.return_value = X (treating them as callables). Alternatively, follow the pattern from test_key_manager.py:64-76 which patches lib.paths.db_path to return a temp DB, and let _backup_dir() resolve naturally via that.",
+    "real_bug_risk": "After fixing fixtures, watch for: (1) State isolation leaks if tests don't reset paths.db_path singleton bindings between tests (the conftest.py already handles this via MOH_TIME_OS_DB env var and StateStore._instance reset); (2) Backup directory creation/cleanup edge cases (e.g., does _backup_dir() properly handle parent creation when tmp_path is mocked?); (3) Timestamp generation in backup filenames \u2014 verify it uses deterministic datetime.now(timezone.utc), not local time (lib/backup.py:38 looks correct). No evidence of real production bug, just test rot.",
+    "confidence": "high"
+  },
+  {
+    "file": "tests/test_drift_detection.py",
+    "failure_kind": "fixture_rot_missing_schema",
+    "root_cause": "The test fixture `detector` (line 16-18) creates a DriftDetector with a tmp_path database but never initializes the schema. DriftDetector.update_baseline() and check_drift() attempt INSERT/SELECT on `drift_baselines` and `drift_alerts` tables (lib/intelligence/drift_detection.py:99-124, 138-214) that are defined in lib/schema.py but were never created in the test database. This causes \"no such table\" errors at runtime when any test method calls detector.update_baseline() or detector.check_drift().",
+    "stale_symbol": "none",
+    "correct_target": "Schema initialization via lib.schema_engine.create_fresh() in the fixture",
+    "proposed_fix": "In tests/test_drift_detection.py, line 16-18, add schema initialization matching the pattern in tests/test_signal_suppression.py:22-37:\n\nOLD:\n```python\n@pytest.fixture\ndef detector(tmp_path):\n    db_path = tmp_path / \"test_drift.db\"\n    return DriftDetector(db_path=db_path)\n```\n\nNEW:\n```python\n@pytest.fixture\ndef detector(tmp_path):\n    import sqlite3\n    from lib import schema_engine\n    \n    db_path = tmp_path / \"test_drift.db\"\n    conn = sqlite3.connect(str(db_path))\n    try:\n        schema_engine.create_fresh(conn)\n        conn.commit()\n    finally:\n        conn.close()\n    return DriftDetector(db_path=db_path)\n```\n\nThis mirrors the established pattern in test_signal_suppression.py where the fixture, not the constructor, is responsible for applying the canonical schema defined in lib/schema.py.",
+    "real_bug_risk": "Low. The DriftDetector class itself is straightforward: it opens a connection with sqlite3.connect(str(self.db_path)) at line 99, 138, 223, 252 to execute SQL on tables that exist in the canonical schema. Once the schema is created, the code paths are deterministic and have no dependencies on stale constants or refactored paths. The datetime.isoformat() calls at lines 119 and 182 are correct (not the buggy key_manager pattern of isoformat()+\"Z\"). No real production bug is hidden here.",
+    "confidence": "high"
+  },
+  {
+    "file": "/Users/molhamhomsi/clawd/moh_time_os/tests/test_audit_trail.py",
+    "failure_kind": "unknown",
+    "root_cause": "test_audit_trail.py does not exhibit the fixture_rot pattern described (stale DB_PATH/BUNDLES_DIR/STATE_FILE/BACKUP_DIR patches). The test fixture at line 13-15 correctly passes db_path explicitly to AuditTrail(db_path=db_path). AuditTrail.__init__ at lib/intelligence/audit_trail.py:57 accepts this parameter and uses it for sqlite3.connect(). No import-time patching of old constants or live DB access occurs in the test or its direct dependencies.",
+    "stale_symbol": "none",
+    "correct_target": "n/a",
+    "proposed_fix": "No fixture fix required. The test is correct as-written. If test_audit_trail.py does fail, the root cause is either: (1) missing yaml module in test environment (signals.py:756), (2) missing schema initialization (but AuditTrail._ensure_table at line 61 creates schema), or (3) an indirect dependency path issue in lib/intelligence/__init__.py imports. The test would only fail due to path refactoring if AuditTrail or safe_sql called paths.db_path() internally without a parameter, which they do not.",
+    "real_bug_risk": "Low. The test passes explicit tmp_path-based db_path and creates isolated schema via _ensure_table(). After fixture works (if one existed), the main risk is AuditTrail.record() at line 117 calling datetime.now(timezone.utc).isoformat() which could produce \"+00:00Z\" format if system timezone is UTC \u2014 same known bug as key_manager. However, this is a real production bug, not a fixture issue.",
+    "confidence": "high"
+  },
+  {
+    "file": "tests/test_data_lifecycle.py",
+    "failure_kind": "fixture_rot_patch_target",
+    "root_cause": "The test at line 383-429 (test_vacuum_failure) sets up a mock side_effect that raises a generic Exception(\"VACUUM failed\") on line 421. However, the production code at lib/data_lifecycle.py:440 only catches (sqlite3.Error, ValueError, OSError). Since generic Exception is not a subclass of sqlite3.Error, the exception is not caught and propagates up, failing the test. Real SQLite VACUUM failures raise sqlite3.OperationalError, which IS a subclass of sqlite3.Error and would be caught correctly in production.",
+    "stale_symbol": "none",
+    "correct_target": "sqlite3.OperationalError (or any sqlite3.Error subclass)",
+    "proposed_fix": "At tests/test_data_lifecycle.py:421, change:\n```python\nraise Exception(\"VACUUM failed\")\n```\nto:\n```python\nraise sqlite3.OperationalError(\"VACUUM failed\")\n```\n\nAdditionally, add `import sqlite3` to the imports at the top of the test file (after line 15).",
+    "real_bug_risk": "No real production bug is at risk of exposure. The production code at lib/data_lifecycle.py:440 correctly catches sqlite3.Error and its subclasses. Real SQLite VACUUM failures raise sqlite3.OperationalError which will be caught. The fix just makes the test mock raise the correct exception type that matches real SQLite behavior.",
+    "confidence": "high"
+  },
+  {
+    "file": "tests/test_determinism_guards.py",
+    "failure_kind": "debt_marker",
+    "root_cause": "tests/test_determinism_guards.py is a guard validation test suite (lines 1-431) that verifies determinism protections work correctly. It does NOT test production code with stale fixtures. The test imports (lines 12-16, 29, 57, 65, 96, 103, 177, 213, 273, 280, 289, 298, 305, 331, 351, 370) correctly reference tests.conftest.LIVE_DB_ABSOLUTE/HOME_DB_ABSOLUTE (conftest.py:31-32) and tests.fixtures functions (fixtures/__init__.py:9), which all exist and are correctly defined. No module-level patched symbols are stale.",
+    "stale_symbol": "none",
+    "correct_target": "n/a",
+    "proposed_fix": "No fix required. The test suite is properly instrumented. The 3 failures (TestCassetteValidation::test_cassettes_valid, test_cassette_has_expiry, test_redact_secrets) are due to missing 'yaml' module dependency (conftest.py:344 \u2192 lib.collectors.recorder \u2192 orchestrator.py:14), not fixture rot. The 40 remaining tests PASS (TestLiveDBGuard, TestSQLiteSiblingFilesBlocked, TestMockedPathConnectBlocked, TestURIFormatBlocked, TestDbapi2BypassClosed, TestTildeExpansionBlocked, TestGuardNoLiveDbFunction, TestFilesystemProbeGuard, TestFixtureDB all pass). This test file itself contains no patches of removed constants like lib.store.DB_PATH, lib.change_bundles.BUNDLES_DIR, lib.daemon.STATE_FILE, or lib.backup.BACKUP_DIR. Context: other test files (test_daemon_resilience.py:33, test_change_bundles.py, test_backup.py:59-62) DO have stale patches, but test_determinism_guards.py avoids this pattern entirely.",
+    "real_bug_risk": "n/a - no real bug risk. This test file serves as a guard validation suite and does not test production code with fixtures. The cassette validation failures are dependency-related (PyYAML not installed), not determinism-guard-related.",
+    "confidence": "high"
+  },
+  {
+    "file": "tests/test_background_tasks.py",
+    "failure_kind": "real_bug",
+    "root_cause": "The exception handler in lib/api/background_tasks.py:131 only catches (sqlite3.Error, ValueError, OSError), but tests raise RuntimeError (lines 177, 383) and TypeError (line 367) which are not in this tuple. These uncaught exceptions prevent the task status from being updated to FAILED and completed_at from being set, leaving the task stuck in RUNNING state. The narrow exception tuple was overly restrictive and did not account for general exception types that user-submitted tasks might raise.",
+    "stale_symbol": "none",
+    "correct_target": "n/a",
+    "proposed_fix": "In lib/api/background_tasks.py line 131, change:\n    except (sqlite3.Error, ValueError, OSError) as e:\nto:\n    except Exception as e:\n\nThis allows _run_task to properly catch and track ALL exception types that user functions might raise, updating the task status to FAILED and capturing the error message. The three originally-caught exceptions (sqlite3.Error, ValueError, OSError) are all subclasses of Exception, so this is backward-compatible and only expands coverage.",
+    "real_bug_risk": "HIGH: This is a real bug in production code. The background task system silently fails to record failures for any exception type outside the narrow tuple. After fixing the fixture (i.e., changing the except clause), verify: (1) All three failing tests pass with error states properly recorded, (2) Background tasks in production that raise RuntimeError, TypeError, or other exceptions are now properly tracked as FAILED with error messages captured, (3) No side effects from catching all exceptions (e.g., SystemExit or KeyboardInterrupt should still be rare).",
+    "confidence": "high"
+  },
+  {
+    "file": "tests/test_auto_resolution.py",
+    "failure_kind": "unknown",
+    "root_cause": "tests/test_auto_resolution.py contains NO fixture rot from stale symbol patches. Comprehensive analysis shows: (1) No @patch decorators targeting removed constants (DB_PATH, BUNDLES_DIR, STATE_FILE, BACKUP_DIR); (2) AutoResolutionEngine.__init__ at lib/intelligence/auto_resolution.py:123 correctly uses paths.db_path() as default; (3) temp_db fixture properly creates schema and passes db_path explicitly; (4) conftest.py autouse fixture reset_outbox_singleton sets MOH_TIME_OS_DB=fixture_db_path for all tests, preventing determinism guard violations. The test file is properly structured and should not fail due to fixture rot.",
+    "stale_symbol": "none",
+    "correct_target": "n/a",
+    "proposed_fix": "No fix required. This test file has NO fixture rot. If tests are failing, the cause is the missing 'yaml' module (lib/intelligence/signals.py:756 import yaml) which is an import dependency issue, not fixture rot. The yaml import can be installed via dependencies.txt or requirements but is orthogonal to the path refactor.",
+    "real_bug_risk": "No production bug risk identified. The AutoResolutionEngine correctly delegates DB path resolution to paths.db_path() and accepts explicit overrides. The fixture properly isolates tests with temporary databases. No stale patches expose latent bugs.",
+    "confidence": "high"
+  },
+  {
+    "file": "tests/test_entity_profile.py",
+    "failure_kind": "real_bug",
+    "root_cause": "lib/intelligence/signals.py line 756 unconditionally imports yaml at module level. The test file imports from lib.intelligence.entity_profile, which imports from lib.intelligence.__init__.py line 71, which imports from lib.intelligence.signals. The yaml module is marked with \"# noqa: E402 \u2014 conditional import\" but is NOT actually conditional\u2014it's a hard dependency that breaks test collection when yaml is unavailable or not installed in the test environment.",
+    "stale_symbol": "none",
+    "correct_target": "n/a",
+    "proposed_fix": "The yaml import in lib/intelligence/signals.py line 756 should be made conditional or lazy-loaded. Change line 756 from: `import yaml  # noqa: E402 \u2014 conditional import` to: `try: import yaml\\nexcept ImportError: yaml = None` and guard all usages of yaml in functions like load_thresholds() to check if yaml is None and handle gracefully. Alternatively, make the thresholds loading optional and only import yaml inside the load_thresholds() function when needed.",
+    "real_bug_risk": "If the yaml import is made optional/lazy, tests will run but threshold loading will silently fail or be skipped when yaml is unavailable. The production code should either: (1) Require yaml as a mandatory dependency that must be installed, or (2) Gracefully handle missing yaml with a warning/log message rather than silent failure. Current marked \"# noqa: E402 \u2014 conditional import\" suggests intent to make it conditional but implementation is incomplete.",
+    "confidence": "high"
+  },
+  {
+    "file": "tests/test_schema_v19.py",
+    "failure_kind": "debt_marker",
+    "root_cause": "The test file tests/test_schema_v19.py was created in commit 71616ca when SCHEMA_VERSION was 19. Since that commit, the schema has been evolved through subsequent development (commits 242d5dc, 26e17a5, afeab3a, cc2a570, 349d5f4) to SCHEMA_VERSION 23. The test at line 48-50 hardcodes an assertion that SCHEMA_VERSION == 19, which is now stale. The test needs to be updated to reflect the current schema version or refactored to be more durable against future version changes.",
+    "stale_symbol": "none",
+    "correct_target": "n/a",
+    "proposed_fix": "Replace the hardcoded version check with one that is flexible. Two options: (1) Remove the test entirely if the purpose (verifying V19 features were added) is already covered by the other 20 passing tests that verify the actual columns and tables exist. (2) Change line 50 from `assert SCHEMA_VERSION == 19` to `assert SCHEMA_VERSION >= 19` to make the test durable across future schema evolution, since the real intent is to verify V19 features are present, not to enforce a specific absolute version number. Option 1 is cleaner (the 20 other tests provide better coverage), but option 2 is safer if the version marker has semantic meaning for documentation.",
+    "real_bug_risk": "No real production bug. This is purely a test version marker that became stale. Fixing it exposes no hidden production issues \u2014 the actual schema features tested (notifications.dismissed, insights.severity, saved_filters table, couplings table) are all properly defined in lib/schema.py lines 733-1838 and passing all 20 other tests.",
+    "confidence": "high"
+  },
+  {
+    "file": "tests/test_calendar_writer.py",
+    "failure_kind": "real_bug",
+    "root_cause": "The production code in lib/integrations/calendar_writer.py catches only (sqlite3.Error, ValueError, OSError, KeyError) at lines 157, 212, 253, 295, 343, 397, and 509. However, the Google Calendar API (via googleapiclient) raises Exception subclasses that don't match these types. Tests at test_calendar_writer.py:142, 278, and 553 mock generic Exception errors, exposing that the production code's exception handling is too narrow.",
+    "stale_symbol": "none",
+    "correct_target": "Exception catch clauses in lib/integrations/calendar_writer.py methods",
+    "proposed_fix": "In lib/integrations/calendar_writer.py, replace all 8 occurrences of `except (sqlite3.Error, ValueError, OSError, KeyError) as e:` with `except Exception as e:` to handle Google API exceptions and other runtime errors. Specifically update lines: 85, 157, 212, 253, 295, 343, 397, 509. The _get_service method at line 85 should still re-raise; the others should return error CalendarWriteResult or empty list.",
+    "real_bug_risk": "HIGH: The current exception handling silently lets unexpected exceptions (like googleapiclient.errors.HttpError) propagate, causing tests to fail. In production, 403 Forbidden, 404 Not Found, and other API errors would crash the caller instead of being handled gracefully. This violates the documented API contract that methods return CalendarWriteResult/list with errors, never raise. After the fixture is fixed, verify that all Google API error codes (401, 403, 404, 429, 500, etc.) are now handled and return appropriate error results without re-raising.",
+    "confidence": "high"
+  },
+  {
+    "file": "tests/test_gmail_writer.py",
+    "failure_kind": "real_bug",
+    "root_cause": "Commit 641754ca narrowed all exception handlers in lib/integrations/gmail_writer.py from `except Exception` to `except (sqlite3.Error, ValueError, OSError, KeyError)`. This tuple does not include Google API exceptions (googleapiclient.errors.HttpError, google.auth.exceptions.RefreshError, etc.), causing real API errors to crash through unhandled. Tests at test_gmail_writer.py:136, 190, 286, 574 etc. mock the API with plain `Exception()` which also isn't caught by the narrow tuple.",
+    "stale_symbol": "none",
+    "correct_target": "lib.integrations.gmail_writer exception handlers should catch Google API errors",
+    "proposed_fix": "Replace the 7 occurrences of `except (sqlite3.Error, ValueError, OSError, KeyError)` in lib/integrations/gmail_writer.py with a broader tuple that includes Google API exceptions. Two approaches:\n\n1. Import from resilience (preferred for consistency):\n   From lib.collectors.resilience import COLLECTOR_ERRORS\n   Then use: except COLLECTOR_ERRORS\n\n2. Or add Google API errors directly:\n   except (sqlite3.Error, ValueError, OSError, KeyError, ConnectionError, TimeoutError, ImportError, AttributeError, TypeError, RuntimeError, json.JSONDecodeError) as e:\n   And conditionally add HttpError/RefreshError at the top if available.\n\nThe minimal fix for tests to pass is to catch Exception, but the correct production fix is to properly catch Google API errors.",
+    "real_bug_risk": "YES - CRITICAL. In production, when the Gmail API fails (auth error, network error, quota exceeded, etc.), it raises googleapiclient.errors.HttpError or google.auth.exceptions.RefreshError. These exceptions are NOT caught by the narrow tuple and will crash the entire application thread instead of being handled gracefully and returned as GmailWriteResult(success=False, error=...).",
+    "confidence": "high"
+  },
+  {
+    "file": "tests/test_asana_writer.py",
+    "failure_kind": "real_bug",
+    "root_cause": "The production code in lib/integrations/asana_sync.py (lines 73, 97, 126, 177) incorrectly uses get_connection() by calling it and treating the result as a raw connection, e.g., `conn = get_connection(); cursor = conn.cursor()`. However, get_connection() from lib/db.py is a @contextmanager that yields a connection, not returns one directly. The code should use: `with get_connection() as conn:`. The tests happen to pass (or fail silently) because unittest.mock.MagicMock supports context manager protocol, but real code would fail at runtime when .cursor() is called on a _GeneratorContextManager object.",
+    "stale_symbol": "get_connection usage pattern",
+    "correct_target": "Wrap all get_connection() calls in with statements",
+    "proposed_fix": "In lib/integrations/asana_sync.py, change all four usages from:\n```python\nconn = get_connection()\ncursor = conn.cursor()\n# ... use cursor ...\nconn.close()\n```\n\nTo:\n```python\nwith get_connection() as conn:\n    cursor = conn.cursor()\n    # ... use cursor ...\n    # conn.close() not needed, context manager handles it\n```\n\nFor example, line 73-89:\nOLD:\n```python\ntry:\n    conn = get_connection()\n    cursor = conn.cursor()\n    cursor.execute(...)\n    conn.commit()\n    conn.close()\n```\n\nNEW:\n```python\ntry:\n    with get_connection() as conn:\n        cursor = conn.cursor()\n        cursor.execute(...)\n        # Implicit commit on exit\n```\n\nRepeat for lines 97-104, 126-151, and 177-182.",
+    "real_bug_risk": "HIGH. Once the fixture is corrected to properly mock get_connection() as a context manager (or tests switch to using real temp DB), the production code will crash at runtime when _ensure_mapping_table(), _get_mapping(), _save_mapping(), or sync_task_to_asana() are called, because they attempt to call .cursor() on a context manager object, not a connection. This is currently hidden by loose test mocking but is a runtime crash in production.",
+    "confidence": "high"
+  },
+  {
+    "file": "tests/test_chat_interactive.py",
+    "failure_kind": "real_bug",
+    "root_cause": "The test at line 182-191 (test_send_message_handles_exception) sets mock_post.side_effect = Exception(\"Network error\") to test exception handling. However, the production code at lib/integrations/chat_interactive.py:159 only catches (sqlite3.Error, ValueError, OSError, KeyError), which does not include the generic Exception class. When httpx.post() raises any exception not in that tuple, it propagates uncaught instead of being wrapped in a ChatWriteResult. The test expects all exceptions to be caught and handled gracefully (as documented in the docstring \"Handles network exceptions\"), but the exception tuple is too narrow.",
+    "stale_symbol": "none",
+    "correct_target": "Exception (or more specifically: httpx.RequestError or a broader catch)",
+    "proposed_fix": "In lib/integrations/chat_interactive.py, change line 159 (and lines 238, 318, 374, 443, 517 which have the same pattern) from:\n  except (sqlite3.Error, ValueError, OSError, KeyError) as e:\nto:\n  except Exception as e:\n\nThis allows the code to catch network exceptions like ConnectionError, timeout errors, and other httpx failures, which is the intended behavior based on the test and docstring.",
+    "real_bug_risk": "YES - HIGH RISK. If this exception handling is narrowed to only catch sqlite3/ValueError/OSError/KeyError, then network errors, httpx.RequestError, timeout errors, and other unexpected exceptions will crash the caller instead of being handled gracefully. This could cause API endpoints to return 500 errors instead of proper error responses. The outbound integration would become fragile and less resilient.",
+    "confidence": "high"
+  },
+  {
+    "file": "/Users/molhamhomsi/clawd/moh_time_os/tests/test_runtime_payload_compatibility.py",
+    "failure_kind": "fixture_rot_patch_target",
+    "root_cause": "The test_client fixture at line 216-223 patches lib.paths.db_path and lib.paths.data_dir BEFORE importing api.server, but fails to reset the StateStore singleton. When api.server imports (line 221), it calls get_store() at module level (api/server.py:93), which initializes StateStore via lib.state_store.py:454-459. The StateStore._instance (line 47) and the module-level _store (line 451) singletons are never reset, so they persist across test runs with stale DB paths. The documented recipe in tests/test_auth_and_side_effects.py shows that both must be reset before app import (see lines 39-42 of that file: state_store.StateStore._instance = None, then reload modules).",
+    "stale_symbol": "lib.state_store.StateStore._instance and lib.state_store._store (not reset before app import)",
+    "correct_target": "Reset StateStore._instance = None and _store = None (in lib.state_store module) BEFORE importing api.server in test_client fixture",
+    "proposed_fix": "At line 216-223, change test_client fixture to:\n\nOLD (lines 216-223):\n```python\n@pytest.fixture(scope=\"module\")\ndef test_client(fixture_db_path, monkeypatch_module):\n    \"\"\"TestClient with fixture DB injected before app import.\"\"\"\n    monkeypatch_module.setattr(lib.paths, \"db_path\", lambda: fixture_db_path)\n    monkeypatch_module.setattr(lib.paths, \"data_dir\", lambda: fixture_db_path.parent)\n\n    from api.server import app\n\n    return TestClient(app, raise_server_exceptions=False)\n```\n\nNEW:\n```python\n@pytest.fixture(scope=\"module\")\ndef test_client(fixture_db_path, monkeypatch_module):\n    \"\"\"TestClient with fixture DB injected before app import.\"\"\"\n    monkeypatch_module.setattr(lib.paths, \"db_path\", lambda: fixture_db_path)\n    monkeypatch_module.setattr(lib.paths, \"data_dir\", lambda: fixture_db_path.parent)\n\n    # Reset StateStore singleton so it reinitializes with patched paths\n    import lib.state_store as state_store\n    state_store.StateStore._instance = None\n    state_store._store = None\n\n    from api.server import app\n\n    return TestClient(app, raise_server_exceptions=False)\n```",
+    "real_bug_risk": "Fixing the fixture itself is low-risk since it only resets an already-instantiated singleton. However, allowing the test to run properly WILL expose any bugs that were hidden by the stale StateStore pointing to the wrong DB. Specifically: watch for \"no such table\" errors (fixture DB schema not created), determinism violations (fixture still accessing live DB via outbox singleton or other paths), and any timestamp/codec issues in the intelligence routes that were previously masked. The code itself appears sound (no \"+00:00Z\" bugs found - key_manager.py correctly uses isoformat() which produces \"+00:00\", and is_expired() correctly handles both \"Z\" and \"+00:00\" formats).",
+    "confidence": "high"
+  },
+  {
+    "file": "tests/test_cross_cutting_correctness.py",
+    "failure_kind": "fixture_rot_patch_target",
+    "root_cause": "The test file tests/test_cross_cutting_correctness.py:249 includes \"scripts\" in the production_dirs list when scanning for module-level DB_PATH violations. However, scripts/check_system_invariants.py:25 still defines DB_PATH = Path(\"data/moh_time_os.db\") as a module-level constant instead of using the new lib.paths.db_path() resolver function. The path refactor moved this constant into a callable resolver, but this script wasn't updated.",
+    "stale_symbol": "DB_PATH at scripts/check_system_invariants.py:25",
+    "correct_target": "lib.paths.db_path()",
+    "proposed_fix": "In scripts/check_system_invariants.py, replace:\n```\nDB_PATH = Path(\"data/moh_time_os.db\")\n```\nwith:\n```\nfrom lib import paths\n\n# At line 62, change:\nif not DB_PATH.exists():\n# to:\nif not paths.db_path().exists():\n\n# And line 65:\nconn = sqlite3.connect(str(DB_PATH))\n# to:\nconn = sqlite3.connect(str(paths.db_path()))\n```\n\nAlternatively, use: `DB_PATH = paths.db_path()` as a function wrapper to call it at runtime (not module-load time).",
+    "real_bug_risk": "Low to None. The script is a utility tool that validates system invariants at startup. It accesses the DB by reading tables. Once the path is dynamically resolved via paths.db_path(), the determinism issue is fixed. No real production bug is hidden here since the script already handles missing DB gracefully (returns empty set). However, if MOH_TIME_OS_DB env var is set, the hardcoded path would bypass it \u2014 fixing the fixture exposes correct behavior.\"",
+    "confidence": "high"
+  }
+]
