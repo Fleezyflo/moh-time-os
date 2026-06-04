@@ -825,10 +825,14 @@ def get_portfolio_intelligence(db_path: Path | None = None) -> dict:
     return result
 
 
-def get_critical_items(db_path: Path | None = None) -> list:
+def get_critical_items(db_path: Path | None = None) -> dict:
     """
-    Just the IMMEDIATE urgency proposals.
-    Returns list of critical items.
+    Just the IMMEDIATE urgency proposals — the "30-second scan" view.
+
+    Returns ``{success, errors, items, generated_at}`` so a failed computation
+    is distinguishable from a genuinely empty result. Previously this returned a
+    bare list and swallowed errors, so an exception looked identical to "no
+    critical items" — a silent-failure that hid outages from the caller.
     """
     from lib.intelligence.patterns import detect_all_patterns
     from lib.intelligence.proposals import (
@@ -838,7 +842,8 @@ def get_critical_items(db_path: Path | None = None) -> list:
     )
     from lib.intelligence.signals import detect_all_signals
 
-    items = []
+    items: list[dict] = []
+    errors: list[dict] = []
 
     try:
         # Run detection
@@ -867,5 +872,11 @@ def get_critical_items(db_path: Path | None = None) -> list:
 
     except (sqlite3.Error, ValueError, OSError) as e:
         logger.error(f"Failed to get critical items: {e}", exc_info=True)
+        errors.append({"error_type": type(e).__name__, "message": str(e)})
 
-    return items
+    return {
+        "success": not errors,
+        "errors": errors,
+        "items": items,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
