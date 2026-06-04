@@ -91,3 +91,52 @@ same TypeError fires as a LIVE runtime error during chat collection (seen in the
 | NOT my regressions (confirmed pre-existing) | NOTED | v4 `TestStateStoreTransaction`/`TestSchemaOwnership` (StateStore bucket) + `test_xero_collector_expansion` (Chip A) fail independently of this chat-only change |
 
 Files in this commit: `lib/collectors/chat.py`, `tests/test_chat_collector_expansion.py`, this log. One purpose (BUG-1).
+
+**BUG-1 status: MERGED — PR #146.** (BUG-2 shipped as PR #147 on its own branch; its log section lives there.)
+
+---
+
+## BUG-4 — proposals "missing handler" was a test contradiction + an unmet detection-health gap  [branch: fix/proposals-surface-detection-errors]
+
+### Root cause
+`test_audit_remediation_v3.py:268` did `from api.spec_router import get_intelligence_proposals` →
+`ImportError` (no such symbol). Two tests CONTRADICT: this one asserts the handler MUST exist in
+spec_router, while `test_canonical_pipeline.py:329` (`test_spec_router_no_longer_has_duplicate_handlers`)
+asserts it must NOT — proposals were deliberately consolidated into `intelligence_router.list_proposals`
+(intelligence_router.py:856, which exists and serves `/proposals`). So the v3 test is STALE (points at
+the pre-consolidation location). Separately, the v3 test's *intent* —
+`assert "pattern_detection_errors" in src` — was a REAL unmet gap: `list_proposals` called
+`detect_all_patterns()` but discarded its `errors`, so a partial pattern-detection failure was invisible
+and proposals looked authoritative when missing inputs.
+
+### Fix (Molham-approved: retarget test + add error surfacing)
+1. `api/intelligence_router.py` `list_proposals`: extract `patterns.get("errors", [])` into
+   `pattern_detection_errors` and surface it via `_wrap_response(result, {... "pattern_detection_errors": ...})`
+   (`params` is `dict[str, Any]` on `IntelligenceResponse`, so it passes the response_model). Mirrors how
+   `spec_router.get_intelligence_patterns` surfaces `detection_errors`.
+2. `tests/test_audit_remediation_v3.py`: retarget the proposals test to
+   `from api.intelligence_router import list_proposals` (resolving the contradiction with canonical-pipeline)
+   and keep the `pattern_detection_errors` source assertion.
+
+### Pre-Edit Verification
+| File edited | Symbol used | Defined at | Confirmed | Notes |
+|-------------|------------|-----------|-----------|-------|
+| intelligence_router.py `list_proposals` | `patterns.get("errors", [])` | `patterns` = `detect_all_patterns()` (line 881) | yes — same key `get_intelligence_patterns` reads (`detection.get("errors", [])`) | surfaced via existing `_wrap_response` |
+| intelligence_router.py | `_wrap_response(data, params)` | intelligence_router.py:45 | yes — params→`{status,data,computed_at,params}` | `IntelligenceResponse.params: dict[str,Any]` (response_models.py:29) — not stripped |
+| test_audit_remediation_v3.py | `list_proposals` | intelligence_router.py:856 | yes — `inspect.getsource` works on it | replaces stale `spec_router.get_intelligence_proposals` import |
+
+ADR: not required — `check_adr_required.sh` covers `api/server.py` + `api/spec_router.py`, NOT `api/intelligence_router.py` (and Governance is non-blocking).
+
+### Pre-Commit Verification
+| Check | Result | Output |
+|-------|--------|--------|
+| TDD red (before) | CONFIRMED | `ImportError: cannot import name 'get_intelligence_proposals' from api.spec_router` |
+| TDD green (after) | PASS | retargeted proposals test 1 passed |
+| contradiction resolved | PASS | `test_spec_router_no_longer_has_duplicate_handlers` still passes (nothing added to spec_router) |
+| regression (intelligence proposals + router) | PASS | `test_intelligence_proposals` + 58 passed |
+| ruff check | PASS | `All checks passed!` |
+| ruff format --check | PASS | `2 files already formatted` |
+| bandit | PASS | exit 0 |
+| NOT my regressions (pre-existing) | NOTED | `test_intelligence_api` 2 failures (`Expected dict with items key`) are BUG-5 (stage-shape), not in `list_proposals` traceback |
+
+Files in this commit: `api/intelligence_router.py`, `tests/test_audit_remediation_v3.py`, this log. One purpose (BUG-4).
