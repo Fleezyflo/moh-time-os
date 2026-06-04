@@ -8,6 +8,7 @@ Covers:
 - Circuit breaker state exposure via get_job_health()
 """
 
+import importlib
 import time
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
@@ -19,23 +20,32 @@ from lib.daemon import JobHealth, TimeOSDaemon
 
 
 @pytest.fixture
-def temp_daemon_dirs(tmp_path):
-    """Create temporary directories for daemon state."""
-    state_dir = tmp_path / "daemon_state"
-    state_dir.mkdir()
-    return state_dir
+def temp_daemon_dirs(tmp_path, monkeypatch):
+    """Sandbox daemon state/pid/log into a temp dir.
+
+    The daemon resolves its paths through lib.paths.data_dir() at call time
+    (_state_file/_pid_file/_log_file, lib/daemon.py). Point MOH_TIME_OS_HOME at
+    a temp dir and reload lib.paths so data_dir() lands in tmp_path — the same
+    idiom tests/test_daemon_status.py uses. (The old constants
+    lib.daemon.STATE_FILE/PID_FILE/LOG_FILE were refactored into these resolver
+    functions, so the previous monkeypatch.setattr on them raised AttributeError.)
+    """
+    monkeypatch.setenv("MOH_TIME_OS_HOME", str(tmp_path))
+    import lib.paths as paths
+
+    importlib.reload(paths)
+    data_dir = tmp_path / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    yield data_dir
+    # Restore lib.paths to the unpatched env so later tests are unaffected.
+    monkeypatch.delenv("MOH_TIME_OS_HOME", raising=False)
+    importlib.reload(paths)
 
 
 @pytest.fixture
-def daemon(temp_daemon_dirs, monkeypatch):
-    """Create a TimeOSDaemon for testing."""
-    # Mock the paths to use temp directory
-    monkeypatch.setattr("lib.daemon.STATE_FILE", temp_daemon_dirs / "daemon_state.json")
-    monkeypatch.setattr("lib.daemon.PID_FILE", temp_daemon_dirs / "daemon.pid")
-    monkeypatch.setattr("lib.daemon.LOG_FILE", temp_daemon_dirs / "daemon.log")
-
-    daemon = TimeOSDaemon()
-    return daemon
+def daemon(temp_daemon_dirs):
+    """Create a TimeOSDaemon whose state/pid/log live in temp_daemon_dirs."""
+    return TimeOSDaemon()
 
 
 # =============================================================================
@@ -86,7 +96,7 @@ class TestDaemonCircuitBreakers:
         assert cb.state == CircuitBreakerState.OPEN
 
         # Mock job execution to succeed
-        with patch("lib.daemon.collect_all") as mock_collect:
+        with patch.object(daemon, "_handle_collect") as mock_collect:
             mock_collect.return_value = None
 
             # Wait for cooldown to expire
@@ -116,7 +126,7 @@ class TestDaemonCircuitBreakers:
         assert cb.state == CircuitBreakerState.HALF_OPEN
 
         # Execute job successfully
-        with patch("lib.daemon.collect_all") as mock_collect:
+        with patch.object(daemon, "_handle_collect") as mock_collect:
             mock_collect.return_value = None
             result = daemon._run_job(job_name)
 
@@ -145,7 +155,7 @@ class TestJobHealthStatus:
         job_name = "collect"
         state = daemon.job_states[job_name]
 
-        with patch("lib.daemon.collect_all") as mock_collect:
+        with patch.object(daemon, "_handle_collect") as mock_collect:
             mock_collect.side_effect = Exception("Collect error")
             daemon._run_job(job_name)
 
@@ -157,7 +167,7 @@ class TestJobHealthStatus:
         job_name = "collect"
         state = daemon.job_states[job_name]
 
-        with patch("lib.daemon.collect_all") as mock_collect:
+        with patch.object(daemon, "_handle_collect") as mock_collect:
             mock_collect.side_effect = Exception("Collect error")
 
             for _i in range(3):
@@ -172,7 +182,7 @@ class TestJobHealthStatus:
         state = daemon.job_states[job_name]
 
         # First, fail a few times
-        with patch("lib.daemon.collect_all") as mock_collect:
+        with patch.object(daemon, "_handle_collect") as mock_collect:
             mock_collect.side_effect = Exception("Collect error")
             for _ in range(2):
                 daemon._run_job(job_name)
@@ -180,7 +190,7 @@ class TestJobHealthStatus:
         assert state.health_status == JobHealth.DEGRADED
 
         # Now succeed
-        with patch("lib.daemon.collect_all") as mock_collect:
+        with patch.object(daemon, "_handle_collect") as mock_collect:
             mock_collect.return_value = None
             daemon._run_job(job_name)
 
@@ -256,7 +266,7 @@ class TestGetJobHealth:
         """Health info should include total and consecutive failure counts."""
         job_name = "collect"
 
-        with patch("lib.daemon.collect_all") as mock_collect:
+        with patch.object(daemon, "_handle_collect") as mock_collect:
             mock_collect.side_effect = Exception("test error")
             for _ in range(3):
                 daemon._run_job(job_name)
@@ -271,7 +281,7 @@ class TestGetJobHealth:
         """Health info should include last error message."""
         job_name = "collect"
 
-        with patch("lib.daemon.collect_all") as mock_collect:
+        with patch.object(daemon, "_handle_collect") as mock_collect:
             mock_collect.side_effect = Exception("test error")
             daemon._run_job(job_name)
 
@@ -283,7 +293,7 @@ class TestGetJobHealth:
         """Health info should include last success timestamp."""
         job_name = "collect"
 
-        with patch("lib.daemon.collect_all") as mock_collect:
+        with patch.object(daemon, "_handle_collect") as mock_collect:
             mock_collect.return_value = None
             daemon._run_job(job_name)
 
@@ -302,17 +312,17 @@ class TestGetJobHealth:
 class TestCircuitBreakerPersistence:
     """Tests for circuit breaker state across daemon restarts."""
 
-    def test_consecutive_failures_persist_across_restarts(self, temp_daemon_dirs, monkeypatch):
-        """Consecutive failure count should persist to disk."""
-        monkeypatch.setattr("lib.daemon.STATE_FILE", temp_daemon_dirs / "daemon_state.json")
-        monkeypatch.setattr("lib.daemon.PID_FILE", temp_daemon_dirs / "daemon.pid")
-        monkeypatch.setattr("lib.daemon.LOG_FILE", temp_daemon_dirs / "daemon.log")
+    def test_consecutive_failures_persist_across_restarts(self, temp_daemon_dirs):
+        """Consecutive failure count should persist to disk.
 
+        temp_daemon_dirs sandboxes daemon state into a temp dir, so daemon1's
+        saved state and daemon2's loaded state share the same on-disk file.
+        """
         # Create daemon and simulate failures
         daemon1 = TimeOSDaemon()
         job_name = "collect"
 
-        with patch("lib.daemon.collect_all") as mock_collect:
+        with patch.object(daemon1, "_handle_collect") as mock_collect:
             mock_collect.side_effect = Exception("test error")
             for _ in range(2):
                 daemon1._run_job(job_name)
@@ -342,7 +352,7 @@ class TestDaemonResilience:
         daemon.jobs[job_name]
 
         # Make job fail
-        with patch("lib.daemon.collect_all") as mock_collect:
+        with patch.object(daemon, "_handle_collect") as mock_collect:
             mock_collect.side_effect = Exception("test error")
             daemon._run_job(job_name)
 
@@ -357,7 +367,7 @@ class TestDaemonResilience:
         """Metrics should be updated when job health changes."""
         job_name = "collect"
 
-        with patch("lib.daemon.collect_all") as mock_collect:
+        with patch.object(daemon, "_handle_collect") as mock_collect:
             mock_collect.side_effect = Exception("test error")
             daemon._run_job(job_name)
 
@@ -373,7 +383,7 @@ class TestDaemonResilience:
         cb = state.circuit_breaker
 
         # Simulate many failures to open circuit breaker
-        with patch("lib.daemon.collect_all") as mock_collect:
+        with patch.object(daemon, "_handle_collect") as mock_collect:
             mock_collect.side_effect = Exception("test error")
             for _ in range(10):  # More than threshold
                 daemon._run_job(job_name)
@@ -386,3 +396,68 @@ class TestDaemonResilience:
         result = daemon._run_job(job_name)
         assert result is False
         assert "circuit breaker" in state.last_error.lower()
+
+
+# =============================================================================
+# EXCEPTION-BREADTH CONTRACT TESTS
+# =============================================================================
+
+
+class TestRunJobExceptionBreadth:
+    """Pin the resilience contract: a job handler raising ANY exception type
+    must be recorded as a failure and never propagate out of _run_job (which
+    runs in run()'s loop with no surrounding try/except). Regression guard for
+    commit 641754c, which narrowed _run_job's catch to
+    (sqlite3.Error, ValueError, OSError) and let other types kill the daemon.
+    """
+
+    @pytest.mark.parametrize(
+        "exc",
+        [RuntimeError("boom"), KeyError("k"), TypeError("t"), AttributeError("a")],
+    )
+    def test_unexpected_exception_type_is_recorded_not_propagated(self, daemon, exc):
+        """An unexpected exception from a job handler is caught and recorded."""
+        job_name = "collect"
+        state = daemon.job_states[job_name]
+
+        with patch.object(daemon, "_handle_collect", side_effect=exc):
+            # Must NOT raise — _run_job has to absorb it so run()'s loop survives.
+            result = daemon._run_job(job_name)
+
+        assert result is False
+        assert state.consecutive_failures == 1
+        assert state.total_failures == 1
+        assert state.health_status == JobHealth.DEGRADED
+        assert state.last_error  # error message recorded
+
+    def test_handle_collect_reraises_unexpected_type_to_run_job(self, daemon):
+        """_handle_collect's broadened boundary logs + re-raises non-ImportError
+        types so _run_job records them (rather than swallowing)."""
+        job_name = "collect"
+        state = daemon.job_states[job_name]
+
+        # Orchestrator's sync_all raises an unexpected type; _handle_collect must
+        # re-raise it (not swallow), and _run_job must record the failure.
+        mock_orch = type(
+            "_O",
+            (),
+            {"sync_all": lambda self: (_ for _ in ()).throw(RuntimeError("boom"))},
+        )()
+        with patch("lib.daemon._get_orchestrator", return_value=mock_orch):
+            result = daemon._run_job(job_name)
+
+        assert result is False
+        assert state.consecutive_failures == 1
+
+    def test_handle_collect_swallows_importerror(self, daemon):
+        """ImportError in collect is still a graceful skip (job succeeds), not a
+        failure — the broadening must not change this."""
+        job_name = "collect"
+        state = daemon.job_states[job_name]
+
+        with patch("lib.daemon._get_orchestrator", side_effect=ImportError("no orch")):
+            result = daemon._run_job(job_name)
+
+        assert result is True
+        assert state.consecutive_failures == 0
+        assert state.health_status == JobHealth.HEALTHY

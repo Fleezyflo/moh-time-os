@@ -473,7 +473,15 @@ class TimeOSDaemon:
             self.logger.info(f"✓ {job_name} completed in {duration:.1f}s")
             return True
 
-        except (sqlite3.Error, ValueError, OSError) as e:
+        except Exception as e:
+            # Broad catch is intentional and load-bearing for daemon resilience:
+            # run() (the main loop) calls _run_job with no surrounding try/except,
+            # so any exception type that escapes here kills the self-healing loop.
+            # A job failure of ANY kind must be recorded (consecutive_failures,
+            # circuit breaker) and surfaced as a typed False result, never
+            # propagated. This is "log + typed error result", not a silent pass.
+            # (Restores the pre-641754c contract; KeyboardInterrupt/SystemExit
+            # derive from BaseException and still propagate for clean shutdown.)
             duration = (datetime.now(timezone.utc) - start).total_seconds()
             state.last_error = str(e)[:500]
             state.total_failures += 1
@@ -492,7 +500,11 @@ class TimeOSDaemon:
             orchestrator.sync_all()
         except ImportError:
             self.logger.warning("Collector orchestrator not available, skipping collect")
-        except (sqlite3.Error, ValueError, OSError) as e:
+        except Exception as e:
+            # Broad catch logs a stage-specific message then re-raises so
+            # _run_job records the job failure. ImportError (above) is the only
+            # swallowed case; every other error type must surface to the
+            # resilience machinery, not be hidden here.
             self.logger.error(f"Collect failed: {e}")
             raise
 
@@ -510,7 +522,9 @@ class TimeOSDaemon:
                 self.logger.info("Lane assignment: no changes")
         except ImportError:
             self.logger.warning("Lane assigner not available, skipping")
-        except (sqlite3.Error, ValueError, OSError) as e:
+        except Exception as e:
+            # See _handle_collect: log the stage error then re-raise so the
+            # failure is recorded by _run_job. Only ImportError is swallowed.
             self.logger.error(f"Lane assignment failed: {e}")
             raise
 
