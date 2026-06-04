@@ -63,9 +63,15 @@ def temp_db():
 
 @pytest.fixture
 def key_manager(temp_db):
-    """Create a KeyManager instance with a temporary database."""
-    # Patch the db_path to use our temp db
-    with patch("lib.security.key_manager.store.DB_PATH", temp_db):
+    """Create a KeyManager instance with a temporary database.
+
+    KeyManager resolves its DB through ``lib.store.get_connection()`` →
+    ``lib.paths.db_path()`` (the old module-level ``store.DB_PATH`` was removed
+    in the paths refactor), so we patch ``lib.paths.db_path`` to return the temp
+    DB. ``KeyManager.__init__`` runs ``db.ensure_migrations()`` which converges
+    the schema onto that temp DB.
+    """
+    with patch("lib.paths.db_path", return_value=temp_db):
         manager = KeyManager()
         yield manager
 

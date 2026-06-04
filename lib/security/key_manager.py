@@ -174,11 +174,11 @@ class KeyManager:
         key_hash = self._hash_key(key)
         key_id = f"key_{secrets.token_hex(8)}"
 
-        now = datetime.now(timezone.utc).isoformat() + "Z"
+        now = datetime.now(timezone.utc).isoformat()
         expires_at = None
         if expires_in_days:
             expires = datetime.now(timezone.utc) + timedelta(days=expires_in_days)
-            expires_at = expires.isoformat() + "Z"
+            expires_at = expires.isoformat()
 
         try:
             with store.get_connection() as conn:
@@ -260,7 +260,7 @@ class KeyManager:
                     return None
 
                 # Update last_used_at
-                now = datetime.now(timezone.utc).isoformat() + "Z"
+                now = datetime.now(timezone.utc).isoformat()
                 conn.execute(
                     "UPDATE api_keys SET last_used_at = ? WHERE id = ?",
                     (now, key_info.id),
