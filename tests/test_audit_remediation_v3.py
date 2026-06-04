@@ -264,10 +264,17 @@ class TestIntelligenceAPIErrorFields:
         assert "detection_errors" in src, "patterns endpoint strips detection_errors"
 
     def test_S_proposals_endpoint_preserves_detection_health(self):
-        """[S] /intelligence/proposals surfaces pattern detection errors."""
-        from api.spec_router import get_intelligence_proposals
+        """[S] /intelligence/proposals surfaces pattern detection errors.
 
-        src = inspect.getsource(get_intelligence_proposals)
+        The proposals handler lives in intelligence_router (`list_proposals`),
+        NOT spec_router — the duplicate spec_router handler was removed during
+        route consolidation (see test_canonical_pipeline
+        ::test_spec_router_no_longer_has_duplicate_handlers, which asserts
+        spec_router must NOT define get_intelligence_proposals).
+        """
+        from api.intelligence_router import list_proposals
+
+        src = inspect.getsource(list_proposals)
         assert "pattern_detection_errors" in src, (
             "proposals endpoint does not surface pattern detection errors"
         )

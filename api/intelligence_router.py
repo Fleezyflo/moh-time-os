@@ -883,6 +883,12 @@ def list_proposals(
         signal_input = {"signals": signals.get("signals", [])}
         pattern_input = {"patterns": patterns.get("patterns", [])}
 
+        # Surface pattern-detection health so callers can tell whether the
+        # proposals were generated from a complete pattern scan or a degraded
+        # one. Without this, a partial detection failure is invisible and the
+        # proposals look authoritative when they are missing inputs.
+        pattern_detection_errors = patterns.get("errors", []) or []
+
         proposals = generate_proposals(signal_input, pattern_input)
 
         # Filter by urgency if specified
@@ -898,7 +904,14 @@ def list_proposals(
 
         result = [{**p.to_dict(), "priority_score": s.to_dict()} for p, s in top]
 
-        return _wrap_response(result, {"limit": limit, "urgency": urgency})
+        return _wrap_response(
+            result,
+            {
+                "limit": limit,
+                "urgency": urgency,
+                "pattern_detection_errors": pattern_detection_errors,
+            },
+        )
     except HTTPException:
         raise
     except (sqlite3.Error, ValueError) as e:
