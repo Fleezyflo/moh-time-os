@@ -1307,7 +1307,9 @@ class AutonomousLoop:
                 results["emails_processed"] += 1
 
                 # Mark email as processed
-                self.store.query("UPDATE communications SET processed = 1 WHERE id = ?", [email_id])
+                self.store.execute_write(
+                    "UPDATE communications SET processed = 1 WHERE id = ?", [email_id]
+                )
 
             # Count untracked
             results["untracked"] = len(manager.get_untracked_commitments())
