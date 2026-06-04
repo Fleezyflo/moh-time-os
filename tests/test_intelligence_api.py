@@ -66,10 +66,14 @@ class TestSignalCatalog:
     """Signal catalog doesn't need DB."""
 
     def test_signal_catalog_has_all_signals(self):
-        """signal_catalog should have all 22 signals."""
+        """signal_catalog should have all 23 signals.
+
+        Count bumped 22 -> 23 when phase-C intelligence expansion (commit
+        2efb17a) added a signal definition; the assertion was not updated then.
+        """
         from lib.intelligence.signals import SIGNAL_CATALOG
 
-        assert len(SIGNAL_CATALOG) == 22
+        assert len(SIGNAL_CATALOG) == 23
 
     def test_signal_catalog_structure(self):
         """Each signal should have required fields."""

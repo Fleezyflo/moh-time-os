@@ -608,8 +608,14 @@ def critical_items():
     try:
         from lib.intelligence import get_critical_items
 
-        data = get_critical_items()
-        return _wrap_response(data)
+        # get_critical_items now returns {success, errors, items, generated_at};
+        # keep the endpoint's `data` as the items list and surface any errors so
+        # a failed computation is not reported as an empty (but successful) scan.
+        critical = get_critical_items()
+        return _wrap_response(
+            critical["items"],
+            {"errors": critical["errors"], "computation_success": critical["success"]},
+        )
     except (sqlite3.Error, ValueError) as e:
         logger.exception("critical_items failed")
         return JSONResponse(
