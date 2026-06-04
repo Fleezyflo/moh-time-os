@@ -22,6 +22,26 @@ class StateStore:
     """
     Central state store. SQLite for persistence, in-memory cache for speed.
     Every component connects through here. No exceptions.
+
+    WRITE-PATH RULE
+    ---------------
+    Reads and writes go through distinct methods so the write path can be
+    serialized and audited in one place:
+
+    - ``query(sql, params)`` is for READS (SELECT) only.
+    - ``execute_write(sql, params)`` runs a single write/DDL statement under the
+      write lock and returns the rowcount.
+    - ``transaction(fn)`` runs a multi-statement unit of work on one connection
+      under the write lock, committing on success and rolling back on error.
+    - Row-level helpers ``insert``/``update``/``delete``/``insert_many`` /
+      ``replace_source_rows`` remain the preferred typed API for single-table
+      mutations.
+
+    PROHIBITED:
+    - Opening a raw ``sqlite3.connect`` outside this class to mutate the DB
+      (bypasses the write lock and the typed helpers).
+    - Routing INSERT/UPDATE/DELETE/CREATE/DROP/ALTER through ``query()`` — those
+      belong in ``execute_write()`` / ``transaction()``.
     """
 
     _instance = None
@@ -48,6 +68,12 @@ class StateStore:
 
         self._cache: dict[str, Any] = {}
         self._cache_timestamps: dict[str, datetime] = {}
+
+        # Serializes writes/DDL routed through execute_write() and transaction().
+        # Reentrant so a transaction() callback (which already holds the lock) can
+        # call execute_write() without deadlocking. SQLite still does its own
+        # file-level locking; this guards the in-process write path.
+        self._write_lock = threading.RLock()
 
         # Schema convergence — schema_engine creates/migrates all tables
         db_module.ensure_migrations()
@@ -226,10 +252,52 @@ class StateStore:
             return result.rowcount > 0
 
     def query(self, sql: str, params: list = None) -> list[dict]:
-        """Execute raw query. Returns list of dicts."""
+        """Execute a read-only query. Returns list of dicts.
+
+        For writes/DDL use ``execute_write()`` or ``transaction()`` instead.
+        """
+        return [dict(row) for row in self._raw_query(sql, params)]
+
+    def _raw_query(self, sql: str, params: list = None) -> list[sqlite3.Row]:
+        """Internal SELECT executor shared by query() and read helpers."""
         with self._get_conn() as conn:
-            rows = conn.execute(sql, params or []).fetchall()
-            return [dict(row) for row in rows]
+            return conn.execute(sql, params or []).fetchall()
+
+    def execute_write(self, sql: str, params: list = None) -> int:
+        """Execute a single write/DDL statement under the write lock.
+
+        Returns the affected ``rowcount`` (-1 for statements where SQLite does
+        not report one, e.g. DDL). Routes DML/DDL through one place so the
+        in-process write path is serialized via ``_write_lock``; SQLite's own
+        file locking handles cross-process safety.
+        """
+        with self._write_lock, self._get_conn() as conn:
+            result = conn.execute(sql, params or [])
+            return result.rowcount
+
+    def transaction(self, fn):
+        """Run ``fn(conn)`` inside a single transaction under the write lock.
+
+        The callback receives a live connection; it may read, write, and read
+        again on the same connection. On success the transaction commits and the
+        callback's return value is returned. If the callback raises, the
+        transaction is rolled back and the exception propagates (nothing
+        persists).
+        """
+        with self._write_lock:
+            conn = sqlite3.connect(self.db_path, timeout=30.0)
+            conn.row_factory = sqlite3.Row
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA foreign_keys=ON")
+            try:
+                result = fn(conn)
+                conn.commit()
+                return result
+            except BaseException:
+                conn.rollback()
+                raise
+            finally:
+                conn.close()
 
     def count(self, table: str, where: str = None, params: list = None) -> int:
         """Count rows."""
