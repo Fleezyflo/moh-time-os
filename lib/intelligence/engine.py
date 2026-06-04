@@ -72,10 +72,10 @@ class StageResult:
 # =============================================================================
 
 
-def _run_scoring_stage(db_path: Path | None = None) -> dict:
+def _run_scoring_stage(db_path: Path | None = None) -> StageResult:
     """
-    Run scoring. Errors are logged per-component.
-    Returns dict with entity scores.
+    Run scoring. Errors are logged per-component AND captured in the returned
+    StageResult so a failed sub-component cannot be silently reported as success.
     """
     from lib.intelligence.scorecard import (
         score_all_clients,
@@ -85,12 +85,13 @@ def _run_scoring_stage(db_path: Path | None = None) -> dict:
     )
 
     errors: list[StageError] = []
-    data = {
+    data: dict = {
         "clients": [],
         "projects": [],
         "persons": [],
         "portfolio": {},
     }
+    components_total = 4
 
     # Score clients
     try:
@@ -148,10 +149,15 @@ def _run_scoring_stage(db_path: Path | None = None) -> dict:
             )
         )
 
-    return data
+    return StageResult(
+        success=not errors,
+        data=data,
+        errors=errors,
+        partial=bool(errors) and len(errors) < components_total,
+    )
 
 
-def _run_signal_stage(db_path: Path | None = None) -> dict:
+def _run_signal_stage(db_path: Path | None = None) -> StageResult:
     """
     Run signal detection and state update. Errors logged.
     Returns dict with signal data.
@@ -230,15 +236,20 @@ def _run_signal_stage(db_path: Path | None = None) -> dict:
             )
         )
 
-    return data
+    # 3 sub-components attempted (detection, state_update, summary).
+    return StageResult(
+        success=not errors,
+        data=data,
+        errors=errors,
+        partial=bool(errors) and len(errors) < 3,
+    )
 
 
 def _run_pattern_stage(
-    db_path: Path | None = None, scores: dict = None, signals: dict = None
-) -> dict:
+    db_path: Path | None = None, scores: dict | None = None, signals: dict | None = None
+) -> StageResult:
     """
-    Run pattern detection. Errors logged.
-    Returns dict with pattern data.
+    Run pattern detection. Errors logged and captured in the returned StageResult.
     """
     from lib.intelligence.patterns import detect_all_patterns
 
@@ -278,15 +289,19 @@ def _run_pattern_stage(
             )
         )
 
-    return data
+    # Single sub-component (detection): success iff no error, never partial.
+    return StageResult(success=not errors, data=data, errors=errors, partial=False)
 
 
 def _run_proposal_stage(
-    db_path: Path | None = None, scores: dict = None, signals: dict = None, patterns: dict = None
-) -> dict:
+    db_path: Path | None = None,
+    scores: dict | None = None,
+    signals: dict | None = None,
+    patterns: dict | None = None,
+) -> StageResult:
     """
-    Generate and rank proposals. Errors logged.
-    Returns dict with proposals.
+    Generate and rank proposals. Errors logged and captured in the returned
+    StageResult. ``signals``/``patterns`` are the prior stages' ``.data`` dicts.
     """
     from lib.intelligence.proposals import (
         generate_daily_briefing,
@@ -367,7 +382,12 @@ def _run_proposal_stage(
                 )
             )
 
-    return data
+    return StageResult(
+        success=not errors,
+        data=data,
+        errors=errors,
+        partial=bool(errors) and bool(data["ranked"]),
+    )
 
 
 # =============================================================================
@@ -443,17 +463,30 @@ def generate_intelligence_snapshot(db_path: Path | None = None) -> dict:
     """
     start_time = time.time()
 
-    # Stage 1: Scoring
-    scores = _run_scoring_stage(db_path)
+    # Each stage returns a StageResult; downstream stages and metadata consume
+    # its .data dict. success/partial/errors are propagated from the results
+    # below — never hardcoded — so a stage failure is visible in the snapshot.
+    scoring_result = _run_scoring_stage(db_path)
+    signal_result = _run_signal_stage(db_path)
+    pattern_result = _run_pattern_stage(db_path, scoring_result.data, signal_result.data)
+    proposal_result = _run_proposal_stage(
+        db_path, scoring_result.data, signal_result.data, pattern_result.data
+    )
 
-    # Stage 2: Signal detection
-    signals = _run_signal_stage(db_path)
+    scores = scoring_result.data
+    signals = signal_result.data
+    patterns = pattern_result.data
+    proposals = proposal_result.data
 
-    # Stage 3: Pattern detection
-    patterns = _run_pattern_stage(db_path, scores, signals)
-
-    # Stage 4: Proposal generation
-    proposals = _run_proposal_stage(db_path, scores, signals, patterns)
+    # Aggregate pipeline-level health from the four stages.
+    stage_results = [scoring_result, signal_result, pattern_result, proposal_result]
+    all_errors: list[StageError] = []
+    for sr in stage_results:
+        all_errors.extend(sr.errors)
+    stages_failed = sum(1 for sr in stage_results if not sr.success)
+    pipeline_partial = any(sr.partial for sr in stage_results) or (
+        0 < stages_failed < len(stage_results)
+    )
 
     # Compute metadata
     end_time = time.time()
@@ -462,20 +495,20 @@ def generate_intelligence_snapshot(db_path: Path | None = None) -> dict:
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "generation_time_seconds": round(generation_time, 2),
-        "pipeline_success": True,
-        "pipeline_partial": False,
-        "pipeline_errors": [],
-        "stages_failed": 0,
+        "pipeline_success": stages_failed == 0,
+        "pipeline_partial": pipeline_partial,
+        "pipeline_errors": [e.to_dict() for e in all_errors],
+        "stages_failed": stages_failed,
         "scores": {
-            "success": True,
-            "partial": False,
-            "errors": [],
+            "success": scoring_result.success,
+            "partial": scoring_result.partial,
+            "errors": [e.to_dict() for e in scoring_result.errors],
             **scores,
         },
         "signals": {
-            "success": True,
-            "partial": False,
-            "errors": [],
+            "success": signal_result.success,
+            "partial": signal_result.partial,
+            "errors": [e.to_dict() for e in signal_result.errors],
             "total_active": signals.get("total_active", 0),
             "new": signals.get("new", []),
             "ongoing": signals.get("ongoing", []),
@@ -484,18 +517,18 @@ def generate_intelligence_snapshot(db_path: Path | None = None) -> dict:
             "by_severity": signals.get("by_severity", {}),
         },
         "patterns": {
-            "success": True,
-            "partial": False,
-            "errors": [],
+            "success": pattern_result.success,
+            "partial": pattern_result.partial,
+            "errors": [e.to_dict() for e in pattern_result.errors],
             "total_detected": patterns.get("total_detected", 0),
             "structural": patterns.get("structural", []),
             "operational": patterns.get("operational", []),
             "informational": patterns.get("informational", []),
         },
         "proposals": {
-            "success": True,
-            "partial": False,
-            "errors": [],
+            "success": proposal_result.success,
+            "partial": proposal_result.partial,
+            "errors": [e.to_dict() for e in proposal_result.errors],
             "total": proposals.get("total", 0),
             "ranked": proposals.get("ranked", []),
             "by_urgency": proposals.get("by_urgency", {}),

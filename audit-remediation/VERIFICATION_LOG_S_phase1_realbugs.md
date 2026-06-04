@@ -140,3 +140,50 @@ ADR: not required — `check_adr_required.sh` covers `api/server.py` + `api/spec
 | NOT my regressions (pre-existing) | NOTED | `test_intelligence_api` 2 failures (`Expected dict with items key`) are BUG-5 (stage-shape), not in `list_proposals` traceback |
 
 Files in this commit: `api/intelligence_router.py`, `tests/test_audit_remediation_v3.py`, this log. One purpose (BUG-4).
+
+**BUG-4 status: shipped — PR #148.**
+
+---
+
+## BUG-5 — intelligence engine stages discarded errors + snapshot hardcoded success  [branch: fix/intelligence-engine-stageresult]
+
+### Root cause
+`engine.py` defines `StageResult`/`StageError` to track per-stage success/errors, but the four stage
+runners (`_run_scoring_stage`, `_run_signal_stage`, `_run_pattern_stage`, `_run_proposal_stage`)
+accumulated an `errors` list and then `return data` (a bare dict), **discarding** it. The 7
+`test_intelligence_engine` tests (`TestPipelineStages`, `TestErrorIsolation`) expect a `StageResult`
+with `.success`/`.data`/`.errors`. WORSE: `generate_intelligence_snapshot` HARDCODED
+`pipeline_success: True, errors: [], stages_failed: 0` for every stage (engine.py:482-530), so the
+snapshot reported total success even when every stage failed — a stub-returning-success violation that
+hides outages (CLAUDE.md: "No stubs returning success").
+
+### Fix (Molham-approved FULL scope: StageResult + real success propagation)
+1. All four stage runners now `return StageResult(success=not errors, data=data, errors=errors,
+   partial=...)`. `partial` = had errors but not every sub-component failed (per-stage component counts).
+2. `generate_intelligence_snapshot` consumes each result's `.data`, passes `.data` to downstream stages
+   (`_run_pattern_stage`/`_run_proposal_stage`), and DERIVES `pipeline_success`/`pipeline_partial`/
+   `pipeline_errors`/`stages_failed` + per-stage `success`/`partial`/`errors` from the StageResults
+   instead of hardcoding. Output dict keys unchanged (external callers unaffected).
+3. `FileNotFoundError` is a subclass of `OSError`, so the existing `except (sqlite3.Error, ValueError,
+   OSError)` already catches the missing-DB case — no except-widening needed; the bug was purely the
+   discarded result + hardcoded snapshot.
+
+### Pre-Edit Verification
+| File edited | Symbol | Defined at | Confirmed | Callers checked |
+|-------------|--------|-----------|-----------|-----------------|
+| engine.py 4 stage runners | `StageResult(success,data,errors,partial)` | engine.py:51 | yes — dataclass already existed | only callers are inside `generate_intelligence_snapshot` (grep: 447-456) — all updated to `.data` |
+| engine.py `generate_intelligence_snapshot` | `_count_entities(scores)`,`_compute_data_completeness(scores)` | engine.py:418,390 | yes — take bare dict | now passed `scoring_result.data` |
+| (external) `generate_intelligence_snapshot` return | output dict keys | unchanged | yes | snapshot consumers (persistence/scoring/signals/daemon) — 110 passed |
+
+### Pre-Commit Verification
+| Check | Result | Output |
+|-------|--------|--------|
+| TDD red (before) | CONFIRMED | `Expected StageResult with .data` / `Expected StageResult` (6 of 7) |
+| TDD green (after) | PASS | test_intelligence_engine 20 passed, 1 failed (`get_critical_items` shape = BUG-5b, deferred) |
+| Behavioral: success-masking fixed | VERIFIED | snapshot on `/nonexistent/path.db` → `pipeline_success=False, stages_failed=2, pipeline_errors=6, scores.success=False` (was hardcoded True) |
+| regression (snapshot consumers) | PASS | persistence+scoring+signals+daemon_intelligence `110 passed` |
+| ruff check | PASS | `All checks passed!` |
+| ruff format --check | PASS | `1 file already formatted` |
+| bandit | PASS | exit 0 |
+
+Files in this commit: `lib/intelligence/engine.py`, this log. One purpose (BUG-5). NO test file changed (the 6 fixed tests were already correct; the 7th — `get_critical_items` dict shape — is BUG-5b, a separate PR).
