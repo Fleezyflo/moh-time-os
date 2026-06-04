@@ -195,7 +195,7 @@ class ThresholdAdjuster:
         active_modifiers = SEASONAL_MODIFIERS.get(season, {})
 
         # Check Ramadan separately (it's not a "season" in the config sense)
-        day_ctx = self._calendar.day_context(ref_date)
+        day_ctx = self._calendar.get_day_context(ref_date)
         if day_ctx.is_ramadan and "ramadan" not in season:
             active_modifiers = {**active_modifiers, **SEASONAL_MODIFIERS.get("ramadan", {})}
 
@@ -246,7 +246,7 @@ class ThresholdAdjuster:
         season = self._calendar.get_season(ref_date)
         modifiers = dict(SEASONAL_MODIFIERS.get(season, {}))
 
-        day_ctx = self._calendar.day_context(ref_date)
+        day_ctx = self._calendar.get_day_context(ref_date)
         if day_ctx.is_ramadan and "ramadan" not in season:
             modifiers.update(SEASONAL_MODIFIERS.get("ramadan", {}))
 
